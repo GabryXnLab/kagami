@@ -1,0 +1,90 @@
+name: Build Android
+
+# Thin wrapper: qui ci sono solo le scelte, la logica sta nel reusable centralizzato
+# GabryXnLab/flutter-ci. Vedi .github/workflows/CLAUDE.md.
+run-name: >-
+  Build Android · ${{ inputs.build_mode }}${{ inputs.runner == 'github' && ' · GitHub' || '' }}${{ inputs.max_workers != 'auto' && format(' · {0} worker', inputs.max_workers) || '' }}${{ inputs.artifact == 'aab' && ' · AAB' || '' }}${{ inputs.clear_cache == true && ' · cache pulita' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: '🖥️ Dove compilare. self-hosted = nexus-core (default, veloce, nessun minuto Actions). github = runner GitHub, quando nexus-core non deve prendere altro carico.'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options:
+          - self-hosted
+          - github
+      max_workers:
+        description: '⚙️ Worker di Gradle/cargo. auto = le CPU libere di nexus-core in quel momento (mai sotto 2), su GitHub tutte. 4 = tutta la macchina, 2 = lascia spazio a un altra build.'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - '4'
+          - '2'
+      build_mode:
+        description: '📱 Modalità. release = quello che va sul telefono (AOT, tree-shaking). debug = avvio rapido e diagnostica. profile = misure di prestazioni.'
+        required: false
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+          - profile
+      artifact:
+        description: '📦 apk = sideload (quello che serve qui) | aab = pacchetto per il Play Store.'
+        required: false
+        default: 'apk'
+        type: choice
+        options:
+          - apk
+          - aab
+      target_platform:
+        description: '🏗️ ABI. android-arm64 è ogni telefono moderno; le altre servono solo per hardware vecchio o emulatori x86.'
+        required: false
+        default: 'android-arm64'
+        type: choice
+        options:
+          - android-arm64
+          - android-arm64,android-arm
+          - android-arm64,android-arm,android-x64
+      run_tests:
+        description: '🧪 Esegui i test prima di compilare (un test rosso ferma la build).'
+        required: false
+        default: true
+        type: boolean
+      clear_cache:
+        description: '🧹 Svuota build/, .dart_tool/ e la cache Gradle del progetto. Serve quando una build si comporta in modo inspiegabile.'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  android:
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-build.yml@main
+    with:
+      app_name: Kagami
+      runner: ${{ inputs.runner }}
+      max_workers: ${{ inputs.max_workers }}
+      # La stessa del clone su nexus-core (vedi CLAUDE.md di root): va aggiornata insieme.
+      flutter_version: '3.47.4'
+      platform: android
+      artifact: ${{ inputs.artifact }}
+      build_mode: ${{ inputs.build_mode }}
+      target_platform: ${{ inputs.target_platform }}
+      run_tests: ${{ inputs.run_tests }}
+      clear_cache: ${{ inputs.clear_cache }}
+      # I .g.dart di drift sono committati: rigenerarli in CI produrrebbe solo
+      # differenze non committate. Che siano allineati lo verifica `Verifica`.
+      run_build_runner: false
+      # Il topic delle build nel gruppo delle notifiche della CI.
+      telegram_topic_id: '6'
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # Il debug.keystore di nexus-core: sui runner GitHub firma l'APK come sul self-hosted,
+      # così si installa sopra l'app e Google Sign-In ne riconosce l'impronta.
+      ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}

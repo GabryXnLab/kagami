@@ -1,0 +1,13 @@
+{
+  "name": "kagami",
+  "image": "ghcr.io/cirruslabs/flutter:stable",
+  "postCreateCommand": "flutter pub get",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.flutter",
+        "Dart-Code.dart-code"
+      ]
+    }
+  }
+}

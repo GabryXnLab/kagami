@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// I dati personali di un lettore: una raccolta, un documento per utente, e
+// nessuna strada che porti al documento di qualcun altro.
+//
+// La libreria non passa di qui — resta la cartella locale del telefono — e
+// nemmeno i manga: quello che viaggia è la fotografia che l'app esporta come
+// backup, cioè stato, voti, capitoli letti, cronologia, raccolte, segnalibri
+// e impostazioni.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /readers/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

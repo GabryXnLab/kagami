@@ -1,0 +1,52 @@
+name: Aggiorna dipendenze
+
+# Thin wrapper su GabryXnLab/flutter-ci. ⚠️ Non è un aggiornamento dell'app installata:
+# il codice Dart è compilato dentro l'APK, quindi dopo questo workflow serve comunque
+# `Build Android`. Vedi .github/workflows/CLAUDE.md.
+run-name: >-
+  Aggiorna dipendenze${{ inputs.major_versions == true && ' · major' || '' }}${{ inputs.commit == false && ' · prova a secco' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: '📦 Pacchetti da aggiornare, separati da spazio. Vuoto = tutti quelli che i vincoli di pubspec.yaml permettono.'
+        required: false
+        default: ''
+        type: string
+      major_versions:
+        description: '⚠️ Alza anche i vincoli di pubspec.yaml alle major successive. Può cambiare API: tienilo spento per l aggiornamento di routine. NB: permission_handler è fermo a ^12 di proposito (vedi CLAUDE.md).'
+        required: false
+        default: false
+        type: boolean
+      commit:
+        description: '💾 Committa e pusha il risultato. Spegnilo per vedere solo cosa cambierebbe.'
+        required: false
+        default: true
+        type: boolean
+      upgrade_sdk:
+        description: '🛠️ Aggiorna anche l SDK Flutter del runner (clone git). È condiviso da tutti i progetti della macchina: chiedilo solo se lo vuoi davvero.'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  deps:
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-update.yml@main
+    with:
+      app_name: Kagami
+      packages: ${{ inputs.packages }}
+      major_versions: ${{ inputs.major_versions }}
+      commit: ${{ inputs.commit }}
+      upgrade_sdk: ${{ inputs.upgrade_sdk }}
+      # drift genera da un'API che può cambiare con la sua versione: il generato va
+      # rifatto e committato insieme al lockfile, o resterebbe quello della versione
+      # precedente.
+      run_build_runner: true
+      telegram_topic_id: '6'
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

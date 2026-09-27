@@ -1,0 +1,30 @@
+name: Verifica
+
+# Thin wrapper su GabryXnLab/flutter-ci: analisi statica, test e controllo che i
+# .g.dart committati corrispondano ancora allo schema. Nessun artefatto prodotto.
+run-name: Verifica · ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      verify_generated:
+        description: '🔁 Rigenera con build_runner e fallisce se i .g.dart committati sono vecchi. Il controllo che manca a chi tiene il generato in git.'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  check:
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-check.yml@main
+    with:
+      app_name: Kagami
+      verify_generated: ${{ inputs.verify_generated }}
+      # Il progetto non segue `dart format`: accenderlo qui vorrebbe dire riformattare
+      # tutto in un commit che non c'entra niente con la verifica.
+      run_format: false
+      # Il motore dell'archivio e il server sono Dart puro, con il loro pubspec:
+      # la radice non li analizza né li prova.
+      dart_packages: packages/kagami_archive server
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

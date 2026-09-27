@@ -1,0 +1,8 @@
+# Al server servono solo il suo sorgente e il motore: il resto del repo
+# (l'app, le build, gli SDK) resterebbe fuori comunque, e così non si copia.
+*
+!packages/kagami_archive
+!server
+**/.dart_tool
+**/build
+server/data

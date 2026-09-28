@@ -21,12 +21,33 @@ on:
           - release
           - debug
           - profile
+  # La build di release.yml: stessi controlli, stesso APK.
+  workflow_call:
+    inputs:
+      build_mode:
+        type: string
+        default: 'release'
+    secrets:
+      GOOGLE_SERVICES_JSON:
+        required: false
+      ANDROID_KEYSTORE:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+      SENTRY_DSN:
+        required: false
 
 permissions:
   contents: read
 
+# Con il nome del workflow: chiamato da release.yml vale il nome di quello, e un push
+# su main non annulla una release in corso.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -36,6 +57,9 @@ env:
 jobs:
   check:
     name: Analisi e test
+    # In un repo privato (il manutentore, o un fork chiuso) da solo a mano: lì ci sono
+    # altre CI, e questa a ogni push costerebbe i minuti del piano.
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -64,6 +88,7 @@ jobs:
 
   server-image:
     name: Immagine del server
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

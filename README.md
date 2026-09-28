@@ -11,6 +11,13 @@ cartella di Drive o sul telefono. Chi non vuole tenere il telefono acceso per
 ore può farla scaricare al proprio **Kagami Server**, un programma da tenere
 acceso su un computer qualsiasi.
 
+## Scaricare l'app
+
+L'APK firmato di ogni versione è nelle
+[Releases](https://github.com/GabryXnLab/kagami/releases), con il suo SHA-256.
+Usa il progetto Firebase del manutentore per account e Drive; per usarne uno
+proprio si compila da sé (sotto, «Farsi il proprio Kagami»).
+
 ## Come è fatto
 
 - **La libreria è un formato aperto**, [MALF](docs/malf.md): cartelle, manifest

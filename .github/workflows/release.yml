@@ -1,0 +1,90 @@
+name: Release
+
+# Una release pubblica: la versione di pubspec.yaml, costruita da ci.yml con tutti i
+# suoi controlli e firmata con la chiave di release, in una GitHub Release con il suo
+# SHA-256. Si lancia a mano da main dopo aver alzato `version` in pubspec.yaml.
+run-name: Release · ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Versione
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      # Una versione pubblicata non si ripubblica: chi ha l'APK deve poter contare
+      # su un numero che indica sempre lo stesso file.
+      - id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml)
+          if [ -z "$version" ]; then
+            echo "::error::version non trovata in pubspec.yaml"
+            exit 1
+          fi
+          if gh release view "v$version" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::v$version esiste già: alza version in pubspec.yaml"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    with:
+      build_mode: release
+    secrets:
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+  publish:
+    name: Pubblica
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagami-release
+          path: dist
+      # Gli aggiornamenti si installano solo sopra un APK con la stessa firma: una
+      # release firmata con una chiave di debug legherebbe per sempre chi la installa.
+      - name: Firma e impronte
+        run: |
+          apk="kagami-$VERSION.apk"
+          mv dist/app-release.apk "$apk"
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          certs=$("$apksigner" verify --print-certs "$apk")
+          if grep -q 'CN=Android Debug' <<< "$certs"; then
+            echo "::error::APK firmato con una chiave di debug: servono i secret ANDROID_KEYSTORE* della chiave di release"
+            exit 1
+          fi
+          sha256sum "$apk" > "$apk.sha256"
+          {
+            echo "Firma dell'APK:"
+            echo '```'
+            grep -E 'SHA-256 digest' <<< "$certs"
+            echo '```'
+          } > notes.md
+      - name: Release
+        run: |
+          gh release create "v$VERSION" "kagami-$VERSION.apk" "kagami-$VERSION.apk.sha256" \
+            -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Kagami $VERSION" \
+            --notes-file notes.md --generate-notes

@@ -12,6 +12,11 @@ un repo pubblico non può chiamare i workflow di un repo privato.
 | `server-image` | idem | `docker build --target test`: i test del server con libvips |
 | `android` | push su `main`, a mano (mai nelle PR) | APK (release di default, `build_mode` a mano), artefatto del run |
 
+In un repo privato (il manutentore, un fork chiuso) `check` e `server-image` partono
+solo a mano, e l'APK con loro: lì ci sono altre CI, e questa a ogni push costerebbe i
+minuti del piano. Il gruppo di `concurrency` porta il nome del workflow, così un push su
+`main` non annulla una release in corso.
+
 `FLUTTER_VERSION` è quella del `CLAUDE.md` di root: si aggiornano insieme.
 
 I `.g.dart` di drift stanno in git e l'APK non li rigenera: che siano allineati lo
@@ -29,6 +34,19 @@ riformattare tutto in un commit che non c'entra niente.
 | `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
+
+## `release.yml` (**Release**): le versioni pubbliche
+
+Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
+
+1. `version` legge la versione e si ferma se la release `v<versione>` esiste già;
+2. `build` chiama `ci.yml` (`workflow_call`): stessi controlli, stesso APK;
+3. `publish` rifiuta un APK firmato con una chiave di debug, poi crea la release con
+   l'APK, il suo `.sha256` e l'impronta SHA-256 della firma nelle note.
+
+Le release si firmano con la **chiave di release** (secret `ANDROID_KEYSTORE*`), sempre
+la stessa: Android installa un aggiornamento solo sopra un APK con la stessa firma, e
+cambiarla vorrebbe dire far disinstallare l'app a chiunque l'abbia.
 
 ## Il sync verso il repo pubblico
 

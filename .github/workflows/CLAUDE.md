@@ -26,8 +26,35 @@ riformattare tutto in un commit che non c'entra niente.
 | Secret | Senza | Con |
 | :--- | :--- | :--- |
 | `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Firebase |
-| `ANDROID_DEBUG_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il proprio `debug.keystore` in base64 (`base64 -w0 ~/.android/debug.keystore`), la cui SHA-1 è registrata in Firebase |
+| `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
+| `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
+
+## Il sync verso il repo pubblico
+
+Lo sviluppo avviene in un repo privato, e il repo pubblico riceve le modifiche come PR
+preparate da un workflow di quel repo (`public-sync.yml`, con la logica in
+`.github/public-sync/sync.py`). Workflow, script e configurazione restano nel privato:
+qui si vede solo il risultato.
+
+- **Un commit per PR, mai la storia privata.** A ogni push su `main` del privato, il
+  sync costruisce l'albero di `main` meno i percorsi della sua lista di esclusioni e lo
+  mette in un commit nuovo il cui unico genitore è `main` di questo repo, sul branch
+  `sync/<sha corto del privato>`. Il messaggio elenca i soggetti dei commit privati
+  inclusi. Un percorso escluso che esiste qui resta com'è. Se l'albero coincide già
+  con `main` non succede niente; una PR di sync nuova chiude quella ancora aperta.
+- **Il trailer `Private-Sync: <sha>`** in fondo al commit e alla descrizione della PR
+  dice qual è l'ultimo commit privato arrivato qui, e il sync seguente riparte da lì.
+  Si può unire con merge, squash o rebase, purché il trailer resti l'ultima riga del
+  messaggio.
+- **Uno scanner blocca le fughe.** Prima del push controlla ogni file dell'albero e il
+  messaggio: chiavi e token di servizi, configurazioni Firebase, keystore, chiavi
+  private, dati personali e nomi dell'infrastruttura del manutentore. Se trova
+  qualcosa il sync si ferma e il riepilogo dice file, riga e tipo, mai il valore.
+- **Un commit fatto direttamente qui non si perde.** Se `main` di questo repo ha
+  cambiamenti che non vengono da un sync, e la PR successiva li cancellerebbe, il sync
+  si ferma e prepara la patch da riportare nel privato. Una PR di un contributore si
+  unisce qui come sempre; i sync riprendono quando la modifica è anche nel privato.
 
 ## Gli altri workflow
 

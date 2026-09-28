@@ -80,7 +80,10 @@ jobs:
     timeout-minutes: 45
     env:
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-      ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       BUILD_MODE: ${{ inputs.build_mode || 'release' }}
     steps:
@@ -106,13 +109,26 @@ jobs:
           fi
           # La chiave di debug di ogni runner è nuova: senza la propria, l'APK
           # non si installa sopra il precedente e Google non ne riconosce
-          # l'impronta per l'accesso.
-          if [ -n "$ANDROID_DEBUG_KEYSTORE" ]; then
-            mkdir -p "$HOME/.android"
-            printf '%s' "$ANDROID_DEBUG_KEYSTORE" | base64 -d > "$HOME/.android/debug.keystore"
+          # l'impronta per l'accesso. Passa da key.properties e non da
+          # ~/.android/debug.keystore, che sui runner di GitHub Gradle ignora e
+          # rigenera. I default sono quelli di una chiave di debug.
+          if [ -n "$ANDROID_KEYSTORE" ]; then
+            printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/kagami.keystore"
+            {
+              echo "storeFile=$RUNNER_TEMP/kagami.keystore"
+              echo "storePassword=${ANDROID_KEYSTORE_PASSWORD:-android}"
+              echo "keyAlias=${ANDROID_KEY_ALIAS:-androiddebugkey}"
+              echo "keyPassword=${ANDROID_KEY_PASSWORD:-${ANDROID_KEYSTORE_PASSWORD:-android}}"
+            } > android/key.properties
           fi
       - run: flutter pub get
       - run: flutter build apk --"$BUILD_MODE" --dart-define=SENTRY_DSN="$SENTRY_DSN"
+      # L'impronta da registrare in Firebase: con un'altra l'accesso con Google fallisce.
+      - name: Impronta della firma
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs "build/app/outputs/flutter-apk/app-$BUILD_MODE.apk" \
+            | grep 'SHA-1' | sed 's/^/firma: /' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: kagami-${{ env.BUILD_MODE }}

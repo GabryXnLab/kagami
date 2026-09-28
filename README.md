@@ -65,6 +65,16 @@ flutter pub get
 flutter build apk --release
 ```
 
+Senza altro, la release si firma con la chiave di debug della macchina. Per
+firmare con la propria si crea `android/key.properties`, che git ignora:
+
+```properties
+storeFile=/percorso/della/chiave.jks
+storePassword=…
+keyAlias=…
+keyPassword=…
+```
+
 Senza una macchina adatta si fa un fork e si lancia **CI** dalla scheda
 Actions: l'APK arriva fra gli artefatti del run. Quali secret accendono cosa
 è in [.github/workflows/CLAUDE.md](.github/workflows/CLAUDE.md).

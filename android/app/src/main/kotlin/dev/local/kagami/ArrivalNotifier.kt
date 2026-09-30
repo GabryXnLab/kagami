@@ -27,6 +27,10 @@ import java.util.concurrent.TimeUnit
  * scheda: la chiave torna a Dart con `open`, o con `launched` se l'app era
  * chiusa e il tocco l'ha avviata.
  *
+ * Con `invite` l'avviso che qualcuno ha dato accesso al suo server: stesso
+ * tocco, con una chiave che Dart riconosce (`server-invite:`), ma un canale
+ * suo, perché chi spegne i capitoli nuovi non spenga anche questo.
+ *
  * Con `watch` Dart consegna ciò che serve a controllare la cartella locale
  * ad app chiusa, e qui si programma `LibraryWatchWorker`.
  *
@@ -60,6 +64,15 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
         when (call.method) {
             "show" -> {
                 show(
+                    context,
+                    call.argument<String>("key")!!,
+                    call.argument<String>("title")!!,
+                    call.argument<String>("text")!!,
+                )
+                result.success(null)
+            }
+            "invite" -> {
+                invite(
                     context,
                     call.argument<String>("key")!!,
                     call.argument<String>("title")!!,
@@ -109,6 +122,7 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
     companion object {
         const val EXTRA_SERIES = "dev.local.kagami.series"
         private const val CHANNEL_ID = "arrivals"
+        private const val INVITES_ID = "server-invites"
         private const val GROUP = "dev.local.kagami.arrivals"
         private const val NOTIFICATION_ID = 1
 
@@ -125,6 +139,35 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                     },
                 )
             }
+            notify(context, CHANNEL_ID, key, title, text, Notification.CATEGORY_RECOMMENDATION, GROUP)
+        }
+
+        fun invite(context: Context, key: String, title: String, text: String) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        INVITES_ID,
+                        "Server condivisi",
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply {
+                        description = "Qualcuno ti ha dato accesso al suo Kagami Server."
+                    },
+                )
+            }
+            notify(context, INVITES_ID, key, title, text, Notification.CATEGORY_SOCIAL, null)
+        }
+
+        private fun notify(
+            context: Context,
+            channelId: String,
+            key: String,
+            title: String,
+            text: String,
+            category: String,
+            group: String?,
+        ) {
+            val manager = context.getSystemService(NotificationManager::class.java)
             // Il dato rende l'intent diverso per ogni serie: con intent uguali il
             // sistema riuserebbe lo stesso PendingIntent, e ogni notifica
             // aprirebbe la serie dell'ultima.
@@ -140,7 +183,7 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Notification.Builder(context, CHANNEL_ID)
+                Notification.Builder(context, channelId)
             } else {
                 @Suppress("DEPRECATION")
                 Notification.Builder(context)
@@ -151,8 +194,8 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 .setContentText(text)
                 .setContentIntent(tap)
                 .setAutoCancel(true)
-                .setGroup(GROUP)
-                .setCategory(Notification.CATEGORY_RECOMMENDATION)
+                .setGroup(group)
+                .setCategory(category)
                 .build()
             manager.notify(key, NOTIFICATION_ID, notification)
         }

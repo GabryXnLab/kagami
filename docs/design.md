@@ -690,17 +690,59 @@ per tutto il tempo. Chi ha un computer sempre acceso può farlo fare a lui:
 **Kagami Server** (`server/`, guida in [server.md](server.md)) è lo stesso
 motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
 
-- **Collegarlo** è incollare il link che il server stampa
-  (`kagami://server?url=…&key=…`), oppure scriverne indirizzo e chiave.
-  L'app salva il collegamento solo dopo che il server ha risposto con quella
-  chiave. Il collegamento sta fra le impostazioni del database, quindi
-  viaggia con backup e account: su un telefono nuovo il server è già lì.
+- **Crearlo** non chiede niente sul server. Da *Crea il tuo server* l'app
+  fa i passi che mancano — accesso con Google, cartella della libreria su
+  Drive, permesso di scriverci — e ne esce un comando `docker run` solo, con
+  l'immagine pubblicata dal progetto e tutto il resto in `KAGAMI_SETUP`:
+  progetto Firebase, client «Web» del progetto e permesso duraturo del
+  proprietario sul suo Drive. Chi lo incolla su un computer con Docker ha
+  finito; poi scrive nell'app l'indirizzo del computer. Il comando contiene
+  un segreto, e l'app lo dice.
+- **Chi lo usa lo dice l'account Google**, non una chiave: ogni richiesta
+  porta il token d'identità di Firebase, che Firebase rinnova da sé, e il
+  server lo verifica con le chiavi pubbliche di Google. Il server ha un
+  proprietario (quello del comando) e un elenco di account ammessi; gli
+  altri ricevono `403`. Il collegamento salvato è solo l'indirizzo, fra le
+  impostazioni del database: viaggia con backup e account, e su un telefono
+  nuovo il server è già lì, per lo stesso account.
+- **Ognuno sul suo Drive.** Ogni account ha sul server il suo permesso di
+  Drive, la sua cartella, la sua coda e le sue serie in corso: i lavori di
+  uno vanno nella cartella della libreria di quell'account, e nessuno vede
+  la coda di un altro. La cartella è quella che legge l'app; se non ce n'è
+  una, collegando il server la si sceglie prima.
+- **Il permesso duraturo** è un refresh token per il client «Web» del
+  progetto Firebase: Android dà all'app un codice per quel client
+  (`serverAuthCode`) e l'app lo riscatta col segreto del client, che mette
+  chi compila (`GOOGLE_SERVER_CLIENT_SECRET`). Senza, la build non può
+  collegare server e lo dice. Il server rinnova i permessi con lo stesso
+  client, che riceve nel comando. Chi dà il suo Drive al server di un altro
+  si fida di chi lo gestisce, e il foglio lo scrive prima di chiederlo.
+
+### Server e utenti
+
+- **Il proprietario aggiunge gli account dall'app** (*Chi può usarlo*):
+  scrive un indirizzo, il server lo ammette, e l'app scrive un invito su
+  Firestore (`serverInvites`, un documento per server e indirizzo; le
+  regole lo lasciano scrivere solo a nome proprio e leggere solo a mittente
+  e destinatario). Il server non manda email e non conosce Firebase oltre
+  ai token: l'invito serve solo a dire all'altro dov'è il server.
+- **Chi è stato aggiunto lo scopre nell'app**: gli inviti per il suo
+  indirizzo si ascoltano finché l'app è aperta, e ognuno dà una notifica
+  una volta sola (canale «Server condivisi»; gli id già annunciati stanno
+  fra le impostazioni, così un secondo telefono non la ripete). Toccarla
+  apre *Scarica un manga*, dove l'invito è in cima alla sezione Server:
+  collegarlo chiede il permesso sul proprio Drive e la cartella, se manca.
+- **Togliere un account** lo chiude fuori dalla richiesta seguente, ferma il
+  suo lavoro e cancella dal server permesso, coda e serie seguite; ciò che è
+  già sul suo Drive resta. **Scollegare** il server, per chi non è il
+  proprietario, gli fa dimenticare il proprio permesso e la propria coda.
 - **La destinazione «Server»** compare per prima quando il server ha il
-  permesso di Drive e una cartella, e il telefono gli manda il link con le
-  stesse scelte: tutta, dal capitolo, i capitoli scelti, la pausa. Il
-  telefono verifica la serie come sempre, perché mostrarla è suo compito;
-  per ManhwaRead gli manda anche la pagina passata dalla verifica, perché il
-  server non ha un browser.
+  permesso di Drive e una cartella di chi usa l'app, e scarica solo su
+  Drive: il telefono gli manda il link con le stesse scelte (tutta, dal
+  capitolo, i capitoli scelti, la pausa). Il telefono verifica la serie
+  come sempre, perché mostrarla è suo compito; per ManhwaRead gli manda
+  anche la pagina passata dalla verifica, perché il server non ha un
+  browser.
 - **La coda del server** si vede sotto quella del telefono, con avanzamento,
   esiti e serie in corso, e un lavoro si toglie da lì. L'app la chiede ogni
   tre secondi solo mentre la schermata è aperta: niente canale sempre
@@ -709,9 +751,9 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
   quella che legge l'app, la sezione lo dice, e un tocco gli fa usare quella
   dell'app.
 - **In chiaro** va bene solo in casa o dentro Tailscale. Su un `http://`
-  pubblico l'app avvisa che la chiave viaggia leggibile. Il chiaro è
-  permesso a tutta l'app (`usesCleartextTraffic`), perché gli indirizzi sono
-  dell'utente e non si possono elencare.
+  pubblico l'app avvisa che il token dell'account viaggia leggibile. Il
+  chiaro è permesso a tutta l'app (`usesCleartextTraffic`), perché gli
+  indirizzi sono dell'utente e non si possono elencare.
 
 Il server resta un'aggiunta: senza, «Scarica un manga» è quello di prima.
 

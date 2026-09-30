@@ -7,10 +7,42 @@ rules_version = '2';
 // nemmeno i manga: quello che viaggia è la fotografia che l'app esporta come
 // backup, cioè stato, voti, capitoli letti, cronologia, raccolte, segnalibri
 // e impostazioni.
+//
+// Più gli inviti ai Kagami Server: il proprietario di un server ne scrive
+// uno per ogni account che ammette, e l'app di quell'account lo trova.
+// L'accesso al server lo decide il server; l'invito dice solo dov'è.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /readers/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /serverInvites/{id} {
+      function verified() {
+        return request.auth != null && request.auth.token.email_verified == true;
+      }
+
+      function me() {
+        return request.auth.token.email.lower();
+      }
+
+      // Lo legge e lo toglie chi l'ha mandato o chi lo riceve; la ricerca
+      // dell'app è per `to` uguale al proprio indirizzo, e le regole la
+      // lasciano passare solo così.
+      allow read, delete: if verified()
+        && (resource.data.to == me() || resource.data.from == me());
+
+      // Lo scrive solo il mittente, a nome suo, per un indirizzo e un server.
+      allow create, update: if verified()
+        && request.resource.data.from == me()
+        && (resource == null || resource.data.from == me())
+        && request.resource.data.to is string
+        && request.resource.data.to == request.resource.data.to.lower()
+        && request.resource.data.url is string
+        && request.resource.data.url.size() < 512
+        && request.resource.data.serverName is string
+        && request.resource.data.serverName.size() < 128
+        && request.resource.data.keys().hasOnly(['to', 'from', 'fromName', 'url', 'serverName', 'at']);
     }
   }
 }

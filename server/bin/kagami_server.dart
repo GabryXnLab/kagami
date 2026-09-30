@@ -2,45 +2,31 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:kagami_archive/drive.dart';
+import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/stores.dart';
 import 'package:kagami_server/kagami_server.dart';
+import 'package:path/path.dart' as p;
 
-const String usage = '''Kagami Server: scarica le serie al posto del telefono e le carica su Drive.
+const String usage = '''Kagami Server: scarica le serie al posto del telefono e le carica sul Drive di chi le chiede.
 
 Uso: kagami-server [--data <cartella>] <comando>
 
-  serve [--host H] [--port P]     accende il server (default 0.0.0.0:8080)
-  key create <nome> [--url U]     crea una chiave API; con --url stampa anche il link da incollare nell'app
-  key list                        le chiavi, senza il segreto
-  key revoke <id|nome>            toglie una chiave
-  drive login [--client-id I --client-secret S]
-                                  dà al server il permesso di scrivere su Drive
-  drive folder <id|link>          sceglie la cartella di Drive della libreria
-  drive status                    permesso e cartella
-  status                          lavoro in corso, coda, ultimi esiti
+  serve [--host H] [--port P] [--setup S]
+                                  accende il server (default 0.0.0.0:8080); la configurazione
+                                  è --setup o KAGAMI_SETUP, generata dall'app
+  users                           gli account ammessi e chi ha già collegato il suo Drive
+  status                          per ogni account: lavoro in corso, coda, ultimi esiti
   ping [--port P]                 esce con 0 se il server risponde (controllo di salute di Docker)
 
-La cartella dei dati è --data, poi KAGAMI_DATA, poi ~/.local/share/kagami-server.''';
+La cartella dei dati è --data, poi KAGAMI_DATA, poi ~/.local/share/kagami-server.
+Gli account si aggiungono e si tolgono dall'app, nella sezione Server.''';
 
 Future<void> main(List<String> arguments) async {
   final parser = ArgParser()
     ..addOption('data')
     ..addFlag('help', abbr: 'h', negatable: false);
-  parser.addCommand('serve', ArgParser()..addOption('host')..addOption('port'));
-  parser.addCommand(
-    'key',
-    ArgParser()
-      ..addCommand('create', ArgParser()..addOption('url'))
-      ..addCommand('list')
-      ..addCommand('revoke'),
-  );
-  parser.addCommand(
-    'drive',
-    ArgParser()
-      ..addCommand('login', ArgParser()..addOption('client-id')..addOption('client-secret'))
-      ..addCommand('folder')
-      ..addCommand('status'),
-  );
+  parser.addCommand('serve', ArgParser()..addOption('host')..addOption('port')..addOption('setup'));
+  parser.addCommand('users');
   parser.addCommand('status');
   parser.addCommand('ping', ArgParser()..addOption('port'));
 
@@ -60,20 +46,21 @@ Future<void> main(List<String> arguments) async {
     switch (command.name) {
       case 'serve':
         final port = command.option('port');
-        await serve(paths, host: command.option('host'), port: port == null ? null : int.parse(port));
-      case 'key':
-        await keyCommand(paths, command.command);
-      case 'drive':
-        await driveCommand(paths, command.command);
+        await serve(
+          paths,
+          host: command.option('host'),
+          port: port == null ? null : int.parse(port),
+          setup: command.option('setup'),
+        );
+      case 'users':
+        await usersCommand(paths);
       case 'status':
         await statusCommand(paths);
       case 'ping':
         await ping(paths, command.option('port'));
     }
-  } on DriveNotAuthorized catch (error) {
-    fail('$error');
-  } on DriveException catch (error) {
-    fail('Drive: $error');
+  } on FormatException catch (error) {
+    fail(error.message);
   }
 }
 
@@ -82,83 +69,33 @@ Never fail(String message) {
   exit(1);
 }
 
-String rest(ArgResults? command, String what) {
-  final rest = command?.rest ?? const [];
-  if (rest.length != 1) fail('Manca $what.\n\n$usage');
-  return rest.single;
+/// L'elenco letto dai file, senza accendere niente: vale anche col server
+/// acceso in un altro processo.
+Future<(AppliedSetup, List<Member>)> _members(ServerPaths paths) async {
+  final setup = await AppliedSetup.load(paths);
+  if (setup == null) fail('Il server non ha ancora una configurazione: avvialo col comando generato dall\'app.');
+  final accounts = Accounts(paths.users, owner: setup.owner, open: (_) => throw UnsupportedError('solo lettura'));
+  return (setup, await accounts.list());
 }
 
-Future<void> keyCommand(ServerPaths paths, ArgResults? command) async {
-  final keys = ApiKeys(paths.keys);
-  switch (command?.name) {
-    case 'create':
-      final (key, secret) = await keys.create(rest(command, 'il nome della chiave'));
-      stdout.writeln('Chiave «${key.name}» (${key.id}). Copiala adesso, non verrà più mostrata:\n\n  $secret\n');
-      final url = command!.option('url');
-      if (url != null) {
-        stdout.writeln('Da incollare in Kagami → Scarica un manga → Server:\n\n  ${pairingLink(Uri.parse(url), secret)}\n');
-      }
-    case 'list':
-      final all = await keys.list();
-      if (all.isEmpty) stdout.writeln('Nessuna chiave.');
-      for (final key in all) {
-        stdout.writeln('${key.id}  ${key.name}  creata ${_day(key.createdAt)}'
-            '${key.usedAt == null ? ', mai usata' : ', usata ${_day(key.usedAt!)}'}');
-      }
-    case 'revoke':
-      final which = rest(command, 'l\'id o il nome della chiave');
-      if (!await keys.revoke(which)) fail('Nessuna chiave «$which».');
-      stdout.writeln('Chiave «$which» revocata: vale da subito, anche col server acceso.');
-    default:
-      fail(usage);
-  }
-}
-
-String _day(DateTime at) => at.toLocal().toString().substring(0, 16);
-
-Future<void> driveCommand(ServerPaths paths, ArgResults? command) async {
-  var config = await ServerConfig.load(paths);
-  switch (command?.name) {
-    case 'login':
-      final env = Platform.environment;
-      final id = command!.option('client-id') ?? environment(env, 'KAGAMI_GOOGLE_CLIENT_ID') ?? config.clientId;
-      final secret =
-          command.option('client-secret') ?? environment(env, 'KAGAMI_GOOGLE_CLIENT_SECRET') ?? config.clientSecret;
-      if (id == null || secret == null) {
-        fail('Serve il client OAuth «Desktop» di Google: --client-id e --client-secret '
-            '(o KAGAMI_GOOGLE_CLIENT_ID e KAGAMI_GOOGLE_CLIENT_SECRET). Come crearlo: docs/server.md.');
-      }
-      final client = GoogleClient(id, secret);
-      final refresh = await loginFromTerminal(
-        client,
-        lines: stdin.transform(utf8.decoder).transform(const LineSplitter()),
-        say: stdout.writeln,
-      );
-      config = config.copyWith(clientId: id, clientSecret: secret);
-      await config.save(paths);
-      await DriveTokens(paths.driveToken, client).save(refresh);
-      stdout.writeln('Fatto: il server può scrivere su Drive.'
-          '${config.folderId == null ? ' Ora scegli la cartella: kagami-server drive folder <link>.' : ''}');
-    case 'folder':
-      final drive = ServerDrive(paths, config);
-      try {
-        final item = await drive.choose(folderIdFrom(rest(command, 'la cartella (id o link)')));
-        stdout.writeln('Cartella della libreria: «${item.name}» (${item.id}).');
-      } finally {
-        drive.client.close();
-      }
-    case 'status':
-      final drive = ServerDrive(paths, config);
-      final reason = await drive.blocked();
-      stdout.writeln(reason ?? 'Pronto: cartella «${config.folderName}» (${config.folderId}).');
-      drive.client.close();
-    default:
-      fail(usage);
+Future<void> usersCommand(ServerPaths paths) async {
+  final (_, members) = await _members(paths);
+  for (final member in members) {
+    final drive = await readJsonFile(File(p.join(paths.user(member.email).path, 'drive.json')));
+    stdout.writeln('${member.email}${member.owner ? ' (proprietario)' : ''}'
+        ' · ${drive?['refreshToken'] == null ? 'Drive non collegato' : 'Drive: ${drive?['folderName'] ?? drive?['folderId']}'}');
   }
 }
 
 Future<void> statusCommand(ServerPaths paths) async {
-  final files = paths.files;
+  final (_, members) = await _members(paths);
+  for (final member in members) {
+    stdout.writeln('== ${member.email}');
+    await _status(ArchiveFiles(paths.user(member.email).path));
+  }
+}
+
+Future<void> _status(ArchiveFiles files) async {
   final status = await files.status();
   stdout.writeln('Stato: ${status.state.name}${status.title.isEmpty ? '' : ' · ${status.title}'}'
       '${status.total == 0 ? '' : ' · ${status.done}/${status.total} capitoli'}'
@@ -173,7 +110,7 @@ Future<void> statusCommand(ServerPaths paths) async {
   }
 }
 
-/// `GET /` sul server di questa macchina: l'unica risposta senza chiave.
+/// `GET /` sul server di questa macchina: l'unica risposta senza token.
 Future<void> ping(ServerPaths paths, String? port) async {
   final config = (await ServerConfig.load(paths)).withEnvironment(Platform.environment);
   final http = HttpClient()..connectionTimeout = const Duration(seconds: 3);

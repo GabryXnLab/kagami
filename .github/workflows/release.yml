@@ -57,6 +57,7 @@ jobs:
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      GOOGLE_SERVER_CLIENT_SECRET: ${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
 
   publish:
     name: Pubblica

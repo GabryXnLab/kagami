@@ -13,6 +13,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/notifications.dart';
 import '../providers.dart';
+import 'archive_screen.dart';
 import 'collections_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
@@ -55,10 +56,15 @@ class _AppShellState extends ConsumerState<AppShell>
     super.dispose();
   }
 
-  /// Il tocco su una notifica porta alla scheda della serie. Con l'app appena
-  /// avviata la libreria non è ancora letta: la si aspetta, altrimenti la
-  /// scheda direbbe che la serie non c'è.
+  /// Il tocco su una notifica porta alla scheda della serie, o per un
+  /// invito a un server dove lo si collega. Con l'app appena avviata la
+  /// libreria non è ancora letta: la si aspetta, altrimenti la scheda
+  /// direbbe che la serie non c'è.
   Future<void> _openFromNotification(String key) async {
+    if (key.startsWith(serverInvitePrefix)) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchiveScreen()));
+      return;
+    }
     await ref.read(libraryIndexProvider.future);
     if (!mounted || ref.read(seriesEntryProvider(key)) == null) return;
     openSeries(context, key);
@@ -100,6 +106,17 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
+    // Gli inviti ai server degli altri arrivano mentre l'app è aperta, da
+    // qualunque schermata.
+    ref.listen(serverInvitesProvider, (_, next) {
+      final invites = next.value;
+      if (invites == null || invites.isEmpty) return;
+      unawaited(announceServerInvites(
+        ref.read(userRepositoryProvider),
+        invites,
+        linked: ref.read(serverLinkProvider).value?.url.toString(),
+      ));
+    });
     if (ref.watch(libraryProvider) == null) {
       // La cartella di Drive sta nel database e arriva un istante dopo: senza
       // aspettarla, chi legge solo da Drive vedrebbe lampeggiare il primo

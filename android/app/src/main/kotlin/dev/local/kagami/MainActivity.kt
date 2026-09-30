@@ -36,6 +36,16 @@ class MainActivity : FlutterActivity() {
                     result.success(false)
                 }
             }
+        // Il client «Web» del progetto Firebase, per cui Google dà il codice
+        // del server: il plugin Gradle di Google lo scrive fra le risorse da
+        // google-services.json, e senza quel file non c'è.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kagami/google")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "webClientId") return@setMethodCallHandler result.notImplemented()
+                @Suppress("DiscouragedApi")
+                val id = resources.getIdentifier("default_web_client_id", "string", packageName)
+                result.success(if (id == 0) null else getString(id))
+            }
     }
 
     override fun onNewIntent(intent: Intent) {

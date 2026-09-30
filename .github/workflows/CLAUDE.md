@@ -10,6 +10,7 @@ dipendere da nessun altro repo.
 | :--- | :--- | :--- |
 | `check` | push su `main`, PR, a mano | `.g.dart` allineati allo schema, `flutter analyze`, `flutter test`, `dart analyze` e `dart test` di `packages/kagami_archive` e `server` |
 | `server-image` | idem | `docker build --target test`: i test del server con libvips |
+| `server-publish`, `server-manifest` | push su `main` del **pubblico** | l'immagine del server su GHCR, `ghcr.io/<owner>/kagami-server:latest` e `:sha-<7>`, amd64 e arm64 |
 | `android` | a mano, e chiamato da `release.yml` | APK (release di default, `build_mode` a mano; `split_per_abi` per uno per architettura), artefatto del run |
 
 In un repo privato (il manutentore, un fork chiuso) `check` e `server-image` partono
@@ -36,6 +37,20 @@ Valgono per `ci.yml` e per `build.yml`.
 | `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
+| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega Kagami Server | il segreto del client «Web» del progetto Firebase, con cui l'app riscatta il permesso di Drive per il server (`docs/server.md`) |
+
+### L'immagine del server
+
+È quella del comando che l'app genera (`serverImage` in
+`lib/src/data/server_access.dart`), quindi va pubblicata da chi distribuisce
+l'app: `server-publish` la costruisce per architettura sul runner nativo
+(`ubuntu-24.04-arm` per arm64: Dart sotto QEMU è lento e a volte si pianta) e
+la spinge per impronta, `server-manifest` riunisce le due impronte sotto
+`latest` e `sha-<7>`. Parte solo da un push su `main` di un repo pubblico, dopo
+che `check` e `server-image` sono passati; il pacchetto su GHCR va reso pubblico
+una volta a mano (*Package settings → Change visibility*), altrimenti `docker
+run` chiede un accesso. L'immagine non contiene niente di personale: tutto
+arriva da `KAGAMI_SETUP`.
 
 ## `build.yml` (**Build**): gli APK e l'IPA di ogni merge
 
@@ -66,7 +81,7 @@ plugin passano da Swift Package Manager, già integrato nel progetto Xcode: nien
 e questo workflow esiste perché la build non dipenda da lui. Per questo non ha
 nemmeno gli input `runner`, `max_workers` e `clear_cache` degli altri wrapper.
 
-`SENTRY_DSN` arriva al reusable come `DART_DEFINES: SENTRY_DSN=…`: nel blocco `with:`
+`SENTRY_DSN` e `GOOGLE_SERVER_CLIENT_SECRET` arrivano al reusable come `DART_DEFINES` (separati da uno spazio): nel blocco `with:`
 di un reusable i secret non si possono usare. Telegram: senza i secret
 `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` (un fork, o questo repo se non li ha) la
 notifica non parte e il run non avvisa.

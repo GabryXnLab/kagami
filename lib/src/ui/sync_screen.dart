@@ -8,10 +8,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/drive.dart';
 import '../data/folder_sync.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
 import 'theme.dart';
@@ -19,15 +21,18 @@ import 'widgets/kit.dart';
 
 /// Come la si riassume in una riga, fra le impostazioni.
 String folderSyncSummary(SyncSettings settings) {
+  final l10n = currentL10n();
   final direction = settings.direction;
-  if (direction == null) return 'Spenta';
+  if (direction == null) return l10n.syncSummaryOff;
   final what = switch (direction) {
-    SyncDirection.download => 'Da Drive al telefono',
-    SyncDirection.upload => 'Dal telefono a Drive',
-    SyncDirection.both => 'In entrambe le direzioni',
+    SyncDirection.download => l10n.syncSummaryDownload,
+    SyncDirection.upload => l10n.syncSummaryUpload,
+    SyncDirection.both => l10n.syncSummaryBoth,
   };
   final minutes = settings.scheduleMinutes;
-  return minutes == null ? '$what, a mano' : '$what, ogni giorno alle ${clockOf(minutes)}';
+  return minutes == null
+      ? l10n.syncSummaryManual(what)
+      : l10n.syncSummaryDaily(what, clockOf(minutes));
 }
 
 String clockOf(int minutes) =>
@@ -43,52 +48,55 @@ class SyncScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final settings = ref.watch(folderSyncSettingsProvider).value;
     final root = ref.watch(libraryRootProvider);
     final folder = ref.watch(driveFolderProvider).value;
     final notifier = ref.read(folderSyncSettingsProvider.notifier);
     if (settings == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Sincronizzazione')));
+      return Scaffold(appBar: AppBar(title: Text(l10n.syncTitle)));
     }
     final direction = settings.direction;
     final muted = context.tokens.muted;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sincronizzazione')),
+      appBar: AppBar(title: Text(l10n.syncTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
           Text(
-            'Tiene uguali la cartella dei manga sul telefono e quella su '
-            'Drive, senza FolderSync. Se lo usi ancora su questa cartella, '
-            'spegnilo: due sincronizzazioni sugli stessi file si pestano i '
-            'piedi.',
+            l10n.syncIntro,
             style: KagamiType.body(13, height: 1.5, color: muted),
           ),
           const SizedBox(height: 22),
-          const KSection('Cartelle'),
+          KSection(l10n.syncFolders),
           KGroup(
             children: [
               KTile(
                 icon: LucideIcons.smartphone,
-                title: 'Sul telefono',
-                subtitle: root ?? 'Nessuna cartella scelta',
+                title: l10n.syncOnPhone,
+                subtitle: root ?? l10n.syncNoFolderChosen,
                 trailing: const Icon(LucideIcons.chevronRight, size: 18),
                 onTap: () => _chooseRoot(ref),
               ),
               KTile(
                 icon: LucideIcons.cloud,
-                title: 'Su Drive',
-                subtitle: folder?.name ?? 'Drive non è collegato',
+                title: l10n.syncOnDrive,
+                subtitle: folder?.name ?? l10n.syncDriveNotConnected,
                 trailing: const Icon(LucideIcons.chevronRight, size: 18),
                 onTap: () => connectDrive(context, ref),
               ),
             ],
           ),
           const SizedBox(height: 26),
-          const KSection('Direzione'),
+          KSection(l10n.syncDirection),
           KSegmented(
-            options: const ['Spenta', 'Da Drive', 'Verso Drive', 'Entrambe'],
+            options: [
+              l10n.syncDirectionOff,
+              l10n.syncDirectionFromDrive,
+              l10n.syncDirectionToDrive,
+              l10n.syncDirectionBoth,
+            ],
             icons: const [
               LucideIcons.power,
               LucideIcons.cloudDownload,
@@ -105,17 +113,10 @@ class SyncScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             switch (direction) {
-              null => 'Niente si muove da solo. La libreria di Drive si legge '
-                  'lo stesso, e «Scarica» funziona come sempre.',
-              SyncDirection.download => 'Quello che arriva su Drive scende '
-                  'sul telefono. Dal telefono non sale niente.',
-              SyncDirection.upload => 'Quello che c\'è sul telefono sale su '
-                  'Drive — per esempio le copie dei dati in reading/backup. '
-                  'Gli indici della libreria restano quelli del server.',
-              SyncDirection.both => 'Quello che cambia da una parte arriva '
-                  'dall\'altra; se è cambiato da tutt\'e due, vince il più '
-                  'recente. Gli indici della libreria scendono e basta: sono '
-                  'del server.',
+              null => l10n.syncDescOff,
+              SyncDirection.download => l10n.syncDescDownload,
+              SyncDirection.upload => l10n.syncDescUpload,
+              SyncDirection.both => l10n.syncDescBoth,
             },
             style: KagamiType.body(13, height: 1.5, color: muted),
           ),
@@ -125,14 +126,11 @@ class SyncScreen extends ConsumerWidget {
               children: [
                 KTile(
                   icon: LucideIcons.trash2,
-                  title: 'Propaga le cancellazioni',
+                  title: l10n.syncDeletions,
                   subtitle: switch (direction) {
-                    SyncDirection.download => 'Toglie dal telefono ciò che '
-                        'sparisce da Drive',
-                    SyncDirection.upload => 'Sposta nel cestino di Drive ciò '
-                        'che togli dal telefono',
-                    SyncDirection.both => 'Da una parte all\'altra; da Drive '
-                        'solo nel cestino',
+                    SyncDirection.download => l10n.syncDeletionsDownload,
+                    SyncDirection.upload => l10n.syncDeletionsUpload,
+                    SyncDirection.both => l10n.syncDeletionsBoth,
                   },
                   onTap: () => notifier.change(
                     (current) => current.copyWith(deletions: !current.deletions),
@@ -149,24 +147,20 @@ class SyncScreen extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(
               settings.deletions
-                  ? '«Libera spazio» toglie i capitoli letti anche da Drive, '
-                      'al giro seguente.'
-                  : 'Un file tolto da una parte resta dall\'altra e non '
-                      'torna indietro: «Libera spazio» libera il telefono e '
-                      'lascia i capitoli su Drive.',
+                  ? l10n.syncDeletionsOnNote
+                  : l10n.syncDeletionsOffNote,
               style: KagamiType.body(12.5, height: 1.45, color: muted),
             ),
             const SizedBox(height: 26),
-            const KSection('Ogni giorno'),
+            KSection(l10n.syncDaily),
             KGroup(
               children: [
                 KTile(
                   icon: LucideIcons.clock,
-                  title: 'Sincronizzazione programmata',
+                  title: l10n.syncScheduled,
                   subtitle: settings.scheduleMinutes == null
-                      ? 'Solo a mano'
-                      : 'Alle ${clockOf(settings.scheduleMinutes!)}, anche ad '
-                          'app chiusa',
+                      ? l10n.syncManualOnly
+                      : l10n.syncAtTime(clockOf(settings.scheduleMinutes!)),
                   onTap: () => _toggleSchedule(ref, settings),
                   trailing: Switch(
                     value: settings.scheduleMinutes != null,
@@ -176,17 +170,17 @@ class SyncScreen extends ConsumerWidget {
                 if (settings.scheduleMinutes != null) ...[
                   KTile(
                     icon: LucideIcons.alarmClock,
-                    title: 'Ora',
+                    title: l10n.syncTime,
                     subtitle: clockOf(settings.scheduleMinutes!),
                     trailing: const Icon(LucideIcons.chevronRight, size: 18),
                     onTap: () => _chooseTime(context, ref, settings),
                   ),
                   KTile(
                     icon: LucideIcons.wifi,
-                    title: 'Solo con Wi-Fi',
+                    title: l10n.syncWifiOnly,
                     subtitle: settings.wifiOnly
-                        ? 'Aspetta una rete che non si paga a consumo'
-                        : 'Anche con i dati mobili',
+                        ? l10n.syncWifiOnlyOn
+                        : l10n.syncWifiOnlyOff,
                     onTap: () => notifier.change(
                       (current) => current.copyWith(wifiOnly: !current.wifiOnly),
                     ),
@@ -203,13 +197,12 @@ class SyncScreen extends ConsumerWidget {
             if (settings.scheduleMinutes != null) ...[
               const SizedBox(height: 10),
               Text(
-                'Android decide il momento esatto: se all\'ora scelta manca '
-                'la rete, il giro parte appena torna.',
+                l10n.syncScheduleNote,
                 style: KagamiType.body(12.5, height: 1.45, color: muted),
               ),
             ],
             const SizedBox(height: 26),
-            const KSection('Adesso'),
+            KSection(l10n.syncNow),
             _RunNow(ready: settings.ready),
           ],
         ],
@@ -267,7 +260,7 @@ class SyncScreen extends ConsumerWidget {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
-      helpText: 'Ora della sincronizzazione',
+      helpText: context.l10n.syncTimePickerHelp,
     );
     if (picked == null) return;
     await ref.read(folderSyncSettingsProvider.notifier).change(
@@ -290,15 +283,16 @@ class _RunNow extends ConsumerWidget {
     final progress = status.progress;
     final last = status.last;
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     return KGroup(
       children: [
         if (progress == null)
           KTile(
             icon: LucideIcons.refreshCw,
-            title: 'Sincronizza adesso',
+            title: l10n.syncRunNow,
             subtitle: ready
-                ? 'Si può continuare a leggere: le copie vanno avanti da sole'
-                : 'Servono la cartella del telefono e quella di Drive',
+                ? l10n.syncRunNowReady
+                : l10n.syncRunNowNotReady,
             onTap: ready ? notifier.run : null,
           )
         else
@@ -312,11 +306,14 @@ class _RunNow extends ConsumerWidget {
                     children: [
                       Text(
                         switch (progress.phase) {
-                          SyncPhase.listing => 'Guardo cosa c\'è su Drive…',
-                          SyncPhase.comparing => 'Confronto con il telefono…',
+                          SyncPhase.listing => l10n.syncPhaseListing,
+                          SyncPhase.comparing => l10n.syncPhaseComparing,
                           SyncPhase.transferring => progress.total == 0
-                              ? 'Niente da copiare'
-                              : 'File ${progress.done} di ${progress.total}',
+                              ? l10n.syncPhaseNothing
+                              : l10n.syncPhaseFiles(
+                                  progress.done,
+                                  progress.total,
+                                ),
                         },
                         style: KagamiType.body(14, weight: 600),
                       ),
@@ -328,7 +325,7 @@ class _RunNow extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Interrompi',
+                  tooltip: l10n.syncStop,
                   icon: const Icon(LucideIcons.x, size: 18),
                   onPressed: notifier.cancel,
                 ),
@@ -346,40 +343,44 @@ class _RunNow extends ConsumerWidget {
                 ? LucideIcons.circleCheck
                 : LucideIcons.triangleAlert,
             tint: last.error == null ? null : context.tokens.danger,
-            title: _when(last),
-            subtitle: _outcome(last),
+            title: _when(l10n, last),
+            subtitle: _outcome(l10n, last),
           )
         else if (progress == null)
           KTile(
             icon: LucideIcons.history,
-            title: 'Mai sincronizzata',
-            subtitle: 'Il primo giro su una cartella già piena è veloce: i '
-                'file uguali si riconoscono dalla misura',
+            title: l10n.syncNever,
+            subtitle: l10n.syncNeverNote,
             tint: muted,
           ),
       ],
     );
   }
 
-  static String _when(SyncReport report) {
+  static String _when(AppLocalizations l10n, SyncReport report) {
     final local = report.at.toLocal();
-    final how = report.scheduled ? 'programmata' : 'a mano';
-    return 'Ultima, $how: ${local.day}/${local.month} alle '
-        '${clockOf(local.hour * 60 + local.minute)}';
+    final date = DateFormat.Md(l10n.localeName).format(local);
+    final time = clockOf(local.hour * 60 + local.minute);
+    return report.scheduled
+        ? l10n.syncLastScheduled(date, time)
+        : l10n.syncLastManual(date, time);
   }
 
-  static String _outcome(SyncReport report) {
+  static String _outcome(AppLocalizations l10n, SyncReport report) {
     final parts = [
-      if (report.downloaded > 0) '${report.downloaded} scaricati',
-      if (report.uploaded > 0) '${report.uploaded} caricati',
-      if (report.deletedLocal > 0) '${report.deletedLocal} tolti dal telefono',
-      if (report.trashed > 0) '${report.trashed} nel cestino di Drive',
-      if (report.failed > 0) '${report.failed} non riusciti, si riprovano',
+      if (report.downloaded > 0) l10n.syncOutcomeDownloaded(report.downloaded),
+      if (report.uploaded > 0) l10n.syncOutcomeUploaded(report.uploaded),
+      if (report.deletedLocal > 0)
+        l10n.syncOutcomeDeletedLocal(report.deletedLocal),
+      if (report.trashed > 0) l10n.syncOutcomeTrashed(report.trashed),
+      if (report.failed > 0) l10n.syncOutcomeFailed(report.failed),
     ];
     final error = report.error;
     if (error != null) {
-      return parts.isEmpty ? error : '$error. Fin lì: ${parts.join(', ')}';
+      return parts.isEmpty
+          ? error
+          : l10n.syncOutcomeErrorSoFar(error, parts.join(', '));
     }
-    return parts.isEmpty ? 'Era già tutto allineato' : parts.join(', ');
+    return parts.isEmpty ? l10n.syncOutcomeAligned : parts.join(', ');
   }
 }

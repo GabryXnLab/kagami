@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/library_view.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 import 'series_screen.dart';
@@ -156,6 +157,7 @@ class _SeriesRow extends StatelessWidget {
     final scheme = context.colors;
     final muted = context.tokens.muted;
     final entry = signals.entry;
+    final l10n = context.l10n;
     final people = signals.people.take(2).join(', ');
     final width = detailed ? 54.0 : 40.0;
     return Padding(
@@ -215,9 +217,9 @@ class _SeriesRow extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       [
-                        '${entry.archivedChapterCount} cap.',
+                        l10n.libraryRowChapters(entry.archivedChapterCount),
                         if (signals.hasUnread)
-                          '${signals.unreadCount} da leggere',
+                          l10n.libraryRowUnread(signals.unreadCount),
                         if (detailed && people.isNotEmpty) people,
                         if (detailed) releaseLabels[entry.releaseStatus]!,
                       ].join(' · '),
@@ -280,6 +282,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final display =
         ref.watch(libraryDisplayProvider).value ?? LibraryDisplay.comfortable;
     final selection = ref.watch(selectionProvider);
+    final l10n = context.l10n;
 
     if (library == null) return const SizedBox.shrink();
 
@@ -307,17 +310,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       ? KEmpty(
                           icon: LucideIcons.searchX,
                           title: filter.isFiltering || filter.auto != null
-                              ? 'Nessuna corrispondenza'
-                              : 'Libreria vuota',
+                              ? l10n.libraryNoMatchTitle
+                              : l10n.libraryEmptyTitle,
                           message: filter.isFiltering || filter.auto != null
-                              ? 'Nessuna serie passa la ricerca e i filtri '
-                                  'scelti.'
-                              : 'La libreria non contiene serie. Se dovrebbe, '
-                                  'controllare la sincronizzazione della '
-                                  'cartella.',
+                              ? l10n.libraryNoMatchMessage
+                              : l10n.libraryEmptyMessage,
                           action: filter.isFiltering || filter.auto != null
                               ? KGhostButton(
-                                  label: 'Azzera i filtri',
+                                  label: l10n.libraryClearFilters,
                                   icon: LucideIcons.eraser,
                                   onPressed: ref
                                       .read(libraryFilterProvider.notifier)
@@ -380,7 +380,7 @@ class _Title extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('Libreria', style: KagamiType.display(30)),
+            Text(context.l10n.libraryTitle, style: KagamiType.display(30)),
             const SizedBox(width: 10),
             Padding(
               padding: const EdgeInsets.only(bottom: 5),
@@ -409,13 +409,13 @@ class _SelectionBar extends ConsumerWidget {
         child: Row(
           children: [
             IconButton(
-              tooltip: 'Annulla selezione',
+              tooltip: context.l10n.libraryCancelSelection,
               onPressed: ref.read(selectionProvider.notifier).clear,
               icon: const Icon(LucideIcons.x),
             ),
             Expanded(
               child: Text(
-                '$count selezionate',
+                context.l10n.librarySelectedCount(count),
                 style: KagamiType.title(15, weight: 700),
               ),
             ),
@@ -425,7 +425,11 @@ class _SelectionBar extends ConsumerWidget {
                         .read(visibleLibraryProvider)
                         .map((signals) => signals.entry.key),
                   ),
-              child: Text(count == total ? 'Tutte ($total)' : 'Tutte'),
+              child: Text(
+                count == total
+                    ? context.l10n.libraryAllWithCount(total)
+                    : context.l10n.libraryAll,
+              ),
             ),
           ],
         ),
@@ -441,7 +445,9 @@ class _SelectionActions extends ConsumerWidget {
   final Set<String> keys;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Container(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return Container(
         color: context.colors.surfaceContainer,
         child: SafeArea(
           top: false,
@@ -451,22 +457,22 @@ class _SelectionActions extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 IconButton(
-                  tooltip: 'Segna tutto letto',
+                  tooltip: l10n.libraryMarkAllRead,
                   onPressed: () => _markAll(context, ref, true),
                   icon: const Icon(LucideIcons.checkCheck),
                 ),
                 IconButton(
-                  tooltip: 'Segna tutto da leggere',
+                  tooltip: l10n.libraryMarkAllUnread,
                   onPressed: () => _markAll(context, ref, false),
                   icon: const Icon(LucideIcons.undo2),
                 ),
                 IconButton(
-                  tooltip: 'Stato',
+                  tooltip: l10n.libraryStatus,
                   onPressed: () => _pickStatus(context, ref),
                   icon: const Icon(LucideIcons.bookmark),
                 ),
                 IconButton(
-                  tooltip: 'Preferiti',
+                  tooltip: l10n.libraryFavorites,
                   onPressed: () {
                     final reading = ref.read(readingProvider.notifier);
                     final data = ref.read(readingProvider).value;
@@ -480,7 +486,7 @@ class _SelectionActions extends ConsumerWidget {
                   icon: const Icon(LucideIcons.heart),
                 ),
                 IconButton(
-                  tooltip: 'Aggiungi a una raccolta',
+                  tooltip: l10n.libraryAddToCollection,
                   onPressed: () => showCollectionSheet(context, keys.toList()),
                   icon: const Icon(LucideIcons.listPlus),
                 ),
@@ -489,11 +495,12 @@ class _SelectionActions extends ConsumerWidget {
           ),
         ),
       );
+  }
 
   Future<void> _pickStatus(BuildContext context, WidgetRef ref) async {
     final status = await showKagamiSheet<ShelfStatus>(
       context,
-      title: 'Stato di ${keys.length} serie',
+      title: context.l10n.libraryStatusOfSeries(keys.length),
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
         child: Column(
@@ -543,8 +550,8 @@ class _SelectionActions extends ConsumerWidget {
       SnackBar(
         content: Text(
           read
-              ? '$touched serie segnate come lette'
-              : '$touched serie tornate da leggere',
+              ? currentL10n().libraryMarkedRead(touched)
+              : currentL10n().libraryMarkedUnread(touched),
         ),
       ),
     );
@@ -661,7 +668,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
               onChanged: notifier.setQuery,
               decoration: InputDecoration(
                 isDense: true,
-                hintText: 'Titolo, autore, tag:…',
+                hintText: context.l10n.librarySearchHint,
                 prefixIcon: const Icon(LucideIcons.search, size: 18),
                 suffixIcon: filter.query.isEmpty
                     ? null
@@ -678,7 +685,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
           const SizedBox(width: 8),
           KIconAction(
             icon: display.isGrid ? LucideIcons.layoutGrid : LucideIcons.list,
-            tooltip: 'Disposizione',
+            tooltip: context.l10n.libraryLayout,
             onPressed: () => _showDisplay(context, display),
           ),
           const SizedBox(width: 8),
@@ -687,7 +694,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
             label: Text('${filter.activeCount}'),
             child: KIconAction(
               icon: LucideIcons.slidersHorizontal,
-              tooltip: 'Filtri e ordinamento',
+              tooltip: context.l10n.libraryFiltersAndSort,
               active: filter.activeCount > 0,
               onPressed: () => _showFilters(context),
             ),
@@ -700,7 +707,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   void _showDisplay(BuildContext context, LibraryDisplay current) =>
       showKagamiSheet<void>(
         context,
-        title: 'Disposizione',
+        title: context.l10n.libraryLayout,
         builder: (context) => Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
           child: Column(
@@ -728,7 +735,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
 
   void _showFilters(BuildContext context) => showKagamiSheet<void>(
         context,
-        title: 'Filtri e ordinamento',
+        title: context.l10n.libraryFiltersAndSort,
         scrollable: true,
         action: Consumer(
           builder: (context, ref, _) =>
@@ -736,7 +743,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                   ? const SizedBox.shrink()
                   : TextButton(
                       onPressed: ref.read(libraryFilterProvider.notifier).clear,
-                      child: const Text('Azzera'),
+                      child: Text(context.l10n.libraryReset),
                     ),
         ),
         builder: (context) => const _FilterSheet(),
@@ -759,7 +766,7 @@ class _ShelfStrip extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           KChip(
-            label: 'Tutte (${all.length})',
+            label: context.l10n.libraryAllWithCount(all.length),
             active: filter.auto == null && filter.collectionId == null,
             onTap: () => notifier.showAuto(null),
           ),
@@ -791,13 +798,14 @@ class _FilterSheet extends ConsumerWidget {
     final filter = ref.watch(libraryFilterProvider);
     final notifier = ref.read(libraryFilterProvider.notifier);
     final facets = ref.watch(libraryFacetsProvider);
+    final l10n = context.l10n;
 
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.7,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
-          const KSection('Ordina'),
+          KSection(l10n.librarySortSection),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -818,12 +826,12 @@ class _FilterSheet extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 22),
-          const KSection('Mostra solo'),
+          KSection(l10n.libraryShowOnly),
           KGroup(
             children: [
               KTile(
                 icon: LucideIcons.bookOpen,
-                title: 'Con capitoli da leggere',
+                title: l10n.libraryOnlyUnread,
                 onTap: () => notifier.setOnlyUnread(!filter.onlyUnread),
                 trailing: Switch(
                   value: filter.onlyUnread,
@@ -832,7 +840,7 @@ class _FilterSheet extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.play,
-                title: 'Iniziate',
+                title: l10n.libraryOnlyStarted,
                 onTap: () => notifier.setOnlyStarted(!filter.onlyStarted),
                 trailing: Switch(
                   value: filter.onlyStarted,
@@ -841,7 +849,7 @@ class _FilterSheet extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.sparkles,
-                title: 'Con capitoli nuovi',
+                title: l10n.libraryOnlyNew,
                 onTap: () => notifier.setOnlyNew(!filter.onlyNew),
                 trailing: Switch(
                   value: filter.onlyNew,
@@ -850,7 +858,7 @@ class _FilterSheet extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.heart,
-                title: 'Preferite',
+                title: l10n.libraryOnlyFavorite,
                 onTap: () => notifier.setOnlyFavorite(!filter.onlyFavorite),
                 trailing: Switch(
                   value: filter.onlyFavorite,
@@ -860,7 +868,7 @@ class _FilterSheet extends ConsumerWidget {
             ],
           ),
           _FilterGroup(
-            title: 'Voto almeno',
+            title: l10n.libraryMinRating,
             children: [
               for (final value in const [6, 7, 8, 9, 10])
                 KChip(
@@ -872,7 +880,7 @@ class _FilterSheet extends ConsumerWidget {
             ],
           ),
           _FilterGroup(
-            title: 'Stato',
+            title: l10n.libraryStatus,
             children: [
               for (final status in ShelfStatus.values)
                 KChip(
@@ -883,7 +891,7 @@ class _FilterSheet extends ConsumerWidget {
             ],
           ),
           _FilterGroup(
-            title: 'Pubblicazione',
+            title: l10n.libraryRelease,
             children: [
               for (final status in releaseLabels.keys)
                 KChip(
@@ -895,22 +903,22 @@ class _FilterSheet extends ConsumerWidget {
           ),
           if (facets.genres.isNotEmpty)
             _TriGroup(
-              title: 'Generi',
-              hint: 'Un tocco richiede, due escludono',
+              title: l10n.libraryGenres,
+              hint: l10n.libraryTriHint,
               values: facets.genres,
               filter: filter.genres,
               onToggle: notifier.toggleGenre,
             ),
           if (facets.tags.isNotEmpty)
             _TriGroup(
-              title: 'Tag',
+              title: l10n.libraryTags,
               values: facets.tags,
               filter: filter.tags,
               onToggle: notifier.toggleTag,
             ),
           if (facets.authors.isNotEmpty)
             _TriGroup(
-              title: 'Autori',
+              title: l10n.libraryAuthors,
               values: facets.authors,
               filter: filter.authors,
               onToggle: notifier.toggleAuthor,

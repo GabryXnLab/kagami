@@ -19,6 +19,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/model.dart';
+import '../l10n.dart';
 import 'theme.dart';
 
 class BrowserPass {
@@ -39,12 +40,15 @@ const int _maxHtml = 8000000;
 const String _chapters =
     "!!document.querySelector('#chaptersList, #groupChapterList, .chapters-list, li.wp-manga-chapter')";
 
+/// Che cosa l'utente vedrà comparire a verifica superata.
+enum BrowserWaiting { chapters, search }
+
 class BrowserCheckPage extends StatefulWidget {
   const BrowserCheckPage({
     required this.url,
     required this.hosts,
     this.ready = _chapters,
-    this.waitingFor = 'l\'elenco dei capitoli',
+    this.waitingFor = BrowserWaiting.chapters,
     super.key,
   });
 
@@ -57,14 +61,14 @@ class BrowserCheckPage extends StatefulWidget {
   final String ready;
 
   /// Che cosa l'utente vedrà comparire a verifica superata.
-  final String waitingFor;
+  final BrowserWaiting waitingFor;
 
   static Future<BrowserPass?> open(
     BuildContext context,
     String url,
     List<String> hosts, {
     String ready = _chapters,
-    String waitingFor = 'l\'elenco dei capitoli',
+    BrowserWaiting waitingFor = BrowserWaiting.chapters,
   }) =>
       Navigator.of(context).push<BrowserPass>(
         MaterialPageRoute(
@@ -162,9 +166,10 @@ class _BrowserCheckPageState extends State<BrowserCheckPage> {
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verifica del sito'),
+        title: Text(l10n.browserTitle),
         bottom: _progress > 0 && _progress < 100
             ? PreferredSize(
                 preferredSize: const Size.fromHeight(2),
@@ -178,10 +183,11 @@ class _BrowserCheckPageState extends State<BrowserCheckPage> {
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
             child: Text(
               controller == null
-                  ? 'La verifica si fa solo dal telefono.'
-                  : 'Il sito vuole sapere che sei una persona. Completa la '
-                      'verifica: quando compare ${widget.waitingFor}, Kagami '
-                      'se ne accorge e torna indietro da sola.',
+                  ? l10n.browserPhoneOnly
+                  : switch (widget.waitingFor) {
+                      BrowserWaiting.chapters => l10n.browserInstructionsChapters,
+                      BrowserWaiting.search => l10n.browserInstructionsSearch,
+                    },
               style: KagamiType.body(13, height: 1.45, color: context.tokens.muted),
             ),
           ),
@@ -233,7 +239,7 @@ class BrowserFetcher implements ProviderHttp {
 
   @override
   Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
-    if (!available) throw const ProviderError('Su questo sito si cerca solo dal telefono.');
+    if (!available) throw ProviderError(currentL10n().browserSearchPhoneOnly);
     final mine = ++_generation;
     // Il segno resta sulla pagina vecchia: finché c'è, la nuova non è arrivata.
     await _run('window.kagamiOld = true');
@@ -242,14 +248,14 @@ class BrowserFetcher implements ProviderHttp {
     // chiede un tocco non si risolve qui.
     for (var i = 0; i < 40; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
-      if (mine != _generation) throw const ProviderError('Superata da una ricerca più recente.');
+      if (mine != _generation) throw ProviderError(currentL10n().browserSearchSuperseded);
       if (await _run("!window.kagamiOld && document.readyState != 'loading' && ($ready)") != true) {
         continue;
       }
       final html = await _run('document.documentElement.outerHTML');
       if (html is! String) continue;
       final body = utf8.encode(html);
-      if (body.length > limit) throw const ProviderError('Risposta troppo grande.');
+      if (body.length > limit) throw ProviderError(currentL10n().browserResponseTooLarge);
       return (body: body, contentType: 'text/html');
     }
     if (await _run('!!window._cf_chl_opt') == true) throw const CloudflareChallenge();

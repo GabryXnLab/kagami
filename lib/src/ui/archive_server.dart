@@ -4,6 +4,7 @@
 library;
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../data/server_access.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
 import 'sync_screen.dart' show clockOf;
@@ -31,7 +33,10 @@ String archiveWhen(DateTime at) {
   final now = DateTime.now();
   final today = local.year == now.year && local.month == now.month && local.day == now.day;
   final clock = clockOf(local.hour * 60 + local.minute);
-  return today ? 'oggi alle $clock' : '${local.day}/${local.month} alle $clock';
+  final l10n = currentL10n();
+  return today
+      ? l10n.serverWhenToday(clock)
+      : l10n.serverWhenDate(DateFormat.Md(l10n.localeName).format(local), clock);
 }
 
 /// La serie che si sta scaricando, dal telefono o dal server: stessi campi,
@@ -46,6 +51,7 @@ class ArchiveProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 13, 8, 13),
       child: Row(
@@ -58,8 +64,7 @@ class ArchiveProgressRow extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   '${status.message}\n'
-                  '${status.pagesDownloaded} tavole nuove · ${archiveSize(status.bytes)}'
-                  '${status.pagesSkipped > 0 ? ' · ${status.pagesSkipped} già a posto' : ''}',
+                  '${l10n.serverProgressStats(status.pagesDownloaded, archiveSize(status.bytes), status.pagesSkipped)}',
                   style: KagamiType.body(12.5, height: 1.4, color: muted),
                 ),
                 const SizedBox(height: 8),
@@ -68,7 +73,7 @@ class ArchiveProgressRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Togli dalla coda',
+            tooltip: l10n.serverRemoveFromQueue,
             icon: const Icon(LucideIcons.x, size: 18),
             onPressed: onCancel,
           ),
@@ -136,6 +141,7 @@ class ServerSection extends ConsumerWidget {
     final view = ref.watch(remoteArchiveProvider);
     final link = view.link;
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final account = ref.watch(cloudAccountProvider).account;
     final invites = [
       for (final invite in ref.watch(serverInvitesProvider).value ?? const <ServerInvite>[])
@@ -144,18 +150,18 @@ class ServerSection extends ConsumerWidget {
     final children = <Widget>[
       const SizedBox(height: 30),
       KSection(
-        'Server',
+        l10n.serverTitle,
         trailing: view.queue.history.isEmpty
             ? null
             : TextButton(
                 onPressed: () => _guard(context, ref.read(remoteArchiveProvider.notifier).clearHistory),
-                child: const Text('Pulisci'),
+                child: Text(l10n.serverClear),
               ),
       ),
     ];
     if (!cloudAvailable) {
       children.add(Text(
-        'Il server riconosce chi lo usa dall\'account Google, che in questa build dell\'app non c\'è.',
+        l10n.serverNoFirebase,
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ));
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
@@ -163,16 +169,15 @@ class ServerSection extends ConsumerWidget {
     if (account == null) {
       children.addAll([
         Text(
-          'Un computer sempre acceso può scaricare e caricare sul tuo Drive al posto del telefono, '
-          'che intanto può anche spegnersi. Il server ti riconosce dal tuo account Google.',
+          l10n.serverSignedOutIntro,
           style: KagamiType.body(12.5, height: 1.45, color: muted),
         ),
         const SizedBox(height: 12),
         KGroup(children: [
           KTile(
             icon: LucideIcons.logIn,
-            title: 'Accedi con Google',
-            subtitle: 'Per creare il tuo server o usare quello di qualcun altro',
+            title: l10n.serverSignIn,
+            subtitle: l10n.serverSignInSubtitle,
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => ref.read(cloudAccountProvider.notifier).signIn(),
           ),
@@ -186,10 +191,10 @@ class ServerSection extends ConsumerWidget {
           for (final invite in invites)
             KTile(
               icon: LucideIcons.userPlus,
-              title: '${invite.sender} ti ha dato accesso a «${invite.serverName}»',
-              subtitle: 'Scarica sul tuo Drive, anche a telefono spento. Tocca per collegarlo',
+              title: l10n.serverInviteTitle(invite.sender, invite.serverName),
+              subtitle: l10n.serverInviteSubtitle,
               trailing: IconButton(
-                tooltip: 'Ignora',
+                tooltip: l10n.serverIgnore,
                 icon: const Icon(LucideIcons.x, size: 18),
                 onPressed: () => _ignore(context, ref, invite),
               ),
@@ -202,8 +207,7 @@ class ServerSection extends ConsumerWidget {
     if (link == null) {
       children.addAll([
         Text(
-          'Un computer sempre acceso — il tuo o quello di chi ti ha dato accesso — può scaricare '
-          'e caricare sul tuo Drive al posto del telefono, che intanto può anche spegnersi.',
+          l10n.serverLinkIntro,
           style: KagamiType.body(12.5, height: 1.45, color: muted),
         ),
         const SizedBox(height: 12),
@@ -211,15 +215,15 @@ class ServerSection extends ConsumerWidget {
           children: [
             KTile(
               icon: LucideIcons.serverCog,
-              title: 'Crea il tuo server',
-              subtitle: 'Un comando da incollare su un computer con Docker: niente da configurare',
+              title: l10n.serverCreate,
+              subtitle: l10n.serverCreateSubtitle,
               trailing: const Icon(LucideIcons.chevronRight, size: 18),
               onTap: () => ServerSetupSheet.open(context),
             ),
             KTile(
               icon: LucideIcons.server,
-              title: 'Collega un server',
-              subtitle: 'Il tuo, già acceso, o quello di chi ti ha aggiunto',
+              title: l10n.serverLinkTitle,
+              subtitle: l10n.serverLinkSubtitle,
               trailing: const Icon(LucideIcons.chevronRight, size: 18),
               onTap: () => ServerLinkSheet.open(context),
             ),
@@ -238,10 +242,10 @@ class ServerSection extends ConsumerWidget {
     final name = info?.name ?? link.url.host;
     final state = switch (view) {
       RemoteArchiveView(:final error?) => error,
-      RemoteArchiveView(info: null) => 'Collegamento…',
-      RemoteArchiveView(info: ServerInfo(driveAuthorized: false)) => 'Non ha ancora il permesso del tuo Drive',
-      RemoteArchiveView(info: ServerInfo(folderId: null)) => 'Non sa ancora in quale cartella del tuo Drive scrivere',
-      RemoteArchiveView(:final info?) => 'Pronto · scrive in «${info.folderName ?? info.folderId}» sul tuo Drive',
+      RemoteArchiveView(info: null) => l10n.serverStateConnecting,
+      RemoteArchiveView(info: ServerInfo(driveAuthorized: false)) => l10n.serverStateNoGrant,
+      RemoteArchiveView(info: ServerInfo(folderId: null)) => l10n.serverStateNoFolder,
+      RemoteArchiveView(:final info?) => l10n.serverStateReady('${info.folderName ?? info.folderId}'),
     };
     // Con il server in errore, ciò che si sa di lui è vecchio: niente gesti
     // che partono da lì.
@@ -250,14 +254,16 @@ class ServerSection extends ConsumerWidget {
         info.driveAuthorized &&
         appFolder != null &&
         info.folderId != appFolder.id;
+    final address = '${link.url.host}${link.url.hasPort ? ':${link.url.port}' : ''}';
     children.add(KGroup(
       children: [
         KTile(
           icon: view.error == null ? LucideIcons.server : LucideIcons.serverOff,
           tint: view.error == null ? null : context.tokens.danger,
           title: name,
-          subtitle: '${link.url.host}${link.url.hasPort ? ':${link.url.port}' : ''}'
-              '${info == null || info.isOwner ? '' : ' · di ${info.owner}'} · $state',
+          subtitle: info == null || info.isOwner
+              ? l10n.serverTileSubtitle(address, state)
+              : l10n.serverTileSubtitleOwner(address, '${info.owner}', state),
           trailing: const Icon(LucideIcons.chevronRight, size: 18),
           onTap: () => ServerLinkSheet.open(context, address: link.url, linked: true),
         ),
@@ -265,32 +271,30 @@ class ServerSection extends ConsumerWidget {
           KTile(
             icon: LucideIcons.triangleAlert,
             tint: context.tokens.danger,
-            title: 'La connessione è in chiaro',
-            subtitle: 'Il token del tuo account si legge per strada: serve HTTPS (Tailscale Funnel, un reverse proxy)',
+            title: l10n.serverPlainTitle,
+            subtitle: l10n.serverPlainSubtitle,
           ),
         if (view.error == null && info != null && !info.ready)
           KTile(
             icon: LucideIcons.hardDriveUpload,
-            title: 'Dai il tuo Drive al server',
-            subtitle: 'Scaricherà nella cartella che legge l\'app, anche a telefono spento',
+            title: l10n.serverGrantTitle,
+            subtitle: l10n.serverGrantSubtitle,
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => _grant(context, ref, link),
           ),
         if (differs)
           KTile(
             icon: LucideIcons.folderSync,
-            title: 'Usa la cartella dell\'app',
-            subtitle: 'Il server scrive in «${info.folderName ?? info.folderId}», l\'app legge «${appFolder.name}»',
+            title: l10n.serverUseAppFolder,
+            subtitle: l10n.serverUseAppFolderSubtitle('${info.folderName ?? info.folderId}', appFolder.name),
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => _guard(context, () => notifier.useFolder(appFolder)),
           ),
         if (info != null && info.isOwner && view.error == null)
           KTile(
             icon: LucideIcons.users,
-            title: 'Chi può usarlo',
-            subtitle: view.users.length <= 1
-                ? 'Solo tu. Aggiungi l\'account Google di chi vuoi'
-                : '${view.users.length} account, te compreso',
+            title: l10n.serverUsersTitle,
+            subtitle: view.users.length <= 1 ? l10n.serverUsersOnlyYou : l10n.serverUsersCount(view.users.length),
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => ServerUsersSheet.open(context),
           ),
@@ -303,16 +307,16 @@ class ServerSection extends ConsumerWidget {
         if (current == null && queue.jobs.isNotEmpty)
           KTile(
             icon: LucideIcons.clock,
-            title: 'Coda in attesa',
-            subtitle: queue.status.message.isEmpty ? 'Il server riparte da solo' : queue.status.message,
+            title: l10n.serverQueueWaiting,
+            subtitle: queue.status.message.isEmpty ? l10n.serverQueueRestarts : queue.status.message,
           ),
         for (final job in waiting)
           KTile(
             icon: job.automatic ? LucideIcons.refreshCw : LucideIcons.clock,
             title: job.title.isEmpty ? job.url : job.title,
-            subtitle: job.automatic ? 'Capitoli nuovi · sul server' : 'In coda · sul server',
+            subtitle: job.automatic ? l10n.serverJobAutomatic : l10n.serverJobQueued,
             trailing: IconButton(
-              tooltip: 'Togli dalla coda',
+              tooltip: l10n.serverRemoveFromQueue,
               icon: const Icon(LucideIcons.x, size: 18),
               onPressed: () => _guard(context, () => notifier.cancel(job)),
             ),
@@ -334,10 +338,11 @@ class ServerSection extends ConsumerWidget {
           children: [
             KTile(
               icon: LucideIcons.refreshCw,
-              title: 'Serie in corso sul server',
-              subtitle: '${view.ongoing.isEmpty ? 'Nessuna, per ora' : '${view.ongoing.length} da seguire'}'
-                  '${minutes == null ? ' · controllo spento' : ' · controllo alle ${clockOf(minutes)}'}. '
-                  'Tocca per controllare adesso',
+              title: l10n.serverOngoingTitle,
+              subtitle: l10n.serverOngoingSubtitle(
+                l10n.serverOngoingCount(view.ongoing.length),
+                minutes == null ? l10n.serverOngoingCheckOff : l10n.serverOngoingCheckAt(clockOf(minutes)),
+              ),
               onTap: view.error != null ? null : () => _checkNow(context, notifier),
             ),
             for (final series in view.ongoing)
@@ -346,10 +351,11 @@ class ServerSection extends ConsumerWidget {
                 tint: series.problem == null ? null : context.tokens.danger,
                 title: series.title,
                 subtitle: series.problem ??
-                    '${series.chapters} capitoli noti'
-                        '${series.checkedAt == null ? '' : ' · controllata ${archiveWhen(series.checkedAt!)}'}',
+                    (series.checkedAt == null
+                        ? l10n.serverSeriesKnown(series.chapters)
+                        : l10n.serverSeriesKnownChecked(series.chapters, archiveWhen(series.checkedAt!))),
                 trailing: IconButton(
-                  tooltip: 'Smetti di seguirla',
+                  tooltip: l10n.serverStopFollowing,
                   icon: const Icon(LucideIcons.bellOff, size: 18),
                   onPressed: () => _guard(context, () => notifier.forget(series)),
                 ),
@@ -363,10 +369,11 @@ class ServerSection extends ConsumerWidget {
 
   static Future<void> _ignore(BuildContext context, WidgetRef ref, ServerInvite invite) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       await ref.read(serverAccessProvider).withdraw(invite.to, Uri.parse(invite.url));
     } on FirebaseException {
-      messenger.showSnackBar(const SnackBar(content: Text('Non sono riuscito a togliere l\'invito: riprova.')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.serverInviteRemoveFailed)));
     }
   }
 
@@ -384,11 +391,10 @@ class ServerSection extends ConsumerWidget {
 
   static Future<void> _checkNow(BuildContext context, RemoteArchiveController notifier) async {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       await notifier.check();
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Il server sta controllando: i capitoli nuovi compaiono nella sua coda.'),
-      ));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.serverCheckingNow)));
     } on ServerException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
@@ -433,7 +439,7 @@ class _AddressField extends StatelessWidget {
           hintText: 'http://192.168.1.20:8080',
           prefixIcon: const Icon(LucideIcons.server, size: 18),
           suffixIcon: IconButton(
-            tooltip: 'Incolla',
+            tooltip: context.l10n.serverPaste,
             icon: const Icon(LucideIcons.clipboardPaste, size: 18),
             onPressed: enabled ? _paste : null,
           ),
@@ -447,8 +453,7 @@ Widget _addressNote(BuildContext context, TextEditingController address, String 
   final exposed = url != null && url.scheme == 'http' && !isPrivateAddress(url);
   return Text(
     exposed
-        ? 'Attenzione: in chiaro su un indirizzo pubblico il token del tuo account si legge per strada. '
-            'Usa HTTPS (Tailscale Funnel, un reverse proxy) o Tailscale.'
+        ? context.l10n.serverAddressExposed
         : otherwise,
     style: KagamiType.body(12.5, height: 1.45, color: exposed ? context.tokens.danger : context.tokens.muted),
   );
@@ -470,7 +475,7 @@ class ServerLinkSheet extends ConsumerStatefulWidget {
   static Future<void> open(BuildContext context, {Uri? address, ServerInvite? from, bool linked = false}) =>
       showKagamiSheet<void>(
         context,
-        title: linked ? 'Server' : 'Collega un server',
+        title: linked ? context.l10n.serverTitle : context.l10n.serverLinkTitle,
         scrollable: true,
         builder: (context) => ServerLinkSheet(address: address, from: from, linked: linked),
       );
@@ -493,7 +498,7 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
   Future<void> _connect() async {
     final url = normalizeServerUrl(_address.text);
     if (url == null) {
-      setState(() => _error = 'Scrivi l\'indirizzo del server, per esempio http://192.168.1.20:8080.');
+      setState(() => _error = context.l10n.serverAddressMissing);
       return;
     }
     setState(() {
@@ -505,7 +510,7 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
       if (info == null || !mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Collegato a «${info.name}»: scarica in «${info.folderName ?? info.folderId}» sul tuo Drive.'),
+        content: Text(context.l10n.serverLinked(info.name, '${info.folderName ?? info.folderId}')),
       ));
     } on ServerException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -525,6 +530,7 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final from = widget.from;
     final email = ref.watch(cloudAccountProvider).account?.email;
     return Padding(
@@ -535,28 +541,23 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
         children: [
           Text(
             from != null
-                ? '${from.sender} ti ha aggiunto a «${from.serverName}». Collegandolo, il server scaricherà '
-                    'i manga che scegli nella cartella della tua libreria sul tuo Drive: Google ti chiederà '
-                    'di permettergli di scriverci. Chi gestisce il server potrà usare quel permesso.'
+                ? l10n.serverLinkFromInvite(from.sender, from.serverName)
                 : widget.linked
-                    ? 'Il server ti riconosce come ${email ?? 'l\'account con cui hai fatto l\'accesso'}. '
-                        'Scollegandolo, se non è tuo, dimentica anche il permesso sul tuo Drive e la tua coda.'
-                    : 'Scrivi l\'indirizzo del server: il tuo, o quello che ti ha dato chi ti ha aggiunto. '
-                        'Il server ti riconosce dall\'account Google, e la prima volta gli dai il permesso '
-                        'di scrivere nella cartella della tua libreria su Drive.',
+                    ? l10n.serverLinkLinked(email ?? l10n.serverSignedInAccount)
+                    : l10n.serverLinkNew,
             style: KagamiType.body(13, height: 1.45, color: muted),
           ),
           const SizedBox(height: 14),
           _AddressField(controller: _address, enabled: !_busy, onChanged: () => setState(() {})),
           const SizedBox(height: 10),
-          _addressNote(context, _address, 'L\'indirizzo viaggia col backup e con l\'account, come la cartella di Drive.'),
+          _addressNote(context, _address, l10n.serverAddressSavedNote),
           if (_error != null) ...[
             const SizedBox(height: 10),
             Text(_error!, style: KagamiType.body(13, height: 1.45, color: context.tokens.danger)),
           ],
           const SizedBox(height: 18),
           KButton(
-            label: _busy ? 'Verifica…' : (widget.linked ? 'Verifica di nuovo' : 'Verifica e collega'),
+            label: _busy ? l10n.serverVerifying : (widget.linked ? l10n.serverVerifyAgain : l10n.serverVerifyAndLink),
             icon: LucideIcons.plugZap,
             expand: true,
             onPressed: _busy ? null : _connect,
@@ -564,7 +565,7 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
           if (widget.linked) ...[
             const SizedBox(height: 10),
             KGhostButton(
-              label: 'Scollega',
+              label: l10n.serverUnlink,
               icon: LucideIcons.unplug,
               expand: true,
               onPressed: _busy ? null : _unlink,
@@ -585,7 +586,7 @@ class ServerSetupSheet extends ConsumerStatefulWidget {
 
   static Future<void> open(BuildContext context) => showKagamiSheet<void>(
         context,
-        title: 'Crea il tuo server',
+        title: context.l10n.serverCreate,
         scrollable: true,
         builder: (context) => const ServerSetupSheet(),
       );
@@ -625,6 +626,7 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
   /// Accesso, cartella della libreria, permesso duraturo su Drive: ognuno
   /// si salta se c'è già, tranne l'ultimo, che il comando porta con sé.
   Future<void> _generate() => _run(() async {
+        final l10n = context.l10n;
         final email = await _signedIn(ref);
         if (email == null || !mounted) return;
         if (ref.read(driveFolderProvider).value == null) await connectDrive(context, ref);
@@ -642,7 +644,9 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
           refreshToken: grant.refreshToken,
           folderId: folder.id,
           folderName: folder.name,
-          name: first == null || first.isEmpty ? 'Il mio Kagami Server' : 'Il server di $first',
+          name: first == null || first.isEmpty
+              ? l10n.serverDefaultNameOwn
+              : l10n.serverDefaultNameOf(first),
         );
         if (mounted) setState(() => _command = serverCommand(setup, image: serverImage));
       });
@@ -650,28 +654,29 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: _command!));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comando copiato.')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.serverCommandCopied)));
   }
 
   Future<void> _connect() => _run(() async {
         final url = normalizeServerUrl(_address.text);
         if (url == null) {
-          throw const ServerException('Scrivi l\'indirizzo del computer, per esempio http://192.168.1.20:8080.');
+          throw ServerException(context.l10n.serverComputerAddressMissing);
         }
         final info = await linkServer(context, ref, url);
         if (info == null || !mounted) return;
         if (!info.isOwner) {
-          throw ServerException('Quel server è di ${info.owner}: è collegato, ma non l\'hai creato tu.');
+          throw ServerException(context.l10n.serverNotOwner('${info.owner}'));
         }
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('«${info.name}» è pronto. Aggiungi chi vuoi da «Chi può usarlo».'),
+          content: Text(context.l10n.serverReady(info.name)),
         ));
       });
 
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final command = _command;
     final folder = ref.watch(driveFolderProvider).value;
     final account = ref.watch(cloudAccountProvider).account;
@@ -692,31 +697,25 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Serve un computer che resti acceso — un mini PC, un NAS, un Raspberry Pi, un server in rete — '
-            'con Docker. Il server scarica i manga e li carica sul tuo Drive, in '
-            '«${folder?.name ?? 'la cartella della libreria'}», anche a telefono spento.',
+            l10n.serverSetupIntro(folder?.name ?? l10n.serverLibraryFolderFallback),
             style: KagamiType.body(13, height: 1.45, color: muted),
           ),
           const SizedBox(height: 16),
           if (command == null) ...[
             Text(
-              'Preparo un comando che contiene tutto: '
-              '${account == null ? 'prima fai l\'accesso con Google, poi ' : ''}'
-              '${folder == null ? 'scegli la cartella dei manga su Drive, poi ' : ''}'
-              'Google ti chiede di permettere al server di scrivere sul tuo Drive.',
+              l10n.serverPrepareIntro(account == null ? 'yes' : 'no', folder == null ? 'yes' : 'no'),
               style: KagamiType.body(13, height: 1.45, color: muted),
             ),
             const SizedBox(height: 16),
             KButton(
-              label: _busy ? 'Preparo…' : 'Genera il comando',
+              label: _busy ? l10n.serverPreparing : l10n.serverGenerate,
               icon: LucideIcons.terminal,
               expand: true,
               onPressed: _busy ? null : _generate,
             ),
           ] else ...[
-            step('1', 'Installa Docker sul computer (docker.com), se non c\'è già.'),
-            step('2', 'Incolla questo comando nel suo terminale. Contiene il permesso sul tuo Drive: '
-                'non mandarlo a nessuno.'),
+            step('1', l10n.serverStep1),
+            step('2', l10n.serverStep2),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.all(12),
@@ -732,17 +731,16 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
               ),
             ),
             const SizedBox(height: 10),
-            KGhostButton(label: 'Copia il comando', icon: LucideIcons.copy, expand: true, onPressed: _copy),
+            KGhostButton(label: l10n.serverCopyCommand, icon: LucideIcons.copy, expand: true, onPressed: _copy),
             const SizedBox(height: 16),
-            step('3', 'Scrivi qui l\'indirizzo del computer: in casa quello della rete locale; da fuori, '
-                'il suo nome in Tailscale o l\'indirizzo HTTPS con cui lo esponi.'),
+            step('3', l10n.serverStep3),
             const SizedBox(height: 4),
             _AddressField(controller: _address, enabled: !_busy, onChanged: () => setState(() {})),
             const SizedBox(height: 10),
-            _addressNote(context, _address, 'Il server risponde sulla porta 8080.'),
+            _addressNote(context, _address, l10n.serverPortNote),
             const SizedBox(height: 16),
             KButton(
-              label: _busy ? 'Verifica…' : 'Verifica e collega',
+              label: _busy ? l10n.serverVerifying : l10n.serverVerifyAndLink,
               icon: LucideIcons.plugZap,
               expand: true,
               onPressed: _busy ? null : _connect,
@@ -765,7 +763,7 @@ class ServerUsersSheet extends ConsumerStatefulWidget {
 
   static Future<void> open(BuildContext context) => showKagamiSheet<void>(
         context,
-        title: 'Chi può usarlo',
+        title: context.l10n.serverUsersTitle,
         scrollable: true,
         builder: (context) => const ServerUsersSheet(),
       );
@@ -788,7 +786,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
   Future<void> _add() async {
     final email = _email.text.trim().toLowerCase();
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      setState(() => _error = 'Scrivi l\'indirizzo dell\'account Google, per esempio nome@gmail.com.');
+      setState(() => _error = context.l10n.serverUserEmailInvalid);
       return;
     }
     setState(() {
@@ -800,7 +798,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
       _email.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$email può usare il server: glielo dice la sua app.'),
+          content: Text(context.l10n.serverUserAdded(email)),
         ));
       }
     } on ServerException catch (error) {
@@ -814,12 +812,11 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Togliere ${user.email}?'),
-        content: const Text('Non potrà più usare il server. La sua coda e il permesso sul suo Drive si '
-            'cancellano; ciò che è già sul suo Drive resta.'),
+        title: Text(context.l10n.serverRemoveTitle(user.email)),
+        content: Text(context.l10n.serverRemoveBody),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Annulla')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Togli')),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.serverCancel)),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text(context.l10n.serverRemove)),
         ],
       ),
     );
@@ -831,6 +828,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
   Widget build(BuildContext context) {
     final users = ref.watch(remoteArchiveProvider.select((view) => view.users));
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -838,8 +836,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Aggiungi l\'account Google di chi vuoi. Nella sua app di Kagami comparirà l\'invito: '
-            'collegando il server, i suoi download andranno sul suo Drive, con la sua coda.',
+            l10n.serverUsersIntro,
             style: KagamiType.body(13, height: 1.45, color: muted),
           ),
           const SizedBox(height: 14),
@@ -854,7 +851,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
               hintText: 'nome@gmail.com',
               prefixIcon: const Icon(LucideIcons.atSign, size: 18),
               suffixIcon: IconButton(
-                tooltip: 'Aggiungi',
+                tooltip: l10n.serverAdd,
                 icon: const Icon(LucideIcons.userPlus, size: 18),
                 onPressed: _busy ? null : _add,
               ),
@@ -871,14 +868,14 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
                 icon: user.owner ? LucideIcons.crown : LucideIcons.user,
                 title: user.email,
                 subtitle: user.owner
-                    ? 'Tu, il proprietario'
+                    ? l10n.serverOwnerYou
                     : user.connected
-                        ? 'Ha collegato il server'
-                        : 'Invitato, non ha ancora collegato il server',
+                        ? l10n.serverConnected
+                        : l10n.serverInvitedPending,
                 trailing: user.owner
                     ? null
                     : IconButton(
-                        tooltip: 'Togli',
+                        tooltip: l10n.serverRemove,
                         icon: const Icon(LucideIcons.userMinus, size: 18),
                         onPressed: _busy ? null : () => _remove(user),
                       ),

@@ -22,6 +22,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../l10n.dart';
 import 'backup.dart';
 import 'user_repository.dart';
 
@@ -122,12 +123,12 @@ class CloudException implements Exception {
 String cloudMessage(Object error) => switch (error) {
       CloudException(:final message) => message,
       FirebaseAuthException(code: 'operation-not-allowed') =>
-        'L\'accesso con Google non è ancora attivo su questo progetto',
+        currentL10n().dataCloudSignInNotEnabled,
       FirebaseAuthException(code: 'network-request-failed') =>
-        'Nessuna connessione',
+        currentL10n().dataCloudNoConnection,
       FirebaseException(:final String message) => message,
-      SocketException() => 'Nessuna connessione',
-      _ => 'Sincronizzazione non riuscita',
+      SocketException() => currentL10n().dataCloudNoConnection,
+      _ => currentL10n().dataSyncFailed,
     };
 
 /// Il viaggio dei dati personali: di là e di qua.
@@ -196,7 +197,7 @@ class CloudSync {
 
   String _requireUser() {
     final id = FirebaseAuth.instance.currentUser?.uid;
-    if (id == null) throw const CloudException('Nessun accesso');
+    if (id == null) throw CloudException(currentL10n().dataCloudNoSignIn);
     return id;
   }
 }
@@ -227,13 +228,13 @@ class CloudAuth {
     }
     final idToken = google.authentication.idToken;
     if (idToken == null) {
-      throw const CloudException('Google non ha dato un token di identità');
+      throw CloudException(currentL10n().dataCloudNoIdentityToken);
     }
     final credential = await FirebaseAuth.instance.signInWithCredential(
       GoogleAuthProvider.credential(idToken: idToken),
     );
     final account = _accountOf(credential.user);
-    if (account == null) throw const CloudException('Accesso non riuscito');
+    if (account == null) throw CloudException(currentL10n().dataCloudSignInFailed);
     return account;
   }
 
@@ -256,10 +257,10 @@ class CloudAuth {
   /// vanno distinti.
   static String _googleMessage(GoogleSignInException error) =>
       switch (error.code) {
-        GoogleSignInExceptionCode.interrupted => 'Accesso interrotto',
+        GoogleSignInExceptionCode.interrupted => currentL10n().dataCloudSignInInterrupted,
         GoogleSignInExceptionCode.clientConfigurationError ||
         GoogleSignInExceptionCode.providerConfigurationError =>
-          'Google non è configurato per questa app',
-        _ => 'Accesso con Google non riuscito',
+          currentL10n().dataCloudGoogleNotConfigured,
+        _ => currentL10n().dataCloudGoogleSignInFailed,
       };
 }

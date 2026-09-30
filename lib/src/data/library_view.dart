@@ -8,6 +8,7 @@ library;
 import 'dart:math' as math;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import '../format/reading.dart';
 
 final DateTime _never = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -136,51 +137,75 @@ class SeriesSignals {
 }
 
 enum LibrarySort {
-  updated('Aggiornate di recente'),
-  title('Titolo'),
-  progress('Avanzamento'),
-  added('Aggiunte di recente'),
-  lastRead('Lette di recente'),
-  unread('Da leggere'),
-  rating('Voto'),
-  chapters('Numero di capitoli'),
-  shuffle('A caso');
+  updated,
+  title,
+  progress,
+  added,
+  lastRead,
+  unread,
+  rating,
+  chapters,
+  shuffle;
 
-  const LibrarySort(this.label);
-
-  final String label;
+  String get label {
+    final l10n = currentL10n();
+    return switch (this) {
+      updated => l10n.librarySortUpdated,
+      title => l10n.librarySortTitle,
+      progress => l10n.librarySortProgress,
+      added => l10n.librarySortAdded,
+      lastRead => l10n.librarySortLastRead,
+      unread => l10n.librarySortUnread,
+      rating => l10n.librarySortRating,
+      chapters => l10n.librarySortChapters,
+      shuffle => l10n.librarySortShuffle,
+    };
+  }
 }
 
 /// Come si dispone la griglia. Su una libreria grande la differenza fra
 /// vedere sei copertine e vederne dodici è la differenza fra scorrere e
 /// cercare.
 enum LibraryDisplay {
-  comfortable('Griglia comoda'),
-  compact('Griglia fitta'),
-  list('Elenco'),
-  detailed('Elenco dettagliato');
-
-  const LibraryDisplay(this.label);
+  comfortable,
+  compact,
+  list,
+  detailed;
 
   static LibraryDisplay parse(String? value) => LibraryDisplay.values
       .firstWhere((row) => row.name == value, orElse: () => comfortable);
 
-  final String label;
+  String get label {
+    final l10n = currentL10n();
+    return switch (this) {
+      comfortable => l10n.libraryDisplayComfortable,
+      compact => l10n.libraryDisplayCompact,
+      list => l10n.libraryDisplayList,
+      detailed => l10n.libraryDisplayDetailed,
+    };
+  }
 
   bool get isGrid => this == comfortable || this == compact;
 }
 
 /// Le raccolte che l'app costruisce da sé e che non si possono modificare.
 enum AutoCollection {
-  reading('In lettura'),
-  fresh('Novità'),
-  favorites('Preferiti'),
-  planned('Da iniziare'),
-  finished('Finiti');
+  reading,
+  fresh,
+  favorites,
+  planned,
+  finished;
 
-  const AutoCollection(this.label);
-
-  final String label;
+  String get label {
+    final l10n = currentL10n();
+    return switch (this) {
+      reading => l10n.libraryAutoReading,
+      fresh => l10n.libraryAutoFresh,
+      favorites => l10n.libraryAutoFavorites,
+      planned => l10n.libraryAutoPlanned,
+      finished => l10n.libraryAutoFinished,
+    };
+  }
 
   bool matches(SeriesSignals signals) => switch (this) {
         AutoCollection.reading =>

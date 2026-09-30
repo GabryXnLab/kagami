@@ -12,19 +12,22 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import 'library.dart';
 
 /// Motivo per cui una cartella non è una libreria utilizzabile.
 enum LibraryProblem {
-  missing('La cartella non esiste o non è leggibile.'),
-  notIndexed('La cartella non contiene library.json: vanno rigenerati gli '
-      'indici con l\'archiviatore che ha scritto la libreria.'),
-  unreadable('library.json non è leggibile o non è un indice MALF valido.'),
-  unsupported('library.json usa una versione del formato più recente di questa app.');
+  missing,
+  notIndexed,
+  unreadable,
+  unsupported;
 
-  const LibraryProblem(this.message);
-
-  final String message;
+  String get message => switch (this) {
+        missing => currentL10n().dataLibraryMissing,
+        notIndexed => currentL10n().dataLibraryNotIndexed,
+        unreadable => currentL10n().dataLibraryUnreadable,
+        unsupported => currentL10n().dataLibraryUnsupported,
+      };
 }
 
 class LibraryException implements Exception {

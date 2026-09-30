@@ -132,10 +132,10 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 manager.createNotificationChannel(
                     NotificationChannel(
                         CHANNEL_ID,
-                        "Capitoli nuovi",
+                        context.getString(R.string.channel_arrivals),
                         NotificationManager.IMPORTANCE_DEFAULT,
                     ).apply {
-                        description = "Un capitolo nuovo di una serie che segui è arrivato nella libreria."
+                        description = context.getString(R.string.channel_arrivals_description)
                     },
                 )
             }
@@ -148,10 +148,10 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 manager.createNotificationChannel(
                     NotificationChannel(
                         INVITES_ID,
-                        "Server condivisi",
+                        context.getString(R.string.channel_invites),
                         NotificationManager.IMPORTANCE_DEFAULT,
                     ).apply {
-                        description = "Qualcuno ti ha dato accesso al suo Kagami Server."
+                        description = context.getString(R.string.channel_invites_description)
                     },
                 )
             }

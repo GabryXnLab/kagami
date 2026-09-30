@@ -40,6 +40,7 @@ import '../data/reader_settings.dart';
 import '../data/user_repository.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'page_bands.dart';
 import 'reader_metrics.dart';
@@ -323,7 +324,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final pages = ref.watch(pagesIndexProvider(widget.seriesKey)).value;
 
     if (entry == null || library == null) {
-      return const _ReaderMessage('Serie non disponibile.');
+      return _ReaderMessage(context.l10n.readerSeriesUnavailable);
     }
     final pagesState = ref.watch(pagesIndexProvider(widget.seriesKey));
     if (chapters != null && pagesState is AsyncData && pages == null) {
@@ -331,10 +332,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       // mai aperta non ce n'è copia: senza rete non si può impaginare niente.
       return _ReaderMessage(
         NetworkMonitor.instance.isOnline
-            ? 'Questa serie non ha un pages.json: vanno rigenerati gli '
-                'indici con l\'archiviatore che l\'ha scritta.'
-            : 'Senza connessione non si può aprire questa serie: l\'elenco '
-                'delle sue tavole è su Drive. Si apre appena torna la rete.',
+            ? context.l10n.readerNoPagesIndex
+            : context.l10n.readerSeriesOffline,
       );
     }
     if (chapters == null || index == null || pages == null) {
@@ -347,15 +346,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final readable = index.readable.sorted((a, b) => a.order.compareTo(b.order));
     final position = readable.indexWhere((chapter) => chapter.id == _chapterId);
     if (position < 0) {
-      return const _ReaderMessage(
-        'Questo capitolo non è ancora sul telefono. '
-        'La sincronizzazione può essere a metà: riprovare più tardi.',
-      );
+      return _ReaderMessage(context.l10n.readerChapterNotOnPhone);
     }
     final chapter = readable[position];
     final files = library.pagePaths(entry, chapter, pages, chapters);
     if (files.isEmpty) {
-      return const _ReaderMessage('Il capitolo non ha pagine leggibili.');
+      return _ReaderMessage(context.l10n.readerChapterNoPages);
     }
     final tiles = library.tilePaths(entry, chapter, pages, chapters);
 
@@ -381,11 +377,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       // un lampo di messaggio sarebbe peggio dell'attesa.
       builder: (context, arrived) {
         if (arrived.data == false) {
-          return const _ReaderMessage(
-            'Le tavole di questo capitolo non sono ancora sul telefono. '
-            "L'indice le annuncia, i file no: è la cartella sincronizzata a "
-            'doverli portare.',
-          );
+          return _ReaderMessage(context.l10n.readerPagesNotOnPhone);
         }
         return Scaffold(
           backgroundColor: switch (_settings.background) {
@@ -603,12 +595,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     if (earlier.isEmpty) return;
     _offeredEarlier = true;
     final chapter = chapters.firstWhere((row) => row.id == chapterId);
-    final many = earlier.length == 1
-        ? 'Il capitolo precedente risulta'
-        : 'I ${earlier.length} capitoli precedenti risultano';
+    final l10n = context.l10n;
     final sure = await showKagamiSheet<bool>(
       context,
-      title: 'Segnare letti i precedenti?',
+      title: l10n.readerMarkEarlierTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -616,23 +606,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Hai finito ${chapter.label()}. $many ancora da leggere: se '
-              'li hai già letti altrove, segnali letti tutti insieme.',
+              l10n.readerMarkEarlierBody(earlier.length, chapter.label()),
               style: KagamiType.body(13.5,
                   height: 1.5, color: context.tokens.muted),
             ),
             const SizedBox(height: 20),
             KButton(
-              label: earlier.length == 1
-                  ? 'Segna letto il precedente'
-                  : 'Segna letti tutti i ${earlier.length}',
+              label: l10n.readerMarkEarlierConfirm(earlier.length),
               icon: LucideIcons.checkCheck,
               expand: true,
               onPressed: () => Navigator.of(context).pop(true),
             ),
             const SizedBox(height: 10),
             KGhostButton(
-              label: 'Lasciali da leggere',
+              label: l10n.readerMarkEarlierDecline,
               expand: true,
               onPressed: () => Navigator.of(context).pop(false),
             ),
@@ -712,7 +699,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Pagina ${page + 1} messa da parte')),
+      SnackBar(content: Text(context.l10n.readerBookmarkAdded(page + 1))),
     );
   }
 
@@ -725,7 +712,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   ) =>
       showKagamiSheet<void>(
         context,
-        title: 'Capitoli',
+        title: context.l10n.readerChapters,
         scrollable: true,
         builder: (context) => _ChaptersSheet(
           chapters: readable,
@@ -748,15 +735,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     if (!context.mounted) return;
     await showKagamiSheet<void>(
       context,
-      title: 'Pagine messe da parte',
+      title: context.l10n.readerBookmarks,
       scrollable: true,
       builder: (context) => bookmarks.isEmpty
-          ? const KEmpty(
+          ? KEmpty(
               icon: LucideIcons.bookmark,
               compact: true,
-              title: 'Nessuna pagina da parte',
-              message: 'Il segnalibro tiene il punto di una tavola; quello '
-                  'del capitolo lo tiene già la ripresa.',
+              title: context.l10n.readerNoBookmarks,
+              message: context.l10n.readerNoBookmarksHint,
             )
           : ListView(
               shrinkWrap: true,
@@ -771,9 +757,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                             )
                             ?.label() ??
                         bookmark.chapterId,
-                    subtitle: 'pagina ${bookmark.page + 1}',
+                    subtitle: context.l10n.readerBookmarkPage(bookmark.page + 1),
                     trailing: IconButton(
-                      tooltip: 'Togli',
+                      tooltip: context.l10n.readerBookmarkRemove,
                       icon: const Icon(LucideIcons.trash2, size: 17),
                       onPressed: () async {
                         await _repository.deleteBookmark(bookmark.id);
@@ -1131,7 +1117,7 @@ class _ChapterViewState extends State<_ChapterView>
                   atTop ? const SizedBox.shrink() : child!,
               child: _RoundAction(
                 icon: LucideIcons.arrowUp,
-                tooltip: 'Torna in cima',
+                tooltip: context.l10n.readerToTop,
                 onTap: _toTop,
               ),
             ),
@@ -1448,10 +1434,10 @@ class _ChapterViewState extends State<_ChapterView>
   /// l'utente possa usare per capire a chi chiedere.
   Widget _pageProblem(String path) => _MissingPage(
         isRemote(path)
-            ? 'Tavola non arrivata da Drive'
+            ? context.l10n.readerPageNotFromDrive
             : File(path).existsSync()
-                ? 'Tavola illeggibile'
-                : 'Tavola non sincronizzata',
+                ? context.l10n.readerPageUnreadable
+                : context.l10n.readerPageNotSynced,
       );
 }
 
@@ -1488,8 +1474,8 @@ class _OfflinePage extends StatelessWidget {
         children: [
           const Icon(LucideIcons.cloudOff, color: muted),
           const SizedBox(height: 10),
-          const Text(
-            'Tavola non ancora scaricata',
+          Text(
+            context.l10n.readerPageNotDownloaded,
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white70,
@@ -1498,8 +1484,8 @@ class _OfflinePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Senza connessione. Arriva da sola appena torna la rete.',
+          Text(
+            context.l10n.readerPageOfflineHint,
             textAlign: TextAlign.center,
             style: TextStyle(color: muted, fontSize: 12),
           ),
@@ -1511,7 +1497,7 @@ class _OfflinePage extends StatelessWidget {
               }
             },
             icon: const Icon(LucideIcons.refreshCw, size: 15),
-            label: const Text('Riprova ora'),
+            label: Text(context.l10n.readerRetryNow),
             style: TextButton.styleFrom(foregroundColor: Colors.white70),
           ),
         ],
@@ -1571,26 +1557,28 @@ class _ProbeReadoutState extends State<_ProbeReadout> {
     if (!_probe.on) return const SizedBox.shrink();
     final p = _probe;
     final bands = p.bands == 0 ? 1 : p.bands;
+    final l10n = context.l10n;
     final lines = [
-      'Fotogrammi ${p.frames} · limite ${_ms(p.budget)} ms',
-      'Lenti UI ${p.slowBuild} (max ${_ms(p.worstBuild)} ms) · '
-          'GPU ${p.slowRaster} (max ${_ms(p.worstRaster)} ms)',
-      'Partiti tardi ${p.lateStarts} (max ${_ms(p.worstStart)} ms)',
-      'Scorrendo ${p.scrollFrames} · saltati ${p.missedFrames} '
-          '(buco max ${_ms(p.worstGap)} ms)',
-      'Tessere ${p.tileBands} · intere ${p.wholeBands} · '
-          'del telefono ${p.phoneBands} (fatte ${p.phoneTiled})',
-      'Native ${p.bands} (texture ${p.textureBands}) · '
-          'tavole decodificate ${p.pageDecodes}',
-      'Decodifica ${_ms(p.decodeTotal ~/ bands)} ms '
-          '(max ${_ms(p.decodeWorst)}) · arrivo ${_ms(p.nativeTotal ~/ bands)} '
-          'ms (max ${_ms(p.nativeWorst)})',
-      'Copia max ${_ms(p.copyWorst)} ms · GC Android ${p.gcCount} '
-          '(${p.gcMillis} ms) · bloccanti ${p.blockingCount} '
-          '(${p.blockingMillis} ms)',
-      'Attese da Drive ${p.driveWaits} · ripieghi Dart ${p.wholeDecodes}',
-      'Correzioni ${p.corrections} · '
-          'salti ${p.jumps} (${p.jumped.toStringAsFixed(0)} px)',
+      l10n.readerProbeFrames('${p.frames}', _ms(p.budget)),
+      l10n.readerProbeSlow('${p.slowBuild}', _ms(p.worstBuild),
+          '${p.slowRaster}', _ms(p.worstRaster)),
+      l10n.readerProbeLate('${p.lateStarts}', _ms(p.worstStart)),
+      l10n.readerProbeScroll(
+          '${p.scrollFrames}', '${p.missedFrames}', _ms(p.worstGap)),
+      l10n.readerProbeSources('${p.tileBands}', '${p.wholeBands}',
+          '${p.phoneBands}', '${p.phoneTiled}'),
+      l10n.readerProbeNative(
+          '${p.bands}', '${p.textureBands}', '${p.pageDecodes}'),
+      l10n.readerProbeDecode(
+          _ms(p.decodeTotal ~/ bands),
+          _ms(p.decodeWorst),
+          _ms(p.nativeTotal ~/ bands),
+          _ms(p.nativeWorst)),
+      l10n.readerProbeMemory(_ms(p.copyWorst), '${p.gcCount}',
+          '${p.gcMillis}', '${p.blockingCount}', '${p.blockingMillis}'),
+      l10n.readerProbeWaits('${p.driveWaits}', '${p.wholeDecodes}'),
+      l10n.readerProbeJumps('${p.corrections}', '${p.jumps}',
+          p.jumped.toStringAsFixed(0)),
     ];
     return Positioned(
       left: 8,
@@ -1751,19 +1739,19 @@ class _ChapterFooter extends StatelessWidget {
           children: [
             if (onNext == null)
               Text(
-                'È l\'ultimo capitolo che c\'è sul telefono.',
+                context.l10n.readerLastChapterOnPhone,
                 textAlign: TextAlign.center,
                 style: KagamiType.body(13.5, color: Colors.white54),
               )
             else ...[
               Text(
-                'Capitolo seguente',
+                context.l10n.readerNextChapter,
                 style:
                     KagamiType.overline(size: 10.5, color: Colors.white38),
               ),
               const SizedBox(height: 12),
               KButton(
-                label: label ?? 'Continua',
+                label: label ?? context.l10n.readerContinue,
                 icon: LucideIcons.arrowDown,
                 onPressed: onNext,
               ),
@@ -1860,19 +1848,19 @@ class _Controls extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Metti da parte questa pagina',
+                        tooltip: context.l10n.readerBookmarkThisPage,
                         onPressed: onBookmark,
                         icon: const Icon(LucideIcons.bookmarkPlus,
                             color: Colors.white),
                       ),
                       IconButton(
-                        tooltip: 'Pagine messe da parte',
+                        tooltip: context.l10n.readerBookmarks,
                         onPressed: onShowBookmarks,
                         icon: const Icon(LucideIcons.bookmark,
                             color: Colors.white),
                       ),
                       IconButton(
-                        tooltip: 'Come si legge',
+                        tooltip: context.l10n.readerHowToRead,
                         onPressed: () => _showSettings(context),
                         icon: const Icon(LucideIcons.settings2,
                             color: Colors.white),
@@ -1932,7 +1920,7 @@ class _Controls extends StatelessWidget {
                           const SizedBox(width: 10),
                           _RoundAction(
                             icon: LucideIcons.chevronUp,
-                            tooltip: 'Torna in cima',
+                            tooltip: context.l10n.readerToTop,
                             onTap: onToTop,
                           ),
                         ],
@@ -1948,7 +1936,7 @@ class _Controls extends StatelessWidget {
 
   void _showSettings(BuildContext context) => showKagamiSheet<void>(
         context,
-        title: 'Come si legge',
+        title: context.l10n.readerHowToRead,
         scrollable: true,
         builder: (context) => _ReaderSettingsSheet(
           settings: settings,
@@ -2014,7 +2002,7 @@ class _ChapterPill extends StatelessWidget {
         child: Row(
           children: [
             IconButton(
-              tooltip: 'Capitolo precedente',
+              tooltip: context.l10n.readerPreviousChapter,
               onPressed: onPrevious,
               icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
             ),
@@ -2046,7 +2034,7 @@ class _ChapterPill extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Capitolo successivo',
+              tooltip: context.l10n.readerNextChapterTooltip,
               onPressed: onNext,
               icon: const Icon(LucideIcons.chevronRight, color: Colors.white),
             ),
@@ -2104,9 +2092,9 @@ class _ChaptersSheetState extends State<_ChaptersSheet> {
                 child: TextField(
                   autofocus: false,
                   onChanged: (value) => setState(() => _query = value),
-                  decoration: const InputDecoration(
-                    hintText: 'Cerca capitolo…',
-                    prefixIcon: Icon(LucideIcons.search, size: 18),
+                  decoration: InputDecoration(
+                    hintText: context.l10n.readerSearchChapter,
+                    prefixIcon: const Icon(LucideIcons.search, size: 18),
                   ),
                 ),
               ),
@@ -2115,7 +2103,9 @@ class _ChaptersSheetState extends State<_ChaptersSheet> {
                 icon: _newestFirst
                     ? LucideIcons.arrowDownWideNarrow
                     : LucideIcons.arrowUpWideNarrow,
-                tooltip: _newestFirst ? 'Dal più recente' : 'Dal primo',
+                tooltip: _newestFirst
+                    ? context.l10n.readerNewestFirst
+                    : context.l10n.readerOldestFirst,
                 onPressed: () => setState(() => _newestFirst = !_newestFirst),
               ),
             ],
@@ -2180,22 +2170,27 @@ class _ChaptersSheetState extends State<_ChaptersSheet> {
         Divider(height: 1, color: context.tokens.line),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Row(
-            children: [
-              Text(
-                'In lettura: ',
+          // Il numero ha il suo stile dentro una frase che ogni lingua ordina
+          // a modo suo: si traduce con un segnaposto e lo si rimette qui.
+          child: Builder(builder: (context) {
+            const mark = '\u{E000}';
+            final parts = context.l10n
+                .readerReadingNow(mark, widget.chapters.length)
+                .split(mark);
+            return Text.rich(
+              TextSpan(
                 style: KagamiType.body(13, color: muted),
+                children: [
+                  TextSpan(text: parts.first),
+                  TextSpan(
+                    text: '$current',
+                    style: KagamiType.figure(13, color: scheme.onSurface),
+                  ),
+                  TextSpan(text: parts.skip(1).join()),
+                ],
               ),
-              Text(
-                '$current',
-                style: KagamiType.figure(13, color: scheme.onSurface),
-              ),
-              Text(
-                ' / ${widget.chapters.length} capitoli',
-                style: KagamiType.body(13, color: muted),
-              ),
-            ],
-          ),
+            );
+          }),
         ),
       ],
     );
@@ -2232,15 +2227,16 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final continuous = _settings.mode == ReaderMode.continuous;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const KSection('Modalità di lettura'),
+          KSection(l10n.readerMode),
           KSegmented(
-            options: const ['Striscia', 'Pagina'],
+            options: [l10n.readerModeStrip, l10n.readerModePage],
             icons: const [LucideIcons.gripHorizontal, LucideIcons.square],
             index: continuous ? 0 : 1,
             onChanged: (index) => _apply(
@@ -2251,9 +2247,9 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
           ),
           const SizedBox(height: 22),
           if (!continuous) ...[
-            const KSection('Verso di lettura'),
+            KSection(l10n.readerDirection),
             KSegmented(
-              options: const ['Sinistra → destra', 'Destra → sinistra'],
+              options: [l10n.readerDirectionLtr, l10n.readerDirectionRtl],
               index:
                   _settings.direction == ReaderDirection.rightToLeft ? 1 : 0,
               onChanged: (index) => _apply(
@@ -2265,7 +2261,7 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
               ),
             ),
             const SizedBox(height: 22),
-            const KSection('Adattamento'),
+            KSection(l10n.readerFit),
             KSegmented(
               options: [for (final fit in ReaderFit.values) fit.label],
               index: _settings.fit.index,
@@ -2274,7 +2270,7 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
             ),
             const SizedBox(height: 22),
           ],
-          const KSection('Sfondo'),
+          KSection(l10n.readerBackground),
           KSegmented(
             options: [
               for (final background in ReaderBackground.values) background.label,
@@ -2285,7 +2281,7 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
             ),
           ),
           const SizedBox(height: 22),
-          const KSection('Luminosità'),
+          KSection(l10n.readerBrightness),
           Slider(
             value: _settings.brightness,
             min: 0.25,
@@ -2295,11 +2291,11 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
           if (continuous) ...[
             const SizedBox(height: 6),
             KSection(
-              'Scorrimento automatico',
+              l10n.readerAutoScroll,
               trailing: Text(
                 _settings.autoScroll == 0
-                    ? 'spento'
-                    : '${_settings.autoScroll.round()} tavole/min',
+                    ? l10n.readerAutoScrollOff
+                    : l10n.readerAutoScrollRate(_settings.autoScroll.round()),
                 style: KagamiType.label(size: 12, color: context.tokens.muted),
               ),
             ),
@@ -2316,28 +2312,28 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
             children: [
               _Toggle(
                 icon: LucideIcons.hash,
-                label: 'Numero di pagina',
+                label: l10n.readerShowPageNumber,
                 value: _settings.showPageNumber,
                 onChanged: (value) =>
                     _apply(_settings.copyWith(showPageNumber: value)),
               ),
               _Toggle(
                 icon: LucideIcons.listOrdered,
-                label: 'Barra di avanzamento',
+                label: l10n.readerShowProgress,
                 value: _settings.showProgress,
                 onChanged: (value) =>
                     _apply(_settings.copyWith(showProgress: value)),
               ),
               _Toggle(
                 icon: LucideIcons.arrowUp,
-                label: 'Pulsante per tornare in cima',
+                label: l10n.readerShowScrollTop,
                 value: _settings.showScrollTop,
                 onChanged: (value) =>
                     _apply(_settings.copyWith(showScrollTop: value)),
               ),
               _Toggle(
                 icon: LucideIcons.lightbulb,
-                label: 'Tieni acceso lo schermo',
+                label: l10n.readerKeepAwake,
                 value: _settings.keepAwake,
                 onChanged: (value) =>
                     _apply(_settings.copyWith(keepAwake: value)),
@@ -2345,14 +2341,14 @@ class _ReaderSettingsSheetState extends State<_ReaderSettingsSheet> {
               if (!continuous)
                 _Toggle(
                   icon: LucideIcons.bookOpen,
-                  label: 'Due tavole affiancate',
+                  label: l10n.readerDoublePage,
                   value: _settings.doublePage,
                   onChanged: (value) =>
                       _apply(_settings.copyWith(doublePage: value)),
                 ),
               _Toggle(
                 icon: LucideIcons.rotateCcw,
-                label: 'Blocca la rotazione',
+                label: l10n.readerLockRotation,
                 value: _rotationLocked,
                 onChanged: (_) {
                   setState(() => _rotationLocked = !_rotationLocked);

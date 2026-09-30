@@ -28,6 +28,8 @@ import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/remote.dart';
 
+import '../l10n.dart';
+
 const String _clientSecret = String.fromEnvironment('GOOGLE_SERVER_CLIENT_SECRET');
 
 /// L'immagine che il comando di avvio scarica. Chi pubblica la sua la
@@ -42,11 +44,8 @@ const String serverImage = String.fromEnvironment(
 /// Perché questa build non può dare un permesso di Drive a un server, o
 /// `null` se può.
 String? get serverGrantUnavailable => Platform.isAndroid
-    ? (_clientSecret.isEmpty
-        ? 'Questa build dell\'app non può collegare server: chi l\'ha compilata non ha indicato il '
-            'segreto del client Web (GOOGLE_SERVER_CLIENT_SECRET).'
-        : null)
-    : 'Collegare un server si può solo da Android.';
+    ? (_clientSecret.isEmpty ? currentL10n().serverUnavailableNoSecret : null)
+    : currentL10n().serverUnavailableAndroidOnly;
 
 class ServerInvite {
   const ServerInvite({
@@ -90,13 +89,13 @@ class ServerAccess {
   /// Il token d'identità dell'account, per il server.
   Future<String> idToken({bool refresh = false}) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw const ServerUnauthorized('Fai l\'accesso con Google per usare il server.');
+    if (user == null) throw ServerUnauthorized(currentL10n().serverSignInRequired);
     try {
       final token = await user.getIdToken(refresh);
       if (token == null) throw const ServerUnauthorized();
       return token;
     } on FirebaseAuthException catch (error) {
-      if (error.code == 'network-request-failed') throw const ServerOffline('Nessuna connessione.');
+      if (error.code == 'network-request-failed') throw ServerOffline(currentL10n().serverNoConnection);
       throw const ServerUnauthorized();
     }
   }
@@ -112,7 +111,7 @@ class ServerAccess {
     final unavailable = serverGrantUnavailable;
     if (unavailable != null) throw ServerException(unavailable);
     final id = await _google.invokeMethod<String>('webClientId');
-    if (id == null) throw const ServerException('Manca google-services.json: questa build non ha il client di Google.');
+    if (id == null) throw ServerException(currentL10n().serverMissingGoogleServices);
     final ServerAuthorizationTokenData? granted;
     try {
       granted = await GoogleSignInPlatform.instance.serverAuthorizationTokensForScopes(
@@ -127,14 +126,14 @@ class ServerAccess {
       );
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled) return null;
-      throw const ServerException('Google non ha concesso l\'accesso a Drive.');
+      throw ServerException(currentL10n().serverDriveAccessDenied);
     }
     if (granted == null) return null;
     final client = GoogleClient(id, _clientSecret);
     try {
       return (client: client, refreshToken: await redeemServerCode(client, granted.serverAuthCode));
     } on DriveOffline {
-      throw const ServerOffline('Google non risponde: riprova fra poco.');
+      throw ServerOffline(currentL10n().serverGoogleNotResponding);
     } on DriveException catch (error) {
       throw ServerException('$error');
     }

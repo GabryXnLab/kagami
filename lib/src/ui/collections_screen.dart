@@ -11,6 +11,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/library_view.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 import 'library_screen.dart';
@@ -46,10 +47,10 @@ class CollectionsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('Raccolte', style: KagamiType.display(30)),
+                    child: Text(context.l10n.collectionsTitle, style: KagamiType.display(30)),
                   ),
                   KButton(
-                    label: 'Nuova',
+                    label: context.l10n.collectionsNew,
                     icon: LucideIcons.plus,
                     height: 42,
                     onPressed: () => askForCollection(context, ref),
@@ -62,7 +63,7 @@ class CollectionsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const KSection('Automatiche'),
+                  KSection(context.l10n.collectionsAutomatic),
                   KGroup(
                     children: [
                       for (final auto in AutoCollection.values)
@@ -73,18 +74,16 @@ class CollectionsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 26),
-                  const KSection('Le tue raccolte'),
+                  KSection(context.l10n.collectionsYours),
                 ],
               ),
             ),
             if (collections.isEmpty)
-              const KEmpty(
+              KEmpty(
                 icon: LucideIcons.listPlus,
                 compact: true,
-                title: 'Nessuna raccolta',
-                message: 'Sono il modo per dare struttura a una libreria che '
-                    'cresce da sola: una serie può stare in più raccolte e '
-                    'l\'ordine lo scegli tu.',
+                title: context.l10n.collectionsNoneTitle,
+                message: context.l10n.collectionsNoneMessage,
               )
             else
               ReorderableListView(
@@ -146,14 +145,14 @@ class _CollectionTile extends ConsumerWidget {
             icon: LucideIcons.bookmark,
             tint: collection.color == null ? null : Color(collection.color!),
             title: collection.name,
-            subtitle: '${collection.seriesKeys.length} serie',
+            subtitle: context.l10n.collectionsSeriesCount(collection.seriesKeys.length),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => CollectionScreen(collectionId: collection.id),
               ),
             ),
             trailing: IconButton(
-              tooltip: 'Modifica',
+              tooltip: context.l10n.collectionsEdit,
               onPressed: () => _menu(context, ref),
               icon: const Icon(LucideIcons.ellipsisVertical, size: 18),
             ),
@@ -172,7 +171,7 @@ class _CollectionTile extends ConsumerWidget {
             children: [
               KTile(
                 icon: LucideIcons.pencil,
-                title: 'Rinomina e cambia colore',
+                title: context.l10n.collectionsRenameRecolor,
                 onTap: () {
                   Navigator.of(context).pop();
                   askForCollection(
@@ -186,7 +185,7 @@ class _CollectionTile extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.trash2,
-                title: 'Elimina la raccolta',
+                title: context.l10n.collectionsDelete,
                 tint: context.tokens.danger,
                 onTap: () {
                   ref
@@ -221,7 +220,9 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
         .watch(collectionsProvider)
         .firstWhereOrNull((row) => row.id == widget.collectionId);
     if (library == null || collection == null) {
-      return const Scaffold(body: Center(child: Text('Raccolta non trovata.')));
+      return Scaffold(
+        body: Center(child: Text(context.l10n.collectionsNotFound)),
+      );
     }
     final all = {
       for (final signals in ref.watch(librarySignalsProvider))
@@ -239,7 +240,9 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
         title: Text(collection.name),
         actions: [
           IconButton(
-            tooltip: _reordering ? 'Fine' : 'Riordina',
+            tooltip: _reordering
+                ? context.l10n.collectionsDone
+                : context.l10n.collectionsReorder,
             onPressed: series.isEmpty
                 ? null
                 : () => setState(() => _reordering = !_reordering),
@@ -251,11 +254,10 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
         ],
       ),
       body: series.isEmpty
-          ? const KEmpty(
+          ? KEmpty(
               icon: LucideIcons.bookmark,
-              title: 'Raccolta vuota',
-              message: 'Si aggiunge una serie dalla sua scheda, o tenendo '
-                  'premuta una copertina nella libreria.',
+              title: context.l10n.collectionsEmptyTitle,
+              message: context.l10n.collectionsEmptyMessage,
             )
           : _reordering
               ? _ReorderList(
@@ -317,7 +319,7 @@ class _ReorderList extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Togli dalla raccolta',
+                    tooltip: context.l10n.collectionsRemoveFrom,
                     onPressed: () =>
                         ref.read(readingProvider.notifier).setSeriesInCollection(
                               collection.id,

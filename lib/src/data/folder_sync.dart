@@ -41,6 +41,7 @@ import 'dart:isolate';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import 'drive.dart';
 
 /// Da che parte vanno i file.
@@ -58,9 +59,9 @@ enum SyncDirection {
   bool get uploads => this != download;
 
   String get label => switch (this) {
-        download => 'Da Drive',
-        upload => 'Verso Drive',
-        both => 'Entrambe',
+        download => currentL10n().dataSyncDirectionDownload,
+        upload => currentL10n().dataSyncDirectionUpload,
+        both => currentL10n().dataSyncDirectionBoth,
       };
 }
 
@@ -467,14 +468,14 @@ class SyncBusy implements Exception {
   const SyncBusy();
 
   @override
-  String toString() => 'Una sincronizzazione è già in corso';
+  String toString() => currentL10n().dataSyncBusy;
 }
 
 class SyncCancelled implements Exception {
   const SyncCancelled();
 
   @override
-  String toString() => 'Sincronizzazione interrotta';
+  String toString() => currentL10n().dataSyncCancelled;
 }
 
 /// I file della sincronizzazione nello spazio dell'app: impostazioni,
@@ -761,8 +762,8 @@ class FolderSync {
       error = switch (caught) {
         DriveException(:final message) => message,
         SyncCancelled() => '$caught',
-        FileSystemException() => 'La cartella del telefono non si legge',
-        _ => 'Sincronizzazione non riuscita',
+        FileSystemException() => currentL10n().dataSyncFolderUnreadable,
+        _ => currentL10n().dataSyncFailed,
       };
     } finally {
       try {

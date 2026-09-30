@@ -1,8 +1,11 @@
 package dev.local.kagami
 
+import android.app.LocaleManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.LocaleList
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -45,6 +48,18 @@ class MainActivity : FlutterActivity() {
                 @Suppress("DiscouragedApi")
                 val id = resources.getIdentifier("default_web_client_id", "string", packageName)
                 result.success(if (id == 0) null else getString(id))
+            }
+        // La lingua scelta nell'app vale anche per ciò che scrive il Kotlin
+        // (notifiche e canali), anche ad app chiusa: da Android 13 il sistema
+        // ricorda una lingua per app. Prima resta quella del sistema.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kagami/locale")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "set") return@setMethodCallHandler result.notImplemented()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    getSystemService(LocaleManager::class.java).applicationLocales =
+                        LocaleList.forLanguageTags(call.arguments as String)
+                }
+                result.success(null)
             }
     }
 

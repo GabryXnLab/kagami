@@ -18,3 +18,4 @@ key.properties
 
 # Report di Gradle, generati a ogni build
 /build/
+.kotlin/

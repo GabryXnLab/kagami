@@ -67,8 +67,7 @@ class LibraryWatchWorker(context: Context, parameters: WorkerParameters) :
                 applicationContext,
                 key,
                 entry.optString("title", mark.optString("title")),
-                if (fresh == 1) "È arrivato un capitolo nuovo"
-                else "Sono arrivati $fresh capitoli nuovi",
+                applicationContext.resources.getQuantityString(R.plurals.arrivals_new, fresh, fresh),
             )
         }
         if (changed) recordFile.writeText(record.toString())

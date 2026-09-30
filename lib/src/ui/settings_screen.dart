@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -19,36 +20,86 @@ import '../data/folder_sync.dart';
 import '../data/page_decoder.dart';
 import '../data/reader_probe.dart';
 import '../data/reader_settings.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
 import 'sync_screen.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
 
-const Map<ThemeMode, String> _themeLabels = {
-  ThemeMode.dark: 'Scuro',
-  ThemeMode.light: 'Chiaro',
-  ThemeMode.system: 'Come il sistema',
-};
+String _themeLabel(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
+      ThemeMode.dark => l10n.settingsThemeDark,
+      ThemeMode.light => l10n.settingsThemeLight,
+      ThemeMode.system => l10n.settingsThemeSystem,
+    };
+
+/// La lingua dell'interfaccia: quella del sistema o una delle tradotte.
+class _Language extends ConsumerWidget {
+  const _Language();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final chosen = ref.watch(appLanguageProvider).value;
+    return KTile(
+      icon: LucideIcons.languages,
+      title: l10n.settingsLanguage,
+      subtitle: chosen == null
+          ? l10n.settingsLanguageSystem
+          : languageNames[chosen.languageCode],
+      trailing: Icon(LucideIcons.chevronRight,
+          size: 18, color: context.tokens.muted),
+      onTap: () => showKagamiSheet<void>(
+        context,
+        title: l10n.settingsLanguage,
+        scrollable: true,
+        builder: (sheet) => RadioGroup<Locale?>(
+          groupValue: chosen,
+          onChanged: (value) {
+            ref.read(appLanguageProvider.notifier).set(value);
+            Navigator.of(sheet).pop();
+          },
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              for (final locale in <Locale?>[
+                null,
+                ...AppLocalizations.supportedLocales,
+              ])
+                RadioListTile<Locale?>(
+                  value: locale,
+                  title: Text(locale == null
+                      ? l10n.settingsLanguageSystem
+                      : languageNames[locale.languageCode]!),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final mode = ref.watch(themeModeProvider).value ?? ThemeMode.dark;
     final root = ref.watch(libraryRootProvider);
     final autoBackup = ref.watch(autoBackupProvider).value ?? true;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Impostazioni')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
-          const KSection('Aspetto'),
+          KSection(l10n.settingsAppearance),
           KSegmented(
             options: [
-              for (final value in ThemeMode.values) _themeLabels[value]!,
+              for (final value in ThemeMode.values) _themeLabel(l10n, value),
             ],
             icons: const [
               LucideIcons.smartphone,
@@ -60,14 +111,16 @@ class SettingsScreen extends ConsumerWidget {
                 .read(themeModeProvider.notifier)
                 .set(ThemeMode.values[index]),
           ),
+          const SizedBox(height: 12),
+          const KGroup(children: [_Language()]),
           const SizedBox(height: 26),
-          const KSection('Libreria'),
+          KSection(l10n.settingsLibrary),
           KGroup(
             children: [
               KTile(
                 icon: LucideIcons.folder,
-                title: 'Cartella',
-                subtitle: root ?? 'Nessuna cartella scelta',
+                title: l10n.settingsFolder,
+                subtitle: root ?? l10n.settingsNoFolder,
                 trailing: const Icon(LucideIcons.chevronRight, size: 18),
                 onTap: () async {
                   final location =
@@ -81,14 +134,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.refreshCw,
-                title: 'Rileggi gli indici',
-                subtitle: 'Da fare quando la sincronizzazione ha appena '
-                    'portato roba nuova',
+                title: l10n.settingsReloadIndexes,
+                subtitle: l10n.settingsReloadIndexesNote,
                 onTap: () {
                   ref.invalidate(libraryCatalogProvider);
                   ref.invalidate(readingProvider);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Indici riletti')),
+                    SnackBar(content: Text(l10n.settingsIndexesReloaded)),
                   );
                 },
               ),
@@ -96,26 +148,25 @@ class SettingsScreen extends ConsumerWidget {
           ),
           if (cloudAvailable) ...[
             const SizedBox(height: 26),
-            const KSection('Google Drive'),
+            KSection(l10n.settingsGoogleDrive),
             const _Drive(),
           ],
           const SizedBox(height: 26),
-          const KSection('Lettura'),
+          KSection(l10n.settingsReading),
           const _ReaderDefaults(),
           const SizedBox(height: 12),
           const _ProbeSwitch(),
           const SizedBox(height: 26),
-          const KSection('Account'),
+          KSection(l10n.settingsAccount),
           const _Account(),
           const SizedBox(height: 26),
-          const KSection('Dati'),
+          KSection(l10n.settingsData),
           KGroup(
             children: [
               KTile(
                 icon: LucideIcons.databaseBackup,
-                title: 'Copia automatica nella libreria',
-                subtitle: 'Una volta al giorno in reading/backup/, che la '
-                    'sincronizzazione porta su Drive insieme ai manga',
+                title: l10n.settingsAutoBackup,
+                subtitle: l10n.settingsAutoBackupNote,
                 onTap: () =>
                     ref.read(autoBackupProvider.notifier).set(!autoBackup),
                 trailing: Switch(
@@ -126,30 +177,28 @@ class SettingsScreen extends ConsumerWidget {
               ),
               KTile(
                 icon: LucideIcons.download,
-                title: 'Esporta i dati',
-                subtitle:
-                    'Stato, voti, cronologia, raccolte e segnalibri in un file',
+                title: l10n.settingsExport,
+                subtitle: l10n.settingsExportNote,
                 onTap: () => _export(context, ref),
               ),
               KTile(
                 icon: LucideIcons.upload,
-                title: 'Importa da un backup',
-                subtitle: 'Dice cosa contiene prima di toccare niente',
+                title: l10n.settingsImport,
+                subtitle: l10n.settingsImportNote,
                 onTap: () => _import(context, ref),
               ),
               if (root != null) _AutoBackups(root: root),
               KTile(
                 icon: LucideIcons.trash2,
-                title: 'Elimina i dati personali',
-                subtitle:
-                    'Stato, voti, cronologia e raccolte. I manga non si toccano',
+                title: l10n.settingsWipe,
+                subtitle: l10n.settingsWipeNote,
                 tint: context.tokens.danger,
                 onTap: () => _wipe(context, ref),
               ),
             ],
           ),
           const SizedBox(height: 26),
-          const KSection('Informazioni'),
+          KSection(l10n.settingsAbout),
           const KGroup(children: [_About()]),
         ],
       ),
@@ -157,11 +206,12 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final service = ref.read(backupServiceProvider);
     final messenger = ScaffoldMessenger.of(context);
     final bytes = await service.export();
     final saved = await FilePicker.saveFile(
-      dialogTitle: 'Dove salvare il backup',
+      dialogTitle: l10n.settingsExportDialog,
       fileName: service.fileName(),
       bytes: bytes,
       mimeType: 'application/gzip',
@@ -169,17 +219,20 @@ class SettingsScreen extends ConsumerWidget {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          saved == null ? 'Esportazione annullata' : 'Backup salvato',
+          saved == null
+              ? l10n.settingsExportCancelled
+              : l10n.settingsExportSaved,
         ),
       ),
     );
   }
 
   Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final service = ref.read(backupServiceProvider);
     final messenger = ScaffoldMessenger.of(context);
     final picked = await FilePicker.pickFiles(
-      dialogTitle: 'Scegli un backup di Kagami',
+      dialogTitle: l10n.settingsImportDialog,
       type: FileType.any,
     );
     final file = picked.firstOrNull;
@@ -188,7 +241,7 @@ class SettingsScreen extends ConsumerWidget {
     final summary = await service.inspect(bytes);
     if (summary == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Non è un backup di Kagami')),
+        SnackBar(content: Text(l10n.settingsImportInvalid)),
       );
       return;
     }
@@ -196,7 +249,7 @@ class SettingsScreen extends ConsumerWidget {
 
     final mode = await showKagamiSheet<ImportMode>(
       context,
-      title: 'Importare questo backup?',
+      title: l10n.settingsImportSheetTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -207,30 +260,32 @@ class SettingsScreen extends ConsumerWidget {
               color: context.colors.surfaceContainerHigh,
               child: KFigureRow(
                 children: [
-                  KFigure(value: '${summary.series}', label: 'Serie'),
-                  KFigure(value: '${summary.chapters}', label: 'Letti'),
-                  KFigure(value: '${summary.collections}', label: 'Raccolte'),
+                  KFigure(value: '${summary.series}', label: l10n.settingsImportSeries),
+                  KFigure(value: '${summary.chapters}', label: l10n.settingsImportRead),
+                  KFigure(value: '${summary.collections}', label: l10n.settingsImportCollections),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              'Fatto il ${_date(summary.createdAt)}. Fondere tiene quello che '
-              'hai già e aggiunge: i capitoli letti si sommano e per il resto '
-              'vince il record più recente. Sostituire cancella i dati di '
-              'questo dispositivo.',
+              summary.createdAt == null
+                  ? l10n.settingsImportExplainUnknownDate
+                  : l10n.settingsImportExplain(
+                      DateFormat.yMd(l10n.localeName)
+                          .format(summary.createdAt!.toLocal()),
+                    ),
               style: KagamiType.body(13, color: context.tokens.muted),
             ),
             const SizedBox(height: 22),
             KButton(
-              label: 'Fondi',
+              label: l10n.settingsImportMerge,
               icon: LucideIcons.merge,
               expand: true,
               onPressed: () => Navigator.of(context).pop(ImportMode.merge),
             ),
             const SizedBox(height: 10),
             KGhostButton(
-              label: 'Sostituisci',
+              label: l10n.settingsImportReplace,
               icon: LucideIcons.replace,
               expand: true,
               onPressed: () => Navigator.of(context).pop(ImportMode.replace),
@@ -244,16 +299,19 @@ class SettingsScreen extends ConsumerWidget {
     ref.invalidate(readingProvider);
     messenger.showSnackBar(
       SnackBar(
-        content: Text(done ? 'Dati importati' : 'Importazione non riuscita'),
+        content: Text(
+          done ? l10n.settingsImportDone : l10n.settingsImportFailed,
+        ),
       ),
     );
   }
 
   Future<void> _wipe(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showKagamiSheet<bool>(
       context,
-      title: 'Eliminare tutti i dati personali?',
+      title: l10n.settingsWipeSheetTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -261,15 +319,12 @@ class SettingsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Spariscono stato, voti, preferiti, capitoli letti, cronologia, '
-              'sessioni, raccolte e segnalibri di questo dispositivo. I manga '
-              'e gli indici della libreria non vengono toccati.\n\n'
-              'Se non hai un backup, questa è l\'ultima occasione per farlo.',
+              l10n.settingsWipeExplain,
               style: KagamiType.body(13.5, color: context.tokens.muted),
             ),
             const SizedBox(height: 22),
             KButton(
-              label: 'Elimina tutto',
+              label: l10n.settingsWipeConfirm,
               icon: LucideIcons.trash2,
               expand: true,
               tone: context.tokens.danger,
@@ -283,14 +338,8 @@ class SettingsScreen extends ConsumerWidget {
     await ref.read(userRepositoryProvider).wipe();
     ref.invalidate(readingProvider);
     messenger.showSnackBar(
-      const SnackBar(content: Text('Dati personali eliminati')),
+      SnackBar(content: Text(l10n.settingsWipeDone)),
     );
-  }
-
-  static String _date(DateTime? value) {
-    if (value == null) return 'data ignota';
-    final local = value.toLocal();
-    return '${local.day}/${local.month}/${local.year}';
   }
 }
 
@@ -313,6 +362,7 @@ class _DriveState extends ConsumerState<_Drive> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final folder = ref.watch(driveFolderProvider).value;
     final root = ref.watch(libraryRootProvider);
     final private = ref.watch(downloadPrivateProvider).value ?? false;
@@ -324,9 +374,8 @@ class _DriveState extends ConsumerState<_Drive> {
         children: [
           KTile(
             icon: LucideIcons.cloud,
-            title: 'Collega Google Drive',
-            subtitle: 'Legge la libreria da Drive senza portarla tutta sul '
-                'telefono, e scarica solo ciò che si sceglie',
+            title: l10n.settingsDriveConnect,
+            subtitle: l10n.settingsDriveConnectNote,
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => connectDrive(context, ref),
           ),
@@ -337,14 +386,14 @@ class _DriveState extends ConsumerState<_Drive> {
       children: [
         KTile(
           icon: LucideIcons.cloud,
-          title: 'Cartella su Drive',
+          title: l10n.settingsDriveFolder,
           subtitle: folder.name,
           trailing: const Icon(LucideIcons.chevronRight, size: 18),
           onTap: () => connectDrive(context, ref),
         ),
         KTile(
           icon: LucideIcons.arrowDownUp,
-          title: 'Sincronizzazione della cartella',
+          title: l10n.settingsDriveSync,
           subtitle: folderSyncSummary(
             ref.watch(folderSyncSettingsProvider).value ?? const SyncSettings(),
           ),
@@ -355,28 +404,30 @@ class _DriveState extends ConsumerState<_Drive> {
         ),
         KTile(
           icon: LucideIcons.download,
-          title: 'I capitoli scaricati vanno',
+          title: l10n.settingsDriveDownloadsGo,
           subtitle: root != null
-              ? 'Nella cartella della libreria: $root'
+              ? l10n.settingsDriveDownloadsFolder(root)
               : private
-                  ? 'Nello spazio dell\'app: se ne vanno disinstallandola'
-                  : 'Si chiede al primo download',
+                  ? l10n.settingsDriveDownloadsApp
+                  : l10n.settingsDriveDownloadsAsk,
         ),
         FutureBuilder<void>(
           future: cache.ready(),
           builder: (context, _) => KTile(
             icon: LucideIcons.hardDrive,
-            title: 'Tavole lette da Drive',
-            subtitle: '${_size(cache.bytes)} in cache, al massimo '
-                '${_size(limit)}. Si rileggono senza rete',
+            title: l10n.settingsDriveCache,
+            subtitle: l10n.settingsDriveCacheNote(
+              _size(cache.bytes),
+              _size(limit),
+            ),
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => _chooseLimit(context, limit),
           ),
         ),
         KTile(
           icon: LucideIcons.trash2,
-          title: 'Svuota la cache',
-          subtitle: 'I capitoli scaricati non si toccano',
+          title: l10n.settingsDriveClearCache,
+          subtitle: l10n.settingsDriveClearCacheNote,
           onTap: () async {
             await cache.clear();
             if (mounted) setState(() {});
@@ -384,9 +435,8 @@ class _DriveState extends ConsumerState<_Drive> {
         ),
         KTile(
           icon: LucideIcons.cloudOff,
-          title: 'Scollega Drive',
-          subtitle: 'La libreria torna a essere la cartella del telefono. '
-              'I capitoli scaricati restano',
+          title: l10n.settingsDriveDisconnect,
+          subtitle: l10n.settingsDriveDisconnectNote,
           tint: context.tokens.danger,
           onTap: () => ref.read(driveFolderProvider.notifier).choose(null),
         ),
@@ -397,7 +447,7 @@ class _DriveState extends ConsumerState<_Drive> {
   Future<void> _chooseLimit(BuildContext context, int current) async {
     final chosen = await showKagamiSheet<int>(
       context,
-      title: 'Spazio per le tavole',
+      title: context.l10n.settingsDriveCacheLimitTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: KSegmented(
@@ -422,14 +472,14 @@ class _Account extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     if (!cloudAvailable) {
-      return const KGroup(
+      return KGroup(
         children: [
           KTile(
             icon: LucideIcons.cloudOff,
-            title: 'Account non disponibile qui',
-            subtitle: 'Questa build non ha Firebase: i dati restano '
-                'dove sono, sul dispositivo',
+            title: l10n.settingsAccountUnavailable,
+            subtitle: l10n.settingsAccountUnavailableNote,
           ),
         ],
       );
@@ -444,9 +494,8 @@ class _Account extends ConsumerWidget {
         if (account == null)
           KTile(
             icon: LucideIcons.logIn,
-            title: 'Accedi con Google',
-            subtitle: 'Voti, stato, capitoli letti, cronologia e raccolte '
-                'seguono l\'account invece del telefono',
+            title: l10n.settingsAccountSignIn,
+            subtitle: l10n.settingsAccountSignInNote,
             trailing: status.busy ? const _Working() : null,
             onTap: status.busy ? null : notifier.signIn,
           )
@@ -458,22 +507,21 @@ class _Account extends ConsumerWidget {
           ),
           KTile(
             icon: LucideIcons.refreshCw,
-            title: 'Sincronizza adesso',
-            subtitle: _lastSync(status.lastSyncAt),
+            title: l10n.settingsAccountSyncNow,
+            subtitle: _lastSync(l10n, status.lastSyncAt),
             trailing: status.busy ? const _Working() : null,
             onTap: status.busy ? null : notifier.syncNow,
           ),
           KTile(
             icon: LucideIcons.logOut,
-            title: 'Esci',
-            subtitle: 'Manda su l\'ultima lettura, poi chiude la sessione',
+            title: l10n.settingsAccountSignOut,
+            subtitle: l10n.settingsAccountSignOutNote,
             onTap: status.busy ? null : notifier.signOut,
           ),
           KTile(
             icon: LucideIcons.cloudOff,
-            title: 'Smetti di tenerne copia',
-            subtitle: 'Cancella i dati dall\'account. Quelli di questo '
-                'telefono restano dove sono',
+            title: l10n.settingsAccountForget,
+            subtitle: l10n.settingsAccountForgetNote,
             tint: context.tokens.danger,
             onTap: status.busy ? null : () => _forget(context, ref),
           ),
@@ -482,7 +530,7 @@ class _Account extends ConsumerWidget {
           KTile(
             icon: LucideIcons.triangleAlert,
             title: status.error!,
-            subtitle: 'I dati di questo telefono non sono stati toccati',
+            subtitle: l10n.settingsAccountErrorNote,
             tint: context.tokens.danger,
           ),
       ],
@@ -492,7 +540,7 @@ class _Account extends ConsumerWidget {
   Future<void> _forget(BuildContext context, WidgetRef ref) async {
     final confirmed = await showKagamiSheet<bool>(
       context,
-      title: 'Cancellare i dati dall\'account?',
+      title: context.l10n.settingsAccountForgetSheetTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -500,14 +548,12 @@ class _Account extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Sparisce la copia tenuta per te, e l\'accesso si chiude. '
-              'Stato, voti, cronologia e raccolte di questo telefono restano '
-              'dove sono — ma da un altro telefono non si vedranno più.',
+              context.l10n.settingsAccountForgetExplain,
               style: KagamiType.body(13.5, color: context.tokens.muted),
             ),
             const SizedBox(height: 22),
             KButton(
-              label: 'Cancella dall\'account',
+              label: context.l10n.settingsAccountForgetConfirm,
               icon: LucideIcons.cloudOff,
               expand: true,
               tone: context.tokens.danger,
@@ -521,12 +567,13 @@ class _Account extends ConsumerWidget {
     await ref.read(cloudAccountProvider.notifier).forget();
   }
 
-  static String _lastSync(DateTime? value) {
-    if (value == null) return 'Mai sincronizzato su questo telefono';
+  static String _lastSync(AppLocalizations l10n, DateTime? value) {
+    if (value == null) return l10n.settingsAccountNeverSynced;
     final local = value.toLocal();
-    String two(int number) => number.toString().padLeft(2, '0');
-    return 'L\'ultima volta il ${local.day}/${local.month} '
-        'alle ${two(local.hour)}:${two(local.minute)}';
+    return l10n.settingsAccountLastSync(
+      DateFormat.Md(l10n.localeName).format(local),
+      DateFormat.Hm(l10n.localeName).format(local),
+    );
   }
 }
 
@@ -590,7 +637,7 @@ class _ReaderDefaultsState extends ConsumerState<_ReaderDefaults> {
           children: [
             KTile(
               icon: LucideIcons.arrowLeftRight,
-              title: 'Direzione in paginata',
+              title: context.l10n.settingsReaderDirection,
               subtitle: settings.direction.label,
               onTap: () => _save(
                 settings.copyWith(
@@ -602,7 +649,7 @@ class _ReaderDefaultsState extends ConsumerState<_ReaderDefaults> {
             ),
             KTile(
               icon: LucideIcons.contrast,
-              title: 'Sfondo',
+              title: context.l10n.settingsReaderBackground,
               subtitle: settings.background.label,
               onTap: () => _save(
                 settings.copyWith(
@@ -614,7 +661,7 @@ class _ReaderDefaultsState extends ConsumerState<_ReaderDefaults> {
             ),
             KTile(
               icon: LucideIcons.lightbulb,
-              title: 'Tieni acceso lo schermo',
+              title: context.l10n.settingsReaderKeepAwake,
               onTap: () => _save(
                 settings.copyWith(keepAwake: !settings.keepAwake),
               ),
@@ -626,7 +673,7 @@ class _ReaderDefaultsState extends ConsumerState<_ReaderDefaults> {
             ),
             KTile(
               icon: LucideIcons.listOrdered,
-              title: 'Barra di avanzamento',
+              title: context.l10n.settingsReaderProgressBar,
               onTap: () => _save(
                 settings.copyWith(showProgress: !settings.showProgress),
               ),
@@ -649,6 +696,7 @@ class _ProbeSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final probe = ReaderProbe.instance;
     final decoder = PageDecoder.instance;
     return ListenableBuilder(
@@ -657,13 +705,17 @@ class _ProbeSwitch extends StatelessWidget {
         children: [
           KTile(
             icon: LucideIcons.gauge,
-            title: 'Misura la fluidità',
-            subtitle: 'Nel lettore, in alto: fotogrammi lenti e saltati, da '
-                'dove arrivano le fasce, GC. Un tocco sui numeri li azzera',
+            title: l10n.settingsProbe,
+            subtitle: l10n.settingsProbeNote,
             onTap: () => probe.setEnabled(!probe.on),
             trailing: _WithInfo(
-              title: 'Misura la fluidità',
-              paragraphs: _probeInfo,
+              title: l10n.settingsProbe,
+              paragraphs: [
+                l10n.settingsProbeInfo1,
+                l10n.settingsProbeInfo2,
+                l10n.settingsProbeInfo3,
+                l10n.settingsProbeInfo4,
+              ],
               child: Switch(value: probe.on, onChanged: probe.setEnabled),
             ),
           ),
@@ -672,14 +724,17 @@ class _ProbeSwitch extends StatelessWidget {
           if (decoder.canDecodeRegions)
             KTile(
               icon: LucideIcons.layers,
-              title: 'Fasce native come texture',
-              subtitle: 'Prova: le tavole ancora da tagliare arrivano alla '
-                  'GPU senza passare dall\'interfaccia. Si spegne riaprendo '
-                  "l'app",
+              title: l10n.settingsTexture,
+              subtitle: l10n.settingsTextureNote,
               onTap: () => decoder.textures = !decoder.textures,
               trailing: _WithInfo(
-                title: 'Fasce native come texture',
-                paragraphs: _textureInfo,
+                title: l10n.settingsTexture,
+                paragraphs: [
+                  l10n.settingsTextureInfo1,
+                  l10n.settingsTextureInfo2,
+                  l10n.settingsTextureInfo3,
+                  l10n.settingsTextureInfo4,
+                ],
                 child: Switch(
                   value: decoder.textures,
                   onChanged: (value) => decoder.textures = value,
@@ -691,37 +746,6 @@ class _ProbeSwitch extends StatelessWidget {
     );
   }
 }
-
-const _probeInfo = [
-  'Mostra nel lettore, in alto a sinistra, un riquadro di numeri su quanto '
-      'è fluida la lettura. Serve a capire perché lo scorrimento scatta: non '
-      'cambia niente di come si legge, e costa pochissimo.',
-  'Il numero che conta di più è «saltati»: i fotogrammi che mancano mentre '
-      'la pagina scorre. Ognuno è un piccolo scatto che si vede. «Partiti '
-      'tardi» e «Lenti» dicono se l\'app era occupata, «GC Android» se il '
-      'sistema stava liberando memoria.',
-  '«Tessere», «intere», «del telefono» e «native» dicono da dove è arrivato '
-      'ogni pezzo di tavola: le prime tre sono le vie leggere, l\'ultima è il '
-      'ritaglio fatto al momento, che è quella che pesa.',
-  'Un tocco sul riquadro azzera i numeri, così si misura da un punto preciso '
-      'del capitolo. Riaprendo l\'app la misura si spegne da sola.',
-];
-
-const _textureInfo = [
-  'Le tavole molto alte di un webtoon si leggono a pezzi. Quasi sempre i pezzi '
-      'sono già pronti: tagliati dall\'archivio sul server, o dal telefono la '
-      'prima volta che si apre il capitolo. Quando non lo sono, li ritaglia al '
-      'momento il decodificatore di Android.',
-  'Normalmente i pixel di quei pezzi passano dall\'app prima di arrivare allo '
-      'schermo. Con questa opzione vanno direttamente alla scheda grafica: '
-      'l\'app ha meno lavoro mentre si scorre, e lo scorrimento può scattare '
-      'meno. La qualità dell\'immagine non cambia.',
-  'È una prova: è un modo di disegnare nuovo, non ancora verificato su questo '
-      'telefono. Se vedi tavole nere, righe o sfarfallii, spegnila. Se il '
-      'telefono non lo supporta, l\'app torna da sola al modo normale.',
-  'Sui capitoli già tagliati in tessere non cambia niente, perché lì questa '
-      'strada non si usa. Riaprendo l\'app si spegne da sola.',
-];
 
 /// Un interruttore con accanto la spiegazione di cosa fa.
 class _WithInfo extends StatelessWidget {
@@ -740,7 +764,7 @@ class _WithInfo extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            tooltip: 'Cosa fa',
+            tooltip: context.l10n.settingsWhatItDoes,
             icon: const Icon(LucideIcons.info, size: 18),
             onPressed: () => showKagamiSheet<void>(
               context,
@@ -778,6 +802,7 @@ class _AutoBackups extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final service = ref.watch(backupServiceProvider);
     return FutureBuilder<List<File>>(
       future: service.backupsIn(root),
@@ -785,12 +810,12 @@ class _AutoBackups extends ConsumerWidget {
         final files = snapshot.data ?? const <File>[];
         return KTile(
           icon: LucideIcons.hardDriveDownload,
-          title: 'Copie nella libreria',
+          title: l10n.settingsBackupsTitle,
           subtitle: files.isEmpty
-              ? 'Nessuna copia ancora: la prima si fa alla prossima apertura'
-              : '${files.length} copie, l\'ultima ${_name(files.first)}',
+              ? l10n.settingsBackupsNone
+              : l10n.settingsBackupsLatest(files.length, _name(files.first)),
           trailing: IconButton(
-            tooltip: 'Fai una copia adesso',
+            tooltip: l10n.settingsBackupNow,
             icon: const Icon(LucideIcons.play, size: 17),
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
@@ -800,7 +825,7 @@ class _AutoBackups extends ConsumerWidget {
               final file = File('${directory.path}/${service.fileName()}');
               await file.writeAsBytes(bytes, flush: true);
               messenger.showSnackBar(
-                SnackBar(content: Text('Copia scritta in ${file.path}')),
+                SnackBar(content: Text(l10n.settingsBackupWritten(file.path))),
               );
             },
           ),
@@ -822,9 +847,11 @@ class _About extends StatelessWidget {
           icon: LucideIcons.info,
           title: 'Kagami',
           subtitle: snapshot.hasData
-              ? 'versione ${snapshot.data!.version} '
-                  '(${snapshot.data!.buildNumber})'
-              : 'lettore per archivi MALF locali',
+              ? context.l10n.settingsVersion(
+                  snapshot.data!.version,
+                  snapshot.data!.buildNumber,
+                )
+              : context.l10n.settingsTagline,
         ),
       );
 }

@@ -17,6 +17,8 @@ import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
 
+import '../l10n.dart';
+
 class NativeImageTools implements ImageTools {
   const NativeImageTools();
 
@@ -65,10 +67,10 @@ ArchiveEnvironment deviceEnvironment(ArchiveFiles files, DriveClient client, Str
             ? null
             : LocalStore(target.root!, hideFromGallery: !target.private);
         return switch (target.destination) {
-          ArchiveDestination.phone => phone() ?? (throw const ProviderError('Manca la cartella del telefono.')),
+          ArchiveDestination.phone => phone() ?? (throw ProviderError(currentL10n().dataArchivePhoneFolderMissing)),
           _ => DriveStore(
               remote: DriveSyncRemote(client),
-              folderId: target.folderId ?? (throw const ProviderError('Manca la cartella di Drive.')),
+              folderId: target.folderId ?? (throw ProviderError(currentL10n().dataArchiveDriveFolderMissing)),
               staging: files.staging(target.folderId!).path,
               mirror: target.destination == ArchiveDestination.driveAndPhone ? phone() : null,
             ),

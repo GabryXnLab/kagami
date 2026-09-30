@@ -26,6 +26,7 @@ import 'package:kagami_archive/providers/manhwaread.dart';
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../data/cloud.dart';
@@ -33,6 +34,7 @@ import '../data/drive.dart';
 import '../providers.dart';
 import 'archive_server.dart';
 import 'browser_check_page.dart';
+import '../l10n.dart';
 import 'drive_ui.dart';
 import 'sync_screen.dart' show clockOf;
 import 'theme.dart';
@@ -67,7 +69,12 @@ enum _Where {
         phone => ArchiveDestination.phone,
       };
 
-  String get label => local?.label ?? 'Server';
+  String label(AppLocalizations l10n) => switch (this) {
+        server => l10n.archiveWhereServer,
+        drive => l10n.archiveWhereDrive,
+        driveAndPhone => l10n.archiveWhereDriveAndPhone,
+        phone => l10n.archiveWherePhone,
+      };
 
   IconData get icon => switch (this) {
         server => LucideIcons.server,
@@ -88,6 +95,12 @@ class _Found {
   final String? error;
   final bool challenged;
 }
+
+String _destinationName(AppLocalizations l10n, ArchiveDestination destination) => switch (destination) {
+      ArchiveDestination.drive => l10n.archiveWhereDrive,
+      ArchiveDestination.driveAndPhone => l10n.archiveWhereDriveAndPhone,
+      ArchiveDestination.phone => l10n.archiveWherePhone,
+    };
 
 const List<String> _manhwaReadHosts = ['manhwaread.com', 'www.manhwaread.com'];
 
@@ -179,9 +192,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on CloudflareChallenge {
       found = provider is ManhwaRead
           ? const _Found.challenged()
-          : const _Found.error('Il sito chiede una verifica che da qui non si può fare.');
+          : _Found.error(currentL10n().archiveErrChallenge);
     } on ProviderOffline {
-      found = const _Found.error('Nessuna connessione: il sito non risponde.');
+      found = _Found.error(currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
       found = _Found.error(error.message);
     } finally {
@@ -200,7 +213,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       provider.home,
       _manhwaReadHosts,
       ready: _searchReady,
-      waitingFor: 'la ricerca del sito',
+      waitingFor: BrowserWaiting.search,
     );
     if (pass == null || !mounted) return;
     final query = _query.text.trim();
@@ -254,7 +267,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           _manhwaReadHosts,
         );
         if (pass == null) {
-          setState(() => _error = 'La verifica del sito non è stata completata.');
+          setState(() => _error = currentL10n().archiveErrVerifyIncomplete);
           return;
         }
         final cookies = pass.cookies;
@@ -277,7 +290,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       });
       unawaited(_ask(inspected));
     } on ProviderOffline {
-      setState(() => _error = 'Nessuna connessione: il sito non risponde.');
+      setState(() => _error = currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
       setState(() => _error = error.message);
     } finally {
@@ -391,7 +404,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         ));
     if (!mounted) return;
     messenger.showSnackBar(SnackBar(
-      content: Text('«${inspected.series.title}» è in coda. Continua anche a schermo spento.'),
+      content: Text(currentL10n().archiveQueuedSnack(inspected.series.title)),
     ));
     setState(() {
       _inspected = null;
@@ -403,7 +416,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   /// è servita la verifica del browser, perché il server non ne ha uno.
   Future<void> _sendToServer(_Inspected inspected) async {
     final messenger = ScaffoldMessenger.of(context);
-    final name = ref.read(remoteArchiveProvider).info?.name ?? 'server';
+    final name = ref.read(remoteArchiveProvider).info?.name ?? currentL10n().archiveServerFallbackName;
     try {
       await ref.read(remoteArchiveProvider.notifier).enqueue(
             url: inspected.series.url,
@@ -419,7 +432,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     }
     if (!mounted) return;
     messenger.showSnackBar(SnackBar(
-      content: Text('«${inspected.series.title}» è in coda su «$name». Il telefono può anche spegnersi.'),
+      content: Text(currentL10n().archiveQueuedServerSnack(inspected.series.title, name)),
     ));
     setState(() {
       _inspected = null;
@@ -434,9 +447,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     // ridisegna la scelta della destinazione quando il server risponde.
     ref.watch(remoteArchiveProvider);
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final inspected = _inspected;
     return Scaffold(
-      appBar: AppBar(title: const Text('Scarica un manga')),
+      appBar: AppBar(title: Text(l10n.archiveTitle)),
       body: Stack(
         children: [
           if (_fetcher case final fetcher?) Positioned.fill(child: fetcher.view()),
@@ -446,9 +460,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
               children: [
                 Text(
-                  'Cerca un titolo sui siti supportati, o incolla il link di una '
-                  'serie: Kagami la scarica dal sito, con metadati, copertina e '
-                  'l\'elenco completo dei capitoli, nella libreria.',
+                  l10n.archiveIntro,
                   style: KagamiType.body(13, height: 1.5, color: muted),
                 ),
                 const SizedBox(height: 16),
@@ -462,12 +474,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                     if (text.trim().length >= 2) _search(text.trim());
                   },
                   decoration: InputDecoration(
-                    hintText: 'Cerca un manga per titolo',
+                    hintText: l10n.archiveSearchHint,
                     prefixIcon: const Icon(LucideIcons.search, size: 18),
                     suffixIcon: _query.text.isEmpty
                         ? null
                         : IconButton(
-                            tooltip: 'Cancella',
+                            tooltip: l10n.archiveClear,
                             icon: const Icon(LucideIcons.x, size: 18),
                             onPressed: () {
                               _query.clear();
@@ -488,7 +500,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                     hintText: 'https://…',
                     prefixIcon: const Icon(LucideIcons.link, size: 18),
                     suffixIcon: IconButton(
-                      tooltip: 'Incolla',
+                      tooltip: l10n.archivePaste,
                       icon: const Icon(LucideIcons.clipboardPaste, size: 18),
                       onPressed: _busy ? null : _paste,
                     ),
@@ -496,7 +508,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                 ),
                 const SizedBox(height: 12),
                 KButton(
-                  label: _busy ? 'Lettura della serie…' : 'Verifica serie',
+                  label: _busy ? l10n.archiveReading : l10n.archiveVerify,
                   icon: LucideIcons.search,
                   expand: true,
                   onPressed: _busy ? null : _verify,
@@ -525,6 +537,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final known = ref.watch(seriesEntryProvider(series.key));
     final destinations = _destinations();
     final destination = destinations.contains(_destination) ? _destination! : destinations.first;
+    final l10n = context.l10n;
     final authors = (metadata['authors'] as List).cast<String>();
     final tags = [...(metadata['genres'] as List).cast<String>(), ...(metadata['tags'] as List).cast<String>()];
     return [
@@ -558,8 +571,11 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                   Text(series.title, style: KagamiType.body(16, weight: 700, height: 1.25)),
                   const SizedBox(height: 4),
                   Text(
-                    '${providerById(series.provider)?.name ?? series.provider} · '
-                    '${series.chapters.length} capitoli · ${_status(metadata['releaseStatus'])}',
+                    l10n.archiveSeriesSummary(
+                      providerById(series.provider)?.name ?? series.provider,
+                      series.chapters.length,
+                      _status(l10n, metadata['releaseStatus']),
+                    ),
                     style: KagamiType.body(12.5, color: muted),
                   ),
                   if (authors.isNotEmpty) ...[
@@ -577,8 +593,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                   if (known != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Già in libreria: ${known.archivedChapterCount} di '
-                      '${known.chapterCount} capitoli. Quelli che ci sono si saltano.',
+                      l10n.archiveKnown(known.archivedChapterCount, known.chapterCount),
                       style: KagamiType.body(12.5, weight: 600, color: context.colors.primary),
                     ),
                   ],
@@ -589,9 +604,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         ),
       ),
       const SizedBox(height: 22),
-      const KSection('Cosa scaricare'),
+      KSection(l10n.archiveWhatSection),
       KSegmented(
-        options: const ['Tutta', 'Dal capitolo', 'Scelti'],
+        options: [l10n.archiveModeAll, l10n.archiveModeFrom, l10n.archiveModePick],
         icons: const [LucideIcons.library, LucideIcons.skipForward, LucideIcons.listChecks],
         index: _mode.index,
         onChanged: (index) => setState(() => _mode = _Mode.values[index]),
@@ -599,12 +614,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       const SizedBox(height: 10),
       Text(
         switch (_mode) {
-          _Mode.all => 'Tutti i capitoli. Rifarlo più avanti porta solo quelli '
-              'nuovi o rovinati.',
-          _Mode.from => 'Dal capitolo scelto in poi: i precedenti restano '
-              'nell\'elenco della serie, segnati come non scaricati.',
-          _Mode.pick => 'Solo i capitoli toccati. Gli altri restano '
-              'nell\'elenco, non scaricati.',
+          _Mode.all => l10n.archiveModeAllHint,
+          _Mode.from => l10n.archiveModeFromHint,
+          _Mode.pick => l10n.archiveModePickHint,
         },
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ),
@@ -614,9 +626,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           controller: _number,
           keyboardType: TextInputType.text,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
-            hintText: 'Numero del capitolo, come sul sito',
-            prefixIcon: Icon(LucideIcons.hash, size: 18),
+          decoration: InputDecoration(
+            hintText: l10n.archiveChapterNumberHint,
+            prefixIcon: const Icon(LucideIcons.hash, size: 18),
           ),
         ),
       ],
@@ -639,27 +651,27 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
             padding: const EdgeInsets.only(top: 8),
             child: Row(
               children: [
-                Text('${_picked.length} scelti', style: KagamiType.body(12.5, color: muted)),
+                Text(l10n.archivePickedCount(_picked.length), style: KagamiType.body(12.5, color: muted)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => setState(() => _picked
                     ..clear()
                     ..addAll(series.chapters.map((c) => c.id))),
-                  child: const Text('Tutti'),
+                  child: Text(l10n.archiveSelectAll),
                 ),
                 TextButton(
                   onPressed: () => setState(_picked.clear),
-                  child: const Text('Nessuno'),
+                  child: Text(l10n.archiveSelectNone),
                 ),
               ],
             ),
           ),
       ],
       const SizedBox(height: 22),
-      const KSection('Dove'),
+      KSection(l10n.archiveWhereSection),
       if (destinations.length > 1)
         KSegmented(
-          options: [for (final value in destinations) value.label],
+          options: [for (final value in destinations) value.label(l10n)],
           icons: [for (final value in destinations) value.icon],
           index: destinations.indexOf(destination),
           onChanged: (index) => setState(() => _destination = destinations[index]),
@@ -668,37 +680,35 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       Text(
         switch (destination) {
           _Where.server => _serverWhere(),
-          _Where.drive => 'Nella cartella di Drive della libreria. Le '
-              'tavole passano dal telefono e se ne vanno appena Drive le ha: '
-              'si leggono in streaming, o si scaricano dopo.',
-          _Where.driveAndPhone => 'Nella cartella di Drive della '
-              'libreria, e i capitoli restano anche sul telefono per leggerli '
-              'senza rete.',
-          _Where.phone => 'Sul telefono, nella cartella dei manga o '
-              'nello spazio dell\'app. Collegando Drive si può scaricare '
-              'direttamente là.',
+          _Where.drive => l10n.archiveWhereDriveHint,
+          _Where.driveAndPhone => l10n.archiveWhereDriveAndPhoneHint,
+          _Where.phone => l10n.archiveWherePhoneHint,
         },
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ),
       const SizedBox(height: 22),
-      const KSection('Pausa fra le richieste'),
+      KSection(l10n.archiveDelaySection),
       KSegmented(
-        options: [for (final ms in _delays) ms == 0 ? 'Niente' : '${ms / 1000} s'],
+        options: [
+          for (final ms in _delays)
+            ms == 0
+                ? l10n.archiveDelayNone
+                : l10n.archiveDelaySeconds(NumberFormat.decimalPattern(l10n.localeName).format(ms / 1000)),
+        ],
         index: math.max(0, _delays.indexOf(_delayMs)),
         onChanged: (index) => setState(() => _delayMs = _delays[index]),
       ),
       const SizedBox(height: 10),
       Text(
-        'I siti non amano chi scarica a raffica: una pausa breve evita di '
-        'farsi bloccare.',
+        l10n.archiveDelayHint,
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ),
       const SizedBox(height: 20),
       KButton(
         label: switch (_mode) {
-          _Mode.all => 'Scarica tutta la serie',
-          _Mode.from => 'Scarica dal capitolo scelto',
-          _Mode.pick => 'Scarica ${_picked.length} capitoli',
+          _Mode.all => l10n.archiveDownloadAll,
+          _Mode.from => l10n.archiveDownloadFrom,
+          _Mode.pick => l10n.archiveDownloadPicked(_picked.length),
         },
         icon: LucideIcons.download,
         expand: true,
@@ -711,13 +721,16 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final info = ref.read(remoteArchiveProvider).info;
     final folder = ref.read(driveFolderProvider).value;
     final other = folder != null && info?.folderId != folder.id;
-    return 'Lo scarica «${info?.name}» e lo carica in «${info?.folderName ?? info?.folderId}» '
-        'su Drive, anche a telefono spento. Le serie in corso le segue il server.'
-        '${other ? ' Attenzione: non è la cartella che legge l\'app.' : ''}';
+    return context.l10n.archiveServerHint(
+      info?.name ?? '',
+      info?.folderName ?? info?.folderId ?? '',
+      other ? 'other' : 'same',
+    );
   }
 
   List<Widget> _results() {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     return [
       for (final provider in providers)
         if (_found[provider.id] case final found?) ...[
@@ -725,7 +738,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           KSection(provider.name),
           if (found.results case final results?)
             results.isEmpty
-                ? Text('Nessun risultato su ${provider.name}.',
+                ? Text(l10n.archiveNoResults(provider.name),
                     style: KagamiType.body(12.5, color: muted))
                 : KGroup(
                     children: [
@@ -734,8 +747,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                           result: result,
                           referer: provider.home,
                           details: [
-                            if (result.chapters case final count?) count == 1 ? '1 capitolo' : '$count capitoli',
-                            if (result.releaseStatus != 'unknown') _status(result.releaseStatus),
+                            if (result.chapters case final count?) l10n.archiveChaptersCount(count),
+                            if (result.releaseStatus != 'unknown') _status(l10n, result.releaseStatus),
                           ].join(' · '),
                           onTap: _busy ? null : () => _pick(result),
                         ),
@@ -746,9 +759,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               children: [
                 KTile(
                   icon: LucideIcons.shieldCheck,
-                  title: 'Verifica ${provider.name}',
-                  subtitle: 'Il sito vuole sapere che sei una persona: toccando '
-                      'si apre la verifica, poi si cerca anche lì',
+                  title: l10n.archiveVerifySite(provider.name),
+                  subtitle: l10n.archiveVerifySiteHint,
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () => _verifySearch(provider),
                 ),
@@ -762,16 +774,17 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     ];
   }
 
-  static String _status(Object? value) => switch (value) {
-        'ongoing' => 'in corso',
-        'completed' => 'conclusa',
-        'hiatus' => 'in pausa',
-        'cancelled' => 'interrotta',
-        _ => 'stato ignoto',
+  static String _status(AppLocalizations l10n, Object? value) => switch (value) {
+        'ongoing' => l10n.archiveStatusOngoing,
+        'completed' => l10n.archiveStatusCompleted,
+        'hiatus' => l10n.archiveStatusHiatus,
+        'cancelled' => l10n.archiveStatusCancelled,
+        _ => l10n.archiveStatusUnknown,
       };
 
   List<Widget> _queue(ArchiveView view) {
     final notifier = ref.read(archiveProvider.notifier);
+    final l10n = context.l10n;
     final status = view.status;
     final current = view.current;
     final waiting = [for (final job in view.jobs) if (job.id != current?.id) job];
@@ -779,10 +792,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     return [
       const SizedBox(height: 30),
       KSection(
-        'Download',
+        l10n.archiveDownloads,
         trailing: view.history.isEmpty
             ? null
-            : TextButton(onPressed: notifier.clearHistory, child: const Text('Pulisci')),
+            : TextButton(onPressed: notifier.clearHistory, child: Text(l10n.archiveClearHistory)),
       ),
       KGroup(
         children: [
@@ -795,19 +808,21 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           if (current == null && view.jobs.isNotEmpty)
             KTile(
               icon: LucideIcons.play,
-              title: 'Coda ferma',
+              title: l10n.archiveQueueStopped,
               subtitle: status.state == ArchiveState.waiting
                   ? status.message
-                  : 'Riparte da sola; toccando la fai partire adesso',
+                  : l10n.archiveQueueResumeHint,
               onTap: notifier.resume,
             ),
           for (final job in waiting)
             KTile(
               icon: job.automatic ? LucideIcons.refreshCw : LucideIcons.clock,
               title: job.title,
-              subtitle: '${job.automatic ? 'Capitoli nuovi' : 'In coda'} · ${job.target.destination.label}',
+              subtitle: job.automatic
+                  ? l10n.archiveJobAutomatic(_destinationName(l10n, job.target.destination))
+                  : l10n.archiveJobQueued(_destinationName(l10n, job.target.destination)),
               trailing: IconButton(
-                tooltip: 'Togli dalla coda',
+                tooltip: l10n.archiveRemoveFromQueue,
                 icon: const Icon(LucideIcons.x, size: 18),
                 onPressed: () => notifier.remove(job),
               ),
@@ -817,7 +832,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               icon: outcome.ok ? LucideIcons.circleCheck : LucideIcons.triangleAlert,
               tint: outcome.ok ? null : context.tokens.danger,
               title: outcome.title,
-              subtitle: '${archiveWhen(outcome.finishedAt)} · ${outcome.message}',
+              subtitle: l10n.archiveHistoryLine(archiveWhen(outcome.finishedAt), outcome.message),
             ),
         ],
       ),
@@ -828,9 +843,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   /// quello della pagina di una serie su uno di questi.
   List<Widget> _sites() {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     return [
       const SizedBox(height: 30),
-      const KSection('Siti supportati'),
+      KSection(l10n.archiveSites),
       KGroup(
         children: [
           for (final provider in providers)
@@ -857,8 +873,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Altri siti sono in arrivo: il supporto per nuovi provider '
-                'arriverà con i prossimi aggiornamenti.',
+                l10n.archiveMoreSites,
                 style: KagamiType.body(12.5, height: 1.45, color: muted),
               ),
             ),
@@ -880,20 +895,19 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       // Si ripiega sugli appunti.
     }
     await Clipboard.setData(ClipboardData(text: url));
-    messenger.showSnackBar(SnackBar(content: Text('$url copiato negli appunti.')));
+    messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveLinkCopied(url))));
   }
 
   List<Widget> _tracked(ArchiveView view) {
     final notifier = ref.read(archiveProvider.notifier);
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final minutes = view.check.minutes;
     return [
       const SizedBox(height: 30),
-      const KSection('Serie in corso'),
+      KSection(l10n.archiveTracked),
       Text(
-        'Le serie in corso scaricate da qui si ricontrollano: arrivano solo i '
-        'capitoli nuovi, nella stessa destinazione. Quelle del server le segue '
-        'il server.',
+        l10n.archiveTrackedIntro,
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ),
       const SizedBox(height: 12),
@@ -901,25 +915,25 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         children: [
           KTile(
             icon: LucideIcons.clock,
-            title: 'Controllo ogni giorno',
-            subtitle: minutes == null ? 'Solo a mano' : 'Alle ${clockOf(minutes)}, anche ad app chiusa',
+            title: l10n.archiveCheckDaily,
+            subtitle: minutes == null ? l10n.archiveCheckManual : l10n.archiveCheckAt(clockOf(minutes)),
             onTap: () => _toggleCheck(view.check),
             trailing: Switch(value: minutes != null, onChanged: (_) => _toggleCheck(view.check)),
           ),
           if (minutes != null) ...[
             KTile(
               icon: LucideIcons.alarmClock,
-              title: 'Ora',
+              title: l10n.archiveCheckTime,
               subtitle: clockOf(minutes),
               trailing: const Icon(LucideIcons.chevronRight, size: 18),
               onTap: () => _chooseTime(view.check),
             ),
             KTile(
               icon: LucideIcons.wifi,
-              title: 'Solo con Wi-Fi',
+              title: l10n.archiveWifiOnly,
               subtitle: view.check.wifiOnly
-                  ? 'Aspetta una rete che non si paga a consumo'
-                  : 'Anche con i dati mobili',
+                  ? l10n.archiveWifiOnlyOn
+                  : l10n.archiveWifiOnlyOff,
               onTap: () => notifier.setCheck(CheckSettings(minutes: minutes, wifiOnly: !view.check.wifiOnly)),
               trailing: Switch(
                 value: view.check.wifiOnly,
@@ -929,10 +943,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           ],
           KTile(
             icon: LucideIcons.refreshCw,
-            title: 'Controlla adesso',
+            title: l10n.archiveCheckNow,
             subtitle: view.tracked.isEmpty
-                ? 'Nessuna serie da seguire, per ora'
-                : '${view.tracked.length} serie da seguire',
+                ? l10n.archiveNoTracked
+                : l10n.archiveTrackedCount(view.tracked.length),
             onTap: view.tracked.isEmpty ? null : _checkNow,
           ),
           for (final series in view.tracked)
@@ -941,10 +955,18 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               tint: series.problem == null ? null : context.tokens.danger,
               title: series.title,
               subtitle: series.problem ??
-                  '${series.chapters.length} capitoli noti · ${series.target.destination.label}'
-                      '${series.checkedAt == null ? '' : ' · controllata ${archiveWhen(series.checkedAt!)}'}',
+                  (series.checkedAt == null
+                      ? l10n.archiveTrackedLine(
+                          series.chapters.length,
+                          _destinationName(l10n, series.target.destination),
+                        )
+                      : l10n.archiveTrackedLineChecked(
+                          series.chapters.length,
+                          _destinationName(l10n, series.target.destination),
+                          archiveWhen(series.checkedAt!),
+                        )),
               trailing: IconButton(
-                tooltip: 'Smetti di seguirla',
+                tooltip: l10n.archiveStopFollowing,
                 icon: const Icon(LucideIcons.bellOff, size: 18),
                 onPressed: () => _forget(series),
               ),
@@ -965,7 +987,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
-      helpText: 'Ora del controllo',
+      helpText: context.l10n.archiveCheckTimeHelp,
     );
     if (picked == null) return;
     await ref
@@ -977,29 +999,32 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final report = await ref.read(archiveProvider.notifier).checkNow();
+      final l10n = currentL10n();
       final parts = [
-        if (report.queued.isNotEmpty) 'capitoli nuovi per ${report.queued.join(', ')}',
-        if (report.removed.isNotEmpty) '${report.removed.join(', ')} ora conclusa',
-        if (report.failed.isNotEmpty) '${report.failed.length} non raggiunte',
+        if (report.queued.isNotEmpty) l10n.archiveCheckQueued(report.queued.join(', ')),
+        if (report.removed.isNotEmpty) l10n.archiveCheckRemoved(report.removed.join(', ')),
+        if (report.failed.isNotEmpty) l10n.archiveCheckFailed(report.failed.length),
       ];
       messenger.showSnackBar(SnackBar(
-        content: Text(parts.isEmpty ? 'Nessun capitolo nuovo.' : '${parts.join('; ')}.'),
+        content: Text(parts.isEmpty
+            ? l10n.archiveNoNewChapters
+            : l10n.archiveCheckReport(parts.join(l10n.archiveCheckSeparator))),
       ));
     } on ProviderOffline {
-      messenger.showSnackBar(const SnackBar(content: Text('Nessuna connessione.')));
+      messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveNoConnection)));
     }
   }
 
   Future<void> _forget(TrackedSeries series) async {
+    final l10n = context.l10n;
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Smettere di seguirla?'),
-        content: Text('I capitoli nuovi di «${series.title}» non arriveranno più da soli. '
-            'Quelli già scaricati restano.'),
+        title: Text(l10n.archiveForgetTitle),
+        content: Text(l10n.archiveForgetBody(series.title)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annulla')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Smetti')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.archiveCancel)),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.archiveForgetConfirm)),
         ],
       ),
     );
@@ -1183,6 +1208,7 @@ class _StartSheetState extends State<_StartSheet> {
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final chapters = widget.chapters;
     final typed = _typed;
     final chosen = typed ??
@@ -1195,9 +1221,7 @@ class _StartSheetState extends State<_StartSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${chapters.length} capitoli. Scarica tutto oppure scegli da quale '
-            'capitolo partire: i precedenti restano in elenco nel lettore, '
-            'senza tavole.',
+            l10n.archiveStartIntro(chapters.length),
             style: KagamiType.body(13, height: 1.45, color: muted),
           ),
           const SizedBox(height: 14),
@@ -1214,18 +1238,18 @@ class _StartSheetState extends State<_StartSheet> {
             controller: _written,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Numero del capitolo, come sul sito',
-              prefixIcon: Icon(LucideIcons.hash, size: 18),
+            decoration: InputDecoration(
+              hintText: l10n.archiveChapterNumberHint,
+              prefixIcon: const Icon(LucideIcons.hash, size: 18),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             _written.text.trim().isNotEmpty && typed == null
-                ? 'Nessun capitolo con questo numero.'
+                ? l10n.archiveStartNoMatch
                 : chosen != null
-                    ? 'Da «${chosen.title}» in poi: $remaining capitoli.'
-                    : 'Nessun capitolo scelto: si può scaricare tutto.',
+                    ? l10n.archiveStartFrom(chosen.title, remaining)
+                    : l10n.archiveStartNone,
             style: KagamiType.body(
               12.5,
               height: 1.4,
@@ -1236,9 +1260,9 @@ class _StartSheetState extends State<_StartSheet> {
           ),
           if (widget.destinations.length > 1) ...[
             const SizedBox(height: 16),
-            const KSection('Dove'),
+            KSection(l10n.archiveWhereSection),
             KSegmented(
-              options: [for (final value in widget.destinations) value.label],
+              options: [for (final value in widget.destinations) value.label(l10n)],
               icons: [for (final value in widget.destinations) value.icon],
               index: widget.destinations.indexOf(_destination),
               onChanged: (index) =>
@@ -1250,7 +1274,7 @@ class _StartSheetState extends State<_StartSheet> {
             children: [
               Expanded(
                 child: KButton(
-                  label: 'Scarica tutto',
+                  label: l10n.archiveStartAll,
                   icon: LucideIcons.library,
                   tone: context.colors.surfaceContainerHighest,
                   expand: true,
@@ -1261,7 +1285,7 @@ class _StartSheetState extends State<_StartSheet> {
               const SizedBox(width: 10),
               Expanded(
                 child: KButton(
-                  label: 'Da qui',
+                  label: l10n.archiveStartHere,
                   icon: LucideIcons.skipForward,
                   expand: true,
                   onPressed: chosen == null

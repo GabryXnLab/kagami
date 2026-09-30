@@ -11,6 +11,7 @@ import '../../data/cleanup.dart';
 import '../../data/drive.dart';
 import '../../data/network.dart';
 import '../../data/folder_sync.dart';
+import '../../l10n.dart';
 import '../../providers.dart';
 import '../theme.dart';
 import 'kit.dart';
@@ -30,9 +31,10 @@ Future<void> offerCleanup(
   bool asked = false,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
   final choice = await showKagamiSheet<_Choice>(
     context,
-    title: 'Liberare spazio?',
+    title: l10n.cleanupTitle,
     builder: (context) => _CleanupForm(
       leftovers: leftovers,
       asked: asked,
@@ -50,15 +52,13 @@ Future<void> offerCleanup(
   if ((choice.remote || (choice.folders && leftovers.synced)) &&
       await sync.busy()) {
     messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Una sincronizzazione è in corso: riprova quando finisce'),
-      ),
+      SnackBar(content: Text(l10n.cleanupSyncBusy)),
     );
     return;
   }
   DriveClient? writer;
   if (choice.remote) {
-    writer = await _driveWriter(ref, messenger);
+    writer = await _driveWriter(ref, messenger, l10n);
     if (writer == null) return;
   }
   try {
@@ -74,11 +74,11 @@ Future<void> offerCleanup(
     );
   } on FileSystemException catch (error) {
     messenger.showSnackBar(
-      SnackBar(content: Text('Non tutto è stato cancellato: ${error.message}')),
+      SnackBar(content: Text(l10n.cleanupNotAllDeleted(error.message))),
     );
   } on DriveException catch (error) {
     messenger.showSnackBar(
-      SnackBar(content: Text('Drive: ${error.message}. Quelli già tolti restano tolti')),
+      SnackBar(content: Text(l10n.cleanupDriveError(error.message))),
     );
   } finally {
     writer?.close();
@@ -92,7 +92,7 @@ Future<void> offerCleanup(
       (choice.cache ? leftovers.cacheBytes : 0) +
       (choice.remote ? leftovers.remoteBytes : 0);
   messenger.showSnackBar(
-    SnackBar(content: Text('Liberati ${formatBytes(freed)}')),
+    SnackBar(content: Text(l10n.cleanupFreed(formatBytes(freed)))),
   );
 }
 
@@ -102,10 +102,11 @@ Future<void> offerCleanup(
 Future<DriveClient?> _driveWriter(
   WidgetRef ref,
   ScaffoldMessengerState messenger,
+  AppLocalizations l10n,
 ) async {
   if (!NetworkMonitor.instance.isOnline) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('Per togliere da Drive serve la rete')),
+      SnackBar(content: Text(l10n.cleanupNeedsNetwork)),
     );
     return null;
   }
@@ -130,8 +131,6 @@ String formatBytes(int bytes) => bytes >= 1 << 30
     : bytes >= 1 << 20
     ? '${(bytes / (1 << 20)).round()} MB'
     : '${(bytes / 1024).ceil()} kB';
-
-String _chapters(int count) => count == 1 ? '1 capitolo' : '$count capitoli';
 
 class _CleanupForm extends StatefulWidget {
   const _CleanupForm({
@@ -159,6 +158,7 @@ class _CleanupFormState extends State<_CleanupForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final leftovers = widget.leftovers;
     final tokens = context.tokens;
     final count = leftovers.chapterCount;
@@ -170,14 +170,8 @@ class _CleanupFormState extends State<_CleanupForm> {
         children: [
           Text(
             count == 0
-                ? leftovers.remote.length == 1
-                    ? 'Un capitolo già letto è ancora su Drive.'
-                    : '${leftovers.remote.length} capitoli già letti sono '
-                          'ancora su Drive.'
-                : count == 1
-                ? 'Un capitolo già letto occupa ancora spazio sul telefono.'
-                : '$count capitoli già letti occupano ancora spazio sul '
-                      'telefono.',
+                ? l10n.cleanupIntroDrive(leftovers.remote.length)
+                : l10n.cleanupIntroPhone(count),
             style: KagamiType.body(13.5, height: 1.5, color: tokens.muted),
           ),
           const SizedBox(height: 14),
@@ -186,10 +180,11 @@ class _CleanupFormState extends State<_CleanupForm> {
               if (leftovers.folders.isNotEmpty)
                 KTile(
                   icon: LucideIcons.hardDrive,
-                  title: 'Capitoli sul telefono',
-                  subtitle:
-                      '${_chapters(leftovers.folders.length)} · '
-                      'circa ${formatBytes(leftovers.folderBytes)}',
+                  title: l10n.cleanupPhoneChapters,
+                  subtitle: l10n.cleanupApproxSize(
+                    leftovers.folders.length,
+                    formatBytes(leftovers.folderBytes),
+                  ),
                   onTap: () => setState(() => _folders = !_folders),
                   trailing: Switch(
                     value: _folders,
@@ -199,10 +194,11 @@ class _CleanupFormState extends State<_CleanupForm> {
               if (leftovers.cached.isNotEmpty)
                 KTile(
                   icon: LucideIcons.cloud,
-                  title: 'Cache di Drive',
-                  subtitle:
-                      '${_chapters(leftovers.cached.length)} · '
-                      '${formatBytes(leftovers.cacheBytes)}',
+                  title: l10n.cleanupDriveCache,
+                  subtitle: l10n.cleanupExactSize(
+                    leftovers.cached.length,
+                    formatBytes(leftovers.cacheBytes),
+                  ),
                   onTap: () => setState(() => _cache = !_cache),
                   trailing: Switch(
                     value: _cache,
@@ -212,11 +208,11 @@ class _CleanupFormState extends State<_CleanupForm> {
               if (leftovers.remote.isNotEmpty)
                 KTile(
                   icon: LucideIcons.cloudOff,
-                  title: 'Capitoli su Drive',
-                  subtitle:
-                      '${_chapters(leftovers.remote.length)} · '
-                      'circa ${formatBytes(leftovers.remoteBytes)} · '
-                      'nel cestino',
+                  title: l10n.cleanupDriveChapters,
+                  subtitle: l10n.cleanupApproxSizeTrash(
+                    leftovers.remote.length,
+                    formatBytes(leftovers.remoteBytes),
+                  ),
                   onTap: () => setState(() => _remote = !_remote),
                   trailing: Switch(
                     value: _remote,
@@ -226,7 +222,7 @@ class _CleanupFormState extends State<_CleanupForm> {
               if (widget.asked)
                 KTile(
                   icon: LucideIcons.bellOff,
-                  title: 'Non chiedere più per questa serie',
+                  title: l10n.cleanupQuiet,
                   onTap: () => setState(() => _quiet = !_quiet),
                   trailing: Switch(
                     value: _quiet,
@@ -239,29 +235,23 @@ class _CleanupFormState extends State<_CleanupForm> {
             const SizedBox(height: 14),
             _Warning(
               !leftovers.onDrive
-                  ? 'Questa serie non è su Drive: i capitoli cancellati non '
-                        'si potranno rileggere finché la sincronizzazione non '
-                        'li riporta.'
+                  ? l10n.cleanupWarnNotOnDrive
                   : _remote
-                  ? 'Non resteranno né sul telefono né su Drive.'
-                  : 'I capitoli restano su Drive e si rileggono da lì.',
+                  ? l10n.cleanupWarnGoneEverywhere
+                  : l10n.cleanupWarnStaysOnDrive,
             ),
           ],
           if (_remote) ...[
             const SizedBox(height: 8),
-            const _Warning(
-              'Dal cestino di Drive si recuperano per trenta giorni. L\'indice '
-              'del server li elenca ancora: se il server li ricarica, tornano '
-              'a leggersi da Drive.',
-            ),
+            _Warning(l10n.cleanupWarnTrash),
           ],
           if ((_folders && leftovers.synced) || _remote) ...[
             const SizedBox(height: 8),
-            _Warning(_syncWarning(widget.sync)),
+            _Warning(_syncWarning(l10n, widget.sync)),
           ],
           const SizedBox(height: 20),
           KButton(
-            label: 'Elimina',
+            label: l10n.cleanupDelete,
             icon: LucideIcons.trash2,
             tone: tokens.danger,
             expand: true,
@@ -276,7 +266,7 @@ class _CleanupFormState extends State<_CleanupForm> {
           ),
           const SizedBox(height: 10),
           KGhostButton(
-            label: 'Non ora',
+            label: l10n.cleanupNotNow,
             expand: true,
             // «Non chiedere più» vale anche senza cancellare niente: è
             // proprio chi dice di no a volerlo.
@@ -296,16 +286,10 @@ class _CleanupFormState extends State<_CleanupForm> {
 
 /// Cosa succede su Drive. Con la sincronizzazione di Kagami lo si sa; con
 /// FolderSync, che l'app non vede, si può solo avvisare.
-String _syncWarning(SyncSettings? sync) {
-  if (sync == null || !sync.enabled) {
-    return 'Se FolderSync sincronizza la cartella in entrambe le direzioni, '
-        'la cancellazione può arrivare anche su Drive; se scarica soltanto, '
-        'i capitoli possono tornare al giro seguente.';
-  }
-  return 'La sincronizzazione rispetta questa scelta: quello che togli da una '
-      'parte non torna e non sparisce dall\'altra, anche con le cancellazioni '
-      'propagate.';
-}
+String _syncWarning(AppLocalizations l10n, SyncSettings? sync) =>
+    sync == null || !sync.enabled
+    ? l10n.cleanupSyncWarnExternal
+    : l10n.cleanupSyncWarnOwn;
 
 class _Warning extends StatelessWidget {
   const _Warning(this.message);

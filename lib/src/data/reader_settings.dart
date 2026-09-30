@@ -8,36 +8,39 @@ library;
 
 import 'package:drift/drift.dart';
 
+import '../l10n.dart';
 import 'db/database.dart';
 
 /// Come scorrono le tavole.
 enum ReaderMode {
   /// Scorrimento verticale senza stacchi: è come sono fatti i manhwa.
-  continuous('Continua'),
+  continuous,
 
   /// Una tavola per volta.
-  paged('Paginata');
-
-  const ReaderMode(this.label);
+  paged;
 
   static ReaderMode parse(String? value) =>
       value == 'paged' ? ReaderMode.paged : ReaderMode.continuous;
 
-  final String label;
+  String get label => switch (this) {
+        continuous => currentL10n().dataReaderModeContinuous,
+        paged => currentL10n().dataReaderModePaged,
+      };
 }
 
 /// Verso di avanzamento in modalità paginata.
 enum ReaderDirection {
-  leftToRight('Sinistra → destra'),
-  rightToLeft('Destra → sinistra');
-
-  const ReaderDirection(this.label);
+  leftToRight,
+  rightToLeft;
 
   static ReaderDirection parse(String? value) => value == 'rtl'
       ? ReaderDirection.rightToLeft
       : ReaderDirection.leftToRight;
 
-  final String label;
+  String get label => switch (this) {
+        leftToRight => currentL10n().dataReaderDirectionLtr,
+        rightToLeft => currentL10n().dataReaderDirectionRtl,
+      };
 
   String get wireValue => this == ReaderDirection.rightToLeft ? 'rtl' : 'ltr';
 }
@@ -46,31 +49,35 @@ enum ReaderDirection {
 /// larghezza è quasi sempre la risposta, ma una tavola doppia scansionata
 /// intera si legge solo per altezza.
 enum ReaderFit {
-  width('Larghezza'),
-  height('Altezza'),
-  original('Originale');
-
-  const ReaderFit(this.label);
+  width,
+  height,
+  original;
 
   static ReaderFit parse(String? value) =>
       ReaderFit.values.firstWhere((row) => row.name == value, orElse: () => width);
 
-  final String label;
+  String get label => switch (this) {
+        width => currentL10n().dataReaderFitWidth,
+        height => currentL10n().dataReaderFitHeight,
+        original => currentL10n().dataReaderFitOriginal,
+      };
 }
 
 /// Il colore attorno alla tavola. Il nero sparisce al buio, il bianco continua
 /// la carta di una scansione chiara e il grigio sta in mezzo.
 enum ReaderBackground {
-  black('Nero'),
-  grey('Grigio'),
-  white('Bianco');
-
-  const ReaderBackground(this.label);
+  black,
+  grey,
+  white;
 
   static ReaderBackground parse(String? value) => ReaderBackground.values
       .firstWhere((row) => row.name == value, orElse: () => black);
 
-  final String label;
+  String get label => switch (this) {
+        black => currentL10n().dataReaderBackgroundBlack,
+        grey => currentL10n().dataReaderBackgroundGrey,
+        white => currentL10n().dataReaderBackgroundWhite,
+      };
 }
 
 class ReaderSettings {

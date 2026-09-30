@@ -28,6 +28,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import 'drive.dart';
 import 'library.dart';
 import 'network.dart';
@@ -150,10 +151,7 @@ class DriveRepository implements LibraryShelf {
         fromSnapshot = true;
         return restored;
       }
-      throw const DriveOffline(
-        'Senza connessione, e la libreria su Drive non è mai stata aperta '
-        'su questo telefono',
-      );
+      throw DriveOffline(currentL10n().dataDriveOfflineNeverOpened);
     }
     return _fetching ??= _fetch(memo).whenComplete(() => _fetching = null);
   }
@@ -809,7 +807,7 @@ class DriveFiles implements RemoteFiles {
     // Un precarico nuovo sostituisce quello vecchio: chi è saltato a un altro
     // capitolo non vuole aspettare le tavole di quello che ha lasciato.
     for (final stale in _prefetch.where((f) => !keep.contains(f.address))) {
-      _drop(stale, const DriveException('Precarico annullato'));
+      _drop(stale, DriveException(currentL10n().dataPrefetchCancelled));
     }
     final queued = {for (final fetch in _prefetch) fetch.address: fetch};
     _prefetch = [
@@ -886,7 +884,7 @@ class DriveFiles implements RemoteFiles {
       try {
         final item = await repository.resolve(relative);
         if (item == null || item.folder) {
-          throw const DriveException('Tavola non trovata su Drive');
+          throw DriveException(currentL10n().dataPageNotOnDrive);
         }
         final started = DateTime.now();
         var bytes = 0;

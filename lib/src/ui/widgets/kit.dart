@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../l10n.dart';
 import '../theme.dart';
 
 /// Il riscontro al tocco: la superficie cede di un soffio e torna. Sostituisce
@@ -986,7 +987,7 @@ class KSheet extends StatelessWidget {
                 Expanded(child: Text(title, style: KagamiType.display(19))),
                 if (action != null) ...[action!, const SizedBox(width: 4)],
                 IconButton(
-                  tooltip: 'Chiudi',
+                  tooltip: context.l10n.kitClose,
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(LucideIcons.x, size: 20),
                 ),

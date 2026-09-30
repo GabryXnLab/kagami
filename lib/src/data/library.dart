@@ -14,6 +14,7 @@ import 'package:collection/collection.dart';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import 'library_repository.dart';
 
 /// Da dove arriva qualcosa: basta a scegliere l'icona e il modo di leggerlo.
@@ -111,7 +112,7 @@ class DriveSignedOut implements Exception {
   const DriveSignedOut();
 
   @override
-  String toString() => 'Accedi con Google per leggere la libreria su Drive';
+  String toString() => currentL10n().dataDriveSignedOut;
 }
 
 /// I capitoli di una serie, con chi li serve.

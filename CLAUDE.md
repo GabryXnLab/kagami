@@ -182,6 +182,7 @@ docs/design.md                 funzionalità, interfaccia e scelte tecniche
 docs/malf.md                   il formato della libreria: l'originale della specifica
 docs/server-api.md             l'API v1 fra app e server: l'originale del protocollo
 docs/server.md                 installare il server: Drive, chiavi, come raggiungerlo
+docs/readme/                   banner del README, chiaro e scuro (SVG, testo già in tracciati)
 .github/workflows/             CI (`ci.yml`), APK e IPA di ogni merge (`build.yml`), release, wrapper del manutentore (+ CLAUDE.md proprio)
 ```
 

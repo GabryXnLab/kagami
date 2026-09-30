@@ -36,13 +36,18 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build
+  # Analisi e test di ci.yml, senza il suo APK: gli APK e l'IPA li fa build.yml.
+  check:
+    name: Controlli
     needs: version
     uses: ./.github/workflows/ci.yml
     with:
-      build_mode: release
-      split_per_abi: true
+      build_apk: false
+
+  build:
+    name: Build
+    needs: [version, check]
+    uses: ./.github/workflows/build.yml
     secrets:
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -61,9 +66,11 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      # Gli artefatti di flutter-ci si chiamano <app>-<piattaforma>-<modo>[-per-abi]-<sha>.
       - uses: actions/download-artifact@v4
         with:
-          name: kagami-release
+          pattern: Kagami-*-release*-${{ github.sha }}
+          merge-multiple: true
           path: dist
       # Gli aggiornamenti si installano solo sopra un APK con la stessa firma: una
       # release firmata con una chiave di debug legherebbe per sempre chi la installa.
@@ -71,22 +78,30 @@ jobs:
         run: |
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           mkdir out
-          for abi in arm64-v8a armeabi-v7a x86_64; do
+          for abi in arm64-v8a armeabi-v7a x86_64 universal; do
+            if [ "$abi" = universal ]; then src=dist/app-release.apk; else src="dist/app-$abi-release.apk"; fi
             apk="out/kagami-$VERSION-$abi.apk"
-            mv "dist/app-$abi-release.apk" "$apk"
+            mv "$src" "$apk"
             certs=$("$apksigner" verify --print-certs "$apk")
             if grep -q 'CN=Android Debug' <<< "$certs"; then
               echo "::error::$apk firmato con una chiave di debug: servono i secret ANDROID_KEYSTORE* della chiave di release"
               exit 1
             fi
           done
-          (cd out && sha256sum ./*.apk | sed 's| \./| |' > "kagami-$VERSION.sha256")
+          mv dist/Kagami-ios-release-unsigned.ipa "out/kagami-$VERSION-ios-unsigned.ipa"
+          (cd out && sha256sum ./* | sed 's| \./| |' > "kagami-$VERSION.sha256")
           {
             echo "Quale scaricare:"
             echo
             echo "- \`arm64-v8a\`: quasi ogni telefono Android dal 2017 in poi. Nel dubbio, questo."
             echo "- \`armeabi-v7a\`: telefoni a 32 bit, vecchi o economici."
             echo "- \`x86_64\`: emulatori e pochi tablet con processore Intel."
+            echo "- \`universal\`: tutte e tre le architetture in un file solo, più pesante."
+            echo "- \`ios-unsigned.ipa\`: iPhone e iPad, non firmato: si installa con AltStore o"
+            echo "  Sideloadly. Su iOS account, Drive e i lavori in background non ci sono."
+            echo
+            echo "Scegliete un APK e restateci: quelli per architettura hanno un \`versionCode\`"
+            echo "più alto dell'universale, che quindi non si installa sopra di loro."
             echo
             echo "Firma degli APK:"
             echo '```'

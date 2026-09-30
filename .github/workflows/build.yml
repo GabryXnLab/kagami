@@ -10,13 +10,34 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Le stesse build per release.yml, che le pubblica.
+  workflow_call:
+    secrets:
+      TELEGRAM_BOT_TOKEN:
+        required: false
+      TELEGRAM_CHAT_ID:
+        required: false
+      GOOGLE_SERVICES_JSON:
+        required: false
+      ANDROID_KEYSTORE:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+      SENTRY_DSN:
+        required: false
 
 permissions:
   contents: read
 
-# Un merge nuovo comprende quello prima: la build vecchia non serve più.
+# Un merge nuovo comprende quello prima: la build vecchia non serve più. Chiamato da
+# release.yml `github.workflow` è «Release», come per ci.yml nello stesso run: il
+# prefisso tiene separati i due gruppi.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 # Ogni job parte da solo solo in un repo pubblico, dove i minuti di GitHub (macOS

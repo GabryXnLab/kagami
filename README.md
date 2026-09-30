@@ -15,7 +15,9 @@ acceso su un computer qualsiasi.
 
 Gli APK firmati di ogni versione sono nelle
 [Releases](https://github.com/GabryXnLab/kagami/releases), uno per architettura
-e con i loro SHA-256: `arm64-v8a` va bene per quasi ogni telefono.
+più l'universale, con i loro SHA-256: `arm64-v8a` va bene per quasi ogni
+telefono. C'è anche un IPA iOS non firmato, da installare con AltStore o
+Sideloadly; su iOS account, Drive e i lavori in background non ci sono.
 Usa il progetto Firebase del manutentore per account e Drive; per usarne uno
 proprio si compila da sé (sotto, «Farsi il proprio Kagami»).
 

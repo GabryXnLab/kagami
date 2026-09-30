@@ -76,15 +76,19 @@ notifica non parte e il run non avvisa.
 Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
 
 1. `version` legge la versione e si ferma se la release `v<versione>` esiste già;
-2. `build` chiama `ci.yml` (`workflow_call`) con `split_per_abi`: stessi controlli, un
-   APK per architettura (`arm64-v8a`, `armeabi-v7a`, `x86_64`) invece di uno da 84 MB
-   che le contiene tutte;
-3. `publish` rifiuta un APK firmato con una chiave di debug, poi crea la release con i
-   tre APK, un `kagami-<versione>.sha256` per tutti e l'impronta della firma nelle note.
+2. `check` chiama `ci.yml` (`workflow_call`, `build_apk: false`): analisi, test e
+   immagine del server, senza il suo APK;
+3. `build` chiama `build.yml` (`workflow_call`): le stesse build di ogni merge, cioè un
+   APK per architettura (`arm64-v8a`, `armeabi-v7a`, `x86_64`), l'universale e l'IPA
+   iOS non firmata;
+4. `publish` scarica gli artefatti di quel run (`Kagami-*-release*-<sha>`), rifiuta un
+   APK firmato con una chiave di debug e crea la release con i quattro APK, l'IPA, un
+   `kagami-<versione>.sha256` per tutti e, nelle note, quale scegliere e l'impronta
+   della firma.
 
 Con `--split-per-abi` Flutter somma al `versionCode` mille per l'architettura (arm64
-2000): un APK per architettura si installa sopra l'universale della 1.0.0, non il
-contrario.
+2000): un APK per architettura si installa sopra l'universale, non il contrario. Le
+note della release lo dicono: si sceglie un tipo di APK e si resta su quello.
 
 Le release si firmano con la **chiave di release** (secret `ANDROID_KEYSTORE*`), sempre
 la stessa: Android installa un aggiornamento solo sopra un APK con la stessa firma, e

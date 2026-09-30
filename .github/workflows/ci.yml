@@ -26,7 +26,7 @@ on:
         required: false
         default: false
         type: boolean
-  # La build di release.yml: stessi controlli, stesso APK.
+  # I controlli di release.yml, che gli APK e l'IPA li prende da build.yml.
   workflow_call:
     inputs:
       build_mode:
@@ -35,6 +35,9 @@ on:
       split_per_abi:
         type: boolean
         default: false
+      build_apk:
+        type: boolean
+        default: true
     secrets:
       GOOGLE_SERVICES_JSON:
         required: false
@@ -110,7 +113,7 @@ jobs:
     # Solo a mano o da release.yml (che parte a mano, e qui ne vale l'evento): l'APK di
     # ogni push su main lo fa build.yml, con quelli per architettura e l'IPA. Nelle PR
     # da un fork i secret non ci sono, e un APK senza non serve a nessuno.
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.build_apk != false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

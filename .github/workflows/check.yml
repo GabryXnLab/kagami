@@ -25,6 +25,8 @@ jobs:
       # Il motore dell'archivio e il server sono Dart puro, con il loro pubspec:
       # la radice non li analizza né li prova.
       dart_packages: packages/kagami_archive server
+      # Senza topic flutter-check salta la notifica: l'esito va dove vanno build e update.
+      telegram_topic_id: '6'
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

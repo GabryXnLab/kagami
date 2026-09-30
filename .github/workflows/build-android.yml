@@ -57,7 +57,7 @@ on:
         default: true
         type: boolean
       clear_cache:
-        description: '🧹 Svuota build/, .dart_tool/ e la cache Gradle del progetto. Serve quando una build si comporta in modo inspiegabile.'
+        description: '🧹 Svuota build/, .dart_tool/ e la cache Gradle del progetto e per questo run non si fida della build cache Gradle. Le cache condivise con gli altri progetti restano. Serve quando una build si comporta in modo inspiegabile.'
         required: false
         default: false
         type: boolean

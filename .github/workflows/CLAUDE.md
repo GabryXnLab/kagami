@@ -97,9 +97,12 @@ cambiarla vorrebbe dire far disinstallare l'app a chiunque l'abbia.
 ## Il sync verso il repo pubblico
 
 Lo sviluppo avviene in un repo privato, e il repo pubblico riceve le modifiche come PR
-preparate da un workflow di quel repo (`public-sync.yml`, con la logica in
-`.github/public-sync/sync.py`). Workflow, script e configurazione restano nel privato:
-qui si vede solo il risultato.
+preparate da un workflow di quel repo: un thin wrapper sul reusable comune di
+[`GabryXnLab/build-kit`](https://github.com/GabryXnLab/build-kit) (`public-sync.yml`,
+con lo script in `public-sync/sync.py`), dove stanno anche i template per pubblicare
+allo stesso modo un altro progetto. Il wrapper e la configurazione del progetto
+(esclusioni, modelli dello scanner, eccezioni) restano nel privato: qui si vede solo il
+risultato.
 
 - **Un commit per PR, mai la storia privata.** A ogni push su `main` del privato, il
   sync costruisce l'albero di `main` meno i percorsi della sua lista di esclusioni e lo
@@ -113,7 +116,8 @@ qui si vede solo il risultato.
   messaggio.
 - **Uno scanner blocca le fughe.** Prima del push controlla ogni file dell'albero e il
   messaggio: chiavi e token di servizi, configurazioni Firebase, keystore, chiavi
-  private, dati personali e nomi dell'infrastruttura del manutentore. Se trova
+  private (i modelli generici del kit), più quelli del progetto e i dati personali e
+  i nomi dell'infrastruttura del manutentore, che non stanno in nessun repo. Se trova
   qualcosa il sync si ferma e il riepilogo dice file, riga e tipo, mai il valore.
 - **Un commit fatto direttamente qui non si perde.** Se `main` di questo repo ha
   cambiamenti che non vengono da un sync, e la PR successiva li cancellerebbe, il sync

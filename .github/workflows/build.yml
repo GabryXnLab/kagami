@@ -1,0 +1,99 @@
+name: Build
+
+# Le build di ogni merge in main: gli APK release (uno per architettura più
+# l'universale) e un IPA iOS non firmato, come artefatti del run. Thin wrapper sul
+# reusable GabryXnLab/flutter-ci, che è pubblico: gira uguale in ogni fork, con i
+# secret di chi compila. Vedi .github/workflows/CLAUDE.md.
+run-name: Build · ${{ github.ref_name }}
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un merge nuovo comprende quello prima: la build vecchia non serve più.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Ogni job parte da solo solo in un repo pubblico, dove i minuti di GitHub (macOS
+# compreso) non si pagano; in un repo privato solo a mano, perché lì un minuto macOS
+# ne vale dieci. `runner` è sempre `github`: il self-hosted di flutter-ci non serve i
+# repo pubblici, e questo workflow esiste per non dipenderne.
+# Analisi e test non si ripetono qui: li fa `check` di ci.yml sullo stesso push.
+jobs:
+  android-per-abi:
+    name: APK per architettura
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-build.yml@main
+    with:
+      app_name: Kagami
+      runner: github
+      # La stessa di ci.yml e del CLAUDE.md di root: si aggiornano insieme.
+      flutter_version: '3.47.4'
+      platform: android
+      build_mode: release
+      target_platform: android-arm,android-arm64,android-x64
+      split_per_abi: true
+      run_analyze: false
+      run_tests: false
+      telegram_topic_id: '6'
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+
+  # Flutter dà o un APK per architettura o l'universale, mai tutti e due in un giro:
+  # due job in parallelo invece di due build una dopo l'altra.
+  android-universal:
+    name: APK universale
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-build.yml@main
+    with:
+      app_name: Kagami
+      runner: github
+      flutter_version: '3.47.4'
+      platform: android
+      build_mode: release
+      target_platform: android-arm,android-arm64,android-x64
+      split_per_abi: false
+      run_analyze: false
+      run_tests: false
+      telegram_topic_id: '6'
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+
+  # Senza account Apple Developer: l'IPA lo firma chi lo installa (AltStore,
+  # Sideloadly). Su iOS account e Drive restano spenti, quindi niente Firebase.
+  ios:
+    name: IPA non firmato
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    uses: GabryXnLab/flutter-ci/.github/workflows/flutter-build.yml@main
+    with:
+      app_name: Kagami
+      runner: github
+      flutter_version: '3.47.4'
+      platform: ios
+      build_mode: release
+      run_analyze: false
+      run_tests: false
+      telegram_topic_id: '6'
+    secrets:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}

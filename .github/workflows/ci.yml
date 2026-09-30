@@ -1,9 +1,9 @@
 name: CI
 
 # La CI di chiunque: runner di GitHub e nessun servizio esterno, quindi gira
-# uguale in questo repo e in ogni fork. È autonoma di proposito: i reusable del
-# manutentore (build-android.yml & co.) stanno in repo privati, e GitHub non li
-# lascia chiamare da un repo pubblico. Vedi .github/workflows/CLAUDE.md.
+# uguale in questo repo e in ogni fork. È autonoma di proposito: analisi, test e
+# l'APK di release.yml non dipendono da nessun altro repo. Gli APK e l'IPA di ogni
+# push su main li fa build.yml. Vedi .github/workflows/CLAUDE.md.
 run-name: CI · ${{ github.ref_name }}
 
 on:
@@ -107,8 +107,10 @@ jobs:
   android:
     name: APK
     needs: check
-    # Nelle PR da un fork i secret non ci sono, e un APK senza non serve a nessuno.
-    if: github.event_name != 'pull_request'
+    # Solo a mano o da release.yml (che parte a mano, e qui ne vale l'evento): l'APK di
+    # ogni push su main lo fa build.yml, con quelli per architettura e l'IPA. Nelle PR
+    # da un fork i secret non ci sono, e un APK senza non serve a nessuno.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

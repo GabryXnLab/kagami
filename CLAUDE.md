@@ -182,7 +182,7 @@ docs/design.md                 funzionalità, interfaccia e scelte tecniche
 docs/malf.md                   il formato della libreria: l'originale della specifica
 docs/server-api.md             l'API v1 fra app e server: l'originale del protocollo
 docs/server.md                 installare il server: Drive, chiavi, come raggiungerlo
-.github/workflows/             CI pubblica (`ci.yml`) e i wrapper del manutentore (+ CLAUDE.md proprio)
+.github/workflows/             CI (`ci.yml`), APK e IPA di ogni merge (`build.yml`), release, wrapper del manutentore (+ CLAUDE.md proprio)
 ```
 
 ## Comandi
@@ -200,12 +200,16 @@ docker build -f server/Dockerfile -t kagami-server . # l'immagine; contesto la r
 flutter build apk --debug       # con google-services.json: account e Drive
 flutter build apk --release --dart-define=SENTRY_DSN=…   # Sentry facoltativo
 flutter build linux --debug     # solo per vedere che compili: niente Firebase
+flutter build ios --release --no-codesign   # solo su macOS; l'IPA non firmato lo fa build.yml
 
 firebase deploy --only firestore:rules   # le regole di sicurezza, sul proprio progetto
 ```
 
-La CI pubblica è `.github/workflows/ci.yml` (che ha il suo `CLAUDE.md`): runner
-di GitHub, nessun servizio esterno, e funziona anche in un fork.
+La CI pubblica è `.github/workflows/ci.yml`: analisi e test su runner di GitHub,
+senza servizi esterni. Gli APK release (per architettura e universale) e l'IPA iOS
+non firmato di ogni push su `main` li fa `build.yml`, con il reusable pubblico
+`GabryXnLab/flutter-ci`. Funzionano anche in un fork, con i secret di chi compila;
+dettagli nel `CLAUDE.md` della cartella.
 
 `test_driver/app.dart` è l'app con Flutter Driver acceso, per provarla con l'MCP
 di Dart (`dart mcp-server`) su un emulatore o un telefono: `launch_app` con

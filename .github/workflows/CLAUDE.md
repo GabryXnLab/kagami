@@ -3,14 +3,14 @@
 ## `ci.yml` (**CI**): quello di tutti
 
 Gira sui runner di GitHub, non chiama repo o servizi esterni e funziona uguale in
-ogni fork. È autonomo di proposito: la logica sta qui e non in un reusable, perché
-un repo pubblico non può chiamare i workflow di un repo privato.
+ogni fork. È autonomo di proposito: analisi, test e l'APK delle release non devono
+dipendere da nessun altro repo.
 
 | Job | Quando | Cosa fa |
 | :--- | :--- | :--- |
 | `check` | push su `main`, PR, a mano | `.g.dart` allineati allo schema, `flutter analyze`, `flutter test`, `dart analyze` e `dart test` di `packages/kagami_archive` e `server` |
 | `server-image` | idem | `docker build --target test`: i test del server con libvips |
-| `android` | push su `main`, a mano (mai nelle PR) | APK (release di default, `build_mode` a mano; `split_per_abi` per uno per architettura), artefatto del run |
+| `android` | a mano, e chiamato da `release.yml` | APK (release di default, `build_mode` a mano; `split_per_abi` per uno per architettura), artefatto del run |
 
 In un repo privato (il manutentore, un fork chiuso) `check` e `server-image` partono
 solo a mano, e l'APK con loro: lì ci sono altre CI, e questa a ogni push costerebbe i
@@ -28,12 +28,48 @@ riformattare tutto in un commit che non c'entra niente.
 
 ### Secret, tutti facoltativi
 
+Valgono per `ci.yml` e per `build.yml`.
+
 | Secret | Senza | Con |
 | :--- | :--- | :--- |
 | `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Firebase |
 | `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
+
+## `build.yml` (**Build**): gli APK e l'IPA di ogni merge
+
+A ogni push su `main` (in un repo privato solo a mano: lì un minuto macOS ne vale
+dieci) tre job in parallelo, tutti sui runner di GitHub, con il reusable pubblico
+[`GabryXnLab/flutter-ci`](https://github.com/GabryXnLab/flutter-ci)
+(`flutter-build.yml`):
+
+| Job | Artefatto |
+| :--- | :--- |
+| `android-per-abi` | un APK release per architettura: `arm64-v8a`, `armeabi-v7a`, `x86_64` |
+| `android-universal` | l'APK release che le contiene tutte |
+| `ios` | `Kagami-ios-release-unsigned.ipa`: `Payload/Runner.app` zippato, **non firmato** |
+
+Flutter dà o gli APK per architettura o l'universale, mai tutti in un giro: da qui due
+job. Gli APK si firmano con la chiave dei secret `ANDROID_KEYSTORE*` e il riepilogo di
+ogni job ha la SHA-1 di ciascuno; con una chiave nei secret e una firma diversa il job
+fallisce. Analisi e test non si ripetono: li fa `check` di `ci.yml` sullo stesso push.
+
+L'IPA non ha firma perché serve un account Apple Developer: lo firma chi lo installa,
+con AltStore o Sideloadly e il proprio Apple ID (un'app così dura sette giorni, poi
+va rifirmata). Su iOS account e Drive restano spenti (Firebase si accende solo su
+Android), quindi non serve `GoogleService-Info.plist`; Sentry sì, con `SENTRY_DSN`. I
+plugin passano da Swift Package Manager, già integrato nel progetto Xcode: niente
+`Podfile`, e il deployment target (15.0) è quello che chiedono i plugin Firebase.
+
+`runner` è fisso a `github`: il self-hosted del manutentore non serve i repo pubblici,
+e questo workflow esiste perché la build non dipenda da lui. Per questo non ha
+nemmeno gli input `runner`, `max_workers` e `clear_cache` degli altri wrapper.
+
+`SENTRY_DSN` arriva al reusable come `DART_DEFINES: SENTRY_DSN=…`: nel blocco `with:`
+di un reusable i secret non si possono usare. Telegram: senza i secret
+`TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` (un fork, o questo repo se non li ha) la
+notifica non parte e il run non avvisa.
 
 ## `release.yml` (**Release**): le versioni pubbliche
 
@@ -83,6 +119,6 @@ qui si vede solo il risultato.
 ## Gli altri workflow
 
 `build-android.yml`, `check.yml` e `update-deps.yml` sono i thin wrapper del
-manutentore sui suoi reusable privati e sul suo runner: solo `workflow_dispatch`, non
-partono mai da soli e in un fork non servono. `copilot-setup-steps.yml` prepara
+manutentore sugli stessi reusable, ma per il suo runner self-hosted: solo
+`workflow_dispatch`, non partono mai da soli e in un fork non servono. `copilot-setup-steps.yml` prepara
 l'ambiente del Copilot cloud agent.

@@ -10,7 +10,7 @@ un repo pubblico non può chiamare i workflow di un repo privato.
 | :--- | :--- | :--- |
 | `check` | push su `main`, PR, a mano | `.g.dart` allineati allo schema, `flutter analyze`, `flutter test`, `dart analyze` e `dart test` di `packages/kagami_archive` e `server` |
 | `server-image` | idem | `docker build --target test`: i test del server con libvips |
-| `android` | push su `main`, a mano (mai nelle PR) | APK (release di default, `build_mode` a mano), artefatto del run |
+| `android` | push su `main`, a mano (mai nelle PR) | APK (release di default, `build_mode` a mano; `split_per_abi` per uno per architettura), artefatto del run |
 
 In un repo privato (il manutentore, un fork chiuso) `check` e `server-image` partono
 solo a mano, e l'APK con loro: lì ci sono altre CI, e questa a ogni push costerebbe i
@@ -40,9 +40,15 @@ riformattare tutto in un commit che non c'entra niente.
 Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
 
 1. `version` legge la versione e si ferma se la release `v<versione>` esiste già;
-2. `build` chiama `ci.yml` (`workflow_call`): stessi controlli, stesso APK;
-3. `publish` rifiuta un APK firmato con una chiave di debug, poi crea la release con
-   l'APK, il suo `.sha256` e l'impronta SHA-256 della firma nelle note.
+2. `build` chiama `ci.yml` (`workflow_call`) con `split_per_abi`: stessi controlli, un
+   APK per architettura (`arm64-v8a`, `armeabi-v7a`, `x86_64`) invece di uno da 84 MB
+   che le contiene tutte;
+3. `publish` rifiuta un APK firmato con una chiave di debug, poi crea la release con i
+   tre APK, un `kagami-<versione>.sha256` per tutti e l'impronta della firma nelle note.
+
+Con `--split-per-abi` Flutter somma al `versionCode` mille per l'architettura (arm64
+2000): un APK per architettura si installa sopra l'universale della 1.0.0, non il
+contrario.
 
 Le release si firmano con la **chiave di release** (secret `ANDROID_KEYSTORE*`), sempre
 la stessa: Android installa un aggiornamento solo sopra un APK con la stessa firma, e

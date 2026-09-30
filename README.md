@@ -13,8 +13,9 @@ acceso su un computer qualsiasi.
 
 ## Scaricare l'app
 
-L'APK firmato di ogni versione è nelle
-[Releases](https://github.com/GabryXnLab/kagami/releases), con il suo SHA-256.
+Gli APK firmati di ogni versione sono nelle
+[Releases](https://github.com/GabryXnLab/kagami/releases), uno per architettura
+e con i loro SHA-256: `arm64-v8a` va bene per quasi ogni telefono.
 Usa il progetto Firebase del manutentore per account e Drive; per usarne uno
 proprio si compila da sé (sotto, «Farsi il proprio Kagami»).
 

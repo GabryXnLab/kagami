@@ -42,6 +42,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       build_mode: release
+      split_per_abi: true
     secrets:
       GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
       ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -68,23 +69,32 @@ jobs:
       # release firmata con una chiave di debug legherebbe per sempre chi la installa.
       - name: Firma e impronte
         run: |
-          apk="kagami-$VERSION.apk"
-          mv dist/app-release.apk "$apk"
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          certs=$("$apksigner" verify --print-certs "$apk")
-          if grep -q 'CN=Android Debug' <<< "$certs"; then
-            echo "::error::APK firmato con una chiave di debug: servono i secret ANDROID_KEYSTORE* della chiave di release"
-            exit 1
-          fi
-          sha256sum "$apk" > "$apk.sha256"
+          mkdir out
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            apk="out/kagami-$VERSION-$abi.apk"
+            mv "dist/app-$abi-release.apk" "$apk"
+            certs=$("$apksigner" verify --print-certs "$apk")
+            if grep -q 'CN=Android Debug' <<< "$certs"; then
+              echo "::error::$apk firmato con una chiave di debug: servono i secret ANDROID_KEYSTORE* della chiave di release"
+              exit 1
+            fi
+          done
+          (cd out && sha256sum ./*.apk | sed 's| \./| |' > "kagami-$VERSION.sha256")
           {
-            echo "Firma dell'APK:"
+            echo "Quale scaricare:"
+            echo
+            echo "- \`arm64-v8a\`: quasi ogni telefono Android dal 2017 in poi. Nel dubbio, questo."
+            echo "- \`armeabi-v7a\`: telefoni a 32 bit, vecchi o economici."
+            echo "- \`x86_64\`: emulatori e pochi tablet con processore Intel."
+            echo
+            echo "Firma degli APK:"
             echo '```'
-            grep -E 'SHA-256 digest' <<< "$certs"
+            "$apksigner" verify --print-certs "out/kagami-$VERSION-arm64-v8a.apk" | grep -E 'SHA-256 digest'
             echo '```'
           } > notes.md
       - name: Release
         run: |
-          gh release create "v$VERSION" "kagami-$VERSION.apk" "kagami-$VERSION.apk.sha256" \
+          gh release create "v$VERSION" out/* \
             -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Kagami $VERSION" \
             --notes-file notes.md --generate-notes

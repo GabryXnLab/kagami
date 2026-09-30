@@ -14,6 +14,8 @@ import 'package:google_sign_in_platform_interface/google_sign_in_platform_interf
 import 'package:kagami_archive/drive.dart';
 import 'package:path/path.dart' as p;
 
+import '../l10n.dart';
+
 export 'package:kagami_archive/drive.dart';
 
 /// Il token d'accesso a Drive.
@@ -97,10 +99,10 @@ class DriveAuth {
       if (error.code == GoogleSignInExceptionCode.canceled) {
         throw const DriveAuthRequired();
       }
-      throw const DriveException('Google non ha concesso l\'accesso a Drive');
+      throw DriveException(currentL10n().dataDriveAccessDenied);
     }
     if (granted == null) {
-      throw const DriveException('Google non ha concesso l\'accesso a Drive');
+      throw DriveException(currentL10n().dataDriveAccessDenied);
     }
     _keep(scope, granted);
   }

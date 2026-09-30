@@ -11,6 +11,7 @@ import '../data/library.dart';
 import '../data/library_repository.dart';
 import '../data/network.dart';
 import '../format/malf.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -36,7 +37,7 @@ Future<void> connectDrive(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return;
   final folder = await showKagamiSheet<DriveFolder>(
     context,
-    title: 'Cartella su Drive',
+    title: context.l10n.driveFolderSheetTitle,
     scrollable: true,
     builder: (_) => const DriveFolderBrowser(),
   );
@@ -71,7 +72,7 @@ Future<String?> downloadDestination(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return null;
   final folder = await showKagamiSheet<bool>(
     context,
-    title: 'Dove salvo i manga?',
+    title: context.l10n.driveDestinationTitle,
     builder: (context) => Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
       child: Column(
@@ -79,22 +80,19 @@ Future<String?> downloadDestination(BuildContext context, WidgetRef ref) async {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Non c\'è una cartella per i manga sul telefono. In una cartella '
-            'i capitoli scaricati restano anche se l\'app si disinstalla, e '
-            'Kagami li legge insieme a quelli che ci sono già. Nello spazio '
-            'dell\'app non serve nessun permesso, ma se ne vanno con lei.',
+            context.l10n.driveDestinationBody,
             style: KagamiType.body(13.5, height: 1.5, color: context.tokens.muted),
           ),
           const SizedBox(height: 20),
           KButton(
-            label: 'Scegli una cartella',
+            label: context.l10n.driveChooseFolder,
             icon: LucideIcons.folderOpen,
             expand: true,
             onPressed: () => Navigator.of(context).pop(true),
           ),
           const SizedBox(height: 10),
           KGhostButton(
-            label: 'Nello spazio dell\'app',
+            label: context.l10n.driveInAppSpace,
             icon: LucideIcons.smartphone,
             expand: true,
             onPressed: () => Navigator.of(context).pop(false),
@@ -182,6 +180,7 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final l10n = context.l10n;
     final here = _path.lastOrNull;
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -195,7 +194,7 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
             child: here == null
                 ? KSegmented(
-                    options: const ['Il mio Drive', 'Condivisi con me'],
+                    options: [l10n.driveMyDrive, l10n.driveSharedWithMe],
                     icons: const [LucideIcons.hardDrive, LucideIcons.users],
                     index: _shared ? 1 : 0,
                     onChanged: (index) => setState(() {
@@ -206,7 +205,7 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
                 : Row(
                     children: [
                       IconButton(
-                        tooltip: 'Indietro',
+                        tooltip: l10n.driveBack,
                         onPressed: _back,
                         icon: const Icon(LucideIcons.arrowLeft, size: 20),
                       ),
@@ -229,10 +228,10 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
                   return KEmpty(
                     icon: LucideIcons.cloudOff,
                     compact: true,
-                    title: 'Drive non risponde',
+                    title: l10n.driveNoResponse,
                     message: '${snapshot.error}',
                     action: KGhostButton(
-                      label: 'Riprova',
+                      label: l10n.driveRetry,
                       icon: LucideIcons.refreshCw,
                       onPressed: () => setState(_load),
                     ),
@@ -268,9 +267,8 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
                             Expanded(
                               child: Text(
                                 isLibrary
-                                    ? 'Contiene library.json: è una libreria'
-                                    : 'Non contiene library.json: la '
-                                        'libreria è la cartella che lo ha',
+                                    ? l10n.driveIsLibrary
+                                    : l10n.driveNotLibrary,
                                 style: KagamiType.body(13, color: muted),
                               ),
                             ),
@@ -279,7 +277,7 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
                       ),
                       const SizedBox(height: 12),
                       KButton(
-                        label: 'Usa questa cartella',
+                        label: l10n.driveUseFolder,
                         icon: LucideIcons.check,
                         expand: true,
                         onPressed: isLibrary
@@ -294,7 +292,7 @@ class _DriveFolderBrowserState extends ConsumerState<DriveFolderBrowser> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Text(
-                          'Nessuna cartella qui',
+                          l10n.driveNoFolders,
                           textAlign: TextAlign.center,
                           style: KagamiType.body(13, color: muted),
                         ),
@@ -362,32 +360,31 @@ class LibraryNotices extends ConsumerWidget {
 ) =>
     switch (notice) {
       DriveAuthRequired() => (
-          'Kagami non ha ancora il permesso di leggere Google Drive',
-          'Autorizza',
+          currentL10n().driveNoticeAuthRequired,
+          currentL10n().driveAuthorize,
           () => authorizeDrive(context, ref),
         ),
       DriveSignedOut() => (
           notice.toString(),
-          'Accedi',
+          currentL10n().driveSignIn,
           () => ref.read(cloudAccountProvider.notifier).signIn(),
         ),
       DriveOffline() => (
-          'Sei offline: si leggono i capitoli sul telefono e le tavole di '
-          'Drive già scaricate. Il resto torna da solo con la rete',
-          'Riprova',
+          currentL10n().driveNoticeOffline,
+          currentL10n().driveRetry,
           () async {
             if (await NetworkMonitor.instance.check()) reloadLibrary(ref);
           },
         ),
       DriveException(:final message) => (
-          'Drive: $message. Si vede quello che c\'è sul telefono',
-          'Riprova',
+          currentL10n().driveNoticeError(message),
+          currentL10n().driveRetry,
           () => reloadLibrary(ref),
         ),
       LibraryException(:final problem) => (
           problem.message,
-          'Riprova',
+          currentL10n().driveRetry,
           () => reloadLibrary(ref),
         ),
-      _ => ('$notice', 'Riprova', () => reloadLibrary(ref)),
+      _ => ('$notice', currentL10n().driveRetry, () => reloadLibrary(ref)),
     };

@@ -1,0 +1,4254 @@
+{
+  "@@locale": "it",
+  "settingsLanguage": "Lingua",
+  "@settingsLanguage": {
+    "description": "Voce delle impostazioni che apre la scelta della lingua dell'interfaccia"
+  },
+  "settingsLanguageSystem": "Come il sistema",
+  "@settingsLanguageSystem": {
+    "description": "Scelta della lingua: segue quella del telefono"
+  },
+  "seriesShelfNone": "Nessuno stato",
+  "@seriesShelfNone": {
+    "description": "Stato di lettura di una serie: nessuno scelto"
+  },
+  "seriesShelfPlanned": "Da leggere",
+  "@seriesShelfPlanned": {
+    "description": "Stato di lettura di una serie: in programma, non ancora cominciata"
+  },
+  "seriesShelfReading": "In lettura",
+  "@seriesShelfReading": {
+    "description": "Stato di lettura di una serie: la sto leggendo"
+  },
+  "seriesShelfPaused": "In pausa",
+  "@seriesShelfPaused": {
+    "description": "Stato di lettura di una serie: lettura sospesa dall'utente"
+  },
+  "seriesShelfCompleted": "Finito",
+  "@seriesShelfCompleted": {
+    "description": "Stato di lettura di una serie: l'utente l'ha finita"
+  },
+  "seriesShelfDropped": "Abbandonato",
+  "@seriesShelfDropped": {
+    "description": "Stato di lettura di una serie: l'utente ha smesso di leggerla"
+  },
+  "seriesReleaseOngoing": "In corso",
+  "@seriesReleaseOngoing": {
+    "description": "Stato di pubblicazione della serie: escono ancora capitoli"
+  },
+  "seriesReleaseCompleted": "Conclusa",
+  "@seriesReleaseCompleted": {
+    "description": "Stato di pubblicazione della serie: terminata dall'autore"
+  },
+  "seriesReleaseHiatus": "In pausa",
+  "@seriesReleaseHiatus": {
+    "description": "Stato di pubblicazione della serie: sospesa dagli autori (hiatus)"
+  },
+  "seriesReleaseCancelled": "Interrotta",
+  "@seriesReleaseCancelled": {
+    "description": "Stato di pubblicazione della serie: cancellata, non uscirà altro"
+  },
+  "seriesReleaseUnknown": "Stato ignoto",
+  "@seriesReleaseUnknown": {
+    "description": "Stato di pubblicazione della serie: non noto"
+  },
+  "seriesNotFound": "Serie non trovata.",
+  "@seriesNotFound": {
+    "description": "Schermata della scheda quando la serie non esiste più nella libreria"
+  },
+  "seriesOfflineTitle": "Capitoli su Drive",
+  "@seriesOfflineTitle": {
+    "description": "Titolo dell'avviso sulla scheda quando non c'è rete e l'elenco dei capitoli sta su Google Drive"
+  },
+  "seriesOfflineMessage": "Senza connessione non si vede l'elenco dei capitoli di questa serie. Compare da solo appena torna la rete.",
+  "@seriesOfflineMessage": {
+    "description": "Avviso sulla scheda senza rete: l'elenco dei capitoli non è disponibile"
+  },
+  "seriesNoIndexTitle": "Nessun indice",
+  "@seriesNoIndexTitle": {
+    "description": "Titolo dell'avviso quando la serie non ha il file index.json"
+  },
+  "seriesNoIndexMessage": "Questa serie non ha un index.json: vanno rigenerati gli indici con l'archiviatore che l'ha scritta.",
+  "@seriesNoIndexMessage": {
+    "description": "Avviso quando manca index.json: rimanda al programma che ha creato la libreria"
+  },
+  "seriesNoChaptersTitle": "Nessun capitolo",
+  "@seriesNoChaptersTitle": {
+    "description": "Titolo dello stato vuoto dell'elenco capitoli quando i filtri escludono tutto"
+  },
+  "seriesNoChaptersMessage": "Nessuno passa la ricerca e i filtri scelti.",
+  "@seriesNoChaptersMessage": {
+    "description": "Stato vuoto dell'elenco capitoli: nessun capitolo corrisponde a ricerca e filtri"
+  },
+  "seriesDownloadAllTitle": "{count, plural, =1{Scaricare un capitolo?} other{Scaricare {count} capitoli?}}",
+  "@seriesDownloadAllTitle": {
+    "description": "Titolo del foglio di conferma per scaricare da Drive sul telefono i capitoli indicati",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesDownloadAllMessage": "Tutti i capitoli che ora si leggono da Drive finiscono sul telefono, e da lì si leggono anche senza rete.",
+  "@seriesDownloadAllMessage": {
+    "description": "Testo del foglio di conferma del download di tutti i capitoli da Drive"
+  },
+  "seriesDownload": "Scarica",
+  "@seriesDownload": {
+    "description": "Pulsante di conferma del download dei capitoli sul telefono"
+  },
+  "seriesCleanupRemote": "{count, plural, =1{Un capitolo letto è ancora su Drive} other{{count} capitoli letti sono ancora su Drive}}",
+  "@seriesCleanupRemote": {
+    "description": "Riga sopra l'elenco capitoli: capitoli già letti che stanno ancora su Google Drive e si possono togliere",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesCleanupLocal": "{count, plural, =1{Un capitolo letto occupa {size}} other{{count} capitoli letti occupano {size}}}",
+  "@seriesCleanupLocal": {
+    "description": "Riga sopra l'elenco capitoli: capitoli già letti che occupano spazio sul telefono; size è già formattata (es. 12 MB)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesDownloadFailed": "Download non riuscito: {error}. Riprova",
+  "@seriesDownloadFailed": {
+    "description": "Descrizione del pulsante su un capitolo il cui download è fallito; toccandolo si riprova",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesDownloadWaiting": "In attesa della rete: riparte da solo. Annulla",
+  "@seriesDownloadWaiting": {
+    "description": "Descrizione del pulsante su un capitolo in attesa di rete; toccandolo si annulla il download"
+  },
+  "seriesDownloadQueued": "In coda. Annulla",
+  "@seriesDownloadQueued": {
+    "description": "Descrizione del pulsante su un capitolo in coda di download; toccandolo si annulla"
+  },
+  "seriesDownloadCancel": "Annulla il download",
+  "@seriesDownloadCancel": {
+    "description": "Descrizione del pulsante su un capitolo in scaricamento; toccandolo si annulla"
+  },
+  "seriesPlaceLocal": "Sul telefono",
+  "@seriesPlaceLocal": {
+    "description": "Pastiglia della scheda: la serie sta solo nella memoria del telefono"
+  },
+  "seriesPlaceDrive": "Su Drive",
+  "@seriesPlaceDrive": {
+    "description": "Dove sta la serie o il capitolo: solo su Google Drive"
+  },
+  "seriesPlaceMixed": "Telefono e Drive",
+  "@seriesPlaceMixed": {
+    "description": "Pastiglia della scheda: la serie sta in parte sul telefono e in parte su Drive"
+  },
+  "seriesMuteTooltipOn": "Notifiche dei capitoli nuovi silenziate",
+  "@seriesMuteTooltipOn": {
+    "description": "Descrizione del pulsante a forma di campana sulla copertina quando la serie è silenziata"
+  },
+  "seriesMuteTooltipOff": "Notifiche dei capitoli nuovi attive",
+  "@seriesMuteTooltipOff": {
+    "description": "Descrizione del pulsante a forma di campana sulla copertina quando le notifiche sono attive"
+  },
+  "seriesMuteUnmuted": "Notifiche dei capitoli nuovi riattivate.",
+  "@seriesMuteUnmuted": {
+    "description": "Messaggio temporaneo dopo aver riattivato le notifiche dei capitoli nuovi di una serie"
+  },
+  "seriesMuteMuted": "Notifiche dei capitoli nuovi silenziate.",
+  "@seriesMuteMuted": {
+    "description": "Messaggio temporaneo dopo aver silenziato le notifiche dei capitoli nuovi di una serie"
+  },
+  "seriesCaughtUpMissing": "{count, plural, =1{In pari con quello che c'è sul telefono: manca un capitolo annunciato.} other{In pari con quello che c'è sul telefono: mancano {count} capitoli annunciati.}}",
+  "@seriesCaughtUpMissing": {
+    "description": "Riquadro di ripresa: tutto ciò che è sul telefono è letto, ma alcuni capitoli annunciati non sono stati scaricati",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesCaughtUpAll": "Letta tutta.",
+  "@seriesCaughtUpAll": {
+    "description": "Riquadro di ripresa: la serie è stata letta per intero"
+  },
+  "seriesResumeToContinue": "DA CONTINUARE",
+  "@seriesResumeToContinue": {
+    "description": "Etichetta in maiuscolo del riquadro di ripresa: la serie è cominciata e il prossimo capitolo è da leggere"
+  },
+  "seriesResumeToStart": "DA INIZIARE",
+  "@seriesResumeToStart": {
+    "description": "Etichetta in maiuscolo del riquadro di ripresa: la serie non è ancora cominciata"
+  },
+  "seriesResumeHalfway": "LASCIATO A METÀ",
+  "@seriesResumeHalfway": {
+    "description": "Etichetta in maiuscolo del riquadro di ripresa: un capitolo è stato lasciato a metà"
+  },
+  "seriesResumePage": "pagina {page} di {total}",
+  "@seriesResumePage": {
+    "description": "Riga sotto la barra di avanzamento del capitolo lasciato a metà",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesContinue": "Continua",
+  "@seriesContinue": {
+    "description": "Pulsante della scheda: prosegue la lettura col capitolo successivo"
+  },
+  "seriesStart": "Inizia",
+  "@seriesStart": {
+    "description": "Pulsante della scheda: comincia a leggere la serie"
+  },
+  "seriesResume": "Riprendi",
+  "@seriesResume": {
+    "description": "Pulsante della scheda: riprende il capitolo lasciato a metà"
+  },
+  "seriesNextChapter": "Capitolo successivo",
+  "@seriesNextChapter": {
+    "description": "Descrizione del pulsante che salta al capitolo dopo quello proposto"
+  },
+  "seriesFigureChapters": "Capitoli",
+  "@seriesFigureChapters": {
+    "description": "Numero in evidenza sulla scheda: quanti capitoli ha la serie"
+  },
+  "seriesFigureRead": "Letti",
+  "@seriesFigureRead": {
+    "description": "Numero in evidenza sulla scheda: quanti capitoli sono stati letti"
+  },
+  "seriesFigureProgress": "Avanzamento",
+  "@seriesFigureProgress": {
+    "description": "Numero in evidenza sulla scheda: percentuale di lettura"
+  },
+  "seriesFigureRating": "Voto",
+  "@seriesFigureRating": {
+    "description": "Numero in evidenza sulla scheda: voto dato alla serie"
+  },
+  "seriesMyShelf": "Il mio scaffale",
+  "@seriesMyShelf": {
+    "description": "Titolo della sezione con stato, preferito, voto, raccolte e note della serie"
+  },
+  "seriesFavoriteOn": "Preferita",
+  "@seriesFavoriteOn": {
+    "description": "Pulsante della scheda quando la serie è già fra i preferiti"
+  },
+  "seriesFavoriteOff": "Preferiti",
+  "@seriesFavoriteOff": {
+    "description": "Pulsante della scheda per aggiungere la serie ai preferiti"
+  },
+  "seriesRatingButton": "Voto",
+  "@seriesRatingButton": {
+    "description": "Pulsante della scheda che apre la scelta del voto, quando non ce n'è uno"
+  },
+  "seriesRatingOutOfTen": "{rating}/10",
+  "@seriesRatingOutOfTen": {
+    "description": "Pulsante della scheda col voto dato, su dieci",
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesCollections": "Raccolte",
+  "@seriesCollections": {
+    "description": "Descrizione del pulsante che aggiunge la serie a delle raccolte"
+  },
+  "seriesNotes": "Note",
+  "@seriesNotes": {
+    "description": "Note personali sulla serie: descrizione del pulsante e titolo del foglio"
+  },
+  "seriesRatingSheetTitle": "Che voto le dai?",
+  "@seriesRatingSheetTitle": {
+    "description": "Titolo del foglio di scelta del voto"
+  },
+  "seriesNotesHint": "Dove eri rimasto, cosa ne pensi…",
+  "@seriesNotesHint": {
+    "description": "Testo suggerito nel campo delle note personali"
+  },
+  "seriesSave": "Salva",
+  "@seriesSave": {
+    "description": "Pulsante che salva le note"
+  },
+  "seriesRatingWord1": "Pessimo",
+  "@seriesRatingWord1": {
+    "description": "Parola che descrive il voto 1 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord2": "Brutto",
+  "@seriesRatingWord2": {
+    "description": "Parola che descrive il voto 2 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord3": "Scarso",
+  "@seriesRatingWord3": {
+    "description": "Parola che descrive il voto 3 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord4": "Mediocre",
+  "@seriesRatingWord4": {
+    "description": "Parola che descrive il voto 4 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord5": "Sufficiente",
+  "@seriesRatingWord5": {
+    "description": "Parola che descrive il voto 5 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord6": "Discreto",
+  "@seriesRatingWord6": {
+    "description": "Parola che descrive il voto 6 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord7": "Buono",
+  "@seriesRatingWord7": {
+    "description": "Parola che descrive il voto 7 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord8": "Ottimo",
+  "@seriesRatingWord8": {
+    "description": "Parola che descrive il voto 8 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord9": "Eccellente",
+  "@seriesRatingWord9": {
+    "description": "Parola che descrive il voto 9 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingWord10": "Capolavoro",
+  "@seriesRatingWord10": {
+    "description": "Parola che descrive il voto 10 su 10 nel foglio del voto (1 pessimo, 10 capolavoro)"
+  },
+  "seriesRatingNone": "Senza voto",
+  "@seriesRatingNone": {
+    "description": "Foglio del voto: nessun voto scelto"
+  },
+  "seriesRatingHint": "Tocca o scorri",
+  "@seriesRatingHint": {
+    "description": "Suggerimento sotto la fila delle dieci celle del voto"
+  },
+  "seriesRatingBefore": "Prima: {rating}",
+  "@seriesRatingBefore": {
+    "description": "Foglio del voto: il voto che la serie aveva prima della modifica",
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesRatingRemove": "Togli",
+  "@seriesRatingRemove": {
+    "description": "Pulsante del foglio del voto: toglie il voto dato alla serie"
+  },
+  "seriesRatingSave": "Salva il voto",
+  "@seriesRatingSave": {
+    "description": "Pulsante del foglio del voto: conferma il voto scelto"
+  },
+  "seriesSynopsis": "Sinossi",
+  "@seriesSynopsis": {
+    "description": "Titolo della sezione con la trama della serie"
+  },
+  "seriesGenres": "Generi",
+  "@seriesGenres": {
+    "description": "Titolo della sezione con i generi della serie"
+  },
+  "seriesTags": "Tag",
+  "@seriesTags": {
+    "description": "Titolo della sezione con le etichette (tag) della serie"
+  },
+  "seriesCreators": "Chi l'ha fatta",
+  "@seriesCreators": {
+    "description": "Titolo della sezione con autori e disegnatori della serie"
+  },
+  "seriesMoreTags": "Altri {count}",
+  "@seriesMoreTags": {
+    "description": "Pastiglia che mostra gli altri tag nascosti; count è quanti sono",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesPaceToRead": "Da leggere",
+  "@seriesPaceToRead": {
+    "description": "Titolo della scheda con il tempo stimato per leggere i capitoli non letti"
+  },
+  "seriesPaceCaption": "{chapters, plural, =1{un capitolo} other{{chapters} capitoli}}, {pages, plural, =1{una tavola} other{{pages} tavole}}",
+  "@seriesPaceCaption": {
+    "description": "Sotto il tempo stimato di lettura: quanti capitoli e quante tavole restano; le tavole sono le pagine del manga",
+    "placeholders": {
+      "chapters": {
+        "type": "int"
+      },
+      "pages": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesPaceNext": "Prossimo capitolo",
+  "@seriesPaceNext": {
+    "description": "Titolo della scheda con la data attesa del prossimo capitolo"
+  },
+  "seriesPaceNextCaption": "dalla cadenza degli ultimi",
+  "@seriesPaceNextCaption": {
+    "description": "Sotto la data attesa: spiega che è una stima dalla cadenza di uscita degli ultimi capitoli"
+  },
+  "seriesDurationMinutes": "{count} min",
+  "@seriesDurationMinutes": {
+    "description": "Durata stimata di lettura, in minuti",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesDurationHours": "{count} h",
+  "@seriesDurationHours": {
+    "description": "Durata stimata di lettura, in ore",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesDurationDays": "{count, plural, =1{1 giorno} other{{count} giorni}}",
+  "@seriesDurationDays": {
+    "description": "Durata stimata di lettura, in giorni",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesWhenLate": "in ritardo",
+  "@seriesWhenLate": {
+    "description": "Data attesa del prossimo capitolo: da più di due settimane"
+  },
+  "seriesWhenExpected": "atteso",
+  "@seriesWhenExpected": {
+    "description": "Data attesa del prossimo capitolo: dovrebbe essere già uscito"
+  },
+  "seriesWhenToday": "oggi",
+  "@seriesWhenToday": {
+    "description": "Data attesa del prossimo capitolo: oggi"
+  },
+  "seriesWhenTomorrow": "domani",
+  "@seriesWhenTomorrow": {
+    "description": "Data attesa del prossimo capitolo: domani"
+  },
+  "seriesWhenInDays": "{count, plural, =1{fra 1 giorno} other{fra {count} giorni}}",
+  "@seriesWhenInDays": {
+    "description": "Data attesa del prossimo capitolo, in giorni",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesWhenInWeeks": "{count, plural, =1{fra 1 settimana} other{fra {count} settimane}}",
+  "@seriesWhenInWeeks": {
+    "description": "Data attesa del prossimo capitolo, in settimane",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesShowLess": "Riduci",
+  "@seriesShowLess": {
+    "description": "Pulsante che richiude la sinossi lunga"
+  },
+  "seriesShowMore": "Leggi tutto",
+  "@seriesShowMore": {
+    "description": "Pulsante che espande la sinossi troncata"
+  },
+  "seriesChaptersTitle": "Capitoli",
+  "@seriesChaptersTitle": {
+    "description": "Titolo della sezione con l'elenco dei capitoli"
+  },
+  "seriesChaptersOf": "su {total}",
+  "@seriesChaptersOf": {
+    "description": "Accanto al titolo Capitoli: quanti ne ha la serie in tutto, quando alcuni non sono scaricati",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesSearchChapter": "Cerca capitolo…",
+  "@seriesSearchChapter": {
+    "description": "Testo suggerito nel campo di ricerca dei capitoli"
+  },
+  "seriesSortNewest": "Dal più recente",
+  "@seriesSortNewest": {
+    "description": "Descrizione del pulsante di ordinamento: ora i capitoli vanno dal più recente"
+  },
+  "seriesSortOldest": "Dal primo",
+  "@seriesSortOldest": {
+    "description": "Descrizione del pulsante di ordinamento: ora i capitoli vanno dal primo"
+  },
+  "seriesMarkAll": "Segna tutti",
+  "@seriesMarkAll": {
+    "description": "Descrizione del pulsante che segna tutti i capitoli come letti (o da leggere)"
+  },
+  "seriesDownloadFromDrive": "Scarica da Drive",
+  "@seriesDownloadFromDrive": {
+    "description": "Descrizione del pulsante che scarica da Google Drive sul telefono i capitoli"
+  },
+  "seriesFreeSpace": "Libera spazio",
+  "@seriesFreeSpace": {
+    "description": "Azione accanto alla riga dei capitoli letti: apre il foglio per toglierli dal telefono"
+  },
+  "seriesFilterUnread": "Da leggere",
+  "@seriesFilterUnread": {
+    "description": "Filtro dell'elenco capitoli: solo quelli non letti"
+  },
+  "seriesFilterDownloaded": "Scaricati",
+  "@seriesFilterDownloaded": {
+    "description": "Filtro dell'elenco capitoli: solo quelli sul telefono"
+  },
+  "seriesFilterAll": "Tutti",
+  "@seriesFilterAll": {
+    "description": "Filtro dell'elenco capitoli: tutti i blocchi di capitoli, senza salto"
+  },
+  "seriesSelectedCount": "{count, plural, =1{1 selezionato} other{{count} selezionati}}",
+  "@seriesSelectedCount": {
+    "description": "Barra in basso: quanti capitoli sono selezionati",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesMarkReadMany": "Segna letti",
+  "@seriesMarkReadMany": {
+    "description": "Descrizione del pulsante che segna i capitoli selezionati come letti"
+  },
+  "seriesMarkUnread": "Segna da leggere",
+  "@seriesMarkUnread": {
+    "description": "Descrizione del pulsante che segna un capitolo (o i selezionati) come da leggere"
+  },
+  "seriesMarkRead": "Segna letto",
+  "@seriesMarkRead": {
+    "description": "Descrizione del pulsante che segna un capitolo come letto"
+  },
+  "seriesMarkReadThrough": "Segna letto fino a qui",
+  "@seriesMarkReadThrough": {
+    "description": "Descrizione del pulsante che segna letti tutti i capitoli fino al più recente selezionato"
+  },
+  "seriesSimilar": "Altre così",
+  "@seriesSimilar": {
+    "description": "Titolo della sezione con serie simili per generi e tag"
+  },
+  "seriesChapterNotDownloaded": "Non scaricato",
+  "@seriesChapterNotDownloaded": {
+    "description": "Riga sotto il titolo di un capitolo annunciato ma non scaricato"
+  },
+  "seriesChapterPages": "{count, plural, =1{1 tavola} other{{count} tavole}}",
+  "@seriesChapterPages": {
+    "description": "Riga sotto il titolo di un capitolo: numero di pagine (tavole)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesDownloadToPhone": "Scarica sul telefono",
+  "@seriesDownloadToPhone": {
+    "description": "Descrizione del pulsante che scarica un capitolo da Drive sul telefono"
+  },
+  "readerSeriesUnavailable": "Serie non disponibile.",
+  "@readerSeriesUnavailable": {
+    "description": "Messaggio a schermo intero nel lettore quando la serie non esiste più."
+  },
+  "readerNoPagesIndex": "Questa serie non ha un pages.json: vanno rigenerati gli indici con l'archiviatore che l'ha scritta.",
+  "@readerNoPagesIndex": {
+    "description": "Messaggio nel lettore: manca il file pages.json (nome di file, da non tradurre) con l'elenco delle tavole."
+  },
+  "readerSeriesOffline": "Senza connessione non si può aprire questa serie: l'elenco delle sue tavole è su Drive. Si apre appena torna la rete.",
+  "@readerSeriesOffline": {
+    "description": "Messaggio nel lettore: niente rete e l'elenco delle tavole della serie è solo su Google Drive."
+  },
+  "readerChapterNotOnPhone": "Questo capitolo non è ancora sul telefono. La sincronizzazione può essere a metà: riprovare più tardi.",
+  "@readerChapterNotOnPhone": {
+    "description": "Messaggio nel lettore: il capitolo richiesto non è presente sul dispositivo."
+  },
+  "readerChapterNoPages": "Il capitolo non ha pagine leggibili.",
+  "@readerChapterNoPages": {
+    "description": "Messaggio nel lettore: il capitolo non contiene pagine."
+  },
+  "readerPagesNotOnPhone": "Le tavole di questo capitolo non sono ancora sul telefono. L'indice le annuncia, i file no: è la cartella sincronizzata a doverli portare.",
+  "@readerPagesNotOnPhone": {
+    "description": "Messaggio nel lettore: l'indice elenca le tavole ma i file immagine non sono ancora arrivati sul dispositivo."
+  },
+  "readerMarkEarlierTitle": "Segnare letti i precedenti?",
+  "@readerMarkEarlierTitle": {
+    "description": "Titolo del foglio mostrato a fine capitolo: chiede se segnare come letti i capitoli precedenti ancora da leggere."
+  },
+  "readerMarkEarlierBody": "{count, plural, =1{Hai finito {chapter}. Il capitolo precedente risulta ancora da leggere: se l'hai già letto altrove, segnalo letto.} other{Hai finito {chapter}. I {count} capitoli precedenti risultano ancora da leggere: se li hai già letti altrove, segnali letti tutti insieme.}}",
+  "@readerMarkEarlierBody": {
+    "description": "Testo del foglio che chiede se segnare letti i capitoli precedenti; {chapter} è il nome del capitolo appena finito, {count} quanti precedenti sono ancora da leggere.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "readerMarkEarlierConfirm": "{count, plural, =1{Segna letto il precedente} other{Segna letti tutti i {count}}}",
+  "@readerMarkEarlierConfirm": {
+    "description": "Pulsante di conferma nel foglio dei capitoli precedenti: segna come letti {count} capitoli.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readerMarkEarlierDecline": "Lasciali da leggere",
+  "@readerMarkEarlierDecline": {
+    "description": "Pulsante nel foglio dei capitoli precedenti: non segnarli come letti."
+  },
+  "readerBookmarkAdded": "Pagina {page} messa da parte",
+  "@readerBookmarkAdded": {
+    "description": "Avviso breve dopo aver salvato un segnalibro; {page} è il numero della pagina.",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "readerChapters": "Capitoli",
+  "@readerChapters": {
+    "description": "Titolo del foglio con l'elenco dei capitoli dentro il lettore."
+  },
+  "readerBookmarks": "Pagine messe da parte",
+  "@readerBookmarks": {
+    "description": "Titolo del foglio dei segnalibri e tooltip del pulsante che lo apre (pagine salvate dall'utente)."
+  },
+  "readerNoBookmarks": "Nessuna pagina da parte",
+  "@readerNoBookmarks": {
+    "description": "Titolo dello stato vuoto del foglio dei segnalibri."
+  },
+  "readerNoBookmarksHint": "Il segnalibro tiene il punto di una tavola; quello del capitolo lo tiene già la ripresa.",
+  "@readerNoBookmarksHint": {
+    "description": "Spiegazione nello stato vuoto dei segnalibri: il segnalibro salva una pagina precisa, mentre il punto di lettura del capitolo è già ricordato."
+  },
+  "readerBookmarkPage": "pagina {page}",
+  "@readerBookmarkPage": {
+    "description": "Sottotitolo di un segnalibro nell'elenco; {page} è il numero della pagina.",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "readerBookmarkRemove": "Togli",
+  "@readerBookmarkRemove": {
+    "description": "Tooltip del pulsante cestino che rimuove un segnalibro."
+  },
+  "readerToTop": "Torna in cima",
+  "@readerToTop": {
+    "description": "Tooltip del pulsante che riporta all'inizio del capitolo."
+  },
+  "readerPageNotFromDrive": "Tavola non arrivata da Drive",
+  "@readerPageNotFromDrive": {
+    "description": "Motivo mostrato al posto di una tavola di Google Drive che non si è scaricata."
+  },
+  "readerPageUnreadable": "Tavola illeggibile",
+  "@readerPageUnreadable": {
+    "description": "Motivo mostrato al posto di una tavola: il file c'è ma non si riesce ad aprire."
+  },
+  "readerPageNotSynced": "Tavola non sincronizzata",
+  "@readerPageNotSynced": {
+    "description": "Motivo mostrato al posto di una tavola: il file non è ancora arrivato sul dispositivo."
+  },
+  "readerPageNotDownloaded": "Tavola non ancora scaricata",
+  "@readerPageNotDownloaded": {
+    "description": "Titolo dell'avviso su una tavola di Drive mancante per assenza di rete."
+  },
+  "readerPageOfflineHint": "Senza connessione. Arriva da sola appena torna la rete.",
+  "@readerPageOfflineHint": {
+    "description": "Sottotitolo dell'avviso su una tavola mancante per assenza di rete."
+  },
+  "readerRetryNow": "Riprova ora",
+  "@readerRetryNow": {
+    "description": "Pulsante che riprova subito a scaricare una tavola mancante."
+  },
+  "readerLastChapterOnPhone": "È l'ultimo capitolo che c'è sul telefono.",
+  "@readerLastChapterOnPhone": {
+    "description": "Fondo del capitolo quando non ce ne sono altri disponibili sul dispositivo."
+  },
+  "readerNextChapter": "Capitolo seguente",
+  "@readerNextChapter": {
+    "description": "Piccola etichetta in fondo al capitolo sopra il pulsante che porta al successivo."
+  },
+  "readerContinue": "Continua",
+  "@readerContinue": {
+    "description": "Pulsante in fondo al capitolo per passare al successivo, se manca il nome del capitolo."
+  },
+  "readerBookmarkThisPage": "Metti da parte questa pagina",
+  "@readerBookmarkThisPage": {
+    "description": "Tooltip del pulsante che salva un segnalibro sulla pagina corrente."
+  },
+  "readerHowToRead": "Come si legge",
+  "@readerHowToRead": {
+    "description": "Tooltip del pulsante e titolo del foglio con le impostazioni di lettura."
+  },
+  "readerPreviousChapter": "Capitolo precedente",
+  "@readerPreviousChapter": {
+    "description": "Tooltip della freccia che porta al capitolo precedente."
+  },
+  "readerNextChapterTooltip": "Capitolo successivo",
+  "@readerNextChapterTooltip": {
+    "description": "Tooltip della freccia che porta al capitolo successivo."
+  },
+  "readerSearchChapter": "Cerca capitolo…",
+  "@readerSearchChapter": {
+    "description": "Segnaposto del campo di ricerca nell'elenco dei capitoli."
+  },
+  "readerNewestFirst": "Dal più recente",
+  "@readerNewestFirst": {
+    "description": "Tooltip del pulsante di ordinamento dei capitoli: ora sono dal più recente."
+  },
+  "readerOldestFirst": "Dal primo",
+  "@readerOldestFirst": {
+    "description": "Tooltip del pulsante di ordinamento dei capitoli: ora sono dal primo (il più vecchio)."
+  },
+  "readerReadingNow": "In lettura: {current} / {total} capitoli",
+  "@readerReadingNow": {
+    "description": "Riga in fondo all'elenco dei capitoli: {current} è il numero del capitolo in lettura (mostrato con uno stile a parte), {total} quanti sono.",
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "readerMode": "Modalità di lettura",
+  "@readerMode": {
+    "description": "Titolo di sezione nelle impostazioni di lettura."
+  },
+  "readerModeStrip": "Striscia",
+  "@readerModeStrip": {
+    "description": "Opzione della modalità di lettura: scorrimento verticale continuo."
+  },
+  "readerModePage": "Pagina",
+  "@readerModePage": {
+    "description": "Opzione della modalità di lettura: una tavola per volta."
+  },
+  "readerDirection": "Verso di lettura",
+  "@readerDirection": {
+    "description": "Titolo di sezione: direzione in cui si sfogliano le pagine."
+  },
+  "readerDirectionLtr": "Sinistra → destra",
+  "@readerDirectionLtr": {
+    "description": "Opzione del verso di lettura."
+  },
+  "readerDirectionRtl": "Destra → sinistra",
+  "@readerDirectionRtl": {
+    "description": "Opzione del verso di lettura (stile manga giapponese)."
+  },
+  "readerFit": "Adattamento",
+  "@readerFit": {
+    "description": "Titolo di sezione: come la tavola si adatta allo schermo."
+  },
+  "readerBackground": "Sfondo",
+  "@readerBackground": {
+    "description": "Titolo di sezione: colore dello sfondo del lettore."
+  },
+  "readerBrightness": "Luminosità",
+  "@readerBrightness": {
+    "description": "Titolo di sezione: luminosità dello schermo nel lettore."
+  },
+  "readerAutoScroll": "Scorrimento automatico",
+  "@readerAutoScroll": {
+    "description": "Titolo di sezione: scorrimento automatico della striscia."
+  },
+  "readerAutoScrollOff": "spento",
+  "@readerAutoScrollOff": {
+    "description": "Valore dello scorrimento automatico quando è disattivato."
+  },
+  "readerAutoScrollRate": "{rate} tavole/min",
+  "@readerAutoScrollRate": {
+    "description": "Velocità dello scorrimento automatico, in tavole al minuto.",
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "readerShowPageNumber": "Numero di pagina",
+  "@readerShowPageNumber": {
+    "description": "Interruttore: mostra il numero della pagina sopra la tavola."
+  },
+  "readerShowProgress": "Barra di avanzamento",
+  "@readerShowProgress": {
+    "description": "Interruttore: mostra la sottile barra di avanzamento in fondo allo schermo."
+  },
+  "readerShowScrollTop": "Pulsante per tornare in cima",
+  "@readerShowScrollTop": {
+    "description": "Interruttore: mostra il pulsante che riporta all'inizio del capitolo."
+  },
+  "readerKeepAwake": "Tieni acceso lo schermo",
+  "@readerKeepAwake": {
+    "description": "Interruttore: impedisce allo schermo di spegnersi durante la lettura."
+  },
+  "readerDoublePage": "Due tavole affiancate",
+  "@readerDoublePage": {
+    "description": "Interruttore: nella modalità a pagine mostra due tavole una accanto all'altra."
+  },
+  "readerLockRotation": "Blocca la rotazione",
+  "@readerLockRotation": {
+    "description": "Interruttore: blocca la rotazione dello schermo."
+  },
+  "archiveTitle": "Scarica un manga",
+  "@archiveTitle": {
+    "description": "Titolo della schermata per archiviare una serie dal sito (Altro → Scarica un manga)"
+  },
+  "archiveIntro": "Cerca un titolo sui siti supportati, o incolla il link di una serie: Kagami la scarica dal sito, con metadati, copertina e l'elenco completo dei capitoli, nella libreria.",
+  "@archiveIntro": {
+    "description": "Testo introduttivo in cima alla schermata di download"
+  },
+  "archiveSearchHint": "Cerca un manga per titolo",
+  "@archiveSearchHint": {
+    "description": "Suggerimento nel campo di ricerca per titolo"
+  },
+  "archiveClear": "Cancella",
+  "@archiveClear": {
+    "description": "Tooltip del pulsante che svuota il campo di ricerca"
+  },
+  "archivePaste": "Incolla",
+  "@archivePaste": {
+    "description": "Tooltip del pulsante che incolla il link dagli appunti"
+  },
+  "archiveReading": "Lettura della serie…",
+  "@archiveReading": {
+    "description": "Etichetta del pulsante mentre la pagina della serie viene letta dal sito"
+  },
+  "archiveVerify": "Verifica serie",
+  "@archiveVerify": {
+    "description": "Pulsante che legge la serie dal link incollato, per controllare cosa c'è prima di scaricare"
+  },
+  "archiveSeriesSummary": "{site} · {count, plural, =1{1 capitolo} other{{count} capitoli}} · {status}",
+  "@archiveSeriesSummary": {
+    "description": "Riga sotto il titolo della serie trovata: sito, numero di capitoli, stato di pubblicazione",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveKnown": "Già in libreria: {archived} di {total} capitoli. Quelli che ci sono si saltano.",
+  "@archiveKnown": {
+    "description": "Avviso sulla scheda della serie che è già in libreria: quanti capitoli archiviati sul totale",
+    "placeholders": {
+      "archived": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveWhatSection": "Cosa scaricare",
+  "@archiveWhatSection": {
+    "description": "Titolo della sezione in cui si sceglie quali capitoli scaricare"
+  },
+  "archiveModeAll": "Tutta",
+  "@archiveModeAll": {
+    "description": "Scelta segmentata: scarica la serie intera"
+  },
+  "archiveModeFrom": "Dal capitolo",
+  "@archiveModeFrom": {
+    "description": "Scelta segmentata: scarica dal capitolo scelto in poi"
+  },
+  "archiveModePick": "Scelti",
+  "@archiveModePick": {
+    "description": "Scelta segmentata: scarica solo i capitoli scelti uno per uno"
+  },
+  "archiveModeAllHint": "Tutti i capitoli. Rifarlo più avanti porta solo quelli nuovi o rovinati.",
+  "@archiveModeAllHint": {
+    "description": "Spiegazione della modalità «Tutta»"
+  },
+  "archiveModeFromHint": "Dal capitolo scelto in poi: i precedenti restano nell'elenco della serie, segnati come non scaricati.",
+  "@archiveModeFromHint": {
+    "description": "Spiegazione della modalità «Dal capitolo»"
+  },
+  "archiveModePickHint": "Solo i capitoli toccati. Gli altri restano nell'elenco, non scaricati.",
+  "@archiveModePickHint": {
+    "description": "Spiegazione della modalità «Scelti»"
+  },
+  "archiveChapterNumberHint": "Numero del capitolo, come sul sito",
+  "@archiveChapterNumberHint": {
+    "description": "Suggerimento del campo in cui si scrive il numero del capitolo da cui partire"
+  },
+  "archivePickedCount": "{count, plural, =1{1 scelto} other{{count} scelti}}",
+  "@archivePickedCount": {
+    "description": "Quanti capitoli sono stati toccati nella scelta uno per uno",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveSelectAll": "Tutti",
+  "@archiveSelectAll": {
+    "description": "Pulsante che seleziona tutti i capitoli da scaricare"
+  },
+  "archiveSelectNone": "Nessuno",
+  "@archiveSelectNone": {
+    "description": "Pulsante che deseleziona tutti i capitoli da scaricare"
+  },
+  "archiveWhereSection": "Dove",
+  "@archiveWhereSection": {
+    "description": "Titolo della sezione in cui si sceglie la destinazione del download"
+  },
+  "archiveWhereServer": "Server",
+  "@archiveWhereServer": {
+    "description": "Destinazione: il Kagami Server collegato"
+  },
+  "archiveWhereDrive": "Drive",
+  "@archiveWhereDrive": {
+    "description": "Destinazione: solo la cartella di Google Drive della libreria"
+  },
+  "archiveWhereDriveAndPhone": "Drive e telefono",
+  "@archiveWhereDriveAndPhone": {
+    "description": "Destinazione: su Drive e anche sul telefono"
+  },
+  "archiveWherePhone": "Telefono",
+  "@archiveWherePhone": {
+    "description": "Destinazione: solo sul telefono"
+  },
+  "archiveWhereDriveHint": "Nella cartella di Drive della libreria. Le tavole passano dal telefono e se ne vanno appena Drive le ha: si leggono in streaming, o si scaricano dopo.",
+  "@archiveWhereDriveHint": {
+    "description": "Spiegazione della destinazione Drive"
+  },
+  "archiveWhereDriveAndPhoneHint": "Nella cartella di Drive della libreria, e i capitoli restano anche sul telefono per leggerli senza rete.",
+  "@archiveWhereDriveAndPhoneHint": {
+    "description": "Spiegazione della destinazione Drive e telefono"
+  },
+  "archiveWherePhoneHint": "Sul telefono, nella cartella dei manga o nello spazio dell'app. Collegando Drive si può scaricare direttamente là.",
+  "@archiveWherePhoneHint": {
+    "description": "Spiegazione della destinazione Telefono"
+  },
+  "archiveServerHint": "Lo scarica «{name}» e lo carica in «{folder}» su Drive, anche a telefono spento. Le serie in corso le segue il server.{other, select, other{ Attenzione: non è la cartella che legge l'app.} same{}}",
+  "@archiveServerHint": {
+    "description": "Spiegazione della destinazione Server; other vale «other» se la cartella del server è diversa da quella letta dall'app, altrimenti «same»",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      },
+      "other": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveDelaySection": "Pausa fra le richieste",
+  "@archiveDelaySection": {
+    "description": "Titolo della sezione con la pausa fra una richiesta e l'altra al sito"
+  },
+  "archiveDelayNone": "Niente",
+  "@archiveDelayNone": {
+    "description": "Pausa fra le richieste: nessuna"
+  },
+  "archiveDelaySeconds": "{seconds} s",
+  "@archiveDelaySeconds": {
+    "description": "Pausa fra le richieste in secondi (s = secondi)",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveDelayHint": "I siti non amano chi scarica a raffica: una pausa breve evita di farsi bloccare.",
+  "@archiveDelayHint": {
+    "description": "Spiegazione della pausa fra le richieste"
+  },
+  "archiveDownloadAll": "Scarica tutta la serie",
+  "@archiveDownloadAll": {
+    "description": "Pulsante di download, modalità serie intera"
+  },
+  "archiveDownloadFrom": "Scarica dal capitolo scelto",
+  "@archiveDownloadFrom": {
+    "description": "Pulsante di download, modalità dal capitolo scelto"
+  },
+  "archiveDownloadPicked": "{count, plural, =1{Scarica 1 capitolo} other{Scarica {count} capitoli}}",
+  "@archiveDownloadPicked": {
+    "description": "Pulsante di download, modalità capitoli scelti",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveNoResults": "Nessun risultato su {site}.",
+  "@archiveNoResults": {
+    "description": "Ricerca per titolo senza risultati su un sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveChaptersCount": "{count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@archiveChaptersCount": {
+    "description": "Numero di capitoli di un risultato di ricerca",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveVerifySite": "Verifica {site}",
+  "@archiveVerifySite": {
+    "description": "Titolo della riga che apre la verifica anti-robot del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveVerifySiteHint": "Il sito vuole sapere che sei una persona: toccando si apre la verifica, poi si cerca anche lì",
+  "@archiveVerifySiteHint": {
+    "description": "Spiegazione della riga di verifica del sito (Cloudflare)"
+  },
+  "archiveStatusOngoing": "in corso",
+  "@archiveStatusOngoing": {
+    "description": "Stato di pubblicazione di una serie: ancora in uscita"
+  },
+  "archiveStatusCompleted": "conclusa",
+  "@archiveStatusCompleted": {
+    "description": "Stato di pubblicazione di una serie: finita"
+  },
+  "archiveStatusHiatus": "in pausa",
+  "@archiveStatusHiatus": {
+    "description": "Stato di pubblicazione di una serie: in pausa (hiatus)"
+  },
+  "archiveStatusCancelled": "interrotta",
+  "@archiveStatusCancelled": {
+    "description": "Stato di pubblicazione di una serie: interrotta definitivamente"
+  },
+  "archiveStatusUnknown": "stato ignoto",
+  "@archiveStatusUnknown": {
+    "description": "Stato di pubblicazione di una serie: non noto"
+  },
+  "archiveErrChallenge": "Il sito chiede una verifica che da qui non si può fare.",
+  "@archiveErrChallenge": {
+    "description": "Errore di ricerca: il sito chiede una verifica anti-robot non eseguibile"
+  },
+  "archiveErrOffline": "Nessuna connessione: il sito non risponde.",
+  "@archiveErrOffline": {
+    "description": "Errore: manca la rete o il sito non risponde"
+  },
+  "archiveErrVerifyIncomplete": "La verifica del sito non è stata completata.",
+  "@archiveErrVerifyIncomplete": {
+    "description": "Errore: l'utente ha chiuso la pagina di verifica senza completarla"
+  },
+  "archiveQueuedSnack": "«{title}» è in coda. Continua anche a schermo spento.",
+  "@archiveQueuedSnack": {
+    "description": "Avviso dopo aver messo una serie in coda sul telefono",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveQueuedServerSnack": "«{title}» è in coda su «{server}». Il telefono può anche spegnersi.",
+  "@archiveQueuedServerSnack": {
+    "description": "Avviso dopo aver messo una serie in coda sul server",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveServerFallbackName": "server",
+  "@archiveServerFallbackName": {
+    "description": "Nome generico del server quando non ne ha uno"
+  },
+  "archiveDownloads": "Download",
+  "@archiveDownloads": {
+    "description": "Titolo della sezione con la coda e lo storico dei download"
+  },
+  "archiveClearHistory": "Pulisci",
+  "@archiveClearHistory": {
+    "description": "Pulsante che svuota lo storico dei download"
+  },
+  "archiveQueueStopped": "Coda ferma",
+  "@archiveQueueStopped": {
+    "description": "Titolo della riga che compare quando ci sono lavori in coda ma nessuno in corso"
+  },
+  "archiveQueueResumeHint": "Riparte da sola; toccando la fai partire adesso",
+  "@archiveQueueResumeHint": {
+    "description": "Spiegazione della coda ferma"
+  },
+  "archiveJobAutomatic": "Capitoli nuovi · {destination}",
+  "@archiveJobAutomatic": {
+    "description": "Riga di un lavoro in coda creato dal controllo delle serie in corso; destinazione del download",
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveJobQueued": "In coda · {destination}",
+  "@archiveJobQueued": {
+    "description": "Riga di un lavoro in coda chiesto dall'utente; destinazione del download",
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRemoveFromQueue": "Togli dalla coda",
+  "@archiveRemoveFromQueue": {
+    "description": "Tooltip del pulsante che toglie un lavoro dalla coda"
+  },
+  "archiveHistoryLine": "{when} · {message}",
+  "@archiveHistoryLine": {
+    "description": "Riga dello storico: quando è finito il lavoro e com'è andato (messaggio del motore)",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveSites": "Siti supportati",
+  "@archiveSites": {
+    "description": "Titolo della sezione con i siti da cui si può scaricare"
+  },
+  "archiveMoreSites": "Altri siti sono in arrivo: il supporto per nuovi provider arriverà con i prossimi aggiornamenti.",
+  "@archiveMoreSites": {
+    "description": "Nota sui siti che verranno aggiunti"
+  },
+  "archiveLinkCopied": "{url} copiato negli appunti.",
+  "@archiveLinkCopied": {
+    "description": "Avviso quando il link di un sito non si può aprire e viene copiato negli appunti",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveTracked": "Serie in corso",
+  "@archiveTracked": {
+    "description": "Titolo della sezione sul controllo dei capitoli nuovi delle serie ancora in uscita"
+  },
+  "archiveTrackedIntro": "Le serie in corso scaricate da qui si ricontrollano: arrivano solo i capitoli nuovi, nella stessa destinazione. Quelle del server le segue il server.",
+  "@archiveTrackedIntro": {
+    "description": "Spiegazione del controllo delle serie in corso"
+  },
+  "archiveCheckDaily": "Controllo ogni giorno",
+  "@archiveCheckDaily": {
+    "description": "Interruttore del controllo giornaliero delle serie in corso"
+  },
+  "archiveCheckManual": "Solo a mano",
+  "@archiveCheckManual": {
+    "description": "Controllo giornaliero spento: si controlla solo su richiesta"
+  },
+  "archiveCheckAt": "Alle {time}, anche ad app chiusa",
+  "@archiveCheckAt": {
+    "description": "Ora del controllo giornaliero; time è un orario già formattato",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCheckTime": "Ora",
+  "@archiveCheckTime": {
+    "description": "Titolo della riga che apre la scelta dell'ora del controllo"
+  },
+  "archiveCheckTimeHelp": "Ora del controllo",
+  "@archiveCheckTimeHelp": {
+    "description": "Intestazione del selettore dell'ora del controllo"
+  },
+  "archiveWifiOnly": "Solo con Wi-Fi",
+  "@archiveWifiOnly": {
+    "description": "Interruttore: il controllo parte solo con il Wi-Fi"
+  },
+  "archiveWifiOnlyOn": "Aspetta una rete che non si paga a consumo",
+  "@archiveWifiOnlyOn": {
+    "description": "Spiegazione di «Solo con Wi-Fi» acceso"
+  },
+  "archiveWifiOnlyOff": "Anche con i dati mobili",
+  "@archiveWifiOnlyOff": {
+    "description": "Spiegazione di «Solo con Wi-Fi» spento"
+  },
+  "archiveCheckNow": "Controlla adesso",
+  "@archiveCheckNow": {
+    "description": "Riga che avvia subito il controllo delle serie in corso"
+  },
+  "archiveNoTracked": "Nessuna serie da seguire, per ora",
+  "@archiveNoTracked": {
+    "description": "Sottotitolo di «Controlla adesso» quando non ci sono serie seguite"
+  },
+  "archiveTrackedCount": "{count, plural, =1{1 serie da seguire} other{{count} serie da seguire}}",
+  "@archiveTrackedCount": {
+    "description": "Quante serie in corso sono seguite",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveTrackedLine": "{count, plural, =1{1 capitolo noto} other{{count} capitoli noti}} · {destination}",
+  "@archiveTrackedLine": {
+    "description": "Riga di una serie seguita: capitoli noti e destinazione",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveTrackedLineChecked": "{count, plural, =1{1 capitolo noto} other{{count} capitoli noti}} · {destination} · controllata {when}",
+  "@archiveTrackedLineChecked": {
+    "description": "Riga di una serie seguita: capitoli noti, destinazione e quando è stata controllata l'ultima volta (when è già formattato)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "destination": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveStopFollowing": "Smetti di seguirla",
+  "@archiveStopFollowing": {
+    "description": "Tooltip del pulsante che smette di seguire una serie in corso"
+  },
+  "archiveCheckQueued": "capitoli nuovi per {names}",
+  "@archiveCheckQueued": {
+    "description": "Esito del controllo: serie con capitoli nuovi messi in coda (names è un elenco di titoli); è un pezzo di frase dopo cui viene il punto",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCheckRemoved": "{names} ora conclusa",
+  "@archiveCheckRemoved": {
+    "description": "Esito del controllo: serie che ora risultano concluse (names è un elenco di titoli); pezzo di frase",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCheckFailed": "{count, plural, =1{1 non raggiunta} other{{count} non raggiunte}}",
+  "@archiveCheckFailed": {
+    "description": "Esito del controllo: serie che il sito non ha fatto leggere; pezzo di frase",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveCheckSeparator": "; ",
+  "@archiveCheckSeparator": {
+    "description": "Separatore fra i pezzi dell'esito del controllo"
+  },
+  "archiveCheckReport": "{parts}.",
+  "@archiveCheckReport": {
+    "description": "Frase finale dell'esito del controllo: i pezzi uniti dal separatore, seguiti dal punto",
+    "placeholders": {
+      "parts": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveNoNewChapters": "Nessun capitolo nuovo.",
+  "@archiveNoNewChapters": {
+    "description": "Esito del controllo quando non c'è niente di nuovo"
+  },
+  "archiveNoConnection": "Nessuna connessione.",
+  "@archiveNoConnection": {
+    "description": "Avviso: manca la rete"
+  },
+  "archiveForgetTitle": "Smettere di seguirla?",
+  "@archiveForgetTitle": {
+    "description": "Titolo del dialogo di conferma per smettere di seguire una serie"
+  },
+  "archiveForgetBody": "I capitoli nuovi di «{title}» non arriveranno più da soli. Quelli già scaricati restano.",
+  "@archiveForgetBody": {
+    "description": "Testo del dialogo di conferma per smettere di seguire una serie",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCancel": "Annulla",
+  "@archiveCancel": {
+    "description": "Pulsante che chiude il dialogo senza fare niente"
+  },
+  "archiveForgetConfirm": "Smetti",
+  "@archiveForgetConfirm": {
+    "description": "Pulsante che conferma di smettere di seguire la serie"
+  },
+  "archiveStartIntro": "{count, plural, =1{1 capitolo.} other{{count} capitoli.}} Scarica tutto oppure scegli da quale capitolo partire: i precedenti restano in elenco nel lettore, senza tavole.",
+  "@archiveStartIntro": {
+    "description": "Introduzione del foglio che chiede se scaricare tutta la serie o da un capitolo",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveStartNoMatch": "Nessun capitolo con questo numero.",
+  "@archiveStartNoMatch": {
+    "description": "Il numero scritto non corrisponde a nessun capitolo"
+  },
+  "archiveStartFrom": "Da «{title}» in poi: {remaining, plural, =1{1 capitolo} other{{remaining} capitoli}}.",
+  "@archiveStartFrom": {
+    "description": "Riepilogo della scelta: dal capitolo indicato in poi, quanti capitoli restano",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveStartNone": "Nessun capitolo scelto: si può scaricare tutto.",
+  "@archiveStartNone": {
+    "description": "Nessun capitolo scelto nel foglio di partenza"
+  },
+  "archiveStartAll": "Scarica tutto",
+  "@archiveStartAll": {
+    "description": "Pulsante del foglio: scarica la serie intera"
+  },
+  "archiveStartHere": "Da qui",
+  "@archiveStartHere": {
+    "description": "Pulsante del foglio: scarica dal capitolo scelto in poi"
+  },
+  "browserTitle": "Verifica del sito",
+  "@browserTitle": {
+    "description": "Titolo della pagina in cui si supera la verifica anti-robot di un sito"
+  },
+  "browserPhoneOnly": "La verifica si fa solo dal telefono.",
+  "@browserPhoneOnly": {
+    "description": "Messaggio sulle piattaforme senza WebView (non Android)"
+  },
+  "browserInstructionsChapters": "Il sito vuole sapere che sei una persona. Completa la verifica: quando compare l'elenco dei capitoli, Kagami se ne accorge e torna indietro da sola.",
+  "@browserInstructionsChapters": {
+    "description": "Istruzioni nella pagina di verifica quando si sta aprendo la pagina di una serie"
+  },
+  "browserInstructionsSearch": "Il sito vuole sapere che sei una persona. Completa la verifica: quando compare la ricerca del sito, Kagami se ne accorge e torna indietro da sola.",
+  "@browserInstructionsSearch": {
+    "description": "Istruzioni nella pagina di verifica quando si sta aprendo la ricerca del sito"
+  },
+  "browserSearchPhoneOnly": "Su questo sito si cerca solo dal telefono.",
+  "@browserSearchPhoneOnly": {
+    "description": "Errore di ricerca su piattaforme senza WebView"
+  },
+  "browserSearchSuperseded": "Superata da una ricerca più recente.",
+  "@browserSearchSuperseded": {
+    "description": "Errore: una ricerca è stata sostituita da una più recente"
+  },
+  "browserResponseTooLarge": "Risposta troppo grande.",
+  "@browserResponseTooLarge": {
+    "description": "Errore: la pagina del sito è troppo grande"
+  },
+  "serverTitle": "Server",
+  "@serverTitle": {
+    "description": "Titolo della sezione «Server» in «Scarica un manga» e del foglio del server collegato"
+  },
+  "serverClear": "Pulisci",
+  "@serverClear": {
+    "description": "Pulsante che svuota lo storico dei lavori del server"
+  },
+  "serverUnavailableNoSecret": "Questa build dell'app non può collegare server: chi l'ha compilata non ha indicato il segreto del client Web (GOOGLE_SERVER_CLIENT_SECRET).",
+  "@serverUnavailableNoSecret": {
+    "description": "Errore: la build non ha il segreto del client Web, quindi non si può dare a un server il permesso su Drive"
+  },
+  "serverUnavailableAndroidOnly": "Collegare un server si può solo da Android.",
+  "@serverUnavailableAndroidOnly": {
+    "description": "Errore: collegare un server è possibile solo su Android"
+  },
+  "serverSignInRequired": "Fai l'accesso con Google per usare il server.",
+  "@serverSignInRequired": {
+    "description": "Errore: serve l'accesso con Google per parlare col server"
+  },
+  "serverNoConnection": "Nessuna connessione.",
+  "@serverNoConnection": {
+    "description": "Errore: il telefono non ha rete"
+  },
+  "serverMissingGoogleServices": "Manca google-services.json: questa build non ha il client di Google.",
+  "@serverMissingGoogleServices": {
+    "description": "Errore: la build non include google-services.json"
+  },
+  "serverDriveAccessDenied": "Google non ha concesso l'accesso a Drive.",
+  "@serverDriveAccessDenied": {
+    "description": "Errore: l'utente o Google ha negato il permesso su Drive"
+  },
+  "serverGoogleNotResponding": "Google non risponde: riprova fra poco.",
+  "@serverGoogleNotResponding": {
+    "description": "Errore: i server di Google non rispondono"
+  },
+  "serverWhenToday": "oggi alle {clock}",
+  "@serverWhenToday": {
+    "description": "Quando è avvenuto qualcosa, oggi; {clock} è l'ora (es. 14:30)",
+    "placeholders": {
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
+  "serverWhenDate": "{date} alle {clock}",
+  "@serverWhenDate": {
+    "description": "Quando è avvenuto qualcosa in un altro giorno; {date} è giorno e mese, {clock} l'ora",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
+  "serverProgressStats": "{pages} tavole nuove · {size}{skipped, plural, =0{} other{ · {skipped} già a posto}}",
+  "@serverProgressStats": {
+    "description": "Riga di avanzamento del download: tavole scaricate, dimensione e tavole già presenti (saltate)",
+    "placeholders": {
+      "pages": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "serverRemoveFromQueue": "Togli dalla coda",
+  "@serverRemoveFromQueue": {
+    "description": "Descrizione del pulsante che toglie un lavoro dalla coda di download"
+  },
+  "serverNoFirebase": "Il server riconosce chi lo usa dall'account Google, che in questa build dell'app non c'è.",
+  "@serverNoFirebase": {
+    "description": "Avviso nella sezione Server: questa build non ha l'account Google"
+  },
+  "serverSignedOutIntro": "Un computer sempre acceso può scaricare e caricare sul tuo Drive al posto del telefono, che intanto può anche spegnersi. Il server ti riconosce dal tuo account Google.",
+  "@serverSignedOutIntro": {
+    "description": "Spiegazione nella sezione Server quando non si è entrati con Google"
+  },
+  "serverSignIn": "Accedi con Google",
+  "@serverSignIn": {
+    "description": "Titolo della voce che fa entrare con l'account Google"
+  },
+  "serverSignInSubtitle": "Per creare il tuo server o usare quello di qualcun altro",
+  "@serverSignInSubtitle": {
+    "description": "Sottotitolo della voce «Accedi con Google» nella sezione Server"
+  },
+  "serverInviteTitle": "{sender} ti ha dato accesso a «{serverName}»",
+  "@serverInviteTitle": {
+    "description": "Invito ricevuto: {sender} è chi ha invitato, {serverName} il nome del server",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInviteSubtitle": "Scarica sul tuo Drive, anche a telefono spento. Tocca per collegarlo",
+  "@serverInviteSubtitle": {
+    "description": "Sottotitolo dell'invito a usare un server"
+  },
+  "serverIgnore": "Ignora",
+  "@serverIgnore": {
+    "description": "Descrizione del pulsante che scarta un invito a un server"
+  },
+  "serverLinkIntro": "Un computer sempre acceso — il tuo o quello di chi ti ha dato accesso — può scaricare e caricare sul tuo Drive al posto del telefono, che intanto può anche spegnersi.",
+  "@serverLinkIntro": {
+    "description": "Spiegazione nella sezione Server quando nessun server è collegato"
+  },
+  "serverCreate": "Crea il tuo server",
+  "@serverCreate": {
+    "description": "Voce e titolo del foglio per creare un proprio Kagami Server"
+  },
+  "serverCreateSubtitle": "Un comando da incollare su un computer con Docker: niente da configurare",
+  "@serverCreateSubtitle": {
+    "description": "Sottotitolo della voce «Crea il tuo server»"
+  },
+  "serverLinkTitle": "Collega un server",
+  "@serverLinkTitle": {
+    "description": "Voce e titolo del foglio per collegare un server esistente"
+  },
+  "serverLinkSubtitle": "Il tuo, già acceso, o quello di chi ti ha aggiunto",
+  "@serverLinkSubtitle": {
+    "description": "Sottotitolo della voce «Collega un server»"
+  },
+  "serverStateConnecting": "Collegamento…",
+  "@serverStateConnecting": {
+    "description": "Stato del server mentre l'app lo sta contattando"
+  },
+  "serverStateNoGrant": "Non ha ancora il permesso del tuo Drive",
+  "@serverStateNoGrant": {
+    "description": "Stato del server: manca il permesso sul Drive dell'utente"
+  },
+  "serverStateNoFolder": "Non sa ancora in quale cartella del tuo Drive scrivere",
+  "@serverStateNoFolder": {
+    "description": "Stato del server: manca la cartella di Drive"
+  },
+  "serverStateReady": "Pronto · scrive in «{folder}» sul tuo Drive",
+  "@serverStateReady": {
+    "description": "Stato del server pronto; {folder} è il nome della cartella di Drive",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "serverTileSubtitle": "{address} · {state}",
+  "@serverTileSubtitle": {
+    "description": "Sottotitolo del server collegato: indirizzo e stato",
+    "placeholders": {
+      "address": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "serverTileSubtitleOwner": "{address} · di {owner} · {state}",
+  "@serverTileSubtitleOwner": {
+    "description": "Sottotitolo del server collegato di un altro proprietario: indirizzo, proprietario e stato",
+    "placeholders": {
+      "address": {
+        "type": "String"
+      },
+      "owner": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "serverPlainTitle": "La connessione è in chiaro",
+  "@serverPlainTitle": {
+    "description": "Avviso: il server è raggiunto in HTTP su un indirizzo pubblico"
+  },
+  "serverPlainSubtitle": "Il token del tuo account si legge per strada: serve HTTPS (Tailscale Funnel, un reverse proxy)",
+  "@serverPlainSubtitle": {
+    "description": "Spiegazione dell'avviso di connessione in chiaro"
+  },
+  "serverGrantTitle": "Dai il tuo Drive al server",
+  "@serverGrantTitle": {
+    "description": "Voce che dà al server il permesso sul Drive"
+  },
+  "serverGrantSubtitle": "Scaricherà nella cartella che legge l'app, anche a telefono spento",
+  "@serverGrantSubtitle": {
+    "description": "Sottotitolo della voce che dà il Drive al server"
+  },
+  "serverUseAppFolder": "Usa la cartella dell'app",
+  "@serverUseAppFolder": {
+    "description": "Voce che fa scrivere al server nella cartella di Drive che legge l'app"
+  },
+  "serverUseAppFolderSubtitle": "Il server scrive in «{serverFolder}», l'app legge «{appFolder}»",
+  "@serverUseAppFolderSubtitle": {
+    "description": "Le due cartelle di Drive sono diverse",
+    "placeholders": {
+      "serverFolder": {
+        "type": "String"
+      },
+      "appFolder": {
+        "type": "String"
+      }
+    }
+  },
+  "serverUsersTitle": "Chi può usarlo",
+  "@serverUsersTitle": {
+    "description": "Voce e titolo del foglio con gli account ammessi al server"
+  },
+  "serverUsersOnlyYou": "Solo tu. Aggiungi l'account Google di chi vuoi",
+  "@serverUsersOnlyYou": {
+    "description": "Sottotitolo quando il server ha solo il proprietario"
+  },
+  "serverUsersCount": "{count} account, te compreso",
+  "@serverUsersCount": {
+    "description": "Sottotitolo: quanti account possono usare il server",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverQueueWaiting": "Coda in attesa",
+  "@serverQueueWaiting": {
+    "description": "Titolo: la coda del server non sta lavorando"
+  },
+  "serverQueueRestarts": "Il server riparte da solo",
+  "@serverQueueRestarts": {
+    "description": "Sottotitolo: la coda del server riprenderà da sola"
+  },
+  "serverJobAutomatic": "Capitoli nuovi · sul server",
+  "@serverJobAutomatic": {
+    "description": "Sottotitolo di un lavoro in coda nato dal controllo automatico dei capitoli nuovi"
+  },
+  "serverJobQueued": "In coda · sul server",
+  "@serverJobQueued": {
+    "description": "Sottotitolo di un lavoro in coda sul server"
+  },
+  "serverOngoingTitle": "Serie in corso sul server",
+  "@serverOngoingTitle": {
+    "description": "Titolo della voce sulle serie in corso che il server segue"
+  },
+  "serverOngoingCount": "{count, plural, =0{Nessuna, per ora} other{{count} da seguire}}",
+  "@serverOngoingCount": {
+    "description": "Quante serie in corso il server segue",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverOngoingCheckOff": "controllo spento",
+  "@serverOngoingCheckOff": {
+    "description": "Il controllo quotidiano dei capitoli nuovi è spento"
+  },
+  "serverOngoingCheckAt": "controllo alle {clock}",
+  "@serverOngoingCheckAt": {
+    "description": "Ora del controllo quotidiano dei capitoli nuovi",
+    "placeholders": {
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
+  "serverOngoingSubtitle": "{count} · {check}. Tocca per controllare adesso",
+  "@serverOngoingSubtitle": {
+    "description": "Sottotitolo della voce sulle serie in corso: {count} è il numero di serie, {check} dice quando controlla",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "check": {
+        "type": "String"
+      }
+    }
+  },
+  "serverSeriesKnown": "{count} capitoli noti",
+  "@serverSeriesKnown": {
+    "description": "Di una serie seguita dal server: quanti capitoli conosce",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverSeriesKnownChecked": "{count} capitoli noti · controllata {when}",
+  "@serverSeriesKnownChecked": {
+    "description": "Di una serie seguita: capitoli noti e quando è stata controllata l'ultima volta",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "serverStopFollowing": "Smetti di seguirla",
+  "@serverStopFollowing": {
+    "description": "Descrizione del pulsante che fa smettere al server di seguire una serie"
+  },
+  "serverInviteRemoveFailed": "Non sono riuscito a togliere l'invito: riprova.",
+  "@serverInviteRemoveFailed": {
+    "description": "Errore nello scartare un invito"
+  },
+  "serverCheckingNow": "Il server sta controllando: i capitoli nuovi compaiono nella sua coda.",
+  "@serverCheckingNow": {
+    "description": "Conferma dopo aver chiesto al server di controllare subito i capitoli nuovi"
+  },
+  "serverPaste": "Incolla",
+  "@serverPaste": {
+    "description": "Descrizione del pulsante che incolla l'indirizzo del server"
+  },
+  "serverAddressExposed": "Attenzione: in chiaro su un indirizzo pubblico il token del tuo account si legge per strada. Usa HTTPS (Tailscale Funnel, un reverse proxy) o Tailscale.",
+  "@serverAddressExposed": {
+    "description": "Avviso sotto il campo indirizzo quando è HTTP su un indirizzo pubblico"
+  },
+  "serverAddressSavedNote": "L'indirizzo viaggia col backup e con l'account, come la cartella di Drive.",
+  "@serverAddressSavedNote": {
+    "description": "Nota sotto il campo indirizzo nel foglio «Collega un server»"
+  },
+  "serverAddressMissing": "Scrivi l'indirizzo del server, per esempio http://192.168.1.20:8080.",
+  "@serverAddressMissing": {
+    "description": "Errore: indirizzo del server mancante o non valido"
+  },
+  "serverLinked": "Collegato a «{name}»: scarica in «{folder}» sul tuo Drive.",
+  "@serverLinked": {
+    "description": "Conferma di collegamento riuscito",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "serverLinkFromInvite": "{sender} ti ha aggiunto a «{serverName}». Collegandolo, il server scaricherà i manga che scegli nella cartella della tua libreria sul tuo Drive: Google ti chiederà di permettergli di scriverci. Chi gestisce il server potrà usare quel permesso.",
+  "@serverLinkFromInvite": {
+    "description": "Spiegazione nel foglio quando si arriva da un invito",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "serverLinkLinked": "Il server ti riconosce come {account}. Scollegandolo, se non è tuo, dimentica anche il permesso sul tuo Drive e la tua coda.",
+  "@serverLinkLinked": {
+    "description": "Spiegazione nel foglio del server già collegato; {account} è l'email o la frase «l'account con cui hai fatto l'accesso»",
+    "placeholders": {
+      "account": {
+        "type": "String"
+      }
+    }
+  },
+  "serverSignedInAccount": "l'account con cui hai fatto l'accesso",
+  "@serverSignedInAccount": {
+    "description": "Sostituisce l'email quando non è nota, dentro la frase «Il server ti riconosce come …»"
+  },
+  "serverLinkNew": "Scrivi l'indirizzo del server: il tuo, o quello che ti ha dato chi ti ha aggiunto. Il server ti riconosce dall'account Google, e la prima volta gli dai il permesso di scrivere nella cartella della tua libreria su Drive.",
+  "@serverLinkNew": {
+    "description": "Spiegazione nel foglio «Collega un server»"
+  },
+  "serverVerifying": "Verifica…",
+  "@serverVerifying": {
+    "description": "Pulsante mentre si verifica il server"
+  },
+  "serverVerifyAgain": "Verifica di nuovo",
+  "@serverVerifyAgain": {
+    "description": "Pulsante per ripetere la verifica del server già collegato"
+  },
+  "serverVerifyAndLink": "Verifica e collega",
+  "@serverVerifyAndLink": {
+    "description": "Pulsante che verifica il server e lo collega"
+  },
+  "serverUnlink": "Scollega",
+  "@serverUnlink": {
+    "description": "Pulsante che scollega il server"
+  },
+  "serverDefaultNameOwn": "Il mio Kagami Server",
+  "@serverDefaultNameOwn": {
+    "description": "Nome predefinito del server creato, se non si conosce il nome dell'utente"
+  },
+  "serverDefaultNameOf": "Il server di {name}",
+  "@serverDefaultNameOf": {
+    "description": "Nome predefinito del server creato; {name} è il nome di battesimo del proprietario",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverCommandCopied": "Comando copiato.",
+  "@serverCommandCopied": {
+    "description": "Conferma dopo aver copiato il comando di avvio del server"
+  },
+  "serverComputerAddressMissing": "Scrivi l'indirizzo del computer, per esempio http://192.168.1.20:8080.",
+  "@serverComputerAddressMissing": {
+    "description": "Errore: indirizzo del computer mancante o non valido"
+  },
+  "serverNotOwner": "Quel server è di {owner}: è collegato, ma non l'hai creato tu.",
+  "@serverNotOwner": {
+    "description": "Errore: il server collegato ha un altro proprietario",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "serverReady": "«{name}» è pronto. Aggiungi chi vuoi da «Chi può usarlo».",
+  "@serverReady": {
+    "description": "Conferma: il server appena creato è pronto",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverLibraryFolderFallback": "la cartella della libreria",
+  "@serverLibraryFolderFallback": {
+    "description": "Sostituisce il nome della cartella di Drive quando non è scelta, dentro la frase del foglio «Crea il tuo server»"
+  },
+  "serverSetupIntro": "Serve un computer che resti acceso — un mini PC, un NAS, un Raspberry Pi, un server in rete — con Docker. Il server scarica i manga e li carica sul tuo Drive, in «{folder}», anche a telefono spento.",
+  "@serverSetupIntro": {
+    "description": "Introduzione del foglio «Crea il tuo server»",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "serverPrepareIntro": "Preparo un comando che contiene tutto: {signIn, select, yes{prima fai l'accesso con Google, poi } other{}}{folder, select, yes{scegli la cartella dei manga su Drive, poi } other{}}Google ti chiede di permettere al server di scrivere sul tuo Drive.",
+  "@serverPrepareIntro": {
+    "description": "Cosa fa l'app prima di generare il comando. signIn e folder valgono «yes» se quel passo manca",
+    "placeholders": {
+      "signIn": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "serverPreparing": "Preparo…",
+  "@serverPreparing": {
+    "description": "Pulsante mentre si prepara il comando"
+  },
+  "serverGenerate": "Genera il comando",
+  "@serverGenerate": {
+    "description": "Pulsante che genera il comando docker run"
+  },
+  "serverStep1": "Installa Docker sul computer (docker.com), se non c'è già.",
+  "@serverStep1": {
+    "description": "Passo 1 delle istruzioni per creare il server"
+  },
+  "serverStep2": "Incolla questo comando nel suo terminale. Contiene il permesso sul tuo Drive: non mandarlo a nessuno.",
+  "@serverStep2": {
+    "description": "Passo 2 delle istruzioni per creare il server"
+  },
+  "serverCopyCommand": "Copia il comando",
+  "@serverCopyCommand": {
+    "description": "Pulsante che copia il comando di avvio negli appunti"
+  },
+  "serverStep3": "Scrivi qui l'indirizzo del computer: in casa quello della rete locale; da fuori, il suo nome in Tailscale o l'indirizzo HTTPS con cui lo esponi.",
+  "@serverStep3": {
+    "description": "Passo 3 delle istruzioni per creare il server"
+  },
+  "serverPortNote": "Il server risponde sulla porta 8080.",
+  "@serverPortNote": {
+    "description": "Nota sotto il campo indirizzo nel foglio «Crea il tuo server»"
+  },
+  "serverUsersIntro": "Aggiungi l'account Google di chi vuoi. Nella sua app di Kagami comparirà l'invito: collegando il server, i suoi download andranno sul suo Drive, con la sua coda.",
+  "@serverUsersIntro": {
+    "description": "Introduzione del foglio «Chi può usarlo»"
+  },
+  "serverUserEmailInvalid": "Scrivi l'indirizzo dell'account Google, per esempio nome@gmail.com.",
+  "@serverUserEmailInvalid": {
+    "description": "Errore: email non valida"
+  },
+  "serverUserAdded": "{email} può usare il server: glielo dice la sua app.",
+  "@serverUserAdded": {
+    "description": "Conferma dopo aver aggiunto un account al server",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "serverRemoveTitle": "Togliere {email}?",
+  "@serverRemoveTitle": {
+    "description": "Titolo della conferma per togliere un account dal server",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "serverRemoveBody": "Non potrà più usare il server. La sua coda e il permesso sul suo Drive si cancellano; ciò che è già sul suo Drive resta.",
+  "@serverRemoveBody": {
+    "description": "Corpo della conferma per togliere un account dal server"
+  },
+  "serverCancel": "Annulla",
+  "@serverCancel": {
+    "description": "Pulsante che chiude la conferma senza togliere l'account"
+  },
+  "serverRemove": "Togli",
+  "@serverRemove": {
+    "description": "Pulsante che toglie l'account dal server (azione, non «Togli dalla coda»)"
+  },
+  "serverAdd": "Aggiungi",
+  "@serverAdd": {
+    "description": "Descrizione del pulsante che aggiunge un account al server"
+  },
+  "serverOwnerYou": "Tu, il proprietario",
+  "@serverOwnerYou": {
+    "description": "Sottotitolo dell'account dell'utente stesso, proprietario del server"
+  },
+  "serverConnected": "Ha collegato il server",
+  "@serverConnected": {
+    "description": "Sottotitolo: l'account invitato ha già collegato il server"
+  },
+  "serverInvitedPending": "Invitato, non ha ancora collegato il server",
+  "@serverInvitedPending": {
+    "description": "Sottotitolo: l'account invitato non ha ancora collegato il server"
+  },
+  "setupIntro": "Legge la cartella dei manga che la sincronizzazione deposita sul telefono, oppure la stessa libreria direttamente da Google Drive, senza portarla tutta qui.",
+  "@setupIntro": {
+    "description": "Schermata del primo avvio: presentazione di cosa fa l'app, sotto il titolo Kagami"
+  },
+  "setupAccessTitle": "Accesso ai file",
+  "@setupAccessTitle": {
+    "description": "Primo avvio, passo 1: titolo della spiegazione del permesso di accedere a tutti i file"
+  },
+  "setupAccessBody": "La cartella sta fuori dallo spazio privato dell'app, e contiene decine di migliaia di immagini: Kagami ha bisogno di leggerle direttamente. Scrive soltanto le copie dei dati nella sottocartella reading/ della libreria e, se lo chiedi, i capitoli che scarichi da Drive.",
+  "@setupAccessBody": {
+    "description": "Primo avvio, passo 1: perché serve il permesso di accesso ai file"
+  },
+  "setupGrantAccess": "Concedi accesso",
+  "@setupGrantAccess": {
+    "description": "Pulsante del primo avvio che chiede il permesso di accesso ai file"
+  },
+  "setupFolderTitle": "La cartella",
+  "@setupFolderTitle": {
+    "description": "Primo avvio, passo 2: titolo della scelta della cartella della libreria"
+  },
+  "setupFolderBody": "Indica la cartella sincronizzata da FolderSync: quella che contiene library.json e una sottocartella per serie.",
+  "@setupFolderBody": {
+    "description": "Primo avvio, passo 2: quale cartella scegliere (FolderSync è un'app di sincronizzazione, library.json un nome di file)"
+  },
+  "setupChooseFolder": "Scegli la cartella",
+  "@setupChooseFolder": {
+    "description": "Pulsante del primo avvio che apre il selettore della cartella della libreria"
+  },
+  "setupOr": "oppure",
+  "@setupOr": {
+    "description": "Separatore fra la scelta della cartella del telefono e quella di Google Drive"
+  },
+  "setupDriveTitle": "Google Drive",
+  "@setupDriveTitle": {
+    "description": "Primo avvio: titolo della scheda che spiega la lettura da Drive (nome proprio)"
+  },
+  "setupDriveBody": "Si accede con Google e si sceglie la cartella della libreria su Drive: le tavole arrivano mentre si legge, e i capitoli che si vogliono avere sempre a portata si scaricano con un tocco. Non serve l'accesso ai file del telefono.",
+  "@setupDriveBody": {
+    "description": "Primo avvio: spiega come funziona la lettura direttamente da Google Drive"
+  },
+  "setupReadFromDrive": "Leggi da Google Drive",
+  "@setupReadFromDrive": {
+    "description": "Pulsante del primo avvio che collega Google Drive"
+  },
+  "setupLibraryProblemTitle": "Libreria non leggibile",
+  "@setupLibraryProblemTitle": {
+    "description": "Titolo dello stato vuoto mostrato quando la libreria non si riesce a leggere"
+  },
+  "setupChangeFolder": "Cambia cartella",
+  "@setupChangeFolder": {
+    "description": "Pulsante sotto l'errore della libreria: sceglie un'altra cartella"
+  },
+  "driveFolderSheetTitle": "Cartella su Drive",
+  "@driveFolderSheetTitle": {
+    "description": "Titolo del foglio in cui si sceglie la cartella della libreria su Google Drive"
+  },
+  "driveDestinationTitle": "Dove salvo i manga?",
+  "@driveDestinationTitle": {
+    "description": "Titolo del foglio che chiede dove salvare i capitoli scaricati"
+  },
+  "driveDestinationBody": "Non c'è una cartella per i manga sul telefono. In una cartella i capitoli scaricati restano anche se l'app si disinstalla, e Kagami li legge insieme a quelli che ci sono già. Nello spazio dell'app non serve nessun permesso, ma se ne vanno con lei.",
+  "@driveDestinationBody": {
+    "description": "Spiega la scelta fra una cartella sul telefono e lo spazio privato dell'app per i download"
+  },
+  "driveChooseFolder": "Scegli una cartella",
+  "@driveChooseFolder": {
+    "description": "Pulsante del foglio della destinazione dei download: sceglie una cartella del telefono"
+  },
+  "driveInAppSpace": "Nello spazio dell'app",
+  "@driveInAppSpace": {
+    "description": "Pulsante del foglio della destinazione dei download: usa lo spazio privato dell'app"
+  },
+  "driveMyDrive": "Il mio Drive",
+  "@driveMyDrive": {
+    "description": "Scheda del navigatore cartelle: il Drive dell'utente"
+  },
+  "driveSharedWithMe": "Condivisi con me",
+  "@driveSharedWithMe": {
+    "description": "Scheda del navigatore cartelle: cartelle condivise da altri"
+  },
+  "driveBack": "Indietro",
+  "@driveBack": {
+    "description": "Descrizione (tooltip) del pulsante che torna alla cartella superiore nel navigatore di Drive"
+  },
+  "driveNoResponse": "Drive non risponde",
+  "@driveNoResponse": {
+    "description": "Titolo dell'errore del navigatore cartelle quando Drive non risponde"
+  },
+  "driveRetry": "Riprova",
+  "@driveRetry": {
+    "description": "Pulsante per ritentare dopo un errore di Drive o di rete"
+  },
+  "driveIsLibrary": "Contiene library.json: è una libreria",
+  "@driveIsLibrary": {
+    "description": "Navigatore cartelle: la cartella scelta è una libreria valida (library.json è un nome di file)"
+  },
+  "driveNotLibrary": "Non contiene library.json: la libreria è la cartella che lo ha",
+  "@driveNotLibrary": {
+    "description": "Navigatore cartelle: la cartella scelta non è una libreria (library.json è un nome di file)"
+  },
+  "driveUseFolder": "Usa questa cartella",
+  "@driveUseFolder": {
+    "description": "Pulsante che conferma la cartella di Drive scelta come libreria"
+  },
+  "driveNoFolders": "Nessuna cartella qui",
+  "@driveNoFolders": {
+    "description": "Navigatore cartelle: la cartella aperta non contiene sottocartelle"
+  },
+  "driveNoticeAuthRequired": "Kagami non ha ancora il permesso di leggere Google Drive",
+  "@driveNoticeAuthRequired": {
+    "description": "Avviso sopra la libreria: manca il permesso su Drive"
+  },
+  "driveAuthorize": "Autorizza",
+  "@driveAuthorize": {
+    "description": "Pulsante dell'avviso che chiede il permesso su Google Drive"
+  },
+  "driveSignIn": "Accedi",
+  "@driveSignIn": {
+    "description": "Pulsante dell'avviso che fa accedere con l'account Google"
+  },
+  "driveNoticeOffline": "Sei offline: si leggono i capitoli sul telefono e le tavole di Drive già scaricate. Il resto torna da solo con la rete",
+  "@driveNoticeOffline": {
+    "description": "Avviso sopra la libreria quando non c'è rete"
+  },
+  "driveNoticeError": "Drive: {message}. Si vede quello che c'è sul telefono",
+  "@driveNoticeError": {
+    "description": "Avviso sopra la libreria quando Drive dà un errore; {message} è il testo dell'errore",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSummaryOff": "Spenta",
+  "@syncSummaryOff": {
+    "description": "Riassunto della sincronizzazione della cartella nelle impostazioni: disattivata"
+  },
+  "syncSummaryDownload": "Da Drive al telefono",
+  "@syncSummaryDownload": {
+    "description": "Direzione della sincronizzazione, usata nel riassunto"
+  },
+  "syncSummaryUpload": "Dal telefono a Drive",
+  "@syncSummaryUpload": {
+    "description": "Direzione della sincronizzazione, usata nel riassunto"
+  },
+  "syncSummaryBoth": "In entrambe le direzioni",
+  "@syncSummaryBoth": {
+    "description": "Direzione della sincronizzazione, usata nel riassunto"
+  },
+  "syncSummaryManual": "{direction}, a mano",
+  "@syncSummaryManual": {
+    "description": "Riassunto della sincronizzazione senza orario; {direction} è la direzione già localizzata",
+    "placeholders": {
+      "direction": {
+        "type": "String"
+      }
+    }
+  },
+  "syncSummaryDaily": "{direction}, ogni giorno alle {time}",
+  "@syncSummaryDaily": {
+    "description": "Riassunto della sincronizzazione programmata; {direction} è la direzione già localizzata, {time} l'ora (HH:mm)",
+    "placeholders": {
+      "direction": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncTitle": "Sincronizzazione",
+  "@syncTitle": {
+    "description": "Titolo della schermata della sincronizzazione della cartella"
+  },
+  "syncIntro": "Tiene uguali la cartella dei manga sul telefono e quella su Drive, senza FolderSync. Se lo usi ancora su questa cartella, spegnilo: due sincronizzazioni sugli stessi file si pestano i piedi.",
+  "@syncIntro": {
+    "description": "Introduzione della schermata di sincronizzazione (FolderSync è un'altra app)"
+  },
+  "syncFolders": "Cartelle",
+  "@syncFolders": {
+    "description": "Intestazione di sezione: le due cartelle sincronizzate"
+  },
+  "syncOnPhone": "Sul telefono",
+  "@syncOnPhone": {
+    "description": "Riga che mostra la cartella locale"
+  },
+  "syncNoFolderChosen": "Nessuna cartella scelta",
+  "@syncNoFolderChosen": {
+    "description": "Sottotitolo quando non è stata scelta la cartella del telefono"
+  },
+  "syncOnDrive": "Su Drive",
+  "@syncOnDrive": {
+    "description": "Riga che mostra la cartella di Google Drive"
+  },
+  "syncDriveNotConnected": "Drive non è collegato",
+  "@syncDriveNotConnected": {
+    "description": "Sottotitolo quando Google Drive non è collegato"
+  },
+  "syncDirection": "Direzione",
+  "@syncDirection": {
+    "description": "Intestazione di sezione: verso dove si copia"
+  },
+  "syncDirectionOff": "Spenta",
+  "@syncDirectionOff": {
+    "description": "Voce del selettore di direzione: sincronizzazione disattivata"
+  },
+  "syncDirectionFromDrive": "Da Drive",
+  "@syncDirectionFromDrive": {
+    "description": "Voce del selettore di direzione: da Drive al telefono"
+  },
+  "syncDirectionToDrive": "Verso Drive",
+  "@syncDirectionToDrive": {
+    "description": "Voce del selettore di direzione: dal telefono a Drive"
+  },
+  "syncDirectionBoth": "Entrambe",
+  "@syncDirectionBoth": {
+    "description": "Voce del selettore di direzione: in tutt'e due i versi"
+  },
+  "syncDescOff": "Niente si muove da solo. La libreria di Drive si legge lo stesso, e «Scarica» funziona come sempre.",
+  "@syncDescOff": {
+    "description": "Spiegazione della direzione Spenta; «Scarica» è il pulsante di download dei capitoli"
+  },
+  "syncDescDownload": "Quello che arriva su Drive scende sul telefono. Dal telefono non sale niente.",
+  "@syncDescDownload": {
+    "description": "Spiegazione della direzione Da Drive"
+  },
+  "syncDescUpload": "Quello che c'è sul telefono sale su Drive — per esempio le copie dei dati in reading/backup. Gli indici della libreria restano quelli del server.",
+  "@syncDescUpload": {
+    "description": "Spiegazione della direzione Verso Drive (reading/backup è un percorso)"
+  },
+  "syncDescBoth": "Quello che cambia da una parte arriva dall'altra; se è cambiato da tutt'e due, vince il più recente. Gli indici della libreria scendono e basta: sono del server.",
+  "@syncDescBoth": {
+    "description": "Spiegazione della direzione Entrambe"
+  },
+  "syncDeletions": "Propaga le cancellazioni",
+  "@syncDeletions": {
+    "description": "Interruttore: un file tolto da una parte si toglie anche dall'altra"
+  },
+  "syncDeletionsDownload": "Toglie dal telefono ciò che sparisce da Drive",
+  "@syncDeletionsDownload": {
+    "description": "Sottotitolo dell'interruttore delle cancellazioni, direzione Da Drive"
+  },
+  "syncDeletionsUpload": "Sposta nel cestino di Drive ciò che togli dal telefono",
+  "@syncDeletionsUpload": {
+    "description": "Sottotitolo dell'interruttore delle cancellazioni, direzione Verso Drive"
+  },
+  "syncDeletionsBoth": "Da una parte all'altra; da Drive solo nel cestino",
+  "@syncDeletionsBoth": {
+    "description": "Sottotitolo dell'interruttore delle cancellazioni, direzione Entrambe"
+  },
+  "syncDeletionsOnNote": "«Libera spazio» toglie i capitoli letti anche da Drive, al giro seguente.",
+  "@syncDeletionsOnNote": {
+    "description": "Nota sotto l'interruttore delle cancellazioni quando è acceso; «Libera spazio» è il foglio che cancella i capitoli già letti"
+  },
+  "syncDeletionsOffNote": "Un file tolto da una parte resta dall'altra e non torna indietro: «Libera spazio» libera il telefono e lascia i capitoli su Drive.",
+  "@syncDeletionsOffNote": {
+    "description": "Nota sotto l'interruttore delle cancellazioni quando è spento"
+  },
+  "syncDaily": "Ogni giorno",
+  "@syncDaily": {
+    "description": "Intestazione di sezione: sincronizzazione programmata"
+  },
+  "syncScheduled": "Sincronizzazione programmata",
+  "@syncScheduled": {
+    "description": "Interruttore della sincronizzazione giornaliera"
+  },
+  "syncManualOnly": "Solo a mano",
+  "@syncManualOnly": {
+    "description": "Sottotitolo dell'interruttore della programmazione quando è spento"
+  },
+  "syncAtTime": "Alle {time}, anche ad app chiusa",
+  "@syncAtTime": {
+    "description": "Sottotitolo della programmazione accesa; {time} è l'ora (HH:mm)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncTime": "Ora",
+  "@syncTime": {
+    "description": "Riga che mostra e cambia l'ora della sincronizzazione giornaliera"
+  },
+  "syncWifiOnly": "Solo con Wi-Fi",
+  "@syncWifiOnly": {
+    "description": "Interruttore: il giro programmato parte solo con il Wi-Fi"
+  },
+  "syncWifiOnlyOn": "Aspetta una rete che non si paga a consumo",
+  "@syncWifiOnlyOn": {
+    "description": "Sottotitolo di «Solo con Wi-Fi» quando è acceso"
+  },
+  "syncWifiOnlyOff": "Anche con i dati mobili",
+  "@syncWifiOnlyOff": {
+    "description": "Sottotitolo di «Solo con Wi-Fi» quando è spento"
+  },
+  "syncScheduleNote": "Android decide il momento esatto: se all'ora scelta manca la rete, il giro parte appena torna.",
+  "@syncScheduleNote": {
+    "description": "Nota sotto la sezione della sincronizzazione programmata"
+  },
+  "syncNow": "Adesso",
+  "@syncNow": {
+    "description": "Intestazione di sezione: il giro a mano"
+  },
+  "syncTimePickerHelp": "Ora della sincronizzazione",
+  "@syncTimePickerHelp": {
+    "description": "Titolo del selettore dell'ora"
+  },
+  "syncRunNow": "Sincronizza adesso",
+  "@syncRunNow": {
+    "description": "Riga che avvia subito un giro di sincronizzazione"
+  },
+  "syncRunNowReady": "Si può continuare a leggere: le copie vanno avanti da sole",
+  "@syncRunNowReady": {
+    "description": "Sottotitolo di «Sincronizza adesso» quando si può avviare"
+  },
+  "syncRunNowNotReady": "Servono la cartella del telefono e quella di Drive",
+  "@syncRunNowNotReady": {
+    "description": "Sottotitolo di «Sincronizza adesso» quando mancano le cartelle"
+  },
+  "syncPhaseListing": "Guardo cosa c'è su Drive…",
+  "@syncPhaseListing": {
+    "description": "Avanzamento del giro: elenco dei file su Drive"
+  },
+  "syncPhaseComparing": "Confronto con il telefono…",
+  "@syncPhaseComparing": {
+    "description": "Avanzamento del giro: confronto con i file del telefono"
+  },
+  "syncPhaseNothing": "Niente da copiare",
+  "@syncPhaseNothing": {
+    "description": "Avanzamento del giro: nessun file da copiare"
+  },
+  "syncPhaseFiles": "File {done} di {total}",
+  "@syncPhaseFiles": {
+    "description": "Avanzamento del giro: file copiato corrente su totale",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStop": "Interrompi",
+  "@syncStop": {
+    "description": "Descrizione (tooltip) del pulsante che ferma il giro in corso"
+  },
+  "syncNever": "Mai sincronizzata",
+  "@syncNever": {
+    "description": "Titolo dell'esito quando non c'è ancora stato nessun giro"
+  },
+  "syncNeverNote": "Il primo giro su una cartella già piena è veloce: i file uguali si riconoscono dalla misura",
+  "@syncNeverNote": {
+    "description": "Nota sotto «Mai sincronizzata»"
+  },
+  "syncLastScheduled": "Ultima, programmata: {date} alle {time}",
+  "@syncLastScheduled": {
+    "description": "Data dell'ultimo giro, se era programmato; {date} è giorno e mese, {time} l'ora",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncLastManual": "Ultima, a mano: {date} alle {time}",
+  "@syncLastManual": {
+    "description": "Data dell'ultimo giro, se lanciato a mano; {date} è giorno e mese, {time} l'ora",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "syncOutcomeDownloaded": "{count, plural, =1{{count} scaricati} other{{count} scaricati}}",
+  "@syncOutcomeDownloaded": {
+    "description": "Esito dell'ultimo giro: file scaricati dal Drive al telefono",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOutcomeUploaded": "{count, plural, =1{{count} caricati} other{{count} caricati}}",
+  "@syncOutcomeUploaded": {
+    "description": "Esito dell'ultimo giro: file caricati dal telefono su Drive",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOutcomeDeletedLocal": "{count, plural, =1{{count} tolti dal telefono} other{{count} tolti dal telefono}}",
+  "@syncOutcomeDeletedLocal": {
+    "description": "Esito dell'ultimo giro: file cancellati dal telefono",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOutcomeTrashed": "{count, plural, =1{{count} nel cestino di Drive} other{{count} nel cestino di Drive}}",
+  "@syncOutcomeTrashed": {
+    "description": "Esito dell'ultimo giro: file spostati nel cestino di Drive",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOutcomeFailed": "{count, plural, =1{{count} non riusciti, si riprovano} other{{count} non riusciti, si riprovano}}",
+  "@syncOutcomeFailed": {
+    "description": "Esito dell'ultimo giro: file non copiati, che si riprovano al prossimo",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOutcomeErrorSoFar": "{error}. Fin lì: {done}",
+  "@syncOutcomeErrorSoFar": {
+    "description": "Esito di un giro finito con errore; {error} è il messaggio, {done} l'elenco di ciò che era stato fatto",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      },
+      "done": {
+        "type": "String"
+      }
+    }
+  },
+  "syncOutcomeAligned": "Era già tutto allineato",
+  "@syncOutcomeAligned": {
+    "description": "Esito dell'ultimo giro: niente da copiare"
+  },
+  "settingsTitle": "Impostazioni",
+  "@settingsTitle": {
+    "description": "Titolo della schermata delle impostazioni"
+  },
+  "settingsAppearance": "Aspetto",
+  "@settingsAppearance": {
+    "description": "Intestazione di sezione delle impostazioni: tema e lingua"
+  },
+  "settingsThemeDark": "Scuro",
+  "@settingsThemeDark": {
+    "description": "Tema dell'interfaccia: scuro"
+  },
+  "settingsThemeLight": "Chiaro",
+  "@settingsThemeLight": {
+    "description": "Tema dell'interfaccia: chiaro"
+  },
+  "settingsThemeSystem": "Come il sistema",
+  "@settingsThemeSystem": {
+    "description": "Tema dell'interfaccia: segue quello del telefono"
+  },
+  "settingsLibrary": "Libreria",
+  "@settingsLibrary": {
+    "description": "Intestazione di sezione delle impostazioni: la cartella della libreria"
+  },
+  "settingsFolder": "Cartella",
+  "@settingsFolder": {
+    "description": "Riga che mostra e cambia la cartella della libreria sul telefono"
+  },
+  "settingsNoFolder": "Nessuna cartella scelta",
+  "@settingsNoFolder": {
+    "description": "Sottotitolo quando non c'è una cartella della libreria"
+  },
+  "settingsReloadIndexes": "Rileggi gli indici",
+  "@settingsReloadIndexes": {
+    "description": "Riga che rilegge gli indici della libreria"
+  },
+  "settingsReloadIndexesNote": "Da fare quando la sincronizzazione ha appena portato roba nuova",
+  "@settingsReloadIndexesNote": {
+    "description": "Sottotitolo di «Rileggi gli indici»"
+  },
+  "settingsIndexesReloaded": "Indici riletti",
+  "@settingsIndexesReloaded": {
+    "description": "Messaggio breve dopo aver riletto gli indici"
+  },
+  "settingsGoogleDrive": "Google Drive",
+  "@settingsGoogleDrive": {
+    "description": "Intestazione di sezione delle impostazioni: Drive (nome proprio)"
+  },
+  "settingsReading": "Lettura",
+  "@settingsReading": {
+    "description": "Intestazione di sezione delle impostazioni: valori predefiniti del lettore"
+  },
+  "settingsAccount": "Account",
+  "@settingsAccount": {
+    "description": "Intestazione di sezione delle impostazioni: accesso con Google"
+  },
+  "settingsData": "Dati",
+  "@settingsData": {
+    "description": "Intestazione di sezione delle impostazioni: backup e dati personali"
+  },
+  "settingsAbout": "Informazioni",
+  "@settingsAbout": {
+    "description": "Intestazione di sezione delle impostazioni: versione dell'app"
+  },
+  "settingsAutoBackup": "Copia automatica nella libreria",
+  "@settingsAutoBackup": {
+    "description": "Interruttore della copia di backup giornaliera"
+  },
+  "settingsAutoBackupNote": "Una volta al giorno in reading/backup/, che la sincronizzazione porta su Drive insieme ai manga",
+  "@settingsAutoBackupNote": {
+    "description": "Sottotitolo dell'interruttore della copia automatica (reading/backup/ è un percorso)"
+  },
+  "settingsExport": "Esporta i dati",
+  "@settingsExport": {
+    "description": "Riga che esporta i dati personali in un file"
+  },
+  "settingsExportNote": "Stato, voti, cronologia, raccolte e segnalibri in un file",
+  "@settingsExportNote": {
+    "description": "Sottotitolo di «Esporta i dati»"
+  },
+  "settingsExportDialog": "Dove salvare il backup",
+  "@settingsExportDialog": {
+    "description": "Titolo del selettore di file per salvare il backup"
+  },
+  "settingsExportCancelled": "Esportazione annullata",
+  "@settingsExportCancelled": {
+    "description": "Messaggio breve: l'utente ha annullato l'esportazione"
+  },
+  "settingsExportSaved": "Backup salvato",
+  "@settingsExportSaved": {
+    "description": "Messaggio breve: backup salvato"
+  },
+  "settingsImport": "Importa da un backup",
+  "@settingsImport": {
+    "description": "Riga che importa i dati da un file di backup"
+  },
+  "settingsImportNote": "Dice cosa contiene prima di toccare niente",
+  "@settingsImportNote": {
+    "description": "Sottotitolo di «Importa da un backup»"
+  },
+  "settingsImportDialog": "Scegli un backup di Kagami",
+  "@settingsImportDialog": {
+    "description": "Titolo del selettore di file per scegliere il backup"
+  },
+  "settingsImportInvalid": "Non è un backup di Kagami",
+  "@settingsImportInvalid": {
+    "description": "Messaggio breve: il file scelto non è un backup valido"
+  },
+  "settingsImportSheetTitle": "Importare questo backup?",
+  "@settingsImportSheetTitle": {
+    "description": "Titolo del foglio di conferma dell'importazione"
+  },
+  "settingsImportSeries": "Serie",
+  "@settingsImportSeries": {
+    "description": "Etichetta di un numero nel riepilogo del backup: quante serie"
+  },
+  "settingsImportRead": "Letti",
+  "@settingsImportRead": {
+    "description": "Etichetta di un numero nel riepilogo del backup: quanti capitoli letti"
+  },
+  "settingsImportCollections": "Raccolte",
+  "@settingsImportCollections": {
+    "description": "Etichetta di un numero nel riepilogo del backup: quante raccolte"
+  },
+  "settingsImportExplain": "Fatto il {date}. Fondere tiene quello che hai già e aggiunge: i capitoli letti si sommano e per il resto vince il record più recente. Sostituire cancella i dati di questo dispositivo.",
+  "@settingsImportExplain": {
+    "description": "Spiega le due scelte di importazione (Fondi e Sostituisci); {date} è la data del backup",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportExplainUnknownDate": "Fatto in una data ignota. Fondere tiene quello che hai già e aggiunge: i capitoli letti si sommano e per il resto vince il record più recente. Sostituire cancella i dati di questo dispositivo.",
+  "@settingsImportExplainUnknownDate": {
+    "description": "Come la spiegazione dell'importazione, ma per un backup senza data"
+  },
+  "settingsImportMerge": "Fondi",
+  "@settingsImportMerge": {
+    "description": "Pulsante: importa il backup unendolo ai dati esistenti"
+  },
+  "settingsImportReplace": "Sostituisci",
+  "@settingsImportReplace": {
+    "description": "Pulsante: importa il backup cancellando i dati esistenti"
+  },
+  "settingsImportDone": "Dati importati",
+  "@settingsImportDone": {
+    "description": "Messaggio breve: importazione riuscita"
+  },
+  "settingsImportFailed": "Importazione non riuscita",
+  "@settingsImportFailed": {
+    "description": "Messaggio breve: importazione fallita"
+  },
+  "settingsWipe": "Elimina i dati personali",
+  "@settingsWipe": {
+    "description": "Riga che cancella i dati personali dal telefono"
+  },
+  "settingsWipeNote": "Stato, voti, cronologia e raccolte. I manga non si toccano",
+  "@settingsWipeNote": {
+    "description": "Sottotitolo di «Elimina i dati personali»"
+  },
+  "settingsWipeSheetTitle": "Eliminare tutti i dati personali?",
+  "@settingsWipeSheetTitle": {
+    "description": "Titolo del foglio di conferma della cancellazione dei dati"
+  },
+  "settingsWipeExplain": "Spariscono stato, voti, preferiti, capitoli letti, cronologia, sessioni, raccolte e segnalibri di questo dispositivo. I manga e gli indici della libreria non vengono toccati.\n\nSe non hai un backup, questa è l'ultima occasione per farlo.",
+  "@settingsWipeExplain": {
+    "description": "Avviso nel foglio di conferma della cancellazione dei dati personali"
+  },
+  "settingsWipeConfirm": "Elimina tutto",
+  "@settingsWipeConfirm": {
+    "description": "Pulsante di conferma della cancellazione dei dati personali"
+  },
+  "settingsWipeDone": "Dati personali eliminati",
+  "@settingsWipeDone": {
+    "description": "Messaggio breve: dati personali cancellati"
+  },
+  "settingsDriveConnect": "Collega Google Drive",
+  "@settingsDriveConnect": {
+    "description": "Riga che collega Drive, quando non lo è"
+  },
+  "settingsDriveConnectNote": "Legge la libreria da Drive senza portarla tutta sul telefono, e scarica solo ciò che si sceglie",
+  "@settingsDriveConnectNote": {
+    "description": "Sottotitolo di «Collega Google Drive»"
+  },
+  "settingsDriveFolder": "Cartella su Drive",
+  "@settingsDriveFolder": {
+    "description": "Riga che mostra e cambia la cartella della libreria su Drive"
+  },
+  "settingsDriveSync": "Sincronizzazione della cartella",
+  "@settingsDriveSync": {
+    "description": "Riga che apre la schermata di sincronizzazione della cartella"
+  },
+  "settingsDriveDownloadsGo": "I capitoli scaricati vanno",
+  "@settingsDriveDownloadsGo": {
+    "description": "Titolo della riga che dice dove finiscono i capitoli scaricati da Drive"
+  },
+  "settingsDriveDownloadsFolder": "Nella cartella della libreria: {path}",
+  "@settingsDriveDownloadsFolder": {
+    "description": "Destinazione dei capitoli scaricati: la cartella della libreria; {path} è il percorso",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDriveDownloadsApp": "Nello spazio dell'app: se ne vanno disinstallandola",
+  "@settingsDriveDownloadsApp": {
+    "description": "Destinazione dei capitoli scaricati: lo spazio privato dell'app"
+  },
+  "settingsDriveDownloadsAsk": "Si chiede al primo download",
+  "@settingsDriveDownloadsAsk": {
+    "description": "Destinazione dei capitoli scaricati: non ancora scelta"
+  },
+  "settingsDriveCache": "Tavole lette da Drive",
+  "@settingsDriveCache": {
+    "description": "Titolo della riga sulla cache delle tavole scaricate da Drive mentre si legge"
+  },
+  "settingsDriveCacheNote": "{used} in cache, al massimo {limit}. Si rileggono senza rete",
+  "@settingsDriveCacheNote": {
+    "description": "Sottotitolo della cache di Drive; {used} e {limit} sono dimensioni (es. 120 MB, 2 GB)",
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDriveCacheLimitTitle": "Spazio per le tavole",
+  "@settingsDriveCacheLimitTitle": {
+    "description": "Titolo del foglio che sceglie la dimensione massima della cache di Drive"
+  },
+  "settingsDriveClearCache": "Svuota la cache",
+  "@settingsDriveClearCache": {
+    "description": "Riga che svuota la cache delle tavole di Drive"
+  },
+  "settingsDriveClearCacheNote": "I capitoli scaricati non si toccano",
+  "@settingsDriveClearCacheNote": {
+    "description": "Sottotitolo di «Svuota la cache»"
+  },
+  "settingsDriveDisconnect": "Scollega Drive",
+  "@settingsDriveDisconnect": {
+    "description": "Riga che scollega Google Drive"
+  },
+  "settingsDriveDisconnectNote": "La libreria torna a essere la cartella del telefono. I capitoli scaricati restano",
+  "@settingsDriveDisconnectNote": {
+    "description": "Sottotitolo di «Scollega Drive»"
+  },
+  "settingsAccountUnavailable": "Account non disponibile qui",
+  "@settingsAccountUnavailable": {
+    "description": "Titolo mostrato nelle build senza Firebase"
+  },
+  "settingsAccountUnavailableNote": "Questa build non ha Firebase: i dati restano dove sono, sul dispositivo",
+  "@settingsAccountUnavailableNote": {
+    "description": "Sottotitolo di «Account non disponibile qui»"
+  },
+  "settingsAccountSignIn": "Accedi con Google",
+  "@settingsAccountSignIn": {
+    "description": "Riga che fa accedere con l'account Google"
+  },
+  "settingsAccountSignInNote": "Voti, stato, capitoli letti, cronologia e raccolte seguono l'account invece del telefono",
+  "@settingsAccountSignInNote": {
+    "description": "Sottotitolo di «Accedi con Google»"
+  },
+  "settingsAccountSyncNow": "Sincronizza adesso",
+  "@settingsAccountSyncNow": {
+    "description": "Riga che sincronizza subito i dati personali con l'account"
+  },
+  "settingsAccountNeverSynced": "Mai sincronizzato su questo telefono",
+  "@settingsAccountNeverSynced": {
+    "description": "Sottotitolo della sincronizzazione account: mai fatta"
+  },
+  "settingsAccountLastSync": "L'ultima volta il {date} alle {time}",
+  "@settingsAccountLastSync": {
+    "description": "Sottotitolo della sincronizzazione account; {date} è giorno e mese, {time} l'ora",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAccountSignOut": "Esci",
+  "@settingsAccountSignOut": {
+    "description": "Riga che chiude la sessione con l'account Google"
+  },
+  "settingsAccountSignOutNote": "Manda su l'ultima lettura, poi chiude la sessione",
+  "@settingsAccountSignOutNote": {
+    "description": "Sottotitolo di «Esci»"
+  },
+  "settingsAccountForget": "Smetti di tenerne copia",
+  "@settingsAccountForget": {
+    "description": "Riga che cancella i dati dall'account"
+  },
+  "settingsAccountForgetNote": "Cancella i dati dall'account. Quelli di questo telefono restano dove sono",
+  "@settingsAccountForgetNote": {
+    "description": "Sottotitolo di «Smetti di tenerne copia»"
+  },
+  "settingsAccountErrorNote": "I dati di questo telefono non sono stati toccati",
+  "@settingsAccountErrorNote": {
+    "description": "Sottotitolo sotto un errore dell'account"
+  },
+  "settingsAccountForgetSheetTitle": "Cancellare i dati dall'account?",
+  "@settingsAccountForgetSheetTitle": {
+    "description": "Titolo del foglio di conferma della cancellazione dei dati dall'account"
+  },
+  "settingsAccountForgetExplain": "Sparisce la copia tenuta per te, e l'accesso si chiude. Stato, voti, cronologia e raccolte di questo telefono restano dove sono — ma da un altro telefono non si vedranno più.",
+  "@settingsAccountForgetExplain": {
+    "description": "Avviso nel foglio di conferma della cancellazione dall'account"
+  },
+  "settingsAccountForgetConfirm": "Cancella dall'account",
+  "@settingsAccountForgetConfirm": {
+    "description": "Pulsante di conferma della cancellazione dei dati dall'account"
+  },
+  "settingsReaderDirection": "Direzione in paginata",
+  "@settingsReaderDirection": {
+    "description": "Impostazione del lettore: verso di lettura in modalità a pagine"
+  },
+  "settingsReaderBackground": "Sfondo",
+  "@settingsReaderBackground": {
+    "description": "Impostazione del lettore: colore dello sfondo"
+  },
+  "settingsReaderKeepAwake": "Tieni acceso lo schermo",
+  "@settingsReaderKeepAwake": {
+    "description": "Impostazione del lettore: schermo sempre acceso"
+  },
+  "settingsReaderProgressBar": "Barra di avanzamento",
+  "@settingsReaderProgressBar": {
+    "description": "Impostazione del lettore: barra di avanzamento"
+  },
+  "settingsProbe": "Misura la fluidità",
+  "@settingsProbe": {
+    "description": "Interruttore che mostra nel lettore i numeri sulla fluidità dello scorrimento"
+  },
+  "settingsProbeNote": "Nel lettore, in alto: fotogrammi lenti e saltati, da dove arrivano le fasce, GC. Un tocco sui numeri li azzera",
+  "@settingsProbeNote": {
+    "description": "Sottotitolo di «Misura la fluidità» (GC è il garbage collector)"
+  },
+  "settingsProbeInfo1": "Mostra nel lettore, in alto a sinistra, un riquadro di numeri su quanto è fluida la lettura. Serve a capire perché lo scorrimento scatta: non cambia niente di come si legge, e costa pochissimo.",
+  "@settingsProbeInfo1": {
+    "description": "Spiegazione di «Misura la fluidità», paragrafo 1"
+  },
+  "settingsProbeInfo2": "Il numero che conta di più è «saltati»: i fotogrammi che mancano mentre la pagina scorre. Ognuno è un piccolo scatto che si vede. «Partiti tardi» e «Lenti» dicono se l'app era occupata, «GC Android» se il sistema stava liberando memoria.",
+  "@settingsProbeInfo2": {
+    "description": "Spiegazione di «Misura la fluidità», paragrafo 2: nomina le etichette del riquadro di misura (saltati, Partiti tardi, Lenti, GC Android)"
+  },
+  "settingsProbeInfo3": "«Tessere», «intere», «del telefono» e «native» dicono da dove è arrivato ogni pezzo di tavola: le prime tre sono le vie leggere, l'ultima è il ritaglio fatto al momento, che è quella che pesa.",
+  "@settingsProbeInfo3": {
+    "description": "Spiegazione di «Misura la fluidità», paragrafo 3: nomina le etichette del riquadro di misura (tessere, intere, del telefono, native)"
+  },
+  "settingsProbeInfo4": "Un tocco sul riquadro azzera i numeri, così si misura da un punto preciso del capitolo. Riaprendo l'app la misura si spegne da sola.",
+  "@settingsProbeInfo4": {
+    "description": "Spiegazione di «Misura la fluidità», paragrafo 4"
+  },
+  "settingsTexture": "Fasce native come texture",
+  "@settingsTexture": {
+    "description": "Interruttore sperimentale: le fasce ritagliate dal telefono vanno alla GPU come texture"
+  },
+  "settingsTextureNote": "Prova: le tavole ancora da tagliare arrivano alla GPU senza passare dall'interfaccia. Si spegne riaprendo l'app",
+  "@settingsTextureNote": {
+    "description": "Sottotitolo di «Fasce native come texture»"
+  },
+  "settingsTextureInfo1": "Le tavole molto alte di un webtoon si leggono a pezzi. Quasi sempre i pezzi sono già pronti: tagliati dall'archivio sul server, o dal telefono la prima volta che si apre il capitolo. Quando non lo sono, li ritaglia al momento il decodificatore di Android.",
+  "@settingsTextureInfo1": {
+    "description": "Spiegazione di «Fasce native come texture», paragrafo 1"
+  },
+  "settingsTextureInfo2": "Normalmente i pixel di quei pezzi passano dall'app prima di arrivare allo schermo. Con questa opzione vanno direttamente alla scheda grafica: l'app ha meno lavoro mentre si scorre, e lo scorrimento può scattare meno. La qualità dell'immagine non cambia.",
+  "@settingsTextureInfo2": {
+    "description": "Spiegazione di «Fasce native come texture», paragrafo 2"
+  },
+  "settingsTextureInfo3": "È una prova: è un modo di disegnare nuovo, non ancora verificato su questo telefono. Se vedi tavole nere, righe o sfarfallii, spegnila. Se il telefono non lo supporta, l'app torna da sola al modo normale.",
+  "@settingsTextureInfo3": {
+    "description": "Spiegazione di «Fasce native come texture», paragrafo 3"
+  },
+  "settingsTextureInfo4": "Sui capitoli già tagliati in tessere non cambia niente, perché lì questa strada non si usa. Riaprendo l'app si spegne da sola.",
+  "@settingsTextureInfo4": {
+    "description": "Spiegazione di «Fasce native come texture», paragrafo 4"
+  },
+  "settingsWhatItDoes": "Cosa fa",
+  "@settingsWhatItDoes": {
+    "description": "Descrizione (tooltip) del pulsante info che spiega un'impostazione"
+  },
+  "settingsBackupsTitle": "Copie nella libreria",
+  "@settingsBackupsTitle": {
+    "description": "Riga che elenca le copie di backup automatiche nella cartella della libreria"
+  },
+  "settingsBackupsNone": "Nessuna copia ancora: la prima si fa alla prossima apertura",
+  "@settingsBackupsNone": {
+    "description": "Sottotitolo di «Copie nella libreria» quando non ce ne sono"
+  },
+  "settingsBackupsLatest": "{count, plural, =1{1 copia, l'ultima {name}} other{{count} copie, l'ultima {name}}}",
+  "@settingsBackupsLatest": {
+    "description": "Sottotitolo di «Copie nella libreria»; {name} è il nome del file dell'ultima copia",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupNow": "Fai una copia adesso",
+  "@settingsBackupNow": {
+    "description": "Descrizione (tooltip) del pulsante che crea subito una copia di backup"
+  },
+  "settingsBackupWritten": "Copia scritta in {path}",
+  "@settingsBackupWritten": {
+    "description": "Messaggio breve dopo aver scritto la copia; {path} è il percorso del file",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsVersion": "versione {version} ({build})",
+  "@settingsVersion": {
+    "description": "Riga informazioni: versione dell'app e numero di build",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTagline": "lettore per archivi MALF locali",
+  "@settingsTagline": {
+    "description": "Descrizione breve dell'app mostrata nelle informazioni (MALF è il nome del formato)"
+  },
+  "librarySortUpdated": "Aggiornate di recente",
+  "@librarySortUpdated": {
+    "description": "Ordinamento della libreria: per data dell'ultimo capitolo arrivato"
+  },
+  "librarySortTitle": "Titolo",
+  "@librarySortTitle": {
+    "description": "Ordinamento della libreria: alfabetico per titolo"
+  },
+  "librarySortProgress": "Avanzamento",
+  "@librarySortProgress": {
+    "description": "Ordinamento della libreria: per percentuale di capitoli letti"
+  },
+  "librarySortAdded": "Aggiunte di recente",
+  "@librarySortAdded": {
+    "description": "Ordinamento della libreria: per data in cui la serie è stata archiviata"
+  },
+  "librarySortLastRead": "Lette di recente",
+  "@librarySortLastRead": {
+    "description": "Ordinamento della libreria: per ultima lettura"
+  },
+  "librarySortUnread": "Da leggere",
+  "@librarySortUnread": {
+    "description": "Ordinamento della libreria: per numero di capitoli ancora da leggere"
+  },
+  "librarySortRating": "Voto",
+  "@librarySortRating": {
+    "description": "Ordinamento della libreria: per voto dato dall'utente"
+  },
+  "librarySortChapters": "Numero di capitoli",
+  "@librarySortChapters": {
+    "description": "Ordinamento della libreria: per numero di capitoli archiviati"
+  },
+  "librarySortShuffle": "A caso",
+  "@librarySortShuffle": {
+    "description": "Ordinamento della libreria: casuale"
+  },
+  "libraryDisplayComfortable": "Griglia comoda",
+  "@libraryDisplayComfortable": {
+    "description": "Disposizione della libreria: griglia con copertine grandi"
+  },
+  "libraryDisplayCompact": "Griglia fitta",
+  "@libraryDisplayCompact": {
+    "description": "Disposizione della libreria: griglia con copertine piccole"
+  },
+  "libraryDisplayList": "Elenco",
+  "@libraryDisplayList": {
+    "description": "Disposizione della libreria: elenco semplice"
+  },
+  "libraryDisplayDetailed": "Elenco dettagliato",
+  "@libraryDisplayDetailed": {
+    "description": "Disposizione della libreria: elenco con autori, stato e avanzamento"
+  },
+  "libraryAutoReading": "In lettura",
+  "@libraryAutoReading": {
+    "description": "Raccolta automatica: serie che si stanno leggendo"
+  },
+  "libraryAutoFresh": "Novità",
+  "@libraryAutoFresh": {
+    "description": "Raccolta automatica: serie con capitoli nuovi"
+  },
+  "libraryAutoFavorites": "Preferiti",
+  "@libraryAutoFavorites": {
+    "description": "Raccolta automatica: serie preferite"
+  },
+  "libraryAutoPlanned": "Da iniziare",
+  "@libraryAutoPlanned": {
+    "description": "Raccolta automatica: serie in programma o mai iniziate"
+  },
+  "libraryAutoFinished": "Finiti",
+  "@libraryAutoFinished": {
+    "description": "Raccolta automatica: serie completate"
+  },
+  "libraryRowChapters": "{count} cap.",
+  "@libraryRowChapters": {
+    "description": "Riga d'elenco della libreria: numero di capitoli di una serie, abbreviato",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryRowUnread": "{count} da leggere",
+  "@libraryRowUnread": {
+    "description": "Riga d'elenco della libreria: numero di capitoli ancora da leggere",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryNoMatchTitle": "Nessuna corrispondenza",
+  "@libraryNoMatchTitle": {
+    "description": "Titolo della libreria quando ricerca o filtri non trovano nessuna serie"
+  },
+  "libraryNoMatchMessage": "Nessuna serie passa la ricerca e i filtri scelti.",
+  "@libraryNoMatchMessage": {
+    "description": "Messaggio della libreria quando ricerca o filtri non trovano nessuna serie"
+  },
+  "libraryEmptyTitle": "Libreria vuota",
+  "@libraryEmptyTitle": {
+    "description": "Titolo della libreria quando non contiene nessuna serie"
+  },
+  "libraryEmptyMessage": "La libreria non contiene serie. Se dovrebbe, controllare la sincronizzazione della cartella.",
+  "@libraryEmptyMessage": {
+    "description": "Messaggio della libreria vuota"
+  },
+  "libraryClearFilters": "Azzera i filtri",
+  "@libraryClearFilters": {
+    "description": "Pulsante che toglie ricerca e filtri dalla libreria"
+  },
+  "libraryTitle": "Libreria",
+  "@libraryTitle": {
+    "description": "Titolo della schermata della libreria"
+  },
+  "libraryCancelSelection": "Annulla selezione",
+  "@libraryCancelSelection": {
+    "description": "Descrizione del pulsante che esce dalla selezione multipla di serie"
+  },
+  "librarySelectedCount": "{count, plural, =1{1 selezionata} other{{count} selezionate}}",
+  "@librarySelectedCount": {
+    "description": "Barra della selezione multipla: quante serie sono selezionate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryAllWithCount": "Tutte ({count})",
+  "@libraryAllWithCount": {
+    "description": "Pulsante che seleziona tutte le serie, o chip che mostra tutta la libreria, col numero di serie",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryAll": "Tutte",
+  "@libraryAll": {
+    "description": "Pulsante che seleziona tutte le serie visibili"
+  },
+  "libraryMarkAllRead": "Segna tutto letto",
+  "@libraryMarkAllRead": {
+    "description": "Azione di gruppo sulle serie selezionate: segna tutti i capitoli come letti"
+  },
+  "libraryMarkAllUnread": "Segna tutto da leggere",
+  "@libraryMarkAllUnread": {
+    "description": "Azione di gruppo sulle serie selezionate: riporta tutti i capitoli da leggere"
+  },
+  "libraryStatus": "Stato",
+  "@libraryStatus": {
+    "description": "Azione di gruppo sulle serie selezionate e gruppo di filtri: stato dell'utente sulla serie (in lettura, completata, ecc.)"
+  },
+  "libraryFavorites": "Preferiti",
+  "@libraryFavorites": {
+    "description": "Azione di gruppo sulle serie selezionate: aggiunge ai preferiti"
+  },
+  "libraryAddToCollection": "Aggiungi a una raccolta",
+  "@libraryAddToCollection": {
+    "description": "Azione di gruppo sulle serie selezionate: le aggiunge a una raccolta"
+  },
+  "libraryStatusOfSeries": "{count, plural, =1{Stato di 1 serie} other{Stato di {count} serie}}",
+  "@libraryStatusOfSeries": {
+    "description": "Titolo del foglio per scegliere lo stato da dare alle serie selezionate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMarkedRead": "{count, plural, =1{1 serie segnata come letta} other{{count} serie segnate come lette}}",
+  "@libraryMarkedRead": {
+    "description": "Avviso dopo aver segnato come lette le serie selezionate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMarkedUnread": "{count, plural, =1{1 serie tornata da leggere} other{{count} serie tornate da leggere}}",
+  "@libraryMarkedUnread": {
+    "description": "Avviso dopo aver riportato da leggere le serie selezionate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "librarySearchHint": "Titolo, autore, tag:…",
+  "@librarySearchHint": {
+    "description": "Suggerimento nel campo di ricerca della libreria; «tag:» è un prefisso di ricerca che resta com'è"
+  },
+  "libraryLayout": "Disposizione",
+  "@libraryLayout": {
+    "description": "Pulsante e titolo del foglio per scegliere come disporre la libreria (griglia, elenco)"
+  },
+  "libraryFiltersAndSort": "Filtri e ordinamento",
+  "@libraryFiltersAndSort": {
+    "description": "Pulsante e titolo del foglio di filtri e ordinamento della libreria"
+  },
+  "libraryReset": "Azzera",
+  "@libraryReset": {
+    "description": "Pulsante nel foglio dei filtri che li toglie tutti"
+  },
+  "librarySortSection": "Ordina",
+  "@librarySortSection": {
+    "description": "Intestazione di sezione nel foglio dei filtri: scelta dell'ordinamento"
+  },
+  "libraryShowOnly": "Mostra solo",
+  "@libraryShowOnly": {
+    "description": "Intestazione di sezione nel foglio dei filtri: interruttori che restringono l'elenco"
+  },
+  "libraryOnlyUnread": "Con capitoli da leggere",
+  "@libraryOnlyUnread": {
+    "description": "Filtro: solo serie con capitoli ancora da leggere"
+  },
+  "libraryOnlyStarted": "Iniziate",
+  "@libraryOnlyStarted": {
+    "description": "Filtro: solo serie già iniziate a leggere"
+  },
+  "libraryOnlyNew": "Con capitoli nuovi",
+  "@libraryOnlyNew": {
+    "description": "Filtro: solo serie con capitoli arrivati dopo l'ultima apertura"
+  },
+  "libraryOnlyFavorite": "Preferite",
+  "@libraryOnlyFavorite": {
+    "description": "Filtro: solo serie preferite"
+  },
+  "libraryMinRating": "Voto almeno",
+  "@libraryMinRating": {
+    "description": "Gruppo di filtri: voto minimo, seguito da un numero da 6 a 10"
+  },
+  "libraryRelease": "Pubblicazione",
+  "@libraryRelease": {
+    "description": "Gruppo di filtri: stato di pubblicazione della serie (in corso, conclusa, ecc.)"
+  },
+  "libraryGenres": "Generi",
+  "@libraryGenres": {
+    "description": "Gruppo di filtri per genere"
+  },
+  "libraryTriHint": "Un tocco richiede, due escludono",
+  "@libraryTriHint": {
+    "description": "Suggerimento sotto i generi: un tocco su un valore lo richiede, un secondo lo esclude"
+  },
+  "libraryTags": "Tag",
+  "@libraryTags": {
+    "description": "Gruppo di filtri per tag"
+  },
+  "libraryAuthors": "Autori",
+  "@libraryAuthors": {
+    "description": "Gruppo di filtri per autore"
+  },
+  "homeEmptyTitle": "Libreria vuota",
+  "@homeEmptyTitle": {
+    "description": "Home: titolo quando la libreria non ha serie"
+  },
+  "homeEmptyMessage": "Niente da sfogliare: la cartella non contiene ancora nessuna serie.",
+  "@homeEmptyMessage": {
+    "description": "Home: messaggio quando la libreria non ha serie"
+  },
+  "homeToStart": "Da iniziare",
+  "@homeToStart": {
+    "description": "Home: titolo della fila di serie mai aperte che si potrebbero iniziare"
+  },
+  "homeSimilarTitle": "Perché leggi quello che leggi",
+  "@homeSimilarTitle": {
+    "description": "Home: titolo della fila di consigli basati sui generi già letti"
+  },
+  "homeSimilarSubtitle": "Non ancora aperte, con i generi che ti tornano",
+  "@homeSimilarSubtitle": {
+    "description": "Home: sottotitolo della fila di consigli"
+  },
+  "homeRecentlyArrived": "Arrivate di recente",
+  "@homeRecentlyArrived": {
+    "description": "Home: titolo della fila di serie aggiunte da poco all'archivio"
+  },
+  "homeLeftHalfway": "Lasciate a metà",
+  "@homeLeftHalfway": {
+    "description": "Home: titolo della fila di serie in pausa o abbandonate"
+  },
+  "homeLeftHalfwaySubtitle": "In pausa e abbandonate",
+  "@homeLeftHalfwaySubtitle": {
+    "description": "Home: sottotitolo della fila di serie in pausa o abbandonate"
+  },
+  "homeCaughtUpTitle": "Sei in pari",
+  "@homeCaughtUpTitle": {
+    "description": "Home: titolo quando non c'è niente da riprendere, aggiornare o iniziare"
+  },
+  "homeCaughtUpMessage": "Con tutto quello che è sincronizzato. Il prossimo capitolo arriverà con la cartella.",
+  "@homeCaughtUpMessage": {
+    "description": "Home: messaggio di «sei in pari», completa il titolo «Sei in pari»"
+  },
+  "homeRandomSeries": "Una a caso",
+  "@homeRandomSeries": {
+    "description": "Home: descrizione del pulsante che apre una serie scelta a caso"
+  },
+  "homeReloadLibrary": "Rileggi la libreria",
+  "@homeReloadLibrary": {
+    "description": "Home: descrizione del pulsante che rilegge la cartella della libreria"
+  },
+  "homeGreetingNight": "Notte fonda",
+  "@homeGreetingNight": {
+    "description": "Home: saluto da mezzanotte alle 5"
+  },
+  "homeGreetingMorning": "Buongiorno",
+  "@homeGreetingMorning": {
+    "description": "Home: saluto del mattino"
+  },
+  "homeGreetingAfternoon": "Buon pomeriggio",
+  "@homeGreetingAfternoon": {
+    "description": "Home: saluto del pomeriggio"
+  },
+  "homeGreetingEvening": "Buonasera",
+  "@homeGreetingEvening": {
+    "description": "Home: saluto della sera"
+  },
+  "homeStatRead": "Letti",
+  "@homeStatRead": {
+    "description": "Home: etichetta della scheda con i capitoli letti in tutto (participio: capitoli letti)"
+  },
+  "homeStatReadCaption": "capitoli in tutto",
+  "@homeStatReadCaption": {
+    "description": "Home: didascalia sotto il numero di capitoli letti"
+  },
+  "homeStatUnread": "Da leggere",
+  "@homeStatUnread": {
+    "description": "Home: etichetta della scheda con i capitoli ancora da leggere"
+  },
+  "homeStatUnreadCaption": "sul telefono",
+  "@homeStatUnreadCaption": {
+    "description": "Home: didascalia sotto il numero di capitoli da leggere"
+  },
+  "homeStatStreak": "Di fila",
+  "@homeStatStreak": {
+    "description": "Home: etichetta della scheda con i giorni consecutivi di lettura"
+  },
+  "homeStatStreakCaption": "{count, plural, =1{giorno} other{giorni}}",
+  "@homeStatStreakCaption": {
+    "description": "Home: didascalia sotto il numero di giorni di lettura consecutivi",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeResume": "Riprendi",
+  "@homeResume": {
+    "description": "Home: titolo della fila delle serie da riprendere a leggere"
+  },
+  "homeNextChapter": "Capitolo successivo",
+  "@homeNextChapter": {
+    "description": "Home: testo della scheda di ripresa quando il capitolo da leggere non è noto"
+  },
+  "homeRead": "Leggi",
+  "@homeRead": {
+    "description": "Home: pulsante che apre il lettore sul capitolo da riprendere"
+  },
+  "homeUpdates": "Aggiornamenti",
+  "@homeUpdates": {
+    "description": "Home: titolo dell'elenco delle serie con capitoli arrivati"
+  },
+  "homeUpdatesSubtitle": "Capitoli sincronizzati e non ancora letti",
+  "@homeUpdatesSubtitle": {
+    "description": "Home: sottotitolo dell'elenco degli aggiornamenti"
+  },
+  "homeLatestChapter": "cap. {number}",
+  "@homeLatestChapter": {
+    "description": "Home: ultimo capitolo arrivato di una serie, abbreviato; {number} è il numero del capitolo",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "homeAgoToday": "oggi",
+  "@homeAgoToday": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo: oggi"
+  },
+  "homeAgoYesterday": "ieri",
+  "@homeAgoYesterday": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo: ieri"
+  },
+  "homeAgoDays": "{count, plural, =1{1 giorno fa} other{{count} giorni fa}}",
+  "@homeAgoDays": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo, in giorni",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAgoWeeks": "{count, plural, =1{1 settimana fa} other{{count} settimane fa}}",
+  "@homeAgoWeeks": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo, in settimane",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAgoMonths": "{count, plural, =1{1 mese fa} other{{count} mesi fa}}",
+  "@homeAgoMonths": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo, in mesi",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAgoYears": "{count, plural, =1{1 anno fa} other{{count} anni fa}}",
+  "@homeAgoYears": {
+    "description": "Quanto tempo fa è arrivato l'ultimo capitolo, in anni",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsTitle": "Raccolte",
+  "@collectionsTitle": {
+    "description": "Titolo della schermata delle raccolte (come le playlist)"
+  },
+  "collectionsNew": "Nuova",
+  "@collectionsNew": {
+    "description": "Pulsante che crea una nuova raccolta"
+  },
+  "collectionsAutomatic": "Automatiche",
+  "@collectionsAutomatic": {
+    "description": "Intestazione di sezione: raccolte costruite dall'app"
+  },
+  "collectionsYours": "Le tue raccolte",
+  "@collectionsYours": {
+    "description": "Intestazione di sezione: raccolte create dall'utente"
+  },
+  "collectionsNoneTitle": "Nessuna raccolta",
+  "@collectionsNoneTitle": {
+    "description": "Titolo quando l'utente non ha creato raccolte"
+  },
+  "collectionsNoneMessage": "Sono il modo per dare struttura a una libreria che cresce da sola: una serie può stare in più raccolte e l'ordine lo scegli tu.",
+  "@collectionsNoneMessage": {
+    "description": "Messaggio quando l'utente non ha creato raccolte"
+  },
+  "collectionsSeriesCount": "{count, plural, =1{1 serie} other{{count} serie}}",
+  "@collectionsSeriesCount": {
+    "description": "Numero di serie in una raccolta",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionsEdit": "Modifica",
+  "@collectionsEdit": {
+    "description": "Descrizione del pulsante con il menu di una raccolta"
+  },
+  "collectionsRenameRecolor": "Rinomina e cambia colore",
+  "@collectionsRenameRecolor": {
+    "description": "Voce del menu di una raccolta"
+  },
+  "collectionsDelete": "Elimina la raccolta",
+  "@collectionsDelete": {
+    "description": "Voce del menu di una raccolta"
+  },
+  "collectionsNotFound": "Raccolta non trovata.",
+  "@collectionsNotFound": {
+    "description": "Messaggio quando la raccolta aperta non esiste più"
+  },
+  "collectionsDone": "Fine",
+  "@collectionsDone": {
+    "description": "Descrizione del pulsante che esce dalla modalità di riordino di una raccolta"
+  },
+  "collectionsReorder": "Riordina",
+  "@collectionsReorder": {
+    "description": "Descrizione del pulsante che attiva il riordino delle serie di una raccolta"
+  },
+  "collectionsEmptyTitle": "Raccolta vuota",
+  "@collectionsEmptyTitle": {
+    "description": "Titolo quando una raccolta non contiene serie"
+  },
+  "collectionsEmptyMessage": "Si aggiunge una serie dalla sua scheda, o tenendo premuta una copertina nella libreria.",
+  "@collectionsEmptyMessage": {
+    "description": "Messaggio quando una raccolta non contiene serie"
+  },
+  "collectionsRemoveFrom": "Togli dalla raccolta",
+  "@collectionsRemoveFrom": {
+    "description": "Descrizione del pulsante che toglie una serie dalla raccolta (non la elimina)"
+  },
+  "shellDataUnreadableTitle": "Dati dell'app non leggibili",
+  "@shellDataUnreadableTitle": {
+    "description": "Titolo della schermata d'errore quando il database dell'app non risponde all'avvio"
+  },
+  "shellRetry": "Riprova",
+  "@shellRetry": {
+    "description": "Pulsante della schermata d'errore all'avvio: riprova a leggere i dati dell'app"
+  },
+  "shellTabHome": "Home",
+  "@shellTabHome": {
+    "description": "Barra di navigazione in basso: prima destinazione, la schermata iniziale"
+  },
+  "shellTabLibrary": "Libreria",
+  "@shellTabLibrary": {
+    "description": "Barra di navigazione in basso: la libreria di manga"
+  },
+  "shellTabCollections": "Raccolte",
+  "@shellTabCollections": {
+    "description": "Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici"
+  },
+  "shellTabMore": "Altro",
+  "@shellTabMore": {
+    "description": "Barra di navigazione in basso: destinazione che raccoglie cronologia, statistiche, download e impostazioni"
+  },
+  "moreTitle": "Altro",
+  "@moreTitle": {
+    "description": "Titolo della schermata Altro"
+  },
+  "moreSectionLibrary": "Libreria",
+  "@moreSectionLibrary": {
+    "description": "Intestazione di sezione nella schermata Altro, sopra «Scarica un manga»"
+  },
+  "moreSectionReading": "La tua lettura",
+  "@moreSectionReading": {
+    "description": "Intestazione di sezione nella schermata Altro, sopra cronologia e statistiche"
+  },
+  "moreSectionPrivacy": "Privatezza",
+  "@moreSectionPrivacy": {
+    "description": "Intestazione di sezione nella schermata Altro, sopra la lettura in incognito"
+  },
+  "moreSectionApp": "App",
+  "@moreSectionApp": {
+    "description": "Intestazione di sezione nella schermata Altro, sopra le impostazioni"
+  },
+  "moreDownload": "Scarica un manga",
+  "@moreDownload": {
+    "description": "Voce di Altro che apre la schermata per archiviare una serie da un sito"
+  },
+  "moreDownloadSubtitle": "Cerca un titolo o incolla un link",
+  "@moreDownloadSubtitle": {
+    "description": "Sottotitolo della voce «Scarica un manga»"
+  },
+  "moreHistory": "Cronologia",
+  "@moreHistory": {
+    "description": "Voce di Altro che apre la cronologia di lettura"
+  },
+  "moreHistorySubtitle": "Cosa hai letto e quando",
+  "@moreHistorySubtitle": {
+    "description": "Sottotitolo della voce Cronologia"
+  },
+  "moreStatistics": "Statistiche",
+  "@moreStatistics": {
+    "description": "Voce di Altro che apre le statistiche di lettura"
+  },
+  "moreStatisticsSubtitle": "Quanto leggi, cosa leggi, quando",
+  "@moreStatisticsSubtitle": {
+    "description": "Sottotitolo della voce Statistiche"
+  },
+  "moreIncognito": "Lettura in incognito",
+  "@moreIncognito": {
+    "description": "Interruttore in Altro: la lettura non lascia tracce"
+  },
+  "moreIncognitoSubtitle": "Non registra posizione, capitoli finiti né tempo di lettura",
+  "@moreIncognitoSubtitle": {
+    "description": "Sottotitolo dell'interruttore della lettura in incognito"
+  },
+  "moreSettings": "Impostazioni",
+  "@moreSettings": {
+    "description": "Voce di Altro che apre le impostazioni dell'app"
+  },
+  "moreSettingsSubtitle": "Aspetto, libreria, lettura, backup",
+  "@moreSettingsSubtitle": {
+    "description": "Sottotitolo della voce Impostazioni: elenca cosa contiene"
+  },
+  "historyTitle": "Cronologia",
+  "@historyTitle": {
+    "description": "Titolo della schermata della cronologia di lettura"
+  },
+  "historyIncognitoOn": "Incognito attivo",
+  "@historyIncognitoOn": {
+    "description": "Tooltip del pulsante a occhio nella cronologia quando la lettura in incognito è accesa"
+  },
+  "historyIncognitoOff": "Leggi in incognito",
+  "@historyIncognitoOff": {
+    "description": "Tooltip del pulsante a occhio nella cronologia quando la lettura in incognito è spenta: lo accende"
+  },
+  "historyClear": "Svuota",
+  "@historyClear": {
+    "description": "Tooltip del cestino e pulsante di conferma che cancella tutta la cronologia di lettura"
+  },
+  "historyUnreadable": "Cronologia non leggibile",
+  "@historyUnreadable": {
+    "description": "Titolo dell'errore quando la cronologia non si riesce a leggere"
+  },
+  "historyEmptyTitle": "Niente di letto, per ora",
+  "@historyEmptyTitle": {
+    "description": "Titolo dello stato vuoto della cronologia"
+  },
+  "historyEmptyMessage": "Ogni capitolo finito comparirà qui con la sua data.",
+  "@historyEmptyMessage": {
+    "description": "Messaggio dello stato vuoto della cronologia"
+  },
+  "historyClearTitle": "Svuotare la cronologia?",
+  "@historyClearTitle": {
+    "description": "Titolo del foglio di conferma per cancellare la cronologia"
+  },
+  "historyClearMessage": "Le date di lettura e il tempo passato a leggere spariscono, e con loro le statistiche che ne derivano. I capitoli tornano da leggere.",
+  "@historyClearMessage": {
+    "description": "Spiegazione nel foglio di conferma che svuota la cronologia"
+  },
+  "historyIncognitoBanner": "In incognito: posizione, capitoli finiti e tempo di lettura non vengono registrati.",
+  "@historyIncognitoBanner": {
+    "description": "Banner in fondo alla cronologia quando la lettura in incognito è attiva"
+  },
+  "historyToday": "Oggi",
+  "@historyToday": {
+    "description": "Intestazione del gruppo di cronologia di oggi"
+  },
+  "historyYesterday": "Ieri",
+  "@historyYesterday": {
+    "description": "Intestazione del gruppo di cronologia di ieri"
+  },
+  "historyReread": "Rileggi",
+  "@historyReread": {
+    "description": "Tooltip del pulsante su una riga di cronologia che riapre il capitolo"
+  },
+  "historyRemove": "Togli dalla cronologia",
+  "@historyRemove": {
+    "description": "Tooltip del pulsante su una riga di cronologia che la rimuove (il capitolo torna da leggere)"
+  },
+  "originLocal": "Sul telefono",
+  "@originLocal": {
+    "description": "Etichetta di accessibilità dell'icona d'origine: la serie è solo sul telefono"
+  },
+  "originDrive": "Su Drive",
+  "@originDrive": {
+    "description": "Etichetta di accessibilità dell'icona d'origine: la serie è solo su Google Drive"
+  },
+  "originMixed": "Sul telefono, e altri capitoli su Drive",
+  "@originMixed": {
+    "description": "Etichetta di accessibilità dell'icona d'origine: alcuni capitoli sul telefono e altri su Drive"
+  },
+  "coverNoChapters": "Nessun capitolo scaricato",
+  "@coverNoChapters": {
+    "description": "Sottotitolo di una serie in griglia senza capitoli sul telefono né su Drive"
+  },
+  "coverChapters": "{count, plural, other{{count} cap.}}",
+  "@coverChapters": {
+    "description": "Sottotitolo di una serie in griglia: numero di capitoli, «cap.» è l'abbreviazione di capitoli",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coverChaptersUnread": "{count, plural, other{{count} cap.}} · {unread} da leggere",
+  "@coverChaptersUnread": {
+    "description": "Sottotitolo di una serie in griglia: numero di capitoli («cap.» abbreviazione) e quanti ne restano da leggere",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "unread": {
+        "type": "int"
+      }
+    }
+  },
+  "coverNewChapters": "{count, plural, =1{1 capitolo nuovo} other{{count} capitoli nuovi}}",
+  "@coverNewChapters": {
+    "description": "Etichetta di accessibilità del pallino dei capitoli arrivati dall'ultima apertura della scheda",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coverUnread": "{unread, plural, =1{1 capitolo da leggere} other{{unread} capitoli da leggere}}",
+  "@coverUnread": {
+    "description": "Etichetta di accessibilità del segnalino dei capitoli da leggere",
+    "placeholders": {
+      "unread": {
+        "type": "int"
+      }
+    }
+  },
+  "coverUnreadFresh": "{unread, plural, =1{1 capitolo da leggere} other{{unread} capitoli da leggere}}, di cui {fresh, plural, =1{1 nuovo} other{{fresh} nuovi}}",
+  "@coverUnreadFresh": {
+    "description": "Etichetta di accessibilità del segnalino dei capitoli da leggere, quando alcuni sono nuovi (arrivati di recente)",
+    "placeholders": {
+      "unread": {
+        "type": "int"
+      },
+      "fresh": {
+        "type": "int"
+      }
+    }
+  },
+  "chartsDayNothing": "{date}: niente",
+  "@chartsDayNothing": {
+    "description": "Tooltip di un quadratino del calendario dell'attività: in quel giorno non si è letto niente. {date} è giorno e mese",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "chartsDayChapters": "{date}: {count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@chartsDayChapters": {
+    "description": "Tooltip di un quadratino del calendario dell'attività: capitoli letti in quel giorno. {date} è giorno e mese",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "kitClose": "Chiudi",
+  "@kitClose": {
+    "description": "Tooltip del pulsante X che chiude un foglio a scomparsa"
+  },
+  "collectionSheetTitle": "Raccolte",
+  "@collectionSheetTitle": {
+    "description": "Titolo del foglio per aggiungere una serie alle raccolte"
+  },
+  "collectionSheetTitleMany": "Raccolte di {count} serie",
+  "@collectionSheetTitleMany": {
+    "description": "Titolo del foglio per aggiungere più serie selezionate alle raccolte",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionSheetNew": "Nuova",
+  "@collectionSheetNew": {
+    "description": "Pulsante nel foglio delle raccolte che crea una nuova raccolta"
+  },
+  "collectionSheetEmptyTitle": "Nessuna raccolta",
+  "@collectionSheetEmptyTitle": {
+    "description": "Titolo dello stato vuoto del foglio delle raccolte"
+  },
+  "collectionSheetEmptyMessage": "Servono a dare struttura a una libreria che cresce da sola.",
+  "@collectionSheetEmptyMessage": {
+    "description": "Messaggio dello stato vuoto del foglio delle raccolte: a cosa servono"
+  },
+  "collectionSheetSeriesCount": "{count, plural, =1{1 serie} other{{count} serie}}",
+  "@collectionSheetSeriesCount": {
+    "description": "Sottotitolo di una raccolta: quante serie contiene",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionSheetCreateTitle": "Nuova raccolta",
+  "@collectionSheetCreateTitle": {
+    "description": "Titolo del foglio per creare una raccolta"
+  },
+  "collectionSheetEditTitle": "Modifica raccolta",
+  "@collectionSheetEditTitle": {
+    "description": "Titolo del foglio per modificare nome e colore di una raccolta"
+  },
+  "collectionSheetNameHint": "Nome",
+  "@collectionSheetNameHint": {
+    "description": "Segnaposto del campo del nome di una raccolta"
+  },
+  "collectionSheetColor": "Colore",
+  "@collectionSheetColor": {
+    "description": "Intestazione della scelta del colore di una raccolta"
+  },
+  "collectionSheetCreate": "Crea",
+  "@collectionSheetCreate": {
+    "description": "Pulsante che crea la raccolta"
+  },
+  "collectionSheetSave": "Salva",
+  "@collectionSheetSave": {
+    "description": "Pulsante che salva le modifiche alla raccolta"
+  },
+  "cleanupTitle": "Liberare spazio?",
+  "@cleanupTitle": {
+    "description": "Titolo del foglio che propone di togliere i capitoli già letti"
+  },
+  "cleanupSyncBusy": "Una sincronizzazione è in corso: riprova quando finisce",
+  "@cleanupSyncBusy": {
+    "description": "Avviso: non si può liberare spazio mentre la sincronizzazione della cartella è in corso"
+  },
+  "cleanupNotAllDeleted": "Non tutto è stato cancellato: {error}",
+  "@cleanupNotAllDeleted": {
+    "description": "Avviso dopo un errore di file durante la cancellazione dei capitoli letti. {error} è il messaggio del sistema",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupDriveError": "Drive: {error}. Quelli già tolti restano tolti",
+  "@cleanupDriveError": {
+    "description": "Avviso dopo un errore di Google Drive durante la cancellazione. {error} è il messaggio di Drive",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupFreed": "Liberati {size}",
+  "@cleanupFreed": {
+    "description": "Avviso a operazione finita: spazio liberato. {size} è una dimensione già formattata, per esempio «120 MB»",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupNeedsNetwork": "Per togliere da Drive serve la rete",
+  "@cleanupNeedsNetwork": {
+    "description": "Avviso: senza rete non si possono spostare capitoli di Drive nel cestino"
+  },
+  "cleanupIntroDrive": "{count, plural, =1{Un capitolo già letto è ancora su Drive.} other{{count} capitoli già letti sono ancora su Drive.}}",
+  "@cleanupIntroDrive": {
+    "description": "Introduzione del foglio «Libera spazio» quando i capitoli letti sono solo su Google Drive",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cleanupIntroPhone": "{count, plural, =1{Un capitolo già letto occupa ancora spazio sul telefono.} other{{count} capitoli già letti occupano ancora spazio sul telefono.}}",
+  "@cleanupIntroPhone": {
+    "description": "Introduzione del foglio «Libera spazio» quando i capitoli letti occupano spazio sul telefono",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cleanupPhoneChapters": "Capitoli sul telefono",
+  "@cleanupPhoneChapters": {
+    "description": "Voce del foglio «Libera spazio»: i capitoli letti salvati sul telefono"
+  },
+  "cleanupDriveCache": "Cache di Drive",
+  "@cleanupDriveCache": {
+    "description": "Voce del foglio «Libera spazio»: le immagini di Drive già scaricate in memoria temporanea sul telefono"
+  },
+  "cleanupDriveChapters": "Capitoli su Drive",
+  "@cleanupDriveChapters": {
+    "description": "Voce del foglio «Libera spazio»: i capitoli letti che si tolgono da Google Drive"
+  },
+  "cleanupApproxSize": "{count, plural, =1{1 capitolo} other{{count} capitoli}} · circa {size}",
+  "@cleanupApproxSize": {
+    "description": "Sottotitolo di una voce del foglio «Libera spazio»: numero di capitoli e spazio approssimativo. {size} è già formattato, per esempio «120 MB»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupExactSize": "{count, plural, =1{1 capitolo} other{{count} capitoli}} · {size}",
+  "@cleanupExactSize": {
+    "description": "Sottotitolo della voce Cache di Drive: numero di capitoli e spazio occupato. {size} è già formattato",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupApproxSizeTrash": "{count, plural, =1{1 capitolo} other{{count} capitoli}} · circa {size} · nel cestino",
+  "@cleanupApproxSizeTrash": {
+    "description": "Sottotitolo della voce dei capitoli su Drive: numero, spazio approssimativo; finiscono nel cestino di Drive, non sono cancellati subito. {size} è già formattato",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanupQuiet": "Non chiedere più per questa serie",
+  "@cleanupQuiet": {
+    "description": "Interruttore del foglio «Libera spazio»: non riproporre la pulizia per questa serie"
+  },
+  "cleanupWarnNotOnDrive": "Questa serie non è su Drive: i capitoli cancellati non si potranno rileggere finché la sincronizzazione non li riporta.",
+  "@cleanupWarnNotOnDrive": {
+    "description": "Avviso nel foglio «Libera spazio»: i capitoli tolti dal telefono non hanno copia su Drive"
+  },
+  "cleanupWarnGoneEverywhere": "Non resteranno né sul telefono né su Drive.",
+  "@cleanupWarnGoneEverywhere": {
+    "description": "Avviso nel foglio «Libera spazio»: i capitoli spariranno sia dal telefono sia da Drive"
+  },
+  "cleanupWarnStaysOnDrive": "I capitoli restano su Drive e si rileggono da lì.",
+  "@cleanupWarnStaysOnDrive": {
+    "description": "Avviso nel foglio «Libera spazio»: togliendoli dal telefono restano disponibili su Drive"
+  },
+  "cleanupWarnTrash": "Dal cestino di Drive si recuperano per trenta giorni. L'indice del server li elenca ancora: se il server li ricarica, tornano a leggersi da Drive.",
+  "@cleanupWarnTrash": {
+    "description": "Avviso nel foglio «Libera spazio» quando si tolgono capitoli da Drive: restano trenta giorni nel cestino; «server» è Kagami Server, che scrive l'indice della libreria"
+  },
+  "cleanupDelete": "Elimina",
+  "@cleanupDelete": {
+    "description": "Pulsante di conferma del foglio «Libera spazio»: cancella le voci scelte"
+  },
+  "cleanupNotNow": "Non ora",
+  "@cleanupNotNow": {
+    "description": "Pulsante del foglio «Libera spazio» che rimanda la pulizia senza cancellare"
+  },
+  "cleanupSyncWarnExternal": "Se FolderSync sincronizza la cartella in entrambe le direzioni, la cancellazione può arrivare anche su Drive; se scarica soltanto, i capitoli possono tornare al giro seguente.",
+  "@cleanupSyncWarnExternal": {
+    "description": "Avviso nel foglio «Libera spazio»: FolderSync è un'app esterna di sincronizzazione che Kagami non controlla"
+  },
+  "cleanupSyncWarnOwn": "La sincronizzazione rispetta questa scelta: quello che togli da una parte non torna e non sparisce dall'altra, anche con le cancellazioni propagate.",
+  "@cleanupSyncWarnOwn": {
+    "description": "Avviso nel foglio «Libera spazio» quando è attiva la sincronizzazione integrata di Kagami"
+  },
+  "statsRangeMonth": "30 giorni",
+  "@statsRangeMonth": {
+    "description": "Scelta dell'intervallo del grafico delle statistiche: ultimi 30 giorni (segmento stretto, testo corto)"
+  },
+  "statsRangeQuarter": "3 mesi",
+  "@statsRangeQuarter": {
+    "description": "Scelta dell'intervallo del grafico delle statistiche: ultimi 3 mesi (testo corto)"
+  },
+  "statsRangeYear": "Un anno",
+  "@statsRangeYear": {
+    "description": "Scelta dell'intervallo del grafico delle statistiche: ultimo anno (testo corto)"
+  },
+  "statsTitle": "Statistiche",
+  "@statsTitle": {
+    "description": "Titolo della schermata delle statistiche di lettura"
+  },
+  "statsUnavailable": "Statistiche non calcolabili",
+  "@statsUnavailable": {
+    "description": "Titolo dell'errore quando le statistiche non si calcolano"
+  },
+  "statsChaptersRead": "capitoli letti",
+  "@statsChaptersRead": {
+    "description": "Etichetta di un riquadro numerico: totale dei capitoli letti (il numero sta sopra)"
+  },
+  "statsSeriesInLibrary": "serie in libreria",
+  "@statsSeriesInLibrary": {
+    "description": "Etichetta di un riquadro numerico: quante serie ci sono in libreria"
+  },
+  "statsMinutes": "{count} min",
+  "@statsMinutes": {
+    "description": "Valore di un riquadro: tempo di lettura in minuti",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsHours": "{count} h",
+  "@statsHours": {
+    "description": "Valore di un riquadro: tempo di lettura in ore",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsReadingTime": "tempo di lettura",
+  "@statsReadingTime": {
+    "description": "Etichetta del riquadro del tempo totale di lettura"
+  },
+  "statsReadingTimeHint": "misurato mentre leggi",
+  "@statsReadingTimeHint": {
+    "description": "Nota sotto il tempo di lettura: il tempo è contato dal lettore"
+  },
+  "statsPagesSeen": "tavole viste",
+  "@statsPagesSeen": {
+    "description": "Etichetta di un riquadro numerico: totale delle pagine (tavole) del manga viste"
+  },
+  "statsStreak": "giorni di fila",
+  "@statsStreak": {
+    "description": "Etichetta del riquadro con i giorni consecutivi in cui si è letto"
+  },
+  "statsStreakRecord": "record: {count}",
+  "@statsStreakRecord": {
+    "description": "Nota sotto i giorni di fila: il record personale",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsAverageRating": "voto medio",
+  "@statsAverageRating": {
+    "description": "Etichetta del riquadro con la media dei voti dati alle serie"
+  },
+  "statsRatedSeries": "{count, plural, =1{1 serie votata} other{{count} serie votate}}",
+  "@statsRatedSeries": {
+    "description": "Nota sotto il voto medio: quante serie hanno un voto",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsChaptersOverTime": "Capitoli letti",
+  "@statsChaptersOverTime": {
+    "description": "Titolo del grafico dei capitoli letti nel tempo"
+  },
+  "statsPerWeek": "per settimana",
+  "@statsPerWeek": {
+    "description": "Sottotitolo del grafico: ogni punto è una settimana"
+  },
+  "statsPerDay": "per giorno",
+  "@statsPerDay": {
+    "description": "Sottotitolo del grafico: ogni punto è un giorno"
+  },
+  "statsActivityTitle": "Quando leggi",
+  "@statsActivityTitle": {
+    "description": "Titolo del calendario dell'attività"
+  },
+  "statsActivitySubtitle": "un quadratino per giorno, negli ultimi sei mesi",
+  "@statsActivitySubtitle": {
+    "description": "Sottotitolo del calendario dell'attività"
+  },
+  "statsShelfTitle": "La libreria per stato",
+  "@statsShelfTitle": {
+    "description": "Titolo del grafico a torta delle serie divise per stato di lettura"
+  },
+  "statsGenreOthers": "Altri {count}",
+  "@statsGenreOthers": {
+    "description": "Fetta del grafico dei generi che raggruppa tutti gli altri generi; {count} è quanti generi raggruppa",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsGenresTitle": "Generi che leggi",
+  "@statsGenresTitle": {
+    "description": "Titolo del grafico a torta dei generi"
+  },
+  "statsGenresSubtitle": "sulle serie che hai iniziato",
+  "@statsGenresSubtitle": {
+    "description": "Sottotitolo del grafico dei generi: contati solo sulle serie iniziate"
+  },
+  "statsRatingsTitle": "Come voti",
+  "@statsRatingsTitle": {
+    "description": "Titolo del grafico della distribuzione dei voti"
+  },
+  "statsRatingsSubtitle": "quante serie per ogni voto",
+  "@statsRatingsSubtitle": {
+    "description": "Sottotitolo del grafico dei voti"
+  },
+  "statsTopSeries": "Serie più lette",
+  "@statsTopSeries": {
+    "description": "Titolo dell'elenco delle serie con più capitoli letti"
+  },
+  "statsShapeTitle": "Com'è fatta la libreria",
+  "@statsShapeTitle": {
+    "description": "Titolo della sezione con i numeri sulla libreria (capitoli, da leggere, in corso, spazio)"
+  },
+  "statsSyncedChapters": "capitoli sincronizzati",
+  "@statsSyncedChapters": {
+    "description": "Etichetta di un riquadro: capitoli presenti nella libreria"
+  },
+  "statsStillUnread": "ancora da leggere",
+  "@statsStillUnread": {
+    "description": "Etichetta di un riquadro: capitoli non ancora letti"
+  },
+  "statsOngoingSeries": "serie in corso",
+  "@statsOngoingSeries": {
+    "description": "Etichetta di un riquadro: serie non ancora concluse"
+  },
+  "statsAnnouncedMissing": "{count, plural, =1{1 capitolo annunciato e non scaricato} other{{count} capitoli annunciati e non scaricati}}",
+  "@statsAnnouncedMissing": {
+    "description": "Nota sotto le serie in corso: capitoli noti ma non ancora scaricati",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statsBytesOnPhone": "occupati sul telefono",
+  "@statsBytesOnPhone": {
+    "description": "Etichetta di un riquadro: spazio occupato dalla libreria sul telefono (il valore è in GB)"
+  },
+  "statsNoHistory": "Niente di letto in questo periodo. La cronologia parte da quando l'app ha cominciato a registrarla.",
+  "@statsNoHistory": {
+    "description": "Messaggio al posto del grafico quando non ci sono letture nel periodo"
+  },
+  "dataDriveNotLinked": "Drive non è collegato",
+  "@dataDriveNotLinked": {
+    "description": "Errore: si prova a usare Google Drive ma non è stata collegata nessuna cartella/account."
+  },
+  "dataChapterNotOnDrive": "Capitolo non trovato su Drive",
+  "@dataChapterNotOnDrive": {
+    "description": "Errore mostrato scaricando un capitolo che non risulta nell'indice della serie su Google Drive."
+  },
+  "dataChapterNoPagesOnDrive": "Il capitolo non ha tavole su Drive",
+  "@dataChapterNoPagesOnDrive": {
+    "description": "Errore scaricando un capitolo da Google Drive che non contiene pagine (tavole)."
+  },
+  "dataPageNotOnDrive": "Tavola non trovata su Drive",
+  "@dataPageNotOnDrive": {
+    "description": "Errore: una tavola (pagina di manga) non si trova su Google Drive."
+  },
+  "dataPrefetchCancelled": "Precarico annullato",
+  "@dataPrefetchCancelled": {
+    "description": "Errore interno mostrato se il precaricamento di una tavola da Drive è stato annullato."
+  },
+  "dataDriveAccessDenied": "Google non ha concesso l'accesso a Drive",
+  "@dataDriveAccessDenied": {
+    "description": "Errore: l'utente o Google ha rifiutato il permesso di accedere a Google Drive."
+  },
+  "dataDriveOfflineNeverOpened": "Senza connessione, e la libreria su Drive non è mai stata aperta su questo telefono",
+  "@dataDriveOfflineNeverOpened": {
+    "description": "Errore offline: manca la rete e la libreria di Google Drive non è mai stata letta su questo telefono, quindi non c'è copia locale."
+  },
+  "dataDriveSignedOut": "Accedi con Google per leggere la libreria su Drive",
+  "@dataDriveSignedOut": {
+    "description": "Messaggio: c'è una cartella di Drive scelta ma nessun account Google con cui leggerla."
+  },
+  "dataSyncMissingFolderOrDirection": "Manca la cartella o la direzione",
+  "@dataSyncMissingFolderOrDirection": {
+    "description": "Esito della sincronizzazione: non è stata scelta la cartella del telefono, quella di Drive o la direzione."
+  },
+  "dataSyncFailed": "Sincronizzazione non riuscita",
+  "@dataSyncFailed": {
+    "description": "Esito generico di una sincronizzazione (cartella del telefono con Drive o dati dell'account) fallita."
+  },
+  "dataSyncFolderUnreadable": "La cartella del telefono non si legge",
+  "@dataSyncFolderUnreadable": {
+    "description": "Esito della sincronizzazione: la cartella del telefono non è leggibile."
+  },
+  "dataSyncBusy": "Una sincronizzazione è già in corso",
+  "@dataSyncBusy": {
+    "description": "Errore: si avvia una sincronizzazione mentre un'altra è già in corso (nell'app o nel lavoro programmato)."
+  },
+  "dataSyncCancelled": "Sincronizzazione interrotta",
+  "@dataSyncCancelled": {
+    "description": "Esito di una sincronizzazione fermata dall'utente."
+  },
+  "dataSyncDirectionDownload": "Da Drive",
+  "@dataSyncDirectionDownload": {
+    "description": "Direzione della sincronizzazione: solo da Google Drive al telefono."
+  },
+  "dataSyncDirectionUpload": "Verso Drive",
+  "@dataSyncDirectionUpload": {
+    "description": "Direzione della sincronizzazione: solo dal telefono a Google Drive."
+  },
+  "dataSyncDirectionBoth": "Entrambe",
+  "@dataSyncDirectionBoth": {
+    "description": "Direzione della sincronizzazione: in tutte e due le direzioni, telefono e Drive."
+  },
+  "dataServerInviteTitle": "{sender} ti ha dato accesso al suo server",
+  "@dataServerInviteTitle": {
+    "description": "Titolo della notifica di invito: un altro utente ha ammesso l'account al suo Kagami Server.",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "dataServerInviteText": "Collega «{serverName}» e scaricherà i manga sul tuo Drive, anche a telefono spento.",
+  "@dataServerInviteText": {
+    "description": "Testo della notifica di invito a un Kagami Server: il server scarica i manga sul Drive dell'utente.",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "dataServerSignInRequired": "Fai l'accesso con Google per usare il server.",
+  "@dataServerSignInRequired": {
+    "description": "Messaggio: per usare Kagami Server serve essere entrati con l'account Google."
+  },
+  "dataServerNotLinked": "Nessun server collegato.",
+  "@dataServerNotLinked": {
+    "description": "Errore: si prova a usare Kagami Server ma non ne è stato collegato nessuno."
+  },
+  "dataServerUserNotNotified": "{email} può usare il server, ma non sono riuscito ad avvisarlo: mandagli tu l'indirizzo {url}.",
+  "@dataServerUserNotNotified": {
+    "description": "Errore dopo aver ammesso un account al server: l'invito automatico non è partito, l'utente deve passare l'indirizzo a mano.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "dataPickLibraryFolderTitle": "Scegli la cartella della libreria manga",
+  "@dataPickLibraryFolderTitle": {
+    "description": "Titolo del selettore di cartelle di sistema quando si sceglie dove sta la libreria di manga."
+  },
+  "dataCloudSignInNotEnabled": "L'accesso con Google non è ancora attivo su questo progetto",
+  "@dataCloudSignInNotEnabled": {
+    "description": "Errore: il metodo di accesso con Google non è abilitato nel progetto Firebase."
+  },
+  "dataCloudNoConnection": "Nessuna connessione",
+  "@dataCloudNoConnection": {
+    "description": "Errore di rete nell'accesso o nella sincronizzazione dell'account: il telefono è offline."
+  },
+  "dataCloudNoSignIn": "Nessun accesso",
+  "@dataCloudNoSignIn": {
+    "description": "Errore: si tenta di sincronizzare i dati dell'account senza essere entrati."
+  },
+  "dataCloudNoIdentityToken": "Google non ha dato un token di identità",
+  "@dataCloudNoIdentityToken": {
+    "description": "Errore tecnico dell'accesso con Google: manca il token di identità."
+  },
+  "dataCloudSignInFailed": "Accesso non riuscito",
+  "@dataCloudSignInFailed": {
+    "description": "Errore generico dell'accesso all'account."
+  },
+  "dataCloudSignInInterrupted": "Accesso interrotto",
+  "@dataCloudSignInInterrupted": {
+    "description": "Errore: la finestra di accesso con Google è stata interrotta."
+  },
+  "dataCloudGoogleNotConfigured": "Google non è configurato per questa app",
+  "@dataCloudGoogleNotConfigured": {
+    "description": "Errore: l'app non è registrata correttamente per l'accesso con Google."
+  },
+  "dataCloudGoogleSignInFailed": "Accesso con Google non riuscito",
+  "@dataCloudGoogleSignInFailed": {
+    "description": "Errore generico dell'accesso con Google."
+  },
+  "dataNewChaptersNotification": "{count, plural, =1{È arrivato un capitolo nuovo} other{Sono arrivati {count} capitoli nuovi}}",
+  "@dataNewChaptersNotification": {
+    "description": "Testo della notifica Android che avvisa di capitoli nuovi in una serie (il titolo della notifica è il nome della serie).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataArchivePhoneFolderMissing": "Manca la cartella del telefono.",
+  "@dataArchivePhoneFolderMissing": {
+    "description": "Errore di «Scarica un manga»: la destinazione è il telefono ma non c'è una cartella scelta."
+  },
+  "dataArchiveDriveFolderMissing": "Manca la cartella di Drive.",
+  "@dataArchiveDriveFolderMissing": {
+    "description": "Errore di «Scarica un manga»: la destinazione è Drive ma non c'è una cartella di Drive scelta."
+  },
+  "dataChapterLabel": "Capitolo {number}",
+  "@dataChapterLabel": {
+    "description": "Nome di un capitolo numerato in elenco, per esempio «Capitolo 70.5».",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "dataLibraryMissing": "La cartella non esiste o non è leggibile.",
+  "@dataLibraryMissing": {
+    "description": "Problema della cartella della libreria: non esiste o non si può leggere."
+  },
+  "dataLibraryNotIndexed": "La cartella non contiene library.json: vanno rigenerati gli indici con l'archiviatore che ha scritto la libreria.",
+  "@dataLibraryNotIndexed": {
+    "description": "Problema della cartella della libreria: manca il file indice library.json (nome di file, da non tradurre)."
+  },
+  "dataLibraryUnreadable": "library.json non è leggibile o non è un indice MALF valido.",
+  "@dataLibraryUnreadable": {
+    "description": "Problema della cartella della libreria: library.json (nome di file) è illeggibile o non è nel formato MALF."
+  },
+  "dataLibraryUnsupported": "library.json usa una versione del formato più recente di questa app.",
+  "@dataLibraryUnsupported": {
+    "description": "Problema della cartella della libreria: il formato è più nuovo di quello che l'app capisce, serve aggiornare l'app."
+  },
+  "dataReaderModeContinuous": "Continua",
+  "@dataReaderModeContinuous": {
+    "description": "Modalità di lettura: scorrimento verticale continuo."
+  },
+  "dataReaderModePaged": "Paginata",
+  "@dataReaderModePaged": {
+    "description": "Modalità di lettura: una tavola per volta."
+  },
+  "dataReaderDirectionLtr": "Sinistra → destra",
+  "@dataReaderDirectionLtr": {
+    "description": "Direzione di lettura in modalità paginata: da sinistra a destra."
+  },
+  "dataReaderDirectionRtl": "Destra → sinistra",
+  "@dataReaderDirectionRtl": {
+    "description": "Direzione di lettura in modalità paginata: da destra a sinistra (stile manga)."
+  },
+  "dataReaderFitWidth": "Larghezza",
+  "@dataReaderFitWidth": {
+    "description": "Adattamento della tavola allo schermo: alla larghezza."
+  },
+  "dataReaderFitHeight": "Altezza",
+  "@dataReaderFitHeight": {
+    "description": "Adattamento della tavola allo schermo: all'altezza."
+  },
+  "dataReaderFitOriginal": "Originale",
+  "@dataReaderFitOriginal": {
+    "description": "Adattamento della tavola allo schermo: dimensione originale del file."
+  },
+  "dataReaderBackgroundBlack": "Nero",
+  "@dataReaderBackgroundBlack": {
+    "description": "Colore di sfondo attorno alla tavola nel lettore: nero."
+  },
+  "dataReaderBackgroundGrey": "Grigio",
+  "@dataReaderBackgroundGrey": {
+    "description": "Colore di sfondo attorno alla tavola nel lettore: grigio."
+  },
+  "dataReaderBackgroundWhite": "Bianco",
+  "@dataReaderBackgroundWhite": {
+    "description": "Colore di sfondo attorno alla tavola nel lettore: bianco."
+  },
+  "readerProbeFrames": "Fotogrammi {frames} · limite {budget} ms",
+  "@readerProbeFrames": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "frames": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeSlow": "Lenti UI {build} (max {buildMax} ms) · GPU {raster} (max {rasterMax} ms)",
+  "@readerProbeSlow": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "build": {
+        "type": "String"
+      },
+      "buildMax": {
+        "type": "String"
+      },
+      "raster": {
+        "type": "String"
+      },
+      "rasterMax": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeLate": "Partiti tardi {late} (max {lateMax} ms)",
+  "@readerProbeLate": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "late": {
+        "type": "String"
+      },
+      "lateMax": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeScroll": "Scorrendo {scroll} · saltati {missed} (buco max {gap} ms)",
+  "@readerProbeScroll": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "scroll": {
+        "type": "String"
+      },
+      "missed": {
+        "type": "String"
+      },
+      "gap": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeSources": "Tessere {tiles} · intere {whole} · del telefono {phone} (fatte {phoneMade})",
+  "@readerProbeSources": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "tiles": {
+        "type": "String"
+      },
+      "whole": {
+        "type": "String"
+      },
+      "phone": {
+        "type": "String"
+      },
+      "phoneMade": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeNative": "Native {bands} (texture {textures}) · tavole decodificate {decodes}",
+  "@readerProbeNative": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "bands": {
+        "type": "String"
+      },
+      "textures": {
+        "type": "String"
+      },
+      "decodes": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeDecode": "Decodifica {decode} ms (max {decodeMax}) · arrivo {arrival} ms (max {arrivalMax})",
+  "@readerProbeDecode": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "decode": {
+        "type": "String"
+      },
+      "decodeMax": {
+        "type": "String"
+      },
+      "arrival": {
+        "type": "String"
+      },
+      "arrivalMax": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeMemory": "Copia max {copy} ms · GC Android {gc} ({gcMs} ms) · bloccanti {blocking} ({blockingMs} ms)",
+  "@readerProbeMemory": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "copy": {
+        "type": "String"
+      },
+      "gc": {
+        "type": "String"
+      },
+      "gcMs": {
+        "type": "String"
+      },
+      "blocking": {
+        "type": "String"
+      },
+      "blockingMs": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeWaits": "Attese da Drive {drive} · ripieghi Dart {fallbacks}",
+  "@readerProbeWaits": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "drive": {
+        "type": "String"
+      },
+      "fallbacks": {
+        "type": "String"
+      }
+    }
+  },
+  "readerProbeJumps": "Correzioni {corrections} · salti {jumps} ({jumped} px)",
+  "@readerProbeJumps": {
+    "description": "Riga del riquadro diagnostico di fluidità del lettore (acceso dalle impostazioni, spiegato in settingsProbeInfo1-4): le etichette devono essere le stesse citate lì. Testo compatto, tecnico.",
+    "placeholders": {
+      "corrections": {
+        "type": "String"
+      },
+      "jumps": {
+        "type": "String"
+      },
+      "jumped": {
+        "type": "String"
+      }
+    }
+  }
+}

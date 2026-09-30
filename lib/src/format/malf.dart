@@ -7,6 +7,8 @@ library;
 
 import 'package:path/path.dart' as p;
 
+import '../l10n.dart';
+
 const String malfFormat = 'malf';
 const int malfFormatVersion = 1;
 
@@ -296,7 +298,7 @@ class ChapterEntry {
     if (number == null || number.isEmpty || double.tryParse(number) == null) {
       return title == null || title.isEmpty ? number ?? id : title;
     }
-    final head = 'Capitolo $number';
+    final head = currentL10n().dataChapterLabel(number);
     if (title == null || title.isEmpty || title == number) return head;
     final repeated = _numbered.firstMatch(title);
     if (repeated == null ||

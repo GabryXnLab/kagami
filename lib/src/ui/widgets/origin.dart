@@ -9,13 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/library.dart';
+import '../../l10n.dart';
 import '../../providers.dart';
 
-const Map<SeriesPlace, String> placeLabels = {
-  SeriesPlace.local: 'Sul telefono',
-  SeriesPlace.drive: 'Su Drive',
-  SeriesPlace.mixed: 'Sul telefono, e altri capitoli su Drive',
-};
+String placeLabel(AppLocalizations l10n, SeriesPlace place) => switch (place) {
+      SeriesPlace.local => l10n.originLocal,
+      SeriesPlace.drive => l10n.originDrive,
+      SeriesPlace.mixed => l10n.originMixed,
+    };
 
 List<IconData> placeIcons(SeriesPlace place) => switch (place) {
       SeriesPlace.local => const [LucideIcons.smartphone],
@@ -36,7 +37,7 @@ class OriginBadge extends ConsumerWidget {
     final drive = ref.watch(libraryProvider.select((l) => l?.hasDrive ?? false));
     if (!drive || place == null) return const SizedBox.shrink();
     return Semantics(
-      label: placeLabels[place],
+      label: placeLabel(context.l10n, place),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: size * 0.45, vertical: size * 0.35),
         decoration: BoxDecoration(

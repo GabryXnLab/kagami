@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/cloud.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
 import 'theme.dart';
@@ -64,6 +65,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = context.colors;
+    final l10n = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -89,42 +91,33 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   Text('Kagami', style: KagamiType.display(32)),
                   const SizedBox(height: 8),
                   Text(
-                    'Legge la cartella dei manga che la sincronizzazione '
-                    'deposita sul telefono, oppure la stessa libreria '
-                    'direttamente da Google Drive, senza portarla tutta qui.',
+l10n.setupIntro,
                     style:
                         KagamiType.body(14, color: context.tokens.muted),
                   ),
                   const SizedBox(height: 30),
                   if (!_granted) ...[
-                    const _Step(
+                    _Step(
                       number: '1',
-                      title: 'Accesso ai file',
-                      body: 'La cartella sta fuori dallo spazio privato '
-                          'dell\'app, e contiene decine di migliaia di '
-                          'immagini: Kagami ha bisogno di leggerle '
-                          'direttamente. Scrive soltanto le copie dei dati '
-                          'nella sottocartella reading/ della libreria e, se '
-                          'lo chiedi, i capitoli che scarichi da Drive.',
+                      title: l10n.setupAccessTitle,
+                      body: l10n.setupAccessBody,
                     ),
                     const SizedBox(height: 22),
                     KButton(
-                      label: 'Concedi accesso',
+                      label: l10n.setupGrantAccess,
                       icon: LucideIcons.shieldCheck,
                       expand: true,
                       onPressed: _working ? null : _request,
                     ),
                   ] else ...[
-                    const _Step(
+                    _Step(
                       number: '2',
-                      title: 'La cartella',
-                      body: 'Indica la cartella sincronizzata da FolderSync: '
-                          'quella che contiene library.json e una '
-                          'sottocartella per serie.',
+                      title: l10n.setupFolderTitle,
+                      body: l10n.setupFolderBody,
                     ),
                     const SizedBox(height: 22),
                     KButton(
-                      label: 'Scegli la cartella',
+                      label: l10n.setupChooseFolder,
                       icon: LucideIcons.folderOpen,
                       expand: true,
                       onPressed: _working ? null : _choose,
@@ -138,7 +131,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'oppure',
+                            l10n.setupOr,
                             style: KagamiType.label(
                               size: 12,
                               color: context.tokens.muted,
@@ -149,18 +142,14 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       ],
                     ),
                     const SizedBox(height: 18),
-                    const _Step(
+                    _Step(
                       icon: LucideIcons.cloud,
-                      title: 'Google Drive',
-                      body: 'Si accede con Google e si sceglie la cartella '
-                          'della libreria su Drive: le tavole arrivano mentre '
-                          'si legge, e i capitoli che si vogliono avere sempre '
-                          'a portata si scaricano con un tocco. Non serve '
-                          'l\'accesso ai file del telefono.',
+                      title: l10n.setupDriveTitle,
+                      body: l10n.setupDriveBody,
                     ),
                     const SizedBox(height: 16),
                     KGhostButton(
-                      label: 'Leggi da Google Drive',
+                      label: l10n.setupReadFromDrive,
                       icon: LucideIcons.cloud,
                       expand: true,
                       onPressed: _working ? null : () => connectDrive(context, ref),
@@ -242,7 +231,7 @@ class LibraryProblemView extends ConsumerWidget {
     final (message, action, onPressed) = noticeOf(context, ref, error);
     return KEmpty(
       icon: LucideIcons.folderX,
-      title: 'Libreria non leggibile',
+      title: context.l10n.setupLibraryProblemTitle,
       message: message,
       action: Column(
         children: [
@@ -262,7 +251,7 @@ class LibraryProblemView extends ConsumerWidget {
                   ref.read(libraryRootProvider.notifier).select(chosen);
                 }
               },
-              child: const Text('Cambia cartella'),
+              child: Text(context.l10n.setupChangeFolder),
             ),
           ],
         ],

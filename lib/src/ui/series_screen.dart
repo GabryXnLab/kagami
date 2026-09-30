@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/cleanup.dart';
@@ -19,6 +20,7 @@ import '../data/library.dart';
 import '../data/library_view.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
 import 'library_screen.dart' show seriesRoute;
@@ -30,14 +32,18 @@ import 'widgets/kit.dart';
 import 'widgets/origin.dart';
 import 'widgets/series_cover.dart';
 
-const Map<ShelfStatus, String> shelfLabels = {
-  ShelfStatus.none: 'Nessuno stato',
-  ShelfStatus.planned: 'Da leggere',
-  ShelfStatus.reading: 'In lettura',
-  ShelfStatus.paused: 'In pausa',
-  ShelfStatus.completed: 'Finito',
-  ShelfStatus.dropped: 'Abbandonato',
-};
+/// Un getter e non una costante: il testo dipende dalla lingua scelta.
+Map<ShelfStatus, String> get shelfLabels {
+  final l10n = currentL10n();
+  return {
+    ShelfStatus.none: l10n.seriesShelfNone,
+    ShelfStatus.planned: l10n.seriesShelfPlanned,
+    ShelfStatus.reading: l10n.seriesShelfReading,
+    ShelfStatus.paused: l10n.seriesShelfPaused,
+    ShelfStatus.completed: l10n.seriesShelfCompleted,
+    ShelfStatus.dropped: l10n.seriesShelfDropped,
+  };
+}
 
 const Map<ShelfStatus, IconData> shelfIcons = {
   ShelfStatus.none: LucideIcons.circleDashed,
@@ -48,13 +54,16 @@ const Map<ShelfStatus, IconData> shelfIcons = {
   ShelfStatus.dropped: LucideIcons.circleX,
 };
 
-const Map<ReleaseStatus, String> releaseLabels = {
-  ReleaseStatus.ongoing: 'In corso',
-  ReleaseStatus.completed: 'Conclusa',
-  ReleaseStatus.hiatus: 'In pausa',
-  ReleaseStatus.cancelled: 'Interrotta',
-  ReleaseStatus.unknown: 'Stato ignoto',
-};
+Map<ReleaseStatus, String> get releaseLabels {
+  final l10n = currentL10n();
+  return {
+    ReleaseStatus.ongoing: l10n.seriesReleaseOngoing,
+    ReleaseStatus.completed: l10n.seriesReleaseCompleted,
+    ReleaseStatus.hiatus: l10n.seriesReleaseHiatus,
+    ReleaseStatus.cancelled: l10n.seriesReleaseCancelled,
+    ReleaseStatus.unknown: l10n.seriesReleaseUnknown,
+  };
+}
 
 /// Quanti capitoli in un salto dell'elenco. Sotto questa soglia l'elenco si
 /// scorre e basta; sopra, cercare il capitolo 40 fra trecento è un gesto
@@ -135,7 +144,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     final library = ref.watch(libraryProvider);
     final signals = ref.watch(seriesSignalsProvider(widget.seriesKey));
     if (library == null || signals == null) {
-      return const Scaffold(body: Center(child: Text('Serie non trovata.')));
+      return Scaffold(
+        body: Center(child: Text(context.l10n.seriesNotFound)),
+      );
     }
     final index = ref.watch(seriesChaptersProvider(widget.seriesKey));
     final sources = index.value;
@@ -218,7 +229,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                   : () => _download(onDrive, confirm: true),
               cleanup: leftovers == null || !leftovers.offersAnything
                   ? null
-                  : _cleanupLabel(leftovers),
+                  : _cleanupLabel(context.l10n, leftovers),
               onCleanup: () {
                 if (leftovers != null) {
                   offerCleanup(context, ref, widget.seriesKey, leftovers);
@@ -234,31 +245,28 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
               ),
             )
           else if (chapters.isEmpty && !ref.watch(networkOnlineProvider))
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: KEmpty(
                 icon: LucideIcons.cloudOff,
-                title: 'Capitoli su Drive',
-                message: 'Senza connessione non si vede l\'elenco dei '
-                    'capitoli di questa serie. Compare da solo appena torna '
-                    'la rete.',
+                title: context.l10n.seriesOfflineTitle,
+                message: context.l10n.seriesOfflineMessage,
               ),
             )
           else if (chapters.isEmpty)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: KEmpty(
                 icon: LucideIcons.fileQuestion,
-                title: 'Nessun indice',
-                message: 'Questa serie non ha un index.json: vanno '
-                    'rigenerati gli indici con l\'archiviatore che l\'ha scritta.',
+                title: context.l10n.seriesNoIndexTitle,
+                message: context.l10n.seriesNoIndexMessage,
               ),
             )
           else if (visible.isEmpty)
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: KEmpty(
                 icon: LucideIcons.listFilter,
                 compact: true,
-                title: 'Nessun capitolo',
-                message: 'Nessuno passa la ricerca e i filtri scelti.',
+                title: context.l10n.seriesNoChaptersTitle,
+                message: context.l10n.seriesNoChaptersMessage,
               ),
             )
           else
@@ -402,7 +410,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     if (confirm) {
       final sure = await showKagamiSheet<bool>(
         context,
-        title: 'Scaricare ${ids.length} capitoli?',
+        title: context.l10n.seriesDownloadAllTitle(ids.length),
         builder: (context) => Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           child: Column(
@@ -410,14 +418,13 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Tutti i capitoli che ora si leggono da Drive finiscono sul '
-                'telefono, e da lì si leggono anche senza rete.',
+                context.l10n.seriesDownloadAllMessage,
                 style: KagamiType.body(13.5,
                     height: 1.5, color: context.tokens.muted),
               ),
               const SizedBox(height: 20),
               KButton(
-                label: 'Scarica',
+                label: context.l10n.seriesDownload,
                 icon: LucideIcons.download,
                 expand: true,
                 onPressed: () => Navigator.of(context).pop(true),
@@ -454,18 +461,11 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     setState(_selected.clear);
   }
 
-  static String _cleanupLabel(ReadLeftovers leftovers) {
+  static String _cleanupLabel(AppLocalizations l10n, ReadLeftovers leftovers) {
     final count = leftovers.chapterCount;
-    if (count == 0) {
-      final remote = leftovers.remote.length;
-      return remote == 1
-          ? 'Un capitolo letto è ancora su Drive'
-          : '$remote capitoli letti sono ancora su Drive';
-    }
+    if (count == 0) return l10n.seriesCleanupRemote(leftovers.remote.length);
     final size = formatBytes(leftovers.folderBytes + leftovers.cacheBytes);
-    return count == 1
-        ? 'Un capitolo letto occupa $size'
-        : '$count capitoli letti occupano $size';
+    return l10n.seriesCleanupLocal(count, size);
   }
 
   void _markAll(List<ChapterEntry> chapters, SeriesState state) {
@@ -492,7 +492,7 @@ class _DownloadState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (progress.error != null) {
-      final label = 'Download non riuscito: ${progress.error}. Riprova';
+      final label = context.l10n.seriesDownloadFailed('${progress.error}');
       return Tooltip(
         message: label,
         child: _TileAction(
@@ -505,13 +505,15 @@ class _DownloadState extends StatelessWidget {
     }
     if (progress.waiting) {
       return _TileAction(
-        label: 'In attesa della rete: riparte da solo. Annulla',
+        label: context.l10n.seriesDownloadWaiting,
         onTap: onCancel,
         child: Icon(LucideIcons.cloudOff, size: 18, color: context.tokens.muted),
       );
     }
     return _TileAction(
-      label: progress.queued ? 'In coda. Annulla' : 'Annulla il download',
+      label: progress.queued
+          ? context.l10n.seriesDownloadQueued
+          : context.l10n.seriesDownloadCancel,
       onTap: onCancel,
       child: SizedBox.square(
         dimension: 20,
@@ -577,9 +579,9 @@ class _PlacePill extends ConsumerWidget {
     if (!drive || place == null) return const SizedBox.shrink();
     return KChip(
       label: switch (place) {
-        SeriesPlace.local => 'Sul telefono',
-        SeriesPlace.drive => 'Su Drive',
-        SeriesPlace.mixed => 'Telefono e Drive',
+        SeriesPlace.local => context.l10n.seriesPlaceLocal,
+        SeriesPlace.drive => context.l10n.seriesPlaceDrive,
+        SeriesPlace.mixed => context.l10n.seriesPlaceMixed,
       },
       icon: placeIcons(place).last,
     );
@@ -679,8 +681,8 @@ class _GlassMute extends ConsumerWidget {
       padding: const EdgeInsets.all(6),
       child: Tooltip(
         message: muted
-            ? 'Notifiche dei capitoli nuovi silenziate'
-            : 'Notifiche dei capitoli nuovi attive',
+            ? context.l10n.seriesMuteTooltipOn
+            : context.l10n.seriesMuteTooltipOff,
         child: KPress(
           onTap: () {
             ref.read(readingProvider.notifier).toggleMuted(signals.entry.key);
@@ -690,8 +692,8 @@ class _GlassMute extends ConsumerWidget {
                 SnackBar(
                   content: Text(
                     muted
-                        ? 'Notifiche dei capitoli nuovi riattivate.'
-                        : 'Notifiche dei capitoli nuovi silenziate.',
+                        ? context.l10n.seriesMuteUnmuted
+                        : context.l10n.seriesMuteMuted,
                   ),
                 ),
               );
@@ -827,9 +829,9 @@ class _Resume extends ConsumerWidget {
             Expanded(
               child: Text(
                 signals.entry.missingChapterCount > 0
-                    ? 'In pari con quello che c\'è sul telefono: mancano '
-                        '${signals.entry.missingChapterCount} capitoli annunciati.'
-                    : 'Letta tutta.',
+                    ? context.l10n.seriesCaughtUpMissing(
+                        signals.entry.missingChapterCount)
+                    : context.l10n.seriesCaughtUpAll,
                 style: KagamiType.body(13.5, color: muted),
               ),
             ),
@@ -854,8 +856,10 @@ class _Resume extends ConsumerWidget {
               const SizedBox(width: 8),
               Text(
                 progress == null
-                    ? (signals.isStarted ? 'DA CONTINUARE' : 'DA INIZIARE')
-                    : 'LASCIATO A METÀ',
+                    ? (signals.isStarted
+                        ? context.l10n.seriesResumeToContinue
+                        : context.l10n.seriesResumeToStart)
+                    : context.l10n.seriesResumeHalfway,
                 style: KagamiType.overline(size: 10.5, color: muted),
               ),
               const Spacer(),
@@ -877,7 +881,10 @@ class _Resume extends ConsumerWidget {
             KProgress(value: progress.fraction),
             const SizedBox(height: 6),
             Text(
-              'pagina ${progress.page + 1} di ${progress.pageCount}',
+              context.l10n.seriesResumePage(
+                progress.page + 1,
+                progress.pageCount,
+              ),
               style: KagamiType.label(size: 11.5, color: muted),
             ),
           ],
@@ -887,8 +894,10 @@ class _Resume extends ConsumerWidget {
               Expanded(
                 child: KButton(
                   label: progress == null
-                      ? (signals.isStarted ? 'Continua' : 'Inizia')
-                      : 'Riprendi',
+                      ? (signals.isStarted
+                          ? context.l10n.seriesContinue
+                          : context.l10n.seriesStart)
+                      : context.l10n.seriesResume,
                   icon: LucideIcons.play,
                   expand: true,
                   onPressed: () => onOpen(chapter.id),
@@ -897,7 +906,7 @@ class _Resume extends ConsumerWidget {
               const SizedBox(width: 10),
               KIconAction(
                 icon: LucideIcons.skipForward,
-                tooltip: 'Capitolo successivo',
+                tooltip: context.l10n.seriesNextChapter,
                 onPressed: () {
                   final readable = index?.readable ?? const <ChapterEntry>[];
                   final after = readable
@@ -936,18 +945,21 @@ class _Numbers extends StatelessWidget {
           // mai scaricati, e un «Letti» più grande di «Capitoli» non si legge.
           KFigure(
             value: '${math.max(entry.chapterCount, entry.archivedChapterCount)}',
-            label: 'Capitoli',
+            label: context.l10n.seriesFigureChapters,
           ),
-          KFigure(value: '${signals.readCount}', label: 'Letti'),
+          KFigure(
+            value: '${signals.readCount}',
+            label: context.l10n.seriesFigureRead,
+          ),
           KFigure(
             value: '${(signals.fraction * 100).round()}%',
-            label: 'Avanzamento',
+            label: context.l10n.seriesFigureProgress,
           ),
           KFigure(
             value: signals.state.rating == null
                 ? '—'
                 : '${signals.state.rating}',
-            label: 'Voto',
+            label: context.l10n.seriesFigureRating,
             tint: signals.state.rating == null
                 ? context.tokens.muted
                 : ratingTint(context, signals.state.rating!),
@@ -974,7 +986,7 @@ class _Shelf extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const KSection('Il mio scaffale'),
+        KSection(context.l10n.seriesMyShelf),
         KChipBar(
           children: [
             for (final entry in shelfLabels.entries)
@@ -991,7 +1003,9 @@ class _Shelf extends ConsumerWidget {
           children: [
             Expanded(
               child: KGhostButton(
-                label: state.favorite ? 'Preferita' : 'Preferiti',
+                label: state.favorite
+                    ? context.l10n.seriesFavoriteOn
+                    : context.l10n.seriesFavoriteOff,
                 icon: state.favorite ? LucideIcons.heart : LucideIcons.heart,
                 expand: true,
                 height: 46,
@@ -1001,7 +1015,9 @@ class _Shelf extends ConsumerWidget {
             const SizedBox(width: 10),
             Expanded(
               child: KGhostButton(
-                label: state.rating == null ? 'Voto' : '${state.rating}/10',
+                label: state.rating == null
+                    ? context.l10n.seriesRatingButton
+                    : context.l10n.seriesRatingOutOfTen(state.rating!),
                 icon: LucideIcons.star,
                 expand: true,
                 height: 46,
@@ -1011,14 +1027,14 @@ class _Shelf extends ConsumerWidget {
             const SizedBox(width: 10),
             KIconAction(
               icon: LucideIcons.listPlus,
-              tooltip: 'Raccolte',
+              tooltip: context.l10n.seriesCollections,
               size: 46,
               onPressed: () => showCollectionSheet(context, [key]),
             ),
             const SizedBox(width: 10),
             KIconAction(
               icon: LucideIcons.notebookPen,
-              tooltip: 'Note',
+              tooltip: context.l10n.seriesNotes,
               size: 46,
               active: notes.isNotEmpty,
               onPressed: () => _editNotes(context, ref, key, state.notes),
@@ -1046,7 +1062,7 @@ class _Shelf extends ConsumerWidget {
   ) async {
     final chosen = await showKagamiSheet<int>(
       context,
-      title: 'Che voto le dai?',
+      title: context.l10n.seriesRatingSheetTitle,
       builder: (context) => _RatingSheet(current: current),
     );
     if (chosen == null) return;
@@ -1064,7 +1080,7 @@ class _Shelf extends ConsumerWidget {
     final controller = TextEditingController(text: current ?? '');
     final saved = await showKagamiSheet<String>(
       context,
-      title: 'Note',
+      title: context.l10n.seriesNotes,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -1074,13 +1090,13 @@ class _Shelf extends ConsumerWidget {
               controller: controller,
               maxLines: 6,
               autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Dove eri rimasto, cosa ne pensi…',
+              decoration: InputDecoration(
+                hintText: context.l10n.seriesNotesHint,
               ),
             ),
             const SizedBox(height: 16),
             KButton(
-              label: 'Salva',
+              label: context.l10n.seriesSave,
               expand: true,
               onPressed: () => Navigator.of(context).pop(controller.text),
             ),
@@ -1108,18 +1124,18 @@ class _RatingSheet extends StatefulWidget {
 }
 
 class _RatingSheetState extends State<_RatingSheet> {
-  static const _words = [
-    'Pessimo',
-    'Brutto',
-    'Scarso',
-    'Mediocre',
-    'Sufficiente',
-    'Discreto',
-    'Buono',
-    'Ottimo',
-    'Eccellente',
-    'Capolavoro',
-  ];
+  List<String> _words(AppLocalizations l10n) => [
+        l10n.seriesRatingWord1,
+        l10n.seriesRatingWord2,
+        l10n.seriesRatingWord3,
+        l10n.seriesRatingWord4,
+        l10n.seriesRatingWord5,
+        l10n.seriesRatingWord6,
+        l10n.seriesRatingWord7,
+        l10n.seriesRatingWord8,
+        l10n.seriesRatingWord9,
+        l10n.seriesRatingWord10,
+      ];
 
   late int? _value = widget.current;
 
@@ -1160,7 +1176,9 @@ class _RatingSheetState extends State<_RatingSheet> {
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 160),
                   child: Text(
-                    value == null ? 'Senza voto' : _words[value - 1],
+                    value == null
+                        ? context.l10n.seriesRatingNone
+                        : _words(context.l10n)[value - 1],
                     key: ValueKey(value),
                     style: KagamiType.title(17, weight: 700, color: tint),
                   ),
@@ -1199,10 +1217,13 @@ class _RatingSheetState extends State<_RatingSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Tocca o scorri', style: KagamiType.body(12, color: muted)),
+              Text(
+                context.l10n.seriesRatingHint,
+                style: KagamiType.body(12, color: muted),
+              ),
               if (widget.current != null)
                 Text(
-                  'Prima: ${widget.current}',
+                  context.l10n.seriesRatingBefore(widget.current!),
                   style: KagamiType.body(12, color: muted),
                 ),
             ],
@@ -1213,7 +1234,7 @@ class _RatingSheetState extends State<_RatingSheet> {
               if (widget.current != null) ...[
                 Expanded(
                   child: KGhostButton(
-                    label: 'Togli',
+                    label: context.l10n.seriesRatingRemove,
                     icon: LucideIcons.eraser,
                     expand: true,
                     onPressed: () => Navigator.of(context).pop(-1),
@@ -1224,7 +1245,7 @@ class _RatingSheetState extends State<_RatingSheet> {
               Expanded(
                 flex: 2,
                 child: KButton(
-                  label: 'Salva il voto',
+                  label: context.l10n.seriesRatingSave,
                   icon: LucideIcons.star,
                   expand: true,
                   tone: value == null ? null : tint,
@@ -1293,7 +1314,7 @@ class _Details extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (description != null && description.isNotEmpty) ...[
-          const KSection('Sinossi'),
+          KSection(context.l10n.seriesSynopsis),
           _Description(text: description),
           const SizedBox(height: 20),
         ],
@@ -1301,7 +1322,7 @@ class _Details extends ConsumerWidget {
         // Generi e tag portano alla libreria già filtrata: da qui "altre
         // così" è una domanda sola, non un giro dai filtri.
         if (entry.genres.isNotEmpty) ...[
-          const KSection('Generi'),
+          KSection(context.l10n.seriesGenres),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1317,7 +1338,7 @@ class _Details extends ConsumerWidget {
         ],
         if (entry.tags.isNotEmpty) ...[
           KSection(
-            'Tag',
+            context.l10n.seriesTags,
             trailing: Text(
               '${entry.tags.length}',
               style: KagamiType.label(size: 12, color: context.tokens.muted),
@@ -1330,7 +1351,7 @@ class _Details extends ConsumerWidget {
           const SizedBox(height: 20),
         ],
         if (entry.authors.isNotEmpty || entry.artists.isNotEmpty) ...[
-          const KSection('Chi l\'ha fatta'),
+          KSection(context.l10n.seriesCreators),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1381,7 +1402,7 @@ class _TagCloudState extends State<_TagCloud> {
             KTag(label: tag, prefix: '#', onTap: () => widget.onTap(tag)),
           if (hidden > 0)
             KChip(
-              label: 'Altri $hidden',
+              label: context.l10n.seriesMoreTags(hidden),
               icon: LucideIcons.plus,
               onTap: () => setState(() => _all = true),
             ),
@@ -1442,9 +1463,9 @@ class _Pace extends ConsumerWidget {
             Expanded(
               child: KStatCard(
                 icon: LucideIcons.hourglass,
-                label: 'Da leggere',
-                value: _time(pages / _pagesPerMinute),
-                caption: '${unread.length} capitoli, $pages tavole',
+                label: context.l10n.seriesPaceToRead,
+                value: _time(context.l10n, pages / _pagesPerMinute),
+                caption: context.l10n.seriesPaceCaption(unread.length, pages),
               ),
             ),
           if (pages > 0 && next != null) const SizedBox(width: 10),
@@ -1452,9 +1473,9 @@ class _Pace extends ConsumerWidget {
             Expanded(
               child: KStatCard(
                 icon: LucideIcons.calendarClock,
-                label: 'Prossimo capitolo',
-                value: _when(next),
-                caption: 'dalla cadenza degli ultimi',
+                label: context.l10n.seriesPaceNext,
+                value: _when(context.l10n, next),
+                caption: context.l10n.seriesPaceNextCaption,
               ),
             ),
         ],
@@ -1462,11 +1483,11 @@ class _Pace extends ConsumerWidget {
     );
   }
 
-  static String _time(double minutes) {
-    if (minutes < 60) return '${minutes.round()} min';
+  static String _time(AppLocalizations l10n, double minutes) {
+    if (minutes < 60) return l10n.seriesDurationMinutes(minutes.round());
     final hours = minutes / 60;
-    if (hours < 24) return '${hours.round()} h';
-    return '${(hours / 24).round()} giorni';
+    if (hours < 24) return l10n.seriesDurationHours(hours.round());
+    return l10n.seriesDurationDays((hours / 24).round());
   }
 
   /// Quando ci si aspetta il prossimo capitolo, dalla cadenza con cui sono
@@ -1492,14 +1513,14 @@ class _Pace extends ConsumerWidget {
     return recent.last.add(Duration(hours: median));
   }
 
-  static String _when(DateTime expected) {
+  static String _when(AppLocalizations l10n, DateTime expected) {
     final days = expected.difference(DateTime.now().toUtc()).inDays;
-    if (days < -14) return 'in ritardo';
-    if (days < 0) return 'atteso';
-    if (days == 0) return 'oggi';
-    if (days == 1) return 'domani';
-    if (days < 14) return 'fra $days giorni';
-    return 'fra ${(days / 7).round()} settimane';
+    if (days < -14) return l10n.seriesWhenLate;
+    if (days < 0) return l10n.seriesWhenExpected;
+    if (days == 0) return l10n.seriesWhenToday;
+    if (days == 1) return l10n.seriesWhenTomorrow;
+    if (days < 14) return l10n.seriesWhenInDays(days);
+    return l10n.seriesWhenInWeeks((days / 7).round());
   }
 }
 
@@ -1538,7 +1559,9 @@ class _DescriptionState extends State<_Description> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _expanded ? 'Riduci' : 'Leggi tutto',
+                  _expanded
+                      ? context.l10n.seriesShowLess
+                      : context.l10n.seriesShowMore,
                   style: KagamiType.label(
                     size: 13,
                     color: context.colors.primary,
@@ -1626,7 +1649,7 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
         children: [
           Row(
             children: [
-              Text('Capitoli', style: KagamiType.display(19)),
+              Text(context.l10n.seriesChaptersTitle, style: KagamiType.display(19)),
               const SizedBox(width: 10),
               Container(
                 padding:
@@ -1644,7 +1667,7 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
               const Spacer(),
               if (widget.archived != widget.total)
                 Text(
-                  'su ${widget.total}',
+                  context.l10n.seriesChaptersOf(widget.total),
                   style: KagamiType.label(size: 12, color: muted),
                 ),
             ],
@@ -1656,10 +1679,10 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
                 child: TextField(
                   controller: _controller,
                   onChanged: widget.onQuery,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     isDense: true,
-                    hintText: 'Cerca capitolo…',
-                    prefixIcon: Icon(LucideIcons.search, size: 18),
+                    hintText: context.l10n.seriesSearchChapter,
+                    prefixIcon: const Icon(LucideIcons.search, size: 18),
                   ),
                 ),
               ),
@@ -1668,20 +1691,22 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
                 icon: widget.newestFirst
                     ? LucideIcons.arrowDownWideNarrow
                     : LucideIcons.arrowUpWideNarrow,
-                tooltip: widget.newestFirst ? 'Dal più recente' : 'Dal primo',
+                tooltip: widget.newestFirst
+                    ? context.l10n.seriesSortNewest
+                    : context.l10n.seriesSortOldest,
                 onPressed: widget.onToggleOrder,
               ),
               const SizedBox(width: 8),
               KIconAction(
                 icon: LucideIcons.checkCheck,
-                tooltip: 'Segna tutti',
+                tooltip: context.l10n.seriesMarkAll,
                 onPressed: widget.onMarkAll,
               ),
               if (widget.onDownloadAll != null) ...[
                 const SizedBox(width: 8),
                 KIconAction(
                   icon: LucideIcons.cloudDownload,
-                  tooltip: 'Scarica da Drive',
+                  tooltip: context.l10n.seriesDownloadFromDrive,
                   onPressed: widget.onDownloadAll,
                 ),
               ],
@@ -1706,7 +1731,7 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
                       ),
                     ),
                     Text(
-                      'Libera spazio',
+                      context.l10n.seriesFreeSpace,
                       style: KagamiType.label(
                         size: 12,
                         color: context.colors.primary,
@@ -1721,12 +1746,12 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
           KChipBar(
             children: [
               KChip(
-                label: 'Da leggere',
+                label: context.l10n.seriesFilterUnread,
                 active: widget.onlyUnread,
                 onTap: widget.onToggleUnread,
               ),
               KChip(
-                label: 'Scaricati',
+                label: context.l10n.seriesFilterDownloaded,
                 active: widget.onlyDownloaded,
                 onTap: widget.onToggleDownloaded,
               ),
@@ -1734,7 +1759,7 @@ class _ChapterHeaderState extends State<_ChapterHeader> {
               // l'elenco si scorre e basta.
               if (widget.blocks.isNotEmpty) ...[
                 KChip(
-                  label: 'Tutti',
+                  label: context.l10n.seriesFilterAll,
                   active: widget.jump == null,
                   onTap: () => widget.onJump(null),
                 ),
@@ -1786,28 +1811,28 @@ class _ChapterSelectionBar extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    '$count selezionati',
+                    context.l10n.seriesSelectedCount(count),
                     style: KagamiType.title(14.5),
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Segna letti',
+                  tooltip: context.l10n.seriesMarkReadMany,
                   onPressed: onRead,
                   icon: const Icon(LucideIcons.check),
                 ),
                 IconButton(
-                  tooltip: 'Segna da leggere',
+                  tooltip: context.l10n.seriesMarkUnread,
                   onPressed: onUnread,
                   icon: const Icon(LucideIcons.undo2),
                 ),
                 IconButton(
-                  tooltip: 'Segna letto fino a qui',
+                  tooltip: context.l10n.seriesMarkReadThrough,
                   onPressed: onReadThrough,
                   icon: const Icon(LucideIcons.listChecks),
                 ),
                 if (onDownload != null)
                   IconButton(
-                    tooltip: 'Scarica da Drive',
+                    tooltip: context.l10n.seriesDownloadFromDrive,
                     onPressed: onDownload,
                     icon: const Icon(LucideIcons.cloudDownload),
                   ),
@@ -1848,9 +1873,9 @@ class _Similar extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 26, 20, 12),
-          child: KSection('Altre così'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 12),
+          child: KSection(context.l10n.seriesSimilar),
         ),
         SizedBox(
           height: 214,
@@ -1915,11 +1940,14 @@ class _ChapterTile extends StatelessWidget {
     // elenco, spento: su una serie in corso è la normalità, non un difetto.
     final available = chapter.isReadable;
     final dim = read || !available;
+    final l10n = context.l10n;
     final subtitle = <String>[
-      if (!available) 'Non scaricato',
-      if (fromDrive) 'Su Drive',
-      if (chapter.archivedAt != null) _shortDate(chapter.archivedAt!),
-      if (available && chapter.pageCount > 0) '${chapter.pageCount} tavole',
+      if (!available) l10n.seriesChapterNotDownloaded,
+      if (fromDrive) l10n.seriesPlaceDrive,
+      if (chapter.archivedAt != null)
+        _shortDate(l10n, chapter.archivedAt!),
+      if (available && chapter.pageCount > 0)
+        l10n.seriesChapterPages(chapter.pageCount),
     ].join(' · ');
 
     return Padding(
@@ -1998,13 +2026,15 @@ class _ChapterTile extends StatelessWidget {
                 )
               else if (!selecting && onDownload != null)
                 _TileAction(
-                  label: 'Scarica sul telefono',
+                  label: context.l10n.seriesDownloadToPhone,
                   onTap: onDownload,
                   child: Icon(LucideIcons.download, size: 18, color: muted),
                 ),
               if (available && !selecting)
                 _TileAction(
-                  label: read ? 'Segna da leggere' : 'Segna letto',
+                  label: read
+                      ? context.l10n.seriesMarkUnread
+                      : context.l10n.seriesMarkRead,
                   onTap: onToggleRead,
                   child: Icon(
                     read ? LucideIcons.undo2 : LucideIcons.check,
@@ -2019,8 +2049,6 @@ class _ChapterTile extends StatelessWidget {
     );
   }
 
-  String _shortDate(DateTime value) {
-    final local = value.toLocal();
-    return '${local.day}/${local.month}/${local.year}';
-  }
+  String _shortDate(AppLocalizations l10n, DateTime value) =>
+      DateFormat.yMd(l10n.localeName).format(value.toLocal());
 }

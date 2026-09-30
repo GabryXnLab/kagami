@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- L'originale è values/strings.xml, in italiano; le altre lingue ne sono traduzioni, come lib/l10n/ per Dart. -->
+    <string name="channel_arrivals">Capitoli nuovi</string>
+    <string name="channel_arrivals_description">Un capitolo nuovo di una serie che segui è arrivato nella libreria.</string>
+    <string name="channel_invites">Server condivisi</string>
+    <string name="channel_invites_description">Qualcuno ti ha dato accesso al suo Kagami Server.</string>
+    <string name="archive_downloading">Download dei manga</string>
+    <string name="channel_archive_description">Le serie che Kagami sta scaricando dai siti.</string>
+    <string name="archive_checking">Controllo delle serie in corso</string>
+    <string name="channel_sync">Sincronizzazione</string>
+    <string name="channel_sync_description">La cartella del telefono e quella di Drive si stanno allineando.</string>
+    <string name="sync_title">Sincronizzazione con Drive</string>
+    <string name="sync_text">Kagami sta allineando la cartella dei manga</string>
+    <plurals name="arrivals_new">
+        <item quantity="one">È arrivato un capitolo nuovo</item>
+        <item quantity="other">Sono arrivati %d capitoli nuovi</item>
+    </plurals>
+</resources>

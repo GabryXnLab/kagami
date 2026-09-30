@@ -8,9 +8,11 @@ library;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/user_repository.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'library_screen.dart';
 import 'reader_screen.dart';
@@ -23,16 +25,17 @@ class HistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final library = ref.watch(libraryProvider);
     final history = ref.watch(historyProvider);
     final incognito = ref.watch(incognitoProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cronologia'),
+        title: Text(l10n.historyTitle),
         actions: [
           IconButton(
-            tooltip: incognito ? 'Incognito attivo' : 'Leggi in incognito',
+            tooltip: incognito ? l10n.historyIncognitoOn : l10n.historyIncognitoOff,
             onPressed: () => ref.read(incognitoProvider.notifier).toggle(),
             icon: Icon(
               incognito ? LucideIcons.eyeOff : LucideIcons.eye,
@@ -40,7 +43,7 @@ class HistoryScreen extends ConsumerWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Svuota',
+            tooltip: l10n.historyClear,
             onPressed: history.value?.isEmpty ?? true
                 ? null
                 : () => _confirmClear(context, ref),
@@ -53,14 +56,14 @@ class HistoryScreen extends ConsumerWidget {
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         AsyncError(:final error) => KEmpty(
             icon: LucideIcons.circleAlert,
-            title: 'Cronologia non leggibile',
+            title: l10n.historyUnreadable,
             message: '$error',
           ),
         AsyncData(:final value) when value.isEmpty || library == null =>
-          const KEmpty(
+          KEmpty(
             icon: LucideIcons.history,
-            title: 'Niente di letto, per ora',
-            message: 'Ogni capitolo finito comparirà qui con la sua data.',
+            title: l10n.historyEmptyTitle,
+            message: l10n.historyEmptyMessage,
           ),
         AsyncData(:final value) => _HistoryList(entries: value),
       },
@@ -73,7 +76,7 @@ class HistoryScreen extends ConsumerWidget {
   Future<void> _confirmClear(BuildContext context, WidgetRef ref) async {
     final confirmed = await showKagamiSheet<bool>(
       context,
-      title: 'Svuotare la cronologia?',
+      title: context.l10n.historyClearTitle,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
         child: Column(
@@ -81,14 +84,12 @@ class HistoryScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Le date di lettura e il tempo passato a leggere spariscono, e '
-              'con loro le statistiche che ne derivano. I capitoli tornano da '
-              'leggere.',
+              context.l10n.historyClearMessage,
               style: KagamiType.body(13.5, color: context.tokens.muted),
             ),
             const SizedBox(height: 22),
             KButton(
-              label: 'Svuota',
+              label: context.l10n.historyClear,
               icon: LucideIcons.trash2,
               expand: true,
               tone: context.tokens.danger,
@@ -122,8 +123,7 @@ class _IncognitoBanner extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'In incognito: posizione, capitoli finiti e tempo di lettura '
-                  'non vengono registrati.',
+                  context.l10n.historyIncognitoBanner,
                   style: KagamiType.body(12.5, color: context.tokens.muted),
                 ),
               ),
@@ -152,7 +152,7 @@ class _HistoryList extends StatelessWidget {
             slivers: [
               SliverPersistentHeader(
                 pinned: true,
-                delegate: _DayHeader(label: _dayLabel(day)),
+                delegate: _DayHeader(label: _dayLabel(context, day)),
               ),
               SliverList.builder(
                 itemCount: days[day]!.length,
@@ -166,41 +166,17 @@ class _HistoryList extends StatelessWidget {
     );
   }
 
-  String _dayLabel(DateTime day) {
+  String _dayLabel(BuildContext context, DateTime day) {
+    final l10n = context.l10n;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final difference = today.difference(day).inDays;
-    if (difference == 0) return 'Oggi';
-    if (difference == 1) return 'Ieri';
-    if (difference < 7) return _weekdays[day.weekday - 1];
-    return '${day.day} ${_months[day.month - 1]} ${day.year}';
+    if (difference == 0) return l10n.historyToday;
+    if (difference == 1) return l10n.historyYesterday;
+    if (difference < 7) return DateFormat.EEEE(l10n.localeName).format(day);
+    return DateFormat.yMMMMd(l10n.localeName).format(day);
   }
 }
-
-const List<String> _weekdays = [
-  'Lunedì',
-  'Martedì',
-  'Mercoledì',
-  'Giovedì',
-  'Venerdì',
-  'Sabato',
-  'Domenica',
-];
-
-const List<String> _months = [
-  'gennaio',
-  'febbraio',
-  'marzo',
-  'aprile',
-  'maggio',
-  'giugno',
-  'luglio',
-  'agosto',
-  'settembre',
-  'ottobre',
-  'novembre',
-  'dicembre',
-];
 
 class _DayHeader extends SliverPersistentHeaderDelegate {
   const _DayHeader({required this.label});
@@ -243,8 +219,7 @@ class _HistoryTile extends ConsumerWidget {
     final chapter =
         chapters?.chapters.firstWhereOrNull((row) => row.id == entry.chapterId);
     final local = entry.readAt.toLocal();
-    final time = '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}';
+    final time = DateFormat.Hm(context.l10n.localeName).format(local);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -286,7 +261,7 @@ class _HistoryTile extends ConsumerWidget {
             ),
             if (chapter != null && chapter.isReadable)
               IconButton(
-                tooltip: 'Rileggi',
+                tooltip: context.l10n.historyReread,
                 onPressed: () => openReader(
                   context,
                   seriesKey: entry.seriesKey,
@@ -295,7 +270,7 @@ class _HistoryTile extends ConsumerWidget {
                 icon: const Icon(LucideIcons.rotateCcw, size: 18),
               ),
             IconButton(
-              tooltip: 'Togli dalla cronologia',
+              tooltip: context.l10n.historyRemove,
               onPressed: () => ref
                   .read(readingProvider.notifier)
                   .setChapterRead(entry.seriesKey, entry.chapterId, false),

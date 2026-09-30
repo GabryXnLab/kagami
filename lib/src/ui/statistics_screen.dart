@@ -10,11 +10,13 @@ import 'package:collection/collection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/library_view.dart';
 import '../data/statistics.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'series_screen.dart';
 import 'widgets/charts.dart';
@@ -23,14 +25,19 @@ import 'widgets/kit.dart';
 /// Le finestre temporali della serie storica: una settimana non mostra una
 /// abitudine, dieci anni non mostrano un mese.
 enum StatsRange {
-  month('30 giorni', 30),
-  quarter('3 mesi', 90),
-  year('Un anno', 365);
+  month(30),
+  quarter(90),
+  year(365);
 
-  const StatsRange(this.label, this.days);
+  const StatsRange(this.days);
 
-  final String label;
   final int days;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        month => l10n.statsRangeMonth,
+        quarter => l10n.statsRangeQuarter,
+        year => l10n.statsRangeYear,
+      };
 }
 
 class StatisticsScreen extends ConsumerStatefulWidget {
@@ -49,12 +56,12 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
     final library = ref.watch(librarySignalsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistiche')),
+      appBar: AppBar(title: Text(context.l10n.statsTitle)),
       body: switch (statistics) {
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
         AsyncError(:final error) => KEmpty(
             icon: LucideIcons.circleAlert,
-            title: 'Statistiche non calcolabili',
+            title: context.l10n.statsUnavailable,
             message: '$error',
           ),
         AsyncData(:final value) => ListView(
@@ -89,6 +96,7 @@ class _Totals extends StatelessWidget {
         ? null
         : rated.fold<int>(0, (sum, s) => sum + s.state.rating!) / rated.length;
     final hours = statistics.timeRead.inMinutes / 60;
+    final l10n = context.l10n;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -102,29 +110,29 @@ class _Totals extends StatelessWidget {
         children: [
           StatTile(
             value: '${statistics.chaptersRead}',
-            label: 'capitoli letti',
+            label: l10n.statsChaptersRead,
           ),
-          StatTile(value: '${library.length}', label: 'serie in libreria'),
+          StatTile(value: '${library.length}', label: l10n.statsSeriesInLibrary),
           StatTile(
             value: hours < 1
-                ? '${statistics.timeRead.inMinutes} min'
-                : '${hours.round()} h',
-            label: 'tempo di lettura',
-            hint: 'misurato mentre leggi',
+                ? l10n.statsMinutes(statistics.timeRead.inMinutes)
+                : l10n.statsHours(hours.round()),
+            label: l10n.statsReadingTime,
+            hint: l10n.statsReadingTimeHint,
           ),
           StatTile(
             value: '${statistics.pagesRead}',
-            label: 'tavole viste',
+            label: l10n.statsPagesSeen,
           ),
           StatTile(
             value: '${statistics.streak}',
-            label: 'giorni di fila',
-            hint: 'record: ${statistics.longestStreak}',
+            label: l10n.statsStreak,
+            hint: l10n.statsStreakRecord(statistics.longestStreak),
           ),
           StatTile(
             value: average == null ? '—' : average.toStringAsFixed(1),
-            label: 'voto medio',
-            hint: '${rated.length} serie votate',
+            label: l10n.statsAverageRating,
+            hint: l10n.statsRatedSeries(rated.length),
           ),
         ],
       ),
@@ -165,15 +173,17 @@ class _ChaptersOverTime extends StatelessWidget {
         points.fold<int>(1, (top, row) => row.value > top ? row.value : top);
 
     return ChartCard(
-      title: 'Capitoli letti',
-      subtitle: weekly ? 'per settimana' : 'per giorno',
+      title: context.l10n.statsChaptersOverTime,
+      subtitle: weekly
+          ? context.l10n.statsPerWeek
+          : context.l10n.statsPerDay,
       height: 180,
       // Le tre finestre stanno tutte su una riga: nasconderle in un menù
       // significherebbe non guardarle mai.
       trailing: SizedBox(
         width: 168,
         child: KSegmented(
-          options: [for (final value in StatsRange.values) value.label],
+          options: [for (final value in StatsRange.values) value.label(context.l10n)],
           index: range.index,
           onChanged: (index) => onRange(StatsRange.values[index]),
         ),
@@ -223,7 +233,7 @@ class _ChaptersOverTime extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            '${day.day}/${day.month}',
+                            DateFormat.Md(context.l10n.localeName).format(day),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -263,8 +273,8 @@ class _Activity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChartCard(
-        title: 'Quando leggi',
-        subtitle: 'un quadratino per giorno, negli ultimi sei mesi',
+        title: context.l10n.statsActivityTitle,
+        subtitle: context.l10n.statsActivitySubtitle,
         height: 116,
         child: ActivityCalendar(perDay: statistics.perDay, days: 182),
       );
@@ -294,7 +304,7 @@ class _ShelfPie extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ChartCard(
-          title: 'La libreria per stato',
+          title: context.l10n.statsShelfTitle,
           height: 180,
           child: PieChart(
             PieChartData(
@@ -358,7 +368,7 @@ class _GenrePie extends StatelessWidget {
     final rest = ranked.skip(5).fold<int>(0, (sum, row) => sum + row.value);
     final slices = <(String, int)>[
       for (final row in top) (row.key, row.value),
-      if (rest > 0) ('Altri ${ranked.length - 5}', rest),
+      if (rest > 0) (context.l10n.statsGenreOthers(ranked.length - 5), rest),
     ];
     final total = slices.fold<int>(0, (sum, row) => sum + row.$2);
 
@@ -366,8 +376,8 @@ class _GenrePie extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ChartCard(
-          title: 'Generi che leggi',
-          subtitle: 'sulle serie che hai iniziato',
+          title: context.l10n.statsGenresTitle,
+          subtitle: context.l10n.statsGenresSubtitle,
           height: 180,
           child: PieChart(
             PieChartData(
@@ -421,8 +431,8 @@ class _Ratings extends StatelessWidget {
     final highest = counts.reduce((a, b) => a > b ? a : b);
 
     return ChartCard(
-      title: 'Come voti',
-      subtitle: 'quante serie per ogni voto',
+      title: context.l10n.statsRatingsTitle,
+      subtitle: context.l10n.statsRatingsSubtitle,
       height: 160,
       child: BarChart(
         BarChartData(
@@ -489,7 +499,7 @@ class _TopSeries extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Serie più lette', style: theme.textTheme.titleSmall),
+          Text(context.l10n.statsTopSeries, style: theme.textTheme.titleSmall),
           const SizedBox(height: 10),
           for (final (key, chapters) in statistics.topSeries)
             Padding(
@@ -550,6 +560,7 @@ class _LibraryShape extends StatelessWidget {
     final bytes = library.fold<int>(0, (sum, s) => sum + s.entry.bytes);
     final missing =
         library.fold<int>(0, (sum, s) => sum + s.entry.missingChapterCount);
+    final l10n = context.l10n;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -557,7 +568,7 @@ class _LibraryShape extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Com\'è fatta la libreria',
+            context.l10n.statsShapeTitle,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 10),
@@ -569,18 +580,16 @@ class _LibraryShape extends StatelessWidget {
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
             children: [
-              StatTile(value: '$chapters', label: 'capitoli sincronizzati'),
-              StatTile(value: '$unread', label: 'ancora da leggere'),
+              StatTile(value: '$chapters', label: l10n.statsSyncedChapters),
+              StatTile(value: '$unread', label: l10n.statsStillUnread),
               StatTile(
                 value: '$ongoing',
-                label: 'serie in corso',
-                hint: missing == 0
-                    ? null
-                    : '$missing capitoli annunciati e non scaricati',
+                label: l10n.statsOngoingSeries,
+                hint: missing == 0 ? null : l10n.statsAnnouncedMissing(missing),
               ),
               StatTile(
                 value: '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
-                label: 'occupati sul telefono',
+                label: l10n.statsBytesOnPhone,
               ),
             ],
           ),
@@ -598,8 +607,7 @@ class _NoHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
         child: Text(
-          'Niente di letto in questo periodo. La cronologia parte da quando '
-          'l\'app ha cominciato a registrarla.',
+          context.l10n.statsNoHistory,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,

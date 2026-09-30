@@ -104,10 +104,10 @@ class FolderSyncWorker(context: Context, parameters: WorkerParameters) :
             manager.createNotificationChannel(
                 NotificationChannel(
                     NOTIFICATION_CHANNEL,
-                    "Sincronizzazione",
+                    applicationContext.getString(R.string.channel_sync),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = "La cartella del telefono e quella di Drive si stanno allineando."
+                    description = applicationContext.getString(R.string.channel_sync_description)
                 },
             )
             Notification.Builder(applicationContext, NOTIFICATION_CHANNEL)
@@ -117,8 +117,8 @@ class FolderSyncWorker(context: Context, parameters: WorkerParameters) :
         }
         val notification = builder
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Sincronizzazione con Drive")
-            .setContentText("Kagami sta allineando la cartella dei manga")
+            .setContentTitle(applicationContext.getString(R.string.sync_title))
+            .setContentText(applicationContext.getString(R.string.sync_text))
             .setOngoing(true)
             .build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

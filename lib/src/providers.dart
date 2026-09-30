@@ -38,6 +38,7 @@ import 'data/server_access.dart';
 import 'data/statistics.dart';
 import 'data/user_repository.dart';
 import 'format/malf.dart';
+import 'l10n.dart';
 import 'format/reading.dart';
 
 final libraryLocationProvider = FutureProvider<LibraryLocation>(
@@ -359,12 +360,12 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
     final files = ref.read(driveFilesProvider);
     final entry = ref.read(seriesEntryProvider(seriesKey));
     if (drive == null || files == null || entry == null) {
-      throw const DriveException('Drive non è collegato');
+      throw DriveException(currentL10n().dataDriveNotLinked);
     }
     final index = await drive.loadSeries(entry);
     final chapter = index?.chapters.firstWhereOrNull((row) => row.id == chapterId);
     final pages = (await drive.loadPages(entry))?.of(chapterId) ?? const [];
-    if (chapter == null) throw const DriveException('Capitolo non trovato su Drive');
+    if (chapter == null) throw DriveException(currentL10n().dataChapterNotOnDrive);
     await ChapterDownloader(drive, files).download(
       destination: destination,
       entry: entry,
@@ -1454,7 +1455,7 @@ class FolderSyncRun extends Notifier<FolderSyncStatus> {
       );
       state = FolderSyncStatus(
         last: report ?? state.last,
-        message: report == null ? 'Manca la cartella o la direzione' : null,
+        message: report == null ? currentL10n().dataSyncMissingFolderOrDirection : null,
       );
       // Quello che è sceso cambia la libreria: capitoli nuovi sul telefono,
       // indici più recenti.
@@ -1494,6 +1495,30 @@ class ThemeChoice extends AsyncNotifier<ThemeMode> {
 
 final themeModeProvider =
     AsyncNotifierProvider<ThemeChoice, ThemeMode>(ThemeChoice.new);
+
+/// La lingua dell'interfaccia; `null` segue quella del sistema. Sta fra le
+/// impostazioni del database, quindi segue il lettore su un telefono nuovo.
+class AppLanguage extends AsyncNotifier<Locale?> {
+  static const String _key = 'app.locale';
+
+  @override
+  Future<Locale?> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    return AppLocalizations.supportedLocales
+        .where((locale) => locale.languageCode == value)
+        .firstOrNull;
+  }
+
+  Future<void> set(Locale? locale) async {
+    state = AsyncData(locale);
+    await ref
+        .read(userRepositoryProvider)
+        .writeSetting(_key, locale?.languageCode ?? '');
+  }
+}
+
+final appLanguageProvider =
+    AsyncNotifierProvider<AppLanguage, Locale?>(AppLanguage.new);
 
 /// Le statistiche, ricalcolate quando la cronologia cambia.
 final statisticsProvider = FutureProvider<ReadingStatistics>((ref) async {
@@ -1723,8 +1748,8 @@ Future<void> announceServerInvites(UserRepository user, List<ServerInvite> invit
   for (final invite in fresh) {
     await ArrivalNotifications.instance.invite(
       invite.id,
-      title: '${invite.sender} ti ha dato accesso al suo server',
-      text: 'Collega «${invite.serverName}» e scaricherà i manga sul tuo Drive, anche a telefono spento.',
+      title: currentL10n().dataServerInviteTitle(invite.sender),
+      text: currentL10n().dataServerInviteText(invite.serverName),
     );
   }
   await user.writeSetting(key, {...seen, for (final invite in fresh) invite.id}.join(','));
@@ -1797,7 +1822,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     // permessi si rileggono da capo.
     final email = ref.watch(cloudAccountProvider.select((status) => status.account?.email));
     if (email == null) {
-      return RemoteArchiveView(link: link, error: 'Fai l\'accesso con Google per usare il server.', unauthorized: true);
+      return RemoteArchiveView(link: link, error: currentL10n().dataServerSignInRequired, unauthorized: true);
     }
     final client = _client = serverClient(ref, link);
     _tick = 0;
@@ -1849,7 +1874,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     }
   }
 
-  ServerClient get _live => _client ?? (throw ServerException(state.error ?? 'Nessun server collegato.'));
+  ServerClient get _live => _client ?? (throw ServerException(state.error ?? currentL10n().dataServerNotLinked));
 
   Future<RemoteJob> enqueue({
     required String url,
@@ -1909,8 +1934,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
           .read(serverAccessProvider)
           .invite(to: user.email, url: link.url, serverName: state.info?.name ?? 'Kagami Server');
     } on FirebaseException {
-      throw ServerException('${user.email} può usare il server, ma non sono riuscito ad avvisarlo: '
-          'mandagli tu l\'indirizzo ${link.url}.');
+      throw ServerException(currentL10n().dataServerUserNotNotified(user.email, link.url.toString()));
     }
   }
 

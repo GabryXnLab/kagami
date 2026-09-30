@@ -14,6 +14,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n.dart';
+
 const String _libraryKey = 'library.root';
 
 class LibraryLocation {
@@ -37,7 +39,7 @@ class LibraryLocation {
   /// Chiede la cartella all'utente. Restituisce `null` se annulla.
   Future<String?> choose() async {
     final chosen = await FilePicker.getDirectoryPath(
-      dialogTitle: 'Scegli la cartella della libreria manga',
+      dialogTitle: currentL10n().dataPickLibraryFolderTitle,
     );
     if (chosen == null) return null;
     await setRoot(chosen);

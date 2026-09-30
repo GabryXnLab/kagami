@@ -49,6 +49,10 @@ motivi per cui sono state prese.
 
 Flutter 3.47 / Dart 3.13, gestione pacchetti `flutter pub` (mai `dart pub` qui).
 
+Interfaccia in nove lingue con `flutter_localizations` e `gen-l10n` (`l10n.yaml`):
+i testi stanno in `lib/l10n/app_<lingua>.arb`, il codice `app_localizations*.dart`
+lì accanto è generato da `flutter gen-l10n` (o `flutter pub get`) e va nel commit.
+
 Stato con `flutter_riverpod` 3 — niente `StateProvider`, che nella 3 è legacy:
 si usano `Notifier` e `NotifierProvider`. Interfaccia Material 3 vestita con un
 kit di componenti proprio (`lib/src/ui/widgets/kit.dart`), carattere **Figtree**
@@ -166,6 +170,8 @@ server/                        Kagami Server, Dart puro (`dart compile exe`)
   lib/src/config.dart, server.dart  cartella dei dati, `KAGAMI_SETUP`, impostazioni, accensione
   test/                        firme vere con una chiave di prova, Google finto, API e client sul loopback, giro
   Dockerfile, docker-compose.yml  immagine con libvips; il target `test` fa girare anche i test di vips
+lib/l10n/                      testi dell'interfaccia: app_it.arb l'originale, le altre lingue tradotte (+ generati)
+lib/src/l10n.dart              `context.l10n`, `currentL10n()` fuori dai widget, nomi delle lingue
 fonts/                         Figtree, il carattere dell'interfaccia
 assets/providers/              icone dei siti da cui si archivia (`Provider.icon`)
 test_driver/app.dart           l'app con Flutter Driver acceso, per l'MCP di Dart sull'emulatore
@@ -537,6 +543,19 @@ nel proprio progetto Firebase.
   in ordine fisso, controllate per chi non distingue i colori come la
   maggioranza su entrambe le superfici. L'ordine non si cicla e nessun grafico
   affida l'identità al solo colore: accanto ci sono legenda e valori.
+- **I testi sono in `app_it.arb`, le altre lingue lo seguono.** Un testo
+  nuovo si scrive in italiano in `app_it.arb`, con una `description` che dica
+  dove compare (chi traduce non vede lo schermo), e si traduce negli altri
+  `app_<lingua>.arb`; finché manca, quella lingua mostra l'italiano. Frasi
+  intere con segnaposto e plurali ICU, mai pezzi concatenati: l'ordine delle
+  parole cambia fra le lingue. Date e ore da `DateFormat` col locale, mai
+  nomi di mesi scritti a mano. Dove non c'è un `BuildContext` (eccezioni,
+  etichette degli enum, notifiche) si usa `currentL10n()`, che legge la lingua
+  scelta (`app.locale` fra le impostazioni del database, vuota per quella del
+  sistema). Il Kotlin ha i suoi testi in `res/values*/strings.xml` e, da
+  Android 13, la lingua gliela passa Dart (`kagami/locale`) perché valga ad
+  app chiusa. I messaggi del motore (`packages/kagami_archive/`) restano in
+  italiano: li produce anche il server, che una lingua non ce l'ha.
 
 ## Convenzioni
 

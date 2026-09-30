@@ -16,6 +16,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../data/library_view.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 import 'library_screen.dart';
@@ -35,6 +36,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final library = ref.watch(libraryProvider);
     final all = ref.watch(librarySignalsProvider);
+    final l10n = context.l10n;
     if (library == null) return const SizedBox.shrink();
 
     final resume = all.where((s) => s.isStarted && s.hasUnread).sorted(
@@ -74,11 +76,10 @@ class HomeScreen extends ConsumerWidget {
               _Greeting(library: all),
               const LibraryNotices(),
               if (all.isEmpty)
-                const KEmpty(
+                KEmpty(
                   icon: LucideIcons.bookOpen,
-                  title: 'Libreria vuota',
-                  message: 'Niente da sfogliare: la cartella non contiene '
-                      'ancora nessuna serie.',
+                  title: l10n.homeEmptyTitle,
+                  message: l10n.homeEmptyMessage,
                 )
               else ...[
                 Entrance(child: _StatsStrip(library: all)),
@@ -97,31 +98,30 @@ class HomeScreen extends ConsumerWidget {
                   Entrance(
                     index: 3,
                     child:
-                        _Shelf(title: 'Da iniziare', series: start),
+                        _Shelf(title: l10n.homeToStart, series: start),
                   ),
                 if (similar.isNotEmpty)
                   _Shelf(
-                    title: 'Perché leggi quello che leggi',
-                    subtitle: 'Non ancora aperte, con i generi che ti tornano',
+                    title: l10n.homeSimilarTitle,
+                    subtitle: l10n.homeSimilarSubtitle,
                     series: similar,
                   ),
                 if (added.isNotEmpty)
                   _Shelf(
-                    title: 'Arrivate di recente',
+                    title: l10n.homeRecentlyArrived,
                     series: added,
                   ),
                 if (abandoned.isNotEmpty)
                   _Shelf(
-                    title: 'Lasciate a metà',
-                    subtitle: 'In pausa e abbandonate',
+                    title: l10n.homeLeftHalfway,
+                    subtitle: l10n.homeLeftHalfwaySubtitle,
                     series: abandoned,
                   ),
                 if (resume.isEmpty && updates.isEmpty && start.isEmpty)
-                  const KEmpty(
+                  KEmpty(
                     icon: LucideIcons.circleCheck,
-                    title: 'Sei in pari',
-                    message: 'Con tutto quello che è sincronizzato. Il prossimo '
-                        'capitolo arriverà con la cartella.',
+                    title: l10n.homeCaughtUpTitle,
+                    message: l10n.homeCaughtUpMessage,
                   ),
               ],
             ],
@@ -172,7 +172,9 @@ class _Greeting extends ConsumerWidget {
   final List<SeriesSignals> library;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Padding(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return Padding(
         padding: const EdgeInsets.fromLTRB(20, 14, 12, 18),
         child: Row(
           children: [
@@ -181,7 +183,7 @@ class _Greeting extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _partOfDay(),
+                    _partOfDay(l10n),
                     style:
                         KagamiType.overline(color: context.tokens.muted),
                   ),
@@ -191,7 +193,7 @@ class _Greeting extends ConsumerWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Una a caso',
+              tooltip: l10n.homeRandomSeries,
               onPressed: library.isEmpty
                   ? null
                   : () => openSeries(
@@ -201,7 +203,7 @@ class _Greeting extends ConsumerWidget {
               icon: const Icon(LucideIcons.dices),
             ),
             IconButton(
-              tooltip: 'Rileggi la libreria',
+              tooltip: l10n.homeReloadLibrary,
               onPressed: () {
                 reloadLibrary(ref);
                 ref.invalidate(readingProvider);
@@ -211,13 +213,14 @@ class _Greeting extends ConsumerWidget {
           ],
         ),
       );
+  }
 
-  static String _partOfDay() {
+  static String _partOfDay(AppLocalizations l10n) {
     final hour = DateTime.now().hour;
-    if (hour < 5) return 'Notte fonda';
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+    if (hour < 5) return l10n.homeGreetingNight;
+    if (hour < 12) return l10n.homeGreetingMorning;
+    if (hour < 18) return l10n.homeGreetingAfternoon;
+    return l10n.homeGreetingEvening;
   }
 }
 
@@ -232,6 +235,7 @@ class _StatsStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statistics = ref.watch(statisticsProvider).value;
     if (statistics == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
     final unread = library.fold<int>(0, (sum, s) => sum + s.unreadCount);
     void open() => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const StatisticsScreen()),
@@ -244,9 +248,9 @@ class _StatsStrip extends ConsumerWidget {
           Expanded(
             child: KStatCard(
               icon: LucideIcons.bookCheck,
-              label: 'Letti',
+              label: l10n.homeStatRead,
               value: '${statistics.chaptersRead}',
-              caption: 'capitoli in tutto',
+              caption: l10n.homeStatReadCaption,
               onTap: open,
             ),
           ),
@@ -254,9 +258,9 @@ class _StatsStrip extends ConsumerWidget {
           Expanded(
             child: KStatCard(
               icon: LucideIcons.layers,
-              label: 'Da leggere',
+              label: l10n.homeStatUnread,
               value: '$unread',
-              caption: 'sul telefono',
+              caption: l10n.homeStatUnreadCaption,
               onTap: open,
             ),
           ),
@@ -264,9 +268,9 @@ class _StatsStrip extends ConsumerWidget {
           Expanded(
             child: KStatCard(
               icon: LucideIcons.flame,
-              label: 'Di fila',
+              label: l10n.homeStatStreak,
               value: '${statistics.streak}',
-              caption: statistics.streak == 1 ? 'giorno' : 'giorni',
+              caption: l10n.homeStatStreakCaption(statistics.streak),
               tint: statistics.streak > 0 ? context.tokens.warning : null,
               onTap: open,
             ),
@@ -288,7 +292,7 @@ class _ResumeRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionTitle('Riprendi'),
+          _SectionTitle(context.l10n.homeResume),
           SizedBox(
             height: 150,
             child: ListView.separated(
@@ -352,7 +356,7 @@ class _ResumeCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      target?.label() ?? 'Capitolo successivo',
+                      target?.label() ?? context.l10n.homeNextChapter,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: KagamiType.body(12.5, color: muted),
@@ -363,7 +367,7 @@ class _ResumeCard extends ConsumerWidget {
                     ],
                     const SizedBox(height: 11),
                     KButton(
-                      label: 'Leggi',
+                      label: context.l10n.homeRead,
                       icon: LucideIcons.play,
                       height: 38,
                       onPressed: target == null
@@ -412,9 +416,9 @@ class _UpdatesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle(
-          'Aggiornamenti',
-          subtitle: 'Capitoli sincronizzati e non ancora letti',
+        _SectionTitle(
+          context.l10n.homeUpdates,
+          subtitle: context.l10n.homeUpdatesSubtitle,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -463,8 +467,10 @@ class _UpdatesSection extends StatelessWidget {
                                   [
                                     if (signals.entry.latestChapterNumber !=
                                         null)
-                                      'cap. ${signals.entry.latestChapterNumber}',
-                                    _ago(signals.freshness),
+                                      context.l10n.homeLatestChapter(
+                                        signals.entry.latestChapterNumber!,
+                                      ),
+                                    _ago(context.l10n, signals.freshness),
                                   ].join(' · '),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -512,14 +518,14 @@ class _UpdatesSection extends StatelessWidget {
   }
 
   /// Quanto tempo fa, in parole: una data esatta qui non dice niente.
-  static String _ago(DateTime when) {
+  static String _ago(AppLocalizations l10n, DateTime when) {
     final days = DateTime.now().toUtc().difference(when).inDays;
-    if (days <= 0) return 'oggi';
-    if (days == 1) return 'ieri';
-    if (days < 7) return '$days giorni fa';
-    if (days < 30) return '${days ~/ 7} settimane fa';
-    if (days < 365) return '${days ~/ 30} mesi fa';
-    return '${days ~/ 365} anni fa';
+    if (days <= 0) return l10n.homeAgoToday;
+    if (days == 1) return l10n.homeAgoYesterday;
+    if (days < 7) return l10n.homeAgoDays(days);
+    if (days < 30) return l10n.homeAgoWeeks(days ~/ 7);
+    if (days < 365) return l10n.homeAgoMonths(days ~/ 30);
+    return l10n.homeAgoYears(days ~/ 365);
   }
 }
 

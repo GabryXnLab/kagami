@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_arrivals">Nouveaux chapitres</string>
+    <string name="channel_arrivals_description">Un nouveau chapitre d’une série que vous suivez est arrivé dans la bibliothèque.</string>
+    <string name="channel_invites">Serveurs partagés</string>
+    <string name="channel_invites_description">Quelqu’un vous a donné accès à son Kagami Server.</string>
+    <string name="archive_downloading">Téléchargements de mangas</string>
+    <string name="channel_archive_description">Les séries que Kagami télécharge depuis les sites.</string>
+    <string name="archive_checking">Vérification des séries en cours</string>
+    <string name="channel_sync">Synchronisation</string>
+    <string name="channel_sync_description">Le dossier du téléphone et celui de Drive sont en cours d’alignement.</string>
+    <string name="sync_title">Synchronisation avec Drive</string>
+    <string name="sync_text">Kagami synchronise le dossier des mangas</string>
+    <plurals name="arrivals_new">
+        <item quantity="one">Un nouveau chapitre est arrivé</item>
+        <item quantity="other">%d nouveaux chapitres sont arrivés</item>
+    </plurals>
+</resources>

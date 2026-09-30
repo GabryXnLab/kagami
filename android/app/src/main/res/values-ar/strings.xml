@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_arrivals">فصول جديدة</string>
+    <string name="channel_arrivals_description">وصل إلى المكتبة فصل جديد من سلسلة تتابعها.</string>
+    <string name="channel_invites">خوادم مشتركة</string>
+    <string name="channel_invites_description">منحك أحدهم حق الوصول إلى Kagami Server الخاص به.</string>
+    <string name="archive_downloading">تنزيلات المانغا</string>
+    <string name="channel_archive_description">السلاسل التي يقوم Kagami بتنزيلها من المواقع.</string>
+    <string name="archive_checking">جارٍ التحقق من السلاسل المستمرة</string>
+    <string name="channel_sync">المزامنة</string>
+    <string name="channel_sync_description">تجري مواءمة مجلد الهاتف مع مجلد Drive.</string>
+    <string name="sync_title">جارٍ المزامنة مع Drive</string>
+    <string name="sync_text">يقوم Kagami بمزامنة مجلد المانغا</string>
+    <plurals name="arrivals_new">
+        <item quantity="zero">لا فصول جديدة</item>
+        <item quantity="one">وصل فصل جديد</item>
+        <item quantity="two">وصل فصلان جديدان</item>
+        <item quantity="few">وصلت %d فصول جديدة</item>
+        <item quantity="many">وصل %d فصلًا جديدًا</item>
+        <item quantity="other">وصل %d فصل جديد</item>
+    </plurals>
+</resources>

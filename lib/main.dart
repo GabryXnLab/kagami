@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -12,6 +14,7 @@ import 'src/data/folder_sync_schedule.dart';
 import 'src/data/library_location.dart';
 import 'src/data/network.dart';
 import 'src/data/notifications.dart';
+import 'src/l10n.dart';
 import 'src/providers.dart';
 import 'src/ui/app_shell.dart';
 import 'src/ui/theme.dart';
@@ -72,6 +75,8 @@ Future<void> archiveCheckMain() async {
   await _withSentry(() => runBackgroundArchive(check: true));
 }
 
+const _localeChannel = MethodChannel('kagami/locale');
+
 class KagamiApp extends ConsumerStatefulWidget {
   const KagamiApp({super.key});
 
@@ -97,6 +102,18 @@ class _KagamiAppState extends ConsumerState<KagamiApp> {
   @override
   Widget build(BuildContext context) {
     final mode = ref.watch(themeModeProvider).value ?? ThemeMode.dark;
+    final locale = ref.watch(appLanguageProvider).value;
+    appLocale = locale;
+    // La lingua arriva anche da un backup o dall'account, non solo dalle
+    // impostazioni: la si dice ad Android ogni volta che cambia, per le
+    // notifiche scritte dal Kotlin.
+    ref.listen(appLanguageProvider, (_, next) {
+      if (!Platform.isAndroid || !next.hasValue) return;
+      _localeChannel.invokeMethod<void>(
+        'set',
+        next.value?.toLanguageTag() ?? '',
+      );
+    });
     return DynamicColorBuilder(
       builder: (light, dark) => MaterialApp(
         title: 'Kagami',
@@ -104,6 +121,9 @@ class _KagamiAppState extends ConsumerState<KagamiApp> {
         theme: kagamiTheme(Brightness.light, light?.primary),
         darkTheme: kagamiTheme(Brightness.dark, dark?.primary),
         themeMode: mode,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const AppShell(),
       ),
     );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../l10n.dart';
 import '../../providers.dart';
 import '../theme.dart';
 import 'kit.dart';
@@ -29,13 +30,13 @@ Future<void> showCollectionSheet(
     showKagamiSheet<void>(
       context,
       title: seriesKeys.length == 1
-          ? 'Raccolte'
-          : 'Raccolte di ${seriesKeys.length} serie',
+          ? context.l10n.collectionSheetTitle
+          : context.l10n.collectionSheetTitleMany(seriesKeys.length),
       scrollable: true,
       action: Consumer(
         builder: (context, ref, _) => TextButton(
           onPressed: () => askForCollection(context, ref),
-          child: const Text('Nuova'),
+          child: Text(context.l10n.collectionSheetNew),
         ),
       ),
       builder: (context) => _CollectionSheet(seriesKeys: seriesKeys),
@@ -51,11 +52,11 @@ class _CollectionSheet extends ConsumerWidget {
     final collections = ref.watch(collectionsProvider);
     final reading = ref.read(readingProvider.notifier);
     if (collections.isEmpty) {
-      return const KEmpty(
+      return KEmpty(
         icon: LucideIcons.listPlus,
         compact: true,
-        title: 'Nessuna raccolta',
-        message: 'Servono a dare struttura a una libreria che cresce da sola.',
+        title: context.l10n.collectionSheetEmptyTitle,
+        message: context.l10n.collectionSheetEmptyMessage,
       );
     }
     return ListView(
@@ -72,7 +73,7 @@ class _CollectionSheet extends ConsumerWidget {
                     ? null
                     : Color(collection.color!),
                 title: collection.name,
-                subtitle: '${collection.seriesKeys.length} serie',
+                subtitle: context.l10n.collectionSheetSeriesCount(collection.seriesKeys.length),
                 onTap: () async {
                   for (final key in seriesKeys) {
                     await reading.setSeriesInCollection(
@@ -108,7 +109,9 @@ Future<void> askForCollection(
   var chosen = color ?? collectionColors.first;
   final confirmed = await showKagamiSheet<bool>(
     context,
-    title: id == null ? 'Nuova raccolta' : 'Modifica raccolta',
+    title: id == null
+        ? context.l10n.collectionSheetCreateTitle
+        : context.l10n.collectionSheetEditTitle,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
@@ -120,10 +123,10 @@ Future<void> askForCollection(
               controller: controller,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Nome'),
+              decoration: InputDecoration(hintText: context.l10n.collectionSheetNameHint),
             ),
             const SizedBox(height: 22),
-            const KSection('Colore'),
+            KSection(context.l10n.collectionSheetColor),
             Row(
               children: [
                 for (final value in collectionColors)
@@ -151,7 +154,9 @@ Future<void> askForCollection(
             ),
             const SizedBox(height: 24),
             KButton(
-              label: id == null ? 'Crea' : 'Salva',
+              label: id == null
+                  ? context.l10n.collectionSheetCreate
+                  : context.l10n.collectionSheetSave,
               expand: true,
               onPressed: () => Navigator.of(context).pop(true),
             ),

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="channel_arrivals">新章节</string>
+    <string name="channel_arrivals_description">你关注的系列有新章节加入了书库。</string>
+    <string name="channel_invites">共享服务器</string>
+    <string name="channel_invites_description">有人让你使用他的 Kagami Server。</string>
+    <string name="archive_downloading">漫画下载</string>
+    <string name="channel_archive_description">Kagami 正在从网站下载的系列。</string>
+    <string name="archive_checking">正在检查连载中的系列</string>
+    <string name="channel_sync">同步</string>
+    <string name="channel_sync_description">正在对齐手机文件夹和 Drive 文件夹。</string>
+    <string name="sync_title">正在与 Drive 同步</string>
+    <string name="sync_text">Kagami 正在同步漫画文件夹</string>
+    <plurals name="arrivals_new">
+        <item quantity="other">有 %d 个新章节</item>
+    </plurals>
+</resources>

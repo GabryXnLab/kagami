@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/notifications.dart';
+import '../l10n.dart';
 import '../providers.dart';
 import 'archive_screen.dart';
 import 'collections_screen.dart';
@@ -129,10 +130,10 @@ class _AppShellState extends ConsumerState<AppShell>
         return Scaffold(
           body: KEmpty(
             icon: LucideIcons.databaseZap,
-            title: 'Dati dell\'app non leggibili',
+            title: context.l10n.shellDataUnreadableTitle,
             message: '$error',
             action: KButton(
-              label: 'Riprova',
+              label: context.l10n.shellRetry,
               icon: LucideIcons.refreshCw,
               onPressed: () => ref.invalidate(driveFolderProvider),
             ),
@@ -325,11 +326,11 @@ Widget _screenOf(ShellTab tab) => switch (tab) {
       ShellTab.more => const MoreScreen(),
     };
 
-const List<({IconData icon, String label})> _destinations = [
-  (icon: LucideIcons.house, label: 'Home'),
-  (icon: LucideIcons.libraryBig, label: 'Libreria'),
-  (icon: LucideIcons.bookmark, label: 'Raccolte'),
-  (icon: LucideIcons.ellipsis, label: 'Altro'),
+List<({IconData icon, String label})> _destinations(AppLocalizations l10n) => [
+  (icon: LucideIcons.house, label: l10n.shellTabHome),
+  (icon: LucideIcons.libraryBig, label: l10n.shellTabLibrary),
+  (icon: LucideIcons.bookmark, label: l10n.shellTabCollections),
+  (icon: LucideIcons.ellipsis, label: l10n.shellTabMore),
 ];
 
 /// La barra sospesa: una pastiglia che galleggia sul contenuto. L'etichetta
@@ -344,6 +345,7 @@ class _NavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = context.colors;
+    final destinations = _destinations(context.l10n);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
@@ -361,10 +363,10 @@ class _NavBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (var i = 0; i < _destinations.length; i++)
+          for (var i = 0; i < destinations.length; i++)
             _NavItem(
-              icon: _destinations[i].icon,
-              label: _destinations[i].label,
+              icon: destinations[i].icon,
+              label: destinations[i].label,
               selected: i == index,
               onTap: () {
                 HapticFeedback.selectionClick();

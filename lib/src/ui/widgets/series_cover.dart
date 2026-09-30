@@ -14,6 +14,7 @@ import '../../data/library.dart';
 import '../../data/network.dart';
 import '../../data/library_view.dart';
 import '../../format/malf.dart';
+import '../../l10n.dart';
 import '../../providers.dart';
 import '../theme.dart';
 import 'kit.dart';
@@ -340,7 +341,7 @@ class SeriesCover extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            _subtitle(),
+            _subtitle(context.l10n),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: KagamiType.label(size: 11, color: context.tokens.muted),
@@ -350,11 +351,15 @@ class SeriesCover extends StatelessWidget {
     );
   }
 
-  String _subtitle() {
+  String _subtitle(AppLocalizations l10n) {
     final entry = signals.entry;
-    if (entry.archivedChapterCount == 0) return 'Nessun capitolo scaricato';
-    final chapters = '${entry.archivedChapterCount} cap.';
-    return signals.hasUnread ? '$chapters · ${signals.unreadCount} da leggere' : chapters;
+    if (entry.archivedChapterCount == 0) return l10n.coverNoChapters;
+    return signals.hasUnread
+        ? l10n.coverChaptersUnread(
+            entry.archivedChapterCount,
+            signals.unreadCount,
+          )
+        : l10n.coverChapters(entry.archivedChapterCount);
   }
 }
 
@@ -371,7 +376,7 @@ class NewChaptersDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.colors;
     return Semantics(
-      label: count == 1 ? '1 capitolo nuovo' : '$count capitoli nuovi',
+      label: context.l10n.coverNewChapters(count),
       child: Container(
         constraints: BoxConstraints(minWidth: size, minHeight: size),
         padding: EdgeInsets.symmetric(horizontal: size * 0.25),
@@ -405,11 +410,9 @@ class _UnreadBadge extends StatelessWidget {
     final unread = signals.unreadCount;
     final fresh = signals.newChapters;
     return Semantics(
-      label: [
-        unread == 1 ? '1 capitolo da leggere' : '$unread capitoli da leggere',
-        if (fresh == 1) 'di cui 1 nuovo',
-        if (fresh > 1) 'di cui $fresh nuovi',
-      ].join(', '),
+      label: fresh > 0
+          ? context.l10n.coverUnreadFresh(unread, fresh)
+          : context.l10n.coverUnread(unread),
       excludeSemantics: true,
       child: _Pill(
         background: fresh > 0

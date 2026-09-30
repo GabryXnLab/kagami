@@ -9,7 +9,9 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../l10n.dart';
 import '../theme.dart';
 
 /// Tinte per i dati divisi in categorie, nell'ordine in cui si usano.
@@ -241,8 +243,13 @@ class ActivityCalendar extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: 3),
                               child: Tooltip(
                                 message: count == 0
-                                    ? '${date.day}/${date.month}: niente'
-                                    : '${date.day}/${date.month}: $count capitoli',
+                                    ? context.l10n.chartsDayNothing(
+                                        DateFormat.Md(context.l10n.localeName)
+                                            .format(date))
+                                    : context.l10n.chartsDayChapters(
+                                        DateFormat.Md(context.l10n.localeName)
+                                            .format(date),
+                                        count),
                                 child: Container(
                                   width: cell,
                                   height: cell,

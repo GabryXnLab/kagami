@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n.dart';
 import 'arrivals.dart';
 
 /// Dove Dart e `LibraryWatchWorker.kt` si passano le consegne: le serie da
@@ -98,9 +99,7 @@ class ArrivalNotifications {
       await channel.invokeMethod<void>('show', {
         'key': alert.entry.key,
         'title': alert.entry.title,
-        'text': alert.count == 1
-            ? 'È arrivato un capitolo nuovo'
-            : 'Sono arrivati ${alert.count} capitoli nuovi',
+        'text': currentL10n().dataNewChaptersNotification(alert.count),
       });
     }
   }

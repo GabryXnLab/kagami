@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../l10n.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 import 'archive_screen.dart';
@@ -23,6 +24,7 @@ class MoreScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final incognito = ref.watch(incognitoProvider).value ?? false;
     void open(Widget screen) => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => screen),
@@ -36,49 +38,48 @@ class MoreScreen extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(bottom: 22),
-              child: Text('Altro', style: KagamiType.display(30)),
+              child: Text(l10n.moreTitle, style: KagamiType.display(30)),
             ),
-            const KSection('Libreria'),
+            KSection(l10n.moreSectionLibrary),
             KGroup(
               children: [
                 KTile(
                   icon: LucideIcons.download,
-                  title: 'Scarica un manga',
-                  subtitle: 'Cerca un titolo o incolla un link',
+                  title: l10n.moreDownload,
+                  subtitle: l10n.moreDownloadSubtitle,
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () => open(const ArchiveScreen()),
                 ),
               ],
             ),
             const SizedBox(height: 26),
-            const KSection('La tua lettura'),
+            KSection(l10n.moreSectionReading),
             KGroup(
               children: [
                 KTile(
                   icon: LucideIcons.history,
-                  title: 'Cronologia',
-                  subtitle: 'Cosa hai letto e quando',
+                  title: l10n.moreHistory,
+                  subtitle: l10n.moreHistorySubtitle,
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () => open(const HistoryScreen()),
                 ),
                 KTile(
                   icon: LucideIcons.chartColumn,
-                  title: 'Statistiche',
-                  subtitle: 'Quanto leggi, cosa leggi, quando',
+                  title: l10n.moreStatistics,
+                  subtitle: l10n.moreStatisticsSubtitle,
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () => open(const StatisticsScreen()),
                 ),
               ],
             ),
             const SizedBox(height: 26),
-            const KSection('Privatezza'),
+            KSection(l10n.moreSectionPrivacy),
             KGroup(
               children: [
                 KTile(
                   icon: incognito ? LucideIcons.eyeOff : LucideIcons.eye,
-                  title: 'Lettura in incognito',
-                  subtitle: 'Non registra posizione, capitoli finiti né '
-                      'tempo di lettura',
+                  title: l10n.moreIncognito,
+                  subtitle: l10n.moreIncognitoSubtitle,
                   tint: incognito ? context.colors.primary : null,
                   onTap: ref.read(incognitoProvider.notifier).toggle,
                   trailing: Switch(
@@ -90,13 +91,13 @@ class MoreScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 26),
-            const KSection('App'),
+            KSection(l10n.moreSectionApp),
             KGroup(
               children: [
                 KTile(
                   icon: LucideIcons.settings,
-                  title: 'Impostazioni',
-                  subtitle: 'Aspetto, libreria, lettura, backup',
+                  title: l10n.moreSettings,
+                  subtitle: l10n.moreSettingsSubtitle,
                   trailing: const Icon(LucideIcons.chevronRight, size: 18),
                   onTap: () => open(const SettingsScreen()),
                 ),

@@ -24,6 +24,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
+import '../l10n.dart';
 import 'drive.dart';
 import 'drive_library.dart';
 import 'library_repository.dart';
@@ -74,7 +75,7 @@ class ChapterDownloader {
   }) async {
     final path = chapter.path;
     if (path == null || pages.isEmpty) {
-      throw const DriveException('Il capitolo non ha tavole su Drive');
+      throw DriveException(currentL10n().dataChapterNoPagesOnDrive);
     }
     final target = Directory(p.join(destination, entry.path, path));
     final partial = Directory('${target.path}$partialSuffix');
@@ -152,7 +153,7 @@ class ChapterDownloader {
       await File(cached).copy(temporary.path);
     } else {
       final item = await drive.resolve('${entry.path}/$relative');
-      if (item == null) throw const DriveException('Tavola non trovata su Drive');
+      if (item == null) throw DriveException(currentL10n().dataPageNotOnDrive);
       await drive.client.download(item.id, temporary);
     }
     await temporary.rename(file.path);

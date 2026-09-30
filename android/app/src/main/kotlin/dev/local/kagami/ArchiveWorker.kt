@@ -56,7 +56,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
 
     override fun doWork(): Result {
         val foreground = runCatching {
-            setForegroundAsync(foregroundInfo(if (check) "Controllo delle serie in corso" else "Download dei manga", null, 0, 0)).get()
+            setForegroundAsync(foregroundInfo(applicationContext.getString(if (check) R.string.archive_checking else R.string.archive_downloading), null, 0, 0)).get()
         }.isSuccess
         val finished = CountDownLatch(1)
         var engine: FlutterEngine? = null
@@ -144,10 +144,10 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             manager.createNotificationChannel(
                 NotificationChannel(
                     NOTIFICATION_CHANNEL,
-                    "Download dei manga",
+                    applicationContext.getString(R.string.archive_downloading),
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = "Le serie che Kagami sta scaricando dai siti."
+                    description = applicationContext.getString(R.string.channel_archive_description)
                 },
             )
             Notification.Builder(applicationContext, NOTIFICATION_CHANNEL)
@@ -157,7 +157,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         }
         builder
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title.ifEmpty { "Download dei manga" })
+            .setContentTitle(title.ifEmpty { applicationContext.getString(R.string.archive_downloading) })
             .setOngoing(true)
             .setOnlyAlertOnce(true)
         if (text != null) builder.setContentText(text)

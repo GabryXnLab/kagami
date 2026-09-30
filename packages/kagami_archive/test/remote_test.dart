@@ -1,16 +1,43 @@
+import 'dart:convert';
+
 import 'package:kagami_archive/remote.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('il link di abbinamento dà indirizzo e chiave, e nient\'altro lo è', () {
-    final link = ServerLink.parsePairing(
-      'kagami://server?url=https%3A%2F%2Fcasa.tail1234.ts.net%2F&key=kagami_abc',
+  test('la configurazione del comando va e torna, e una incompleta si rifiuta', () {
+    const setup = ServerSetup(
+      project: 'progetto',
+      client: GoogleClient('id.apps.googleusercontent.com', 'segreto'),
+      owner: 'Proprietario@Gmail.com',
+      refreshToken: '1//refresh',
+      folderId: 'cartella',
+      folderName: 'MangaArchive',
+      name: 'Casa',
     );
-    expect(link?.url, Uri.parse('https://casa.tail1234.ts.net'));
-    expect(link?.key, 'kagami_abc');
-    expect(ServerLink.parsePairing('https://casa.tail1234.ts.net'), isNull);
-    expect(ServerLink.parsePairing('kagami://server?url=https%3A%2F%2Fx'), isNull);
-    expect(ServerLink.parsePairing('kagami://altro?url=x&key=y'), isNull);
+    final blob = setup.encode();
+    expect(blob, isNot(contains('=')));
+    final back = ServerSetup.decode(blob);
+    expect(back.project, 'progetto');
+    expect(back.client.id, 'id.apps.googleusercontent.com');
+    expect(back.client.secret, 'segreto');
+    expect(back.owner, 'proprietario@gmail.com');
+    expect(back.refreshToken, '1//refresh');
+    expect(back.folderId, 'cartella');
+    expect(back.folderName, 'MangaArchive');
+    expect(back.name, 'Casa');
+    expect(() => ServerSetup.decode('non-json'), throwsFormatException);
+    expect(() => ServerSetup.decode(base64Url.encode(utf8.encode('{"v":1,"project":"p"}'))), throwsFormatException);
+
+    final command = serverCommand(setup, image: 'ghcr.io/esempio/kagami-server');
+    expect(command, startsWith('docker run -d --name kagami-server'));
+    expect(command, contains('-e KAGAMI_SETUP=$blob '));
+    expect(command, endsWith(' ghcr.io/esempio/kagami-server'));
+  });
+
+  test('un collegamento della v1 perde la chiave e tiene l\'indirizzo', () {
+    final link = ServerLink.fromJson({'url': 'http://nas:8080', 'key': 'kagami_vecchia'});
+    expect(link.url, Uri.parse('http://nas:8080'));
+    expect(link.toJson(), {'url': 'http://nas:8080'});
   });
 
   test('l\'indirizzo scritto a mano si ripulisce', () {

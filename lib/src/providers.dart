@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
@@ -33,6 +34,7 @@ import 'data/library_view.dart';
 import 'data/network.dart';
 import 'data/notifications.dart';
 import 'data/reader_settings.dart';
+import 'data/server_access.dart';
 import 'data/statistics.dart';
 import 'data/user_repository.dart';
 import 'format/malf.dart';
@@ -1661,9 +1663,10 @@ class ArchiveController extends Notifier<ArchiveView> {
 final archiveProvider =
     NotifierProvider.autoDispose<ArchiveController, ArchiveView>(ArchiveController.new);
 
-/// Il server che scarica al posto del telefono: indirizzo e chiave. Sta fra
+/// Il server che scarica al posto del telefono: il suo indirizzo. Sta fra
 /// le impostazioni del database, quindi viaggia con backup e account come la
-/// cartella di Drive: su un telefono nuovo il server è già collegato.
+/// cartella di Drive: su un telefono nuovo il server è già collegato, e chi
+/// chiama lo dice l'account, non il telefono.
 class ServerLinkNotifier extends AsyncNotifier<ServerLink?> {
   static const String _key = 'server.link';
 
@@ -1689,6 +1692,44 @@ class ServerLinkNotifier extends AsyncNotifier<ServerLink?> {
 final serverLinkProvider =
     AsyncNotifierProvider<ServerLinkNotifier, ServerLink?>(ServerLinkNotifier.new);
 
+final serverAccessProvider = Provider<ServerAccess>((ref) => const ServerAccess());
+
+/// Un client per [link] con il token dell'account di adesso.
+ServerClient serverClient(Ref ref, ServerLink link) {
+  final access = ref.read(serverAccessProvider);
+  return ServerClient(link, access.idToken);
+}
+
+/// Gli inviti ai server degli altri per l'account con cui si è fatto
+/// l'accesso. Senza le regole di Firestore pubblicate la lettura fallisce:
+/// non ci sono inviti, e basta.
+final serverInvitesProvider = StreamProvider<List<ServerInvite>>((ref) {
+  final email = ref.watch(cloudAccountProvider.select((status) => status.account?.email));
+  if (!cloudAvailable || email == null || email.isEmpty) return Stream.value(const []);
+  return ref
+      .watch(serverAccessProvider)
+      .invitesFor(email)
+      .handleError((Object _) {}, test: (error) => error is FirebaseException);
+});
+
+/// Dà notizia di un invito una volta sola: gli id già annunciati stanno fra
+/// le impostazioni, così un secondo telefono con lo stesso account non
+/// ripete la notifica dopo la sincronizzazione.
+Future<void> announceServerInvites(UserRepository user, List<ServerInvite> invites, {String? linked}) async {
+  const key = 'server.invites.seen';
+  final seen = {...(await user.readSetting(key) ?? '').split(',').where((id) => id.isNotEmpty)};
+  final fresh = [for (final invite in invites) if (!seen.contains(invite.id) && invite.url != linked) invite];
+  if (fresh.isEmpty) return;
+  for (final invite in fresh) {
+    await ArrivalNotifications.instance.invite(
+      invite.id,
+      title: '${invite.sender} ti ha dato accesso al suo server',
+      text: 'Collega «${invite.serverName}» e scaricherà i manga sul tuo Drive, anche a telefono spento.',
+    );
+  }
+  await user.writeSetting(key, {...seen, for (final invite in fresh) invite.id}.join(','));
+}
+
 /// Il server come lo mostra «Scarica un manga».
 class RemoteArchiveView {
   const RemoteArchiveView({
@@ -1696,6 +1737,7 @@ class RemoteArchiveView {
     this.info,
     this.queue = const RemoteQueue(),
     this.ongoing = const [],
+    this.users = const [],
     this.error,
     this.unauthorized = false,
   });
@@ -1706,6 +1748,9 @@ class RemoteArchiveView {
   final ServerInfo? info;
   final RemoteQueue queue;
   final List<RemoteSeries> ongoing;
+
+  /// Gli account ammessi, solo per il proprietario.
+  final List<ServerUser> users;
 
   /// Perché l'ultima richiesta non è andata, se non è andata.
   final String? error;
@@ -1718,6 +1763,7 @@ class RemoteArchiveView {
     ServerInfo? info,
     RemoteQueue? queue,
     List<RemoteSeries>? ongoing,
+    List<ServerUser>? users,
     String? error,
     bool clearError = false,
     bool? unauthorized,
@@ -1727,6 +1773,7 @@ class RemoteArchiveView {
         info: info ?? this.info,
         queue: queue ?? this.queue,
         ongoing: ongoing ?? this.ongoing,
+        users: users ?? this.users,
         error: clearError ? null : error ?? this.error,
         unauthorized: unauthorized ?? this.unauthorized,
       );
@@ -1746,20 +1793,27 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
   RemoteArchiveView build() {
     final link = ref.watch(serverLinkProvider).value;
     if (link == null) return const RemoteArchiveView();
-    final client = _client = ServerClient(link);
+    // Un altro account è un altro utente per il server: coda, Drive e
+    // permessi si rileggono da capo.
+    final email = ref.watch(cloudAccountProvider.select((status) => status.account?.email));
+    if (email == null) {
+      return RemoteArchiveView(link: link, error: 'Fai l\'accesso con Google per usare il server.', unauthorized: true);
+    }
+    final client = _client = serverClient(ref, link);
     _tick = 0;
     _lastOutcome = null;
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => unawaited(refresh()));
     ref.onDispose(() {
       _timer?.cancel();
       client.close();
+      if (identical(_client, client)) _client = null;
     });
     unawaited(refresh(full: true));
     return RemoteArchiveView(link: link);
   }
 
-  /// La coda sempre; presentazione e serie in corso ogni mezzo minuto, o
-  /// dopo un gesto che le cambia.
+  /// La coda sempre; presentazione, serie in corso e utenti ogni mezzo
+  /// minuto, o dopo un gesto che le cambia.
   Future<void> refresh({bool full = false}) async {
     final client = _client;
     if (client == null) return;
@@ -1768,6 +1822,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
       final info = every || state.info == null ? await client.info() : null;
       final queue = await client.queue();
       final ongoing = every ? await client.ongoing() : null;
+      final users = every && (info ?? state.info)?.isOwner == true ? await client.users() : null;
       if (!ref.mounted || client != _client) return;
       // Una serie finita sul server è su Drive: la libreria si rilegge.
       final latest = queue.history.firstOrNull;
@@ -1781,16 +1836,20 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
         info: info,
         queue: queue,
         ongoing: ongoing,
+        users: users,
         clearError: true,
         unauthorized: false,
       );
     } on ServerException catch (error) {
       if (!ref.mounted || client != _client) return;
-      state = state.copyWith(error: error.message, unauthorized: error is ServerUnauthorized);
+      state = state.copyWith(
+        error: error.message,
+        unauthorized: error is ServerUnauthorized || error is ServerForbidden,
+      );
     }
   }
 
-  ServerClient get _live => _client ?? (throw const ServerException('Nessun server collegato.'));
+  ServerClient get _live => _client ?? (throw ServerException(state.error ?? 'Nessun server collegato.'));
 
   Future<RemoteJob> enqueue({
     required String url,
@@ -1832,8 +1891,55 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
   /// Dice al server di scrivere nella cartella di Drive che legge l'app.
   Future<void> useFolder(DriveFolder folder) async {
     final chosen = await _live.chooseFolder(folder.id);
-    state = state.copyWith(info: state.info?.withFolder(chosen.id, chosen.name));
+    final info = state.info;
+    if (info != null) {
+      state = state.copyWith(info: info.withDrive(authorized: info.driveAuthorized, id: chosen.id, name: chosen.name));
+    }
     await refresh(full: true);
+  }
+
+  /// Ammette un account e lo avvisa: l'invito lo trova la sua app.
+  Future<void> addUser(String email) async {
+    final user = await _live.addUser(email);
+    await refresh(full: true);
+    final link = state.link;
+    if (link == null) return;
+    try {
+      await ref
+          .read(serverAccessProvider)
+          .invite(to: user.email, url: link.url, serverName: state.info?.name ?? 'Kagami Server');
+    } on FirebaseException {
+      throw ServerException('${user.email} può usare il server, ma non sono riuscito ad avvisarlo: '
+          'mandagli tu l\'indirizzo ${link.url}.');
+    }
+  }
+
+  Future<void> removeUser(ServerUser user) async {
+    await _live.removeUser(user.email);
+    await refresh(full: true);
+    final link = state.link;
+    if (link == null) return;
+    try {
+      await ref.read(serverAccessProvider).withdraw(user.email, link.url);
+    } on FirebaseException {
+      // L'invito rimasto non apre niente: il server non lo ammette più.
+    }
+  }
+
+  /// Scollega il server da questo account. Chi non è il proprietario gli
+  /// fa anche dimenticare il suo Drive e la sua coda; il proprietario no,
+  /// perché il suo permesso è quello del comando di avvio.
+  Future<void> unlink() async {
+    final client = _client;
+    if (client != null && state.info?.isOwner == false) {
+      try {
+        await client.forgetDrive();
+      } on ServerException {
+        // Anche spento o irraggiungibile il server si scollega: il permesso
+        // lo si può togliere anche da myaccount.google.com.
+      }
+    }
+    await ref.read(serverLinkProvider.notifier).choose(null);
   }
 }
 

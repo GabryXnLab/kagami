@@ -29,6 +29,8 @@ on:
         required: false
       SENTRY_DSN:
         required: false
+      GOOGLE_SERVER_CLIENT_SECRET:
+        required: false
 
 permissions:
   contents: read
@@ -70,7 +72,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
 
   # Flutter dà o un APK per architettura o l'universale, mai tutti e due in un giro:
   # due job in parallelo invece di due build una dopo l'altra.
@@ -97,7 +99,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
 
   # Senza account Apple Developer: l'IPA lo firma chi lo installa (AltStore,
   # Sideloadly). Su iOS account e Drive restano spenti, quindi niente Firebase.

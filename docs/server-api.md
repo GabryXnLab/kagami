@@ -1,23 +1,84 @@
-# API di Kagami Server — v1
+# API di Kagami Server — v2
 
 Il contratto fra l'app e un server che scarica al posto del telefono. È
 l'originale: l'implementazione di riferimento è `server/` in questo repo, e
 qualunque altro server che risponda così funziona con Kagami. Una modifica
-che cambia il significato di un campo è una `v2`; aggiungere campi no, e un
-client ignora quelli che non conosce.
+che cambia il significato di un campo è una versione nuova; aggiungere campi
+no, e un client ignora quelli che non conosce.
 
-## Trasporto e chiave
+La v1 riconosceva chi chiamava con una chiave API creata dal terminale del
+server. La v2 lo riconosce con l'account Google con cui si è fatto l'accesso
+all'app: il server ha un proprietario, un elenco di account ammessi, e per
+ognuno un Drive, una cartella, una coda e le serie che segue.
 
-- JSON UTF-8 su HTTP. Il server non fa TLS: l'HTTPS lo mette chi lo espone
-  (Tailscale Funnel, un reverse proxy). In chiaro va bene solo in una rete
-  privata o dentro una VPN (vedi [server.md](server.md)).
-- Ogni richiesta sotto `/v1/` porta la chiave:
-  `Authorization: Bearer kagami_…`. Senza chiave, o con una non valida: `401`
-  con `WWW-Authenticate: Bearer realm="kagami-server"`.
-- La chiave la crea il server (`kagami-server key create <nome>`), che ne
-  tiene solo l'impronta SHA-256. Una per dispositivo, revocabile da sola.
-- Il link di abbinamento `kagami://server?url=<indirizzo>&key=<chiave>` porta
-  indirizzo e chiave insieme: l'app lo accetta incollato.
+## Trasporto
+
+JSON UTF-8 su HTTP. Il server non fa TLS: l'HTTPS lo mette chi lo espone
+(Tailscale Funnel, un reverse proxy). In chiaro va bene solo in una rete
+privata o dentro una VPN (vedi [server.md](server.md)).
+
+## Chi chiama
+
+Ogni richiesta sotto `/v2/` porta il token d'identità di Firebase
+dell'account con cui si è fatto l'accesso all'app:
+`Authorization: Bearer <ID token>`. È un JWT firmato da Google che dura
+un'ora; l'app ne chiede uno nuovo da sé (`getIdToken`), senza schermate.
+
+Il server lo accetta se:
+
+- la firma RS256 torna con una delle chiavi pubbliche di
+  `securetoken@system.gserviceaccount.com`
+  (`https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`);
+- `aud` è il progetto Firebase della configurazione e `iss` è
+  `https://securetoken.google.com/<progetto>`;
+- `exp` non è passato e `iat` non è nel futuro (un minuto di tolleranza);
+- l'accesso è con Google (`firebase.sign_in_provider` = `google.com`),
+  `email` c'è ed `email_verified` è vero.
+
+L'utente è l'indirizzo `email`, in minuscolo. Token mancante o non valido:
+`401` con `WWW-Authenticate: Bearer realm="kagami-server"`. Token valido di
+un account che non è nell'elenco: `403 not_allowed`.
+
+Il server non tiene sessioni: ogni richiesta porta il suo token, quindi
+togliere un account dall'elenco vale dalla richiesta seguente.
+
+## Configurazione: `KAGAMI_SETUP`
+
+Il server non ha schermate né accessi da fare sul terminale. Tutto ciò che
+gli serve lo porta un blob che l'app genera per il proprietario e mette nel
+comando di avvio, come variabile d'ambiente `KAGAMI_SETUP` (o
+`kagami-server serve --setup <blob>`). È un JSON codificato in base64url,
+senza `=` finali:
+
+```json
+{
+  "v": 1,
+  "name": "Il server di Gabry",
+  "project": "mio-progetto-firebase",
+  "client": {"id": "1234-abc.apps.googleusercontent.com", "secret": "…"},
+  "owner": {
+    "email": "proprietario@gmail.com",
+    "refreshToken": "1//0g…",
+    "folderId": "1AbC…",
+    "folderName": "MangaArchive"
+  }
+}
+```
+
+| Campo | |
+| --- | --- |
+| `project` | il progetto Firebase dell'app: `aud` dei token accettati |
+| `client` | il client OAuth «Web» dello stesso progetto, quello per cui l'app chiede il codice per il server (`serverClientId`): con lui il server rinnova i permessi di Drive degli utenti |
+| `owner` | il proprietario: il suo permesso di Drive (refresh token, scope `drive`) e la cartella della sua libreria |
+| `name` | facoltativo, il nome che l'app mostra |
+
+Il server lo applica al primo avvio e ogni volta che cambia (ne ricorda
+l'impronta): riavviare il contenitore con lo stesso comando non rimette un
+permesso vecchio sopra uno rinnovato. Il blob contiene segreti: chi lo ha
+può scrivere sul Drive del proprietario.
+
+Senza configurazione ogni richiesta sotto `/v2/` risponde
+`503 not_configured`.
 
 ## Errori
 
@@ -25,7 +86,7 @@ Ogni errore ha lo stesso corpo, con un `code` stabile per il programma e un
 `message` da mostrare all'utente:
 
 ```json
-{"error": {"code": "drive_not_ready", "message": "Il server non ha ancora Drive: …"}}
+{"error": {"code": "drive_not_ready", "message": "Il server non ha ancora il tuo Drive: …"}}
 ```
 
 | Stato | `code` | Quando |
@@ -33,47 +94,80 @@ Ogni errore ha lo stesso corpo, con un `code` stabile per il programma e un
 | 400 | `bad_request` | corpo non JSON, campo mancante o del tipo sbagliato |
 | 400 | `unsupported_url` | il link non è di un sito che il server conosce |
 | 400 | `bad_folder` | la cartella di Drive non c'è o il server non la vede |
-| 401 | `unauthorized` | chiave mancante o non valida |
-| 404 | `not_found` | indirizzo, lavoro o serie sconosciuti |
-| 409 | `drive_not_ready` | il server non ha ancora il permesso di Drive o la cartella |
+| 400 | `bad_grant` | Google non accetta il permesso di Drive mandato |
+| 401 | `unauthorized` | token mancante, scaduto o non valido |
+| 403 | `not_allowed` | l'account non è fra quelli ammessi |
+| 403 | `owner_only` | l'operazione è del proprietario |
+| 404 | `not_found` | indirizzo, lavoro, serie o utente sconosciuti |
+| 409 | `drive_not_ready` | il server non ha il permesso di Drive di chi chiama, o la sua cartella |
 | 413 | `too_large` | corpo oltre 16 MB |
-| 503 | `drive_offline` | Drive non risponde adesso |
+| 503 | `not_configured` | il server è partito senza `KAGAMI_SETUP` |
+| 503 | `drive_offline` | Google non risponde adesso |
 | 500 | `internal` | guasto del server |
 
 ## Indirizzi
 
-### `GET /` — senza chiave
+### `GET /` — senza token
 
 ```json
-{"service": "kagami-server", "api": 1}
+{"service": "kagami-server", "api": 2}
 ```
 
-È l'unica risposta senza chiave: dice che lì c'è un Kagami Server e quale
-API parla. La usano l'app, per dire «indirizzo giusto, chiave sbagliata», e
+È l'unica risposta senza token: dice che lì c'è un Kagami Server e quale API
+parla. La usano l'app, per dire «indirizzo giusto, server da aggiornare», e
 il controllo di salute di Docker.
 
-### `GET /v1/server`
+### `GET /v2/server`
 
 ```json
 {
-  "service": "kagami-server", "version": "0.1.0", "api": 1,
-  "name": "Kagami Server",
+  "service": "kagami-server", "version": "0.2.0", "api": 2,
+  "name": "Il server di Gabry",
+  "owner": "proprietario@gmail.com",
   "providers": [{"id": "mangak", "name": "MangaK"}, {"id": "manhwaread", "name": "ManhwaRead"}],
-  "drive": {"authorized": true, "folderId": "1AbC…", "folderName": "MangaArchive"},
   "images": true,
-  "check": {"minutes": 240}
+  "check": {"minutes": 240},
+  "me": {
+    "email": "amico@gmail.com", "owner": false,
+    "drive": {"authorized": true, "folderId": "1XyZ…", "folderName": "Manga"}
+  }
 }
 ```
 
-- `drive.authorized`: il server ha il permesso di scrivere su Drive.
-  `folderId` è la cartella della libreria dove finisce tutto: deve essere la
-  stessa che legge l'app.
+- `me` è chi chiama. `me.drive.authorized`: il server ha il suo permesso di
+  scrivere su Drive; `folderId` è la cartella della sua libreria, dove
+  finisce tutto ciò che mette in coda.
 - `images`: il server fa miniature e tessere (MALF, «Tessere delle tavole
   alte»). Se è `false` la libreria resta valida, solo senza tessere.
 - `check.minutes`: l'ora del controllo quotidiano delle serie in corso, in
   minuti dalla mezzanotte del server; `null` se è spento.
 
-### `POST /v1/jobs` — mette in coda una serie
+### `PUT /v2/me/drive` — dà al server il permesso sul proprio Drive
+
+```json
+{"refreshToken": "1//0g…", "folderId": "https://drive.google.com/drive/folders/1XyZ…"}
+```
+
+Il refresh token è quello che l'app ottiene da Google per il client di
+`client.id` (lo scope `drive`). Il server lo prova subito chiedendo un token
+d'accesso, poi controlla di vedere la cartella; se uno dei due non va,
+non salva niente (`bad_grant`, `bad_folder`). `folderId` accetta l'id o il
+link. Risponde con lo stesso `drive` di `me`.
+
+### `DELETE /v2/me/drive` → `204`
+
+Il server dimentica il permesso e la cartella di chi chiama, e ferma la sua
+coda. È ciò che fa l'app scollegando il server.
+
+### `PUT /v2/me/folder` — cambia la cartella della libreria
+
+```json
+{"folderId": "https://drive.google.com/drive/folders/1XyZ…"}
+```
+
+Come sopra, senza toccare il permesso.
+
+### `POST /v2/jobs` — mette in coda una serie
 
 ```json
 {"url": "https://mangak.io/dungeon-odyssey", "title": "Dungeon Odyssey", "start": "16"}
@@ -88,9 +182,11 @@ il controllo di salute di Docker.
 | `delayMs` | intero 0–5000 | pausa fra le richieste al sito (default 200) |
 | `snapshot` | stringa | la pagina HTML della serie, solo per i siti dietro la verifica del browser (ManhwaRead) |
 
-Senza `start` né `ids` si scarica tutta la serie. In ogni caso `series.json`
-ha l'elenco completo dei capitoli (MALF). Lo stesso link già in coda viene
-sostituito. Risponde `201`:
+Va nella coda di chi chiama e sul suo Drive, nella sua cartella: senza
+permesso o cartella, `409 drive_not_ready`. Senza `start` né `ids` si
+scarica tutta la serie. In ogni caso `series.json` ha l'elenco completo dei
+capitoli (MALF). Lo stesso link già in coda viene sostituito. Risponde
+`201`:
 
 ```json
 {"job": {"id": "srv-…", "url": "…", "title": "Dungeon Odyssey", "start": "16", "delayMs": 200}}
@@ -102,7 +198,7 @@ l'elenco dei capitoli da quella pagina. Le tavole le trova poi sul CDN del
 sito. Se anche quello chiede la verifica, il lavoro finisce con un errore
 che lo dice.
 
-### `GET /v1/jobs` — a che punto è
+### `GET /v2/jobs` — a che punto è la propria coda
 
 ```json
 {
@@ -121,18 +217,18 @@ perché). Il primo della coda è quello in corso. `history` tiene gli ultimi
 venti esiti, dal più recente. Sono gli stessi campi della coda del telefono.
 Un lavoro appena finito esce dalla coda un attimo prima che il suo esito
 entri in `history`: un client che guarda la coda non ne deduce che è stato
-annullato.
+annullato. Ogni utente vede solo la sua coda.
 
-### `DELETE /v1/jobs/{id}` → `204`
+### `DELETE /v2/jobs/{id}` → `204`
 
 Toglie il lavoro dalla coda; se è quello in corso lo ferma prima. Ciò che è
 già su Drive resta, e rifare lo stesso download porta solo ciò che manca.
 
-### `DELETE /v1/history` → `204`
+### `DELETE /v2/history` → `204`
 
 Dimentica gli esiti.
 
-### `GET /v1/ongoing` — le serie in corso che il server segue
+### `GET /v2/ongoing` — le serie in corso che il server segue
 
 ```json
 {"series": [{"key": "mangak:KY55w5Y9", "title": "…", "url": "…", "chapters": 169,
@@ -141,23 +237,46 @@ Dimentica gli esiti.
 
 Una serie che il sito dà `ongoing`, scaricata dal server, entra qui da sola;
 il controllo quotidiano mette in coda solo i capitoli nuovi, e una serie
-conclusa esce da sola.
+conclusa esce da sola. Sono quelle di chi chiama.
 
-### `DELETE /v1/ongoing/{key}` → `204`
+### `DELETE /v2/ongoing/{key}` → `204`
 
 Smette di seguire la serie. I capitoli già archiviati restano.
 
-### `POST /v1/check` → `202`
+### `POST /v2/check` → `202`
 
-Il controllo delle serie in corso, subito. Risponde prima di finire: i
-capitoli nuovi compaiono in `GET /v1/jobs`.
+Il controllo delle serie in corso di chi chiama, subito. Risponde prima di
+finire: i capitoli nuovi compaiono in `GET /v2/jobs`.
 
-### `PUT /v1/drive/folder` — sceglie la cartella della libreria
+## Utenti — solo il proprietario
+
+Gli altri ricevono `403 owner_only`.
+
+### `GET /v2/users`
 
 ```json
-{"folderId": "https://drive.google.com/drive/folders/1AbC…"}
+{"users": [
+  {"email": "proprietario@gmail.com", "owner": true, "addedAt": "…", "connected": true},
+  {"email": "amico@gmail.com", "owner": false, "addedAt": "…", "connected": false}
+]}
 ```
 
-Accetta l'id o il link. Il server controlla di vederla e di poterci entrare
-col suo permesso, poi risponde con lo stesso `drive` di `GET /v1/server`.
-Serve all'app per dire al server «usa la cartella che leggo io».
+`connected`: il server ha il permesso di Drive di quell'utente, cioè
+l'utente ha già collegato il server dall'app.
+
+### `POST /v2/users` → `201`
+
+```json
+{"email": "amico@gmail.com"}
+```
+
+Ammette l'account. Risponde con la riga dell'utente; un account già ammesso
+risponde uguale. Avvisare l'utente è compito dell'app (vedi
+[design.md](design.md), «Server e utenti»).
+
+### `DELETE /v2/users/{email}` → `204`
+
+Toglie l'account: da subito le sue richieste ricevono `403`, il suo lavoro
+in corso si ferma, e il server cancella il suo permesso di Drive, la sua coda
+e le serie che seguiva. Ciò che è già sul suo Drive resta. Il proprietario
+non si può togliere.

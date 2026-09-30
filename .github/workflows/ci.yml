@@ -51,6 +51,8 @@ on:
         required: false
       SENTRY_DSN:
         required: false
+      GOOGLE_SERVER_CLIENT_SECRET:
+        required: false
 
 permissions:
   contents: read
@@ -107,6 +109,93 @@ jobs:
       # Il target `test` fa girare anche i test che vogliono libvips.
       - run: docker build -f server/Dockerfile --target test .
 
+  # L'immagine che il comando generato dall'app scarica: una per architettura, sul
+  # runner nativo (Dart sotto QEMU compila piano e a volte si pianta), poi un indice
+  # che le riunisce sotto lo stesso nome. Solo dal pubblico e solo da main: è quella
+  # che usa chiunque abbia l'app.
+  server-publish:
+    name: Pubblica il server (${{ matrix.arch }})
+    needs: [check, server-image]
+    if: ${{ !github.event.repository.private && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Nome dell'immagine
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kagami-server" >> "$GITHUB_ENV"
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          platforms: linux/${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.description=Kagami Server: scarica i manga sul Drive di chi li chiede
+            org.opencontainers.image.licenses=GPL-3.0-only
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=server-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=server-${{ matrix.arch }}
+      - name: Impronta
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  server-manifest:
+    name: Pubblica il server
+    needs: server-publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: server-digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # `latest` è quello del comando dell'app; lo sha resta per tornare indietro.
+      - name: Indice multi-architettura
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kagami-server"
+          docker buildx imagetools create -t "$image:latest" -t "$image:sha-${GITHUB_SHA::7}" \
+            $(printf "$image@sha256:%s " *)
+          docker buildx imagetools inspect "$image:latest"
+          echo "Immagine: \`$image:latest\`" >> "$GITHUB_STEP_SUMMARY"
+
   android:
     name: APK
     needs: check
@@ -123,6 +212,7 @@ jobs:
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      GOOGLE_SERVER_CLIENT_SECRET: ${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
       BUILD_MODE: ${{ inputs.build_mode || 'release' }}
       SPLIT_PER_ABI: ${{ inputs.split_per_abi && 'true' || '' }}
     steps:
@@ -161,7 +251,7 @@ jobs:
             } > android/key.properties
           fi
       - run: flutter pub get
-      - run: flutter build apk --"$BUILD_MODE" ${SPLIT_PER_ABI:+--split-per-abi} --dart-define=SENTRY_DSN="$SENTRY_DSN"
+      - run: flutter build apk --"$BUILD_MODE" ${SPLIT_PER_ABI:+--split-per-abi} --dart-define=SENTRY_DSN="$SENTRY_DSN" --dart-define=GOOGLE_SERVER_CLIENT_SECRET="$GOOGLE_SERVER_CLIENT_SECRET"
       # L'impronta da registrare in Firebase: con un'altra l'accesso con Google fallisce.
       - name: Impronta della firma
         run: |

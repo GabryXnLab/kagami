@@ -303,28 +303,25 @@ cartella di Drive della libreria, e il telefono può spegnersi. È lo stesso
 motore dell'app, quindi scrive la stessa libreria e convive con i download
 fatti dal telefono.
 
+Nell'app, *Altro → Scarica un manga → Server → Crea il tuo server*: l'app
+prepara un comando solo, da incollare su un computer con Docker.
+
 ```bash
-git clone https://github.com/GabryXnLab/kagami.git
-cd kagami/server
-docker compose up -d
-docker compose logs kagami-server        # la prima chiave API: copiala subito
-docker compose exec kagami-server kagami-server drive login
-docker compose exec kagami-server kagami-server drive folder <link della cartella>
-docker compose exec kagami-server kagami-server key create "Telefono" --url <indirizzo>
+docker run -d --name kagami-server --restart unless-stopped \
+  -p 8080:8080 -v kagami-data:/data \
+  -e KAGAMI_SETUP=… ghcr.io/gabryxnlab/kagami-server:latest
 ```
 
-L'ultimo comando stampa un link `kagami://server?…` con indirizzo e chiave:
-nell'app, *Altro → Scarica un manga → Server*, lo incolli e il server compare
-come destinazione, con la sua coda sotto quella del telefono.
+Sul server non c'è niente da configurare: poi scrivi nell'app l'indirizzo
+del computer, e il server compare come destinazione, con la sua coda sotto
+quella del telefono.
 
-- **Drive con un permesso suo**, che non scade quando il telefono si spegne:
-  serve un client OAuth tuo, cinque minuti una volta sola
-  ([come](docs/server.md#2-dare-al-server-il-permesso-di-drive)).
-- **Una chiave per dispositivo**, revocabile da sola; sul disco del server ne
-  resta solo l'impronta SHA-256.
+- **Si entra con l'account Google** dell'app, niente chiavi: il proprietario
+  aggiunge dall'app chi vuole, e a loro arriva l'invito nell'app.
+- **Ognuno sul suo Drive**, con la sua coda e le sue serie in corso.
 - **Raggiungibile** in casa, con [Tailscale](https://tailscale.com) anche senza
   un dominio né porte aperte, o dietro un reverse proxy con HTTPS
-  ([i casi](docs/server.md#3-farlo-raggiungere-dal-telefono)).
+  ([i casi](docs/server.md#2-farlo-raggiungere-dal-telefono)).
 - **Segue le serie in corso** che ha scaricato, una volta al giorno, e dopo un
   riavvio riprende da dove era senza riscaricare ciò che è già su Drive.
 - Senza Docker è un eseguibile unico: `dart compile exe`, su Linux, macOS o
@@ -388,7 +385,7 @@ facoltativo, e l'app si adatta a quello che trova.
 | niente | libreria in una cartella del telefono, lettore, stato, voti, raccolte, cronologia, statistiche, backup su file, download dai siti sul telefono |
 | `android/app/google-services.json` | in più: accesso con Google, dati personali che seguono il lettore, libreria su Drive, sincronizzazione della cartella, download verso Drive |
 | `--dart-define=SENTRY_DSN=…` | in più: errori e crash sul proprio progetto Sentry |
-| un Kagami Server | in più: download fatti da un computer acceso invece che dal telefono |
+| `--dart-define=GOOGLE_SERVER_CLIENT_SECRET=…` | in più, con `google-services.json`: creare e collegare un Kagami Server, download fatti da un computer acceso invece che dal telefono ([cosa serve](docs/server.md#chi-compila-la-propria-app)) |
 
 ### Compilare l'APK
 
@@ -427,6 +424,7 @@ firmata. I secret sono tutti facoltativi:
 | `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
+| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega server | il segreto del client «Web» del progetto Firebase ([dove](docs/server.md#chi-compila-la-propria-app)) |
 
 I dettagli dei workflow sono in
 [.github/workflows/CLAUDE.md](.github/workflows/CLAUDE.md).

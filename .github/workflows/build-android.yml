@@ -88,3 +88,5 @@ jobs:
       # Il debug.keystore di nexus-core: sui runner GitHub firma l'APK come sul self-hosted,
       # così si installa sopra l'app e Google Sign-In ne riconosce l'impronta.
       ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+      # Il segreto del client Web di Firebase: senza, l'app non può collegare server.
+      DART_DEFINES: GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}

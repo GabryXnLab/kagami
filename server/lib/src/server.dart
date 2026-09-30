@@ -1,121 +1,136 @@
-/// Il server messo insieme: configurazione, Drive, giro e API.
+/// Il server messo insieme: configurazione, utenti, giri e API.
 library;
 
 import 'dart:async';
 import 'dart:io';
 
-import 'package:kagami_archive/drive.dart';
+import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/image_tools.dart';
+import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/remote.dart' show ServerSetup;
+import 'package:path/path.dart' as p;
 
 import 'api.dart';
 import 'config.dart';
 import 'google.dart';
+import 'identity.dart';
 import 'images.dart';
-import 'keys.dart';
+import 'users.dart';
 import 'worker.dart';
 
-/// Drive del server: il permesso in `drive-token.json`, la cartella in
-/// `config.json`.
-class ServerDrive implements DriveSetup {
-  ServerDrive(this.paths, this._config)
-      : tokens = DriveTokens(paths.driveToken, _client(_config));
+/// Lo spazio di un utente sul server: cartella, Drive e giro.
+class ServerSpace implements UserSpace {
+  ServerSpace._(this.directory, this.files, this.userDrive, this.worker);
 
-  final ServerPaths paths;
-  ServerConfig _config;
-  final DriveTokens tokens;
+  static Future<ServerSpace> open(
+    Directory directory,
+    GoogleClient client, {
+    required ImageTools images,
+    int? checkMinutes,
+  }) async {
+    final files = ArchiveFiles(directory.path);
+    final drive = UserDrive(File(p.join(directory.path, 'drive.json')), client);
+    await drive.load();
+    final worker = ServerWorker(
+      files,
+      serverEnvironment(files, drive.drive, Directory(p.join(directory.path, 'scratch')), images),
+      blocked: drive.blocked,
+      checkMinutes: checkMinutes,
+    )..start();
+    return ServerSpace._(directory, files, drive, worker);
+  }
 
-  late final DriveClient client = DriveClient(tokens.token, network: const ServerNetwork());
+  final Directory directory;
+  @override
+  final ArchiveFiles files;
+  final UserDrive userDrive;
+  final ServerWorker worker;
 
-  ServerConfig get config => _config;
+  @override
+  JobControl get jobs => worker;
 
-  static GoogleClient? _client(ServerConfig config) {
-    final id = config.clientId;
-    final secret = config.clientSecret;
-    return id == null || secret == null ? null : GoogleClient(id, secret);
+  @override
+  DriveSetup get drive => userDrive;
+
+  @override
+  Future<void> close() async {
+    await worker.close();
+    userDrive.close();
   }
 
   @override
-  Future<bool> get authorized async => _client(_config) != null && await tokens.authorized;
-
-  @override
-  String? get folderId => _config.folderId;
-
-  @override
-  String? get folderName => _config.folderName;
-
-  @override
-  Future<DriveItem> choose(String folderId) async {
-    final item = await client.file(folderId);
-    if (!item.folder) throw const DriveException('Non è una cartella.');
-    // Un elenco dice anche che il server ci può entrare: `file` risponde
-    // pure per una cartella vista solo di sfuggita da un link condiviso.
-    await client.children(folderId);
-    final chosen = (await ServerConfig.load(paths)).copyWith(folderId: item.id, folderName: item.name);
-    await chosen.save(paths);
-    _config = _config.copyWith(folderId: item.id, folderName: item.name);
-    return item;
-  }
-
-  /// Perché un giro non può partire, o `null`.
-  Future<String?> blocked() async {
-    if (_client(_config) == null) {
-      return 'Manca il client OAuth di Google: esegui «kagami-server drive login».';
-    }
-    if (_config.folderId == null) return 'Manca la cartella della libreria: «kagami-server drive folder».';
-    try {
-      await tokens.token();
-      return null;
-    } on DriveNotAuthorized catch (error) {
-      return '$error';
-    } on DriveOffline {
-      return 'Google non risponde: si riprova fra poco.';
-    }
+  Future<void> destroy() async {
+    await close();
+    if (await directory.exists()) await directory.delete(recursive: true);
   }
 }
 
+/// Applica `KAGAMI_SETUP` se è nuova: progetto e client in `setup.json`, il
+/// permesso del proprietario nella sua cartella. Torna la configurazione in
+/// vigore, o `null` se il server non ne ha mai avuta una.
+Future<AppliedSetup?> applySetup(ServerPaths paths, String? blob, {void Function(String)? say}) async {
+  final current = await AppliedSetup.load(paths);
+  if (blob == null || blob.trim().isEmpty) return current;
+  final hash = setupHash(blob);
+  if (current?.hash == hash) return current;
+  final setup = ServerSetup.decode(blob);
+  final applied = AppliedSetup(
+    project: setup.project,
+    client: setup.client,
+    owner: setup.owner,
+    name: setup.name,
+    hash: hash,
+  );
+  await applied.save(paths);
+  final drive = UserDrive(File(p.join(paths.user(setup.owner).path, 'drive.json')), setup.client);
+  await drive.put(setup.refreshToken, setup.folderId, setup.folderName);
+  say?.call('Configurazione applicata: proprietario ${setup.owner}.');
+  return applied;
+}
+
 /// Accende il server e resta acceso finché non riceve SIGINT o SIGTERM.
-Future<void> serve(ServerPaths paths, {String? host, int? port, void Function(String)? say}) async {
-  final out = say ?? stdout.writeln;
+Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, void Function(String)? say}) async {
+  final void Function(String) out = say ?? stdout.writeln;
   await paths.root.create(recursive: true);
   final config = (await ServerConfig.load(paths)).withEnvironment(Platform.environment);
-  final drive = ServerDrive(paths, config);
-  final files = paths.files;
-  final keys = ApiKeys(paths.keys);
+  final applied = await applySetup(paths, setup ?? environment(Platform.environment, 'KAGAMI_SETUP'), say: out);
 
   final vips = await VipsImageTools.available();
   final ImageTools images = vips ? VipsImageTools(paths.scratch) : const NoImageTools();
-  final worker = ServerWorker(
-    files,
-    serverEnvironment(files, drive.client, paths.scratch, images),
-    blocked: drive.blocked,
-    checkMinutes: config.checkMinutes,
-  );
+  final accounts = applied == null
+      ? null
+      : Accounts(
+          paths.users,
+          owner: applied.owner,
+          open: (email) => ServerSpace.open(
+            paths.user(email),
+            applied.client,
+            images: images,
+            checkMinutes: config.checkMinutes,
+          ),
+        );
   final api = ServerApi(
-    name: config.name,
-    keys: keys,
-    files: files,
-    jobs: worker,
-    drive: drive,
+    name: config.name ?? applied?.name ?? 'Kagami Server',
+    identity: applied == null ? null : FirebaseVerifier(applied.project),
+    accounts: accounts,
     images: vips,
     checkMinutes: config.checkMinutes,
   );
-
-  // Il primo avvio senza chiavi ne crea una e la stampa: con Docker la si
-  // legge da `docker logs`, senza entrare nel contenitore.
-  if ((await keys.list()).isEmpty) {
-    final (_, secret) = await keys.create('primo dispositivo');
-    out('Nessuna chiave API: ne ho creata una. Copiala adesso, non verrà più mostrata:\n\n  $secret\n');
-  }
 
   final server = await HttpServer.bind(host ?? config.host, port ?? config.port);
   server.idleTimeout = const Duration(seconds: 30);
   out('Kagami Server $serverVersion in ascolto su ${server.address.address}:${server.port}');
   out('Dati in ${paths.root.path}');
   out(vips ? 'Miniature e tessere: libvips.' : 'Miniature e tessere: spente (manca «vips»).');
-  final reason = await drive.blocked();
-  out(reason == null ? 'Drive: pronto, cartella ${config.folderName ?? config.folderId}.' : 'Drive: $reason');
+  if (accounts == null) {
+    out('Nessuna configurazione: avvia il server col comando che genera l\'app '
+        '(Altro → Scarica un manga → Server → Crea il tuo server).');
+  } else {
+    await accounts.openAll();
+    final users = await accounts.list();
+    out('Proprietario: ${accounts.owner}; account ammessi: ${users.length}.');
+  }
 
-  worker.start();
   final serving = server.listen((request) => unawaited(api.handle(request)));
 
   final stop = Completer<void>();
@@ -124,12 +139,11 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, void Function(St
     if (!Platform.isWindows) ProcessSignal.sigterm.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
   ];
   await stop.future;
-  out('Chiusura: il lavoro in corso si ferma e resta in coda.');
+  out('Chiusura: i lavori in corso si fermano e restano in coda.');
   for (final signal in signals) {
     await signal.cancel();
   }
   await serving.cancel();
   await server.close();
-  await worker.close();
-  drive.client.close();
+  await accounts?.close();
 }

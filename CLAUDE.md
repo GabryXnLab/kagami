@@ -12,8 +12,10 @@ l'utente sceglie. Può anche archiviare da sé: da una ricerca o da un link
 con lo stesso motore dell'estensione MangaArchive portato in Dart
 (`packages/kagami_archive/`). Lo stesso motore gira anche in **Kagami
 Server** (`server/`), un programma che chiunque può tenere acceso su un suo
-computer perché scarichi e carichi su Drive al posto del telefono: l'app gli
-parla con una chiave API (protocollo in `docs/server-api.md`).
+computer perché scarichi e carichi su Drive al posto del telefono, per sé e
+per gli account Google che ammette: l'app lo crea generando un comando
+`docker run` e gli parla col token dell'account (protocollo in
+`docs/server-api.md`).
 
 La cartella arriva da questa catena, che l'app non controlla (salvo l'ultimo
 tratto, se l'utente lo affida a lei) e su cui non deve fare assunzioni oltre
@@ -78,7 +80,7 @@ chiusa. `sentry_flutter` 9 fissa `jni` alla 0.14, per questo
 `path_provider_android` resta alla 2.2.
 
 Nessun valore personale nel codice: progetto Firebase, DSN di Sentry, chiavi di
-firma, indirizzi e client OAuth del server sono di chi compila o di chi installa,
+firma, segreto del client «Web» e indirizzi del server sono di chi compila o di chi installa,
 e arrivano da file fuori da git, da `--dart-define` o dalle variabili del server.
 Le note di una macchina o di un manutentore vanno in `CLAUDE.local.md`, che git
 ignora.
@@ -128,7 +130,8 @@ lib/
     ui/settings_screen.dart    aspetto, libreria, lettura, dati
     ui/more_screen.dart        la destinazione che raccoglie le tre sopra
     ui/archive_screen.dart     Scarica un manga: ricerca, link, capitoli, destinazione, coda
-    ui/archive_server.dart     il server lì dentro: collegarlo, la sua coda, la sua cartella
+    ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
+    data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
     ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare su ManhwaRead
     ui/setup_screen.dart       permesso, cartella, stati vuoti e di errore
     ui/reader_metrics.dart     geometria della striscia a fasce, senza schermo
@@ -145,21 +148,23 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/indexes.dart             index.json, pages.json, riga di libreria, firma
   lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)
   lib/drive.dart               client REST di Drive, `SyncRemote`, `NetworkState`
-  lib/remote.dart              client dell'API del server, link di abbinamento, indirizzi privati
+  lib/remote.dart              client dell'API del server, `KAGAMI_SETUP` e comando, indirizzi privati
+  lib/google_token.dart        endpoint dei token di Google: riscattare e rinnovare i permessi
   lib/image_tools.dart         miniature e tessere: l'interfaccia, chi le fa è fuori
   lib/jobs.dart, runner.dart   coda, avanzamento, storico, il giro
   lib/tracking.dart            serie in corso e controllo dei capitoli nuovi
   test/                        provider con fixture copiate, motore su cartella e
                                Drive finto, coda, serie in corso (`dart test`)
 server/                        Kagami Server, Dart puro (`dart compile exe`)
-  bin/kagami_server.dart       riga di comando: serve, key, drive, status
-  lib/src/api.dart             l'API v1: rotte, chiave, validazione dei lavori
-  lib/src/keys.dart            chiavi API: solo l'impronta su disco, revoca per nome
-  lib/src/google.dart          permesso di Drive del server: OAuth installato, refresh token
+  bin/kagami_server.dart       riga di comando: serve, users, status, ping
+  lib/src/api.dart             l'API v2: rotte, chi chiama, utenti, validazione dei lavori
+  lib/src/identity.dart        token d'identità di Firebase: firma RS256, progetto, account Google
+  lib/src/users.dart           account ammessi, proprietario, uno spazio (coda, Drive, giro) per utente
+  lib/src/google.dart          il Drive di un utente: refresh token e cartella
   lib/src/worker.dart          il giro della coda (ArchiveRunner) e il controllo quotidiano
   lib/src/images.dart          miniature e tessere con libvips
-  lib/src/config.dart, server.dart  cartella dei dati, impostazioni, accensione
-  test/                        chiavi, token contro un Google finto, API e client sul loopback, giro
+  lib/src/config.dart, server.dart  cartella dei dati, `KAGAMI_SETUP`, impostazioni, accensione
+  test/                        firme vere con una chiave di prova, Google finto, API e client sul loopback, giro
   Dockerfile, docker-compose.yml  immagine con libvips; il target `test` fa girare anche i test di vips
 fonts/                         Figtree, il carattere dell'interfaccia
 assets/providers/              icone dei siti da cui si archivia (`Provider.icon`)
@@ -177,7 +182,7 @@ test/network_test.dart         monitor della rete e fasce che tornano da sole
 test/arrivals_test.dart        pallino dei capitoli nuovi, notifiche, silenzio nel backup
 test/folder_sync_test.dart     piano della sincronizzazione e giri contro un Drive finto
 test/tag_tint_test.dart        il colore di un'etichetta dipende solo dal suo testo
-firestore.rules                chi può leggere il proprio documento: solo lui
+firestore.rules                il proprio documento solo a sé; gli inviti ai server a mittente e destinatario
 docs/design.md                 funzionalità, interfaccia e scelte tecniche
 docs/malf.md                   il formato della libreria: l'originale della specifica
 docs/server-api.md             l'API v1 fra app e server: l'originale del protocollo
@@ -200,6 +205,7 @@ docker build -f server/Dockerfile --target test .   # i test del server con libv
 docker build -f server/Dockerfile -t kagami-server . # l'immagine; contesto la radice del repo
 flutter build apk --debug       # con google-services.json: account e Drive
 flutter build apk --release --dart-define=SENTRY_DSN=…   # Sentry facoltativo
+flutter build apk --release --dart-define=GOOGLE_SERVER_CLIENT_SECRET=…   # per creare e collegare server
 flutter build linux --debug     # solo per vedere che compili: niente Firebase
 flutter build ios --release --no-codesign   # solo su macOS; l'IPA non firmato lo fa build.yml
 
@@ -235,31 +241,48 @@ nel proprio progetto Firebase.
   repo e parla un protocollo di Kagami. Non va mai sostituito con
   `mangaarchive`, Cobalt o un servizio del manutentore, nemmeno «per ora».
 - **Kagami Server è l'archiviatore del telefono su un computer acceso.** Stesso
-  `ArchiveRunner`, stessi file di coda e stato (`ArchiveFiles` nella sua
-  cartella dei dati), destinazione solo la cartella di Drive della libreria.
-  Il protocollo è `docs/server-api.md`, e si cambia prima lì. Vincoli:
-  - la chiave è `Authorization: Bearer`, e su disco ne resta solo lo SHA-256.
-    Niente limite ai tentativi: 256 bit non si indovinano, e dietro un proxy
-    un blocco per indirizzo chiuderebbe fuori il proprietario;
+  `ArchiveRunner`, stessi file di coda e stato (`ArchiveFiles`), uno spazio
+  per account in `users/` della cartella dei dati, destinazione solo la
+  cartella di Drive della libreria di chi chiede. Il protocollo è
+  `docs/server-api.md`, e si cambia prima lì. Vincoli:
+  - sul server non si configura niente e non si fa nessun accesso: tutto
+    arriva da `KAGAMI_SETUP`, che l'app genera per il proprietario dentro un
+    comando `docker run` (progetto Firebase, client «Web», permesso di Drive
+    e cartella del proprietario). Si applica quando cambia, per impronta:
+    rilanciare lo stesso comando non rimette un permesso vecchio;
+  - chi chiama lo dice il **token d'identità di Firebase** (`Bearer`),
+    verificato con le chiavi pubbliche di Google (`identity.dart`, RS256
+    confrontando il blocco intero, senza dipendenze): `aud` il progetto,
+    accesso con Google, indirizzo verificato. Niente sessioni né chiavi su
+    disco; l'elenco degli account è del proprietario, che lo cambia
+    dall'app (`/v2/users`);
+  - ogni account ha il **suo** Drive: un refresh token per il client «Web»
+    del progetto Firebase, riscattato dall'app dal `serverAuthCode` di
+    Android col segreto del client, che mette chi compila
+    (`--dart-define=GOOGLE_SERVER_CLIENT_SECRET`). Il telefono non può
+    prestare il suo token, che dura un'ora. Con l'app OAuth in «Testing» i
+    permessi scadono in sette giorni: `docs/server.md` lo dice;
+  - gli inviti sono documenti Firestore (`serverInvites`, regole in
+    `firestore.rules`): il server non manda email e di Firebase conosce solo
+    i token. La notifica dell'invito la dà l'app di chi lo riceve;
   - il server non fa TLS. L'HTTPS lo mette chi lo espone (Tailscale Funnel,
     reverse proxy); in chiaro va bene solo in casa o dentro Tailscale;
-  - Drive col **client OAuth del proprietario** (tipo Desktop) e un refresh
-    token. Il telefono non può prestare il suo token, che dura un'ora, e
-    Kagami non distribuisce un client, perché lo scope completo di Drive
-    aperto a chiunque vorrebbe la verifica di Google. Con l'app OAuth in
-    «Testing» il permesso scade in sette giorni: `docs/server.md` lo dice;
   - niente browser: per ManhwaRead la pagina della serie la manda il
     telefono (`snapshot`), le tavole si prendono dal CDN;
   - l'immagine Docker si costruisce dalla radice (serve `packages/`), e
-    `.dockerignore` fa entrare solo `server/` e il motore. Sulla macchina
+    `.dockerignore` fa entrare solo `server/` e il motore. La pubblica su
+    GHCR `ci.yml` dal repo pubblico, ed è quella del comando dell'app
+    (`serverImage`): non contiene niente di personale. Sulla macchina
     condivisa si toglie per nome solo ciò che si è creato, mai con `prune`;
-  - prima di ogni giro si chiede se Drive è pronto (`ServerDrive.blocked`):
-    senza, i lavori aspettano in coda invece di fallire tutti;
-  - nell'app il collegamento (`server.link`) è un'impostazione del database,
-    quindi va in backup e account, per scelta dell'utente. La coda del server
-    si chiede solo a schermata aperta (`remoteArchiveProvider`, autoDispose).
-    Il client è `packages/kagami_archive/lib/remote.dart`, e i test del
-    server lo provano contro `ServerApi`: chi cambia l'API cambia tutti e due.
+  - prima di ogni giro si chiede se il Drive di quell'account è pronto
+    (`UserDrive.blocked`): senza, i lavori aspettano in coda invece di
+    fallire tutti;
+  - nell'app il collegamento (`server.link`) è solo l'indirizzo, fra le
+    impostazioni del database, quindi va in backup e account. La coda del
+    server si chiede solo a schermata aperta (`remoteArchiveProvider`,
+    autoDispose). Il client è `packages/kagami_archive/lib/remote.dart`, e i
+    test del server lo provano contro `ServerApi`: chi cambia l'API cambia
+    tutti e due.
 - **L'archiviatore è un pacchetto Dart puro** (`packages/kagami_archive/`),
   perché lo usano sia l'app sia il server, e il server non ha Flutter. Lì non
   entra niente di Flutter, Android o dell'account. Ciò che il telefono

@@ -1,8 +1,8 @@
-# Kagami Server con Docker Compose. Dalla cartella server/:
-#   docker compose up -d
-#   docker compose logs kagami-server          # la prima chiave API
-#   docker compose exec kagami-server kagami-server drive login
-#   docker compose exec kagami-server kagami-server drive folder <link>
+# Kagami Server con Docker Compose, per chi lo costruisce dal sorgente. Chi
+# non vuole il sorgente usa il comando `docker run` che genera l'app, con
+# l'immagine già pronta. Dalla cartella server/:
+#   KAGAMI_SETUP=<dall'app> docker compose up -d
+#   docker compose logs kagami-server
 # Guida completa: docs/server.md.
 services:
   kagami-server:
@@ -17,9 +17,10 @@ services:
       # Il tuo fuso orario (es. Europe/Rome): decide l'ora del controllo delle
       # serie in corso. Si prende da TZ della shell, se c'è.
       TZ: ${TZ:-UTC}
-      # Il client OAuth «Desktop» del tuo progetto Google Cloud (docs/server.md).
-      KAGAMI_GOOGLE_CLIENT_ID: ""
-      KAGAMI_GOOGLE_CLIENT_SECRET: ""
+      # La configurazione generata dall'app (Altro → Scarica un manga →
+      # Server → Crea il tuo server): progetto, client e il tuo Drive. Si
+      # applica al primo avvio e quando cambia; poi può anche restare vuota.
+      KAGAMI_SETUP: ${KAGAMI_SETUP:-}
     volumes:
       - kagami-data:/data
 

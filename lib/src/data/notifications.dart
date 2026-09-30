@@ -56,6 +56,10 @@ class ArrivalFiles {
 
 const MethodChannel notificationsChannel = MethodChannel('kagami/notifications');
 
+/// Le notifiche degli inviti hanno chiavi così; quelle delle serie hanno la
+/// chiave della serie, che non comincia mai in questo modo.
+const String serverInvitePrefix = 'server-invite:';
+
 class ArrivalNotifications {
   ArrivalNotifications({this.channel = notificationsChannel})
       : _native = !kIsWeb && Platform.isAndroid;
@@ -99,6 +103,14 @@ class ArrivalNotifications {
             : 'Sono arrivati ${alert.count} capitoli nuovi',
       });
     }
+  }
+
+  /// L'avviso che qualcuno ci ha dato accesso al suo server. La chiave porta
+  /// [serverInvitePrefix]: toccandola si apre «Scarica un manga».
+  Future<void> invite(String id, {required String title, required String text}) async {
+    if (!_native) return;
+    await Permission.notification.request();
+    await channel.invokeMethod<void>('invite', {'key': '$serverInvitePrefix$id', 'title': title, 'text': text});
   }
 
   /// Programma il controllo della cartella locale ad app chiusa.

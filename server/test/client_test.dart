@@ -1,58 +1,50 @@
 // Il client dell'app contro l'API vera del server: il contratto di
-// docs/server-api.md provato da tutt'e due i lati.
+// docs/server-api.md provato da tutt'e due i lati. Il resto del server è
+// finto (fakes.dart): qui conta la forma delle richieste e delle risposte.
 import 'dart:io';
 
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
-import 'package:kagami_server/kagami_server.dart';
-import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'fakes.dart';
 
 void main() {
-  late Directory dir;
-  late HttpServer server;
+  const owner = 'owner@example.com';
+  late TestServer server;
   late ArchiveFiles files;
   late FakeJobs jobs;
   late FakeDrive drive;
   late ServerClient client;
   late Uri address;
 
+  ServerClient as(String email, {Uri? at}) =>
+      ServerClient(ServerLink(at ?? address), ({bool refresh = false}) async => 'tok:$email');
+
   setUp(() async {
-    dir = await Directory.systemTemp.createTemp('kagami-client-');
-    files = ArchiveFiles(dir.path);
-    jobs = FakeJobs()..files = files;
-    drive = FakeDrive();
-    final keys = ApiKeys(File(p.join(dir.path, 'keys.json')));
-    final (_, secret) = await keys.create('telefono');
-    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    server.listen(ServerApi(
-      name: 'Casa',
-      keys: keys,
-      files: files,
-      jobs: jobs,
-      drive: drive,
-      images: true,
-      checkMinutes: 240,
-      log: (_) {},
-    ).handle);
-    address = Uri.parse('http://127.0.0.1:${server.port}');
-    client = ServerClient(ServerLink(address, secret));
+    server = await TestServer.start(owner: owner, name: 'Casa');
+    final space = await server.ready(owner);
+    files = space.files;
+    jobs = space.jobs;
+    drive = space.drive;
+    address = server.address;
+    client = as(owner);
   });
   tearDown(() async {
     client.close();
-    await server.close(force: true);
-    await dir.delete(recursive: true);
+    await server.close();
   });
 
   test('il server si presenta e riceve un lavoro, che poi si vede e si toglie', () async {
     final info = await client.info();
     expect(info.name, 'Casa');
     expect(info.ready, isTrue);
-    expect(info.folderName, 'MangaArchive');
+    expect(info.isOwner, isTrue);
+    expect(info.email, owner);
+    expect(info.owner, owner);
+    expect(info.folderName, 'Manga');
     expect(info.providers, containsAll(['mangak', 'manhwaread']));
 
     final job = await client.enqueue(url: 'https://mangak.io/x', title: 'X', ids: {'a', 'b'}, delayMs: 500);
@@ -78,12 +70,22 @@ void main() {
     );
   });
 
-  test('chiave sbagliata, server spento, indirizzo di qualcos\'altro', () async {
-    final wrong = ServerClient(ServerLink(address, 'kagami_falsa'));
+  test('token rifiutato, token scaduto, server spento, indirizzo di qualcos\'altro', () async {
+    final wrong = ServerClient(ServerLink(address), ({bool refresh = false}) async => 'falso');
     await expectLater(wrong.info(), throwsA(isA<ServerUnauthorized>()));
     wrong.close();
 
-    final off = ServerClient(ServerLink(Uri.parse('http://127.0.0.1:1'), 'k'));
+    // Il primo token è scaduto: il client ne chiede uno nuovo e riprova.
+    final asked = <bool>[];
+    final stale = ServerClient(ServerLink(address), ({bool refresh = false}) async {
+      asked.add(refresh);
+      return refresh ? 'tok:$owner' : 'scaduto';
+    });
+    expect((await stale.info()).email, owner);
+    expect(asked, [false, true]);
+    stale.close();
+
+    final off = as(owner, at: Uri.parse('http://127.0.0.1:1'));
     await expectLater(off.info(), throwsA(isA<ServerOffline>()));
     off.close();
 
@@ -92,13 +94,57 @@ void main() {
       request.response.write('<html>un altro sito</html>');
       await request.response.close();
     });
-    final elsewhere = ServerClient(ServerLink(Uri.parse('http://127.0.0.1:${other.port}'), 'k'));
+    final elsewhere = as(owner, at: Uri.parse('http://127.0.0.1:${other.port}'));
     await expectLater(
       elsewhere.info(),
       throwsA(isA<ServerException>().having((e) => e.message, 'message', contains('Kagami Server'))),
     );
     elsewhere.close();
     await other.close(force: true);
+  });
+
+  test('un server della v1 all\'indirizzo giusto va aggiornato, e lo si dice', () async {
+    final old = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    old.listen((request) async {
+      final root = request.uri.path == '/';
+      request.response
+        ..statusCode = root ? 200 : 404
+        ..write(root ? '{"service":"kagami-server","api":1}' : '{"error":{"code":"not_found","message":"Indirizzo sconosciuto."}}');
+      await request.response.close();
+    });
+    final client = as(owner, at: Uri.parse('http://127.0.0.1:${old.port}'));
+    await expectLater(client.info(), throwsA(isA<ServerException>().having((e) => e.message, 'message', contains('API 1'))));
+    client.close();
+    await old.close(force: true);
+  });
+
+  test('un amico: fuori finché non è ammesso, poi dà il suo Drive e ha la sua coda', () async {
+    const friend = 'amico@example.com';
+    final his = as(friend);
+    await expectLater(his.info(), throwsA(isA<ServerForbidden>().having((e) => e.code, 'code', 'not_allowed')));
+    await expectLater(his.users(), throwsA(isA<ServerForbidden>()));
+
+    final added = await client.addUser('Amico@Example.com');
+    expect((added.email, added.owner, added.connected), (friend, false, false));
+    final info = await his.info();
+    expect((info.isOwner, info.ready), (false, false));
+    await expectLater(his.users(), throwsA(isA<ServerForbidden>().having((e) => e.code, 'code', 'owner_only')));
+
+    expect(await his.grantDrive('1//suo', 'sua-cartella'), (id: 'sua-cartella', name: 'Scelta'));
+    expect((await his.info()).ready, isTrue);
+    expect([for (final user in await client.users()) (user.email, user.owner, user.connected)], [
+      (owner, true, true),
+      (friend, false, true),
+    ]);
+    await his.enqueue(url: 'https://mangak.io/x');
+    expect((await his.queue()).jobs, hasLength(1));
+    expect((await client.queue()).jobs, isEmpty);
+
+    await his.forgetDrive();
+    expect((await his.info()).ready, isFalse);
+    await client.removeUser(friend);
+    await expectLater(his.info(), throwsA(isA<ServerForbidden>()));
+    his.close();
   });
 
   test('serie in corso, controllo, cartella scelta dall\'app, storico', () async {
@@ -126,6 +172,7 @@ void main() {
 
     final folder = await client.chooseFolder('nuova');
     expect(folder, (id: 'nuova', name: 'Scelta'));
+    expect(drive.folderId, 'nuova');
 
     await files.remember(ArchiveOutcome(title: 'Fatta', ok: true, message: 'ok', finishedAt: DateTime.now()));
     expect((await client.queue()).history.single.title, 'Fatta');

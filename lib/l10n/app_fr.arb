@@ -349,7 +349,7 @@
   "serverPreparing": "Préparation…",
   "serverGenerate": "Générer la commande",
   "serverStep1": "Installe Docker sur l'ordinateur (docker.com), s'il n'y est pas déjà.",
-  "serverStep2": "Colle cette commande dans son terminal. Elle contient l'autorisation d'accéder à ton Drive : ne l'envoie à personne.",
+  "serverStep2": "Colle ces commandes dans son terminal : la première démarre le serveur, la seconde le tient à jour toute seule. Elles contiennent l'autorisation d'accéder à ton Drive : ne les envoie à personne.",
   "serverCopyCommand": "Copier la commande",
   "serverStep3": "Saisis ici l'adresse de l'ordinateur : à la maison, celle du réseau local ; à l'extérieur, son nom dans Tailscale ou l'adresse HTTPS par laquelle tu l'exposes.",
   "serverPortNote": "Le serveur répond sur le port 8080.",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "Décodage {decode} ms (max {decodeMax}) · arrivée {arrival} ms (max {arrivalMax})",
   "readerProbeMemory": "Copie max {copy} ms · GC Android {gc} ({gcMs} ms) · bloquants {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Attentes de Drive {drive} · repli Dart {fallbacks}",
-  "readerProbeJumps": "Corrections {corrections} · sauts {jumps} ({jumped} px)"
+  "readerProbeJumps": "Corrections {corrections} · sauts {jumps} ({jumped} px)",
+  "serverCheckDaily": "Vérification quotidienne des nouveaux chapitres",
+  "serverCheckDailyAt": "Chaque jour à {clock}, heure du serveur",
+  "serverCheckDailyOff": "Désactivé : les nouveaux chapitres ne se téléchargent qu'à la main",
+  "serverCheckLibrary": "Toute la bibliothèque sur Drive",
+  "serverCheckLibraryOn": "Aussi les séries téléchargées par le téléphone ou par d'autres, pas seulement par le serveur",
+  "serverCheckLibraryOff": "Seulement les séries en cours téléchargées par le serveur",
+  "serverCheckLast": "Dernière vérification {when} : {count, plural, =0{aucun nouveau chapitre} =1{1 série avec de nouveaux chapitres} other{{count} séries avec de nouveaux chapitres}}",
+  "serverCheckTimeHelp": "Heure de la vérification"
 }

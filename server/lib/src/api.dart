@@ -23,6 +23,7 @@ import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
 import 'users.dart';
+import 'worker.dart' show ServerCheck;
 
 /// Il corpo più grande accettato: la pagina di una serie di ManhwaRead, che
 /// il telefono manda quando il sito è dietro Cloudflare, sta abbondantemente
@@ -43,7 +44,6 @@ class ServerApi {
     required this.identity,
     required this.accounts,
     required this.images,
-    required this.checkMinutes,
     this.log = _stderr,
   });
 
@@ -56,7 +56,6 @@ class ServerApi {
 
   /// Se il server fa miniature e tessere (c'è `vips`).
   final bool images;
-  final int? checkMinutes;
   final void Function(String line) log;
 
   static void _stderr(String line) => stderr.writeln(line);
@@ -129,6 +128,7 @@ class ServerApi {
       ('GET', ['ongoing']) => (HttpStatus.ok, await _ongoing(me)),
       ('DELETE', ['ongoing', final key]) => await _forget(me, key),
       ('POST', ['check']) => _check(me),
+      ('PUT', ['check']) => (HttpStatus.ok, await _configureCheck(me, await _body(request))),
       ('GET', ['users']) => (HttpStatus.ok, await _users(_owner(accounts, email))),
       ('POST', ['users']) => (HttpStatus.created, await _addUser(_owner(accounts, email), await _body(request))),
       ('DELETE', ['users', final who]) => await _removeUser(_owner(accounts, email), who),
@@ -187,7 +187,7 @@ class ServerApi {
           for (final provider in providers) {'id': provider.id, 'name': provider.name},
         ],
         'images': images,
-        'check': {'minutes': checkMinutes},
+        'check': _checkJson(await me.jobs.checkSettings()),
         'me': {'email': email, 'owner': email == accounts.owner, 'drive': await _drive(me.drive)},
       };
 
@@ -311,6 +311,35 @@ class ServerApi {
     }
     await tracking.forget(key);
     return (HttpStatus.noContent, null);
+  }
+
+  /// `minutes` è `null` col controllo spento, come per i client di prima.
+  static Map<String, Object?> _checkJson(ServerCheck settings) => {
+        'minutes': settings.enabled ? settings.minutes : null,
+        'time': settings.minutes,
+        'enabled': settings.enabled,
+        'library': settings.library,
+        'checkedAt': ?settings.checkedAt?.toIso8601String(),
+        'checked': settings.checked,
+        'queued': settings.queued,
+        'failed': settings.failed,
+      };
+
+  Future<Map<String, Object?>> _configureCheck(UserSpace me, Map<String, Object?> body) async {
+    final enabled = body['enabled'];
+    final minutes = body['minutes'];
+    final library = body['library'];
+    if ((enabled != null && enabled is! bool) || (library != null && library is! bool)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«enabled» e «library» sono sì o no.');
+    }
+    if (minutes != null && (minutes is! int || minutes < 0 || minutes >= 24 * 60)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«minutes» va da 0 a 1439.');
+    }
+    return _checkJson(await me.jobs.configureCheck(
+      enabled: enabled as bool?,
+      minutes: minutes as int?,
+      library: library as bool?,
+    ));
   }
 
   (int, Object?) _check(UserSpace me) {

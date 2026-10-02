@@ -1422,7 +1422,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get serverStep2 =>
-      'Incolla questo comando nel suo terminale. Contiene il permesso sul tuo Drive: non mandarlo a nessuno.';
+      'Incolla questi comandi nel suo terminale: il primo accende il server, il secondo lo tiene aggiornato da solo. Contengono il permesso sul tuo Drive: non mandarli a nessuno.';
 
   @override
   String get serverCopyCommand => 'Copia il comando';
@@ -3312,4 +3312,42 @@ class AppLocalizationsIt extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return 'Correzioni $corrections · salti $jumps ($jumped px)';
   }
+
+  @override
+  String get serverCheckDaily => 'Controllo giornaliero dei capitoli nuovi';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return 'Ogni giorno alle $clock, ora del server';
+  }
+
+  @override
+  String get serverCheckDailyOff =>
+      'Spento: i capitoli nuovi si scaricano solo a mano';
+
+  @override
+  String get serverCheckLibrary => 'Tutta la libreria su Drive';
+
+  @override
+  String get serverCheckLibraryOn =>
+      'Anche le serie scaricate dal telefono o da altri, non solo dal server';
+
+  @override
+  String get serverCheckLibraryOff =>
+      'Solo le serie in corso scaricate dal server';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count serie con capitoli nuovi',
+      one: '1 serie con capitoli nuovi',
+      zero: 'nessun capitolo nuovo',
+    );
+    return 'Ultimo controllo $when: $_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => 'Ora del controllo';
 }

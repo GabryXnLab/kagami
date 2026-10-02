@@ -73,6 +73,28 @@ void main() {
     await worker.close();
   });
 
+  test('il controllo quotidiano: ora da config.json, poi quella scelta dall\'app, e com\'è andato', () async {
+    final worker = ServerWorker(files, environment(), blocked: () async => null, checkMinutes: 300,
+        folder: () => 'f', log: (_) {});
+    expect(((await worker.checkSettings()).enabled, (await worker.checkSettings()).minutes), (true, 300));
+    await worker.configureCheck(minutes: 60, library: false);
+    final again = ServerWorker(files, environment(), blocked: () async => null, log: (_) {});
+    final settings = await again.checkSettings();
+    expect((settings.enabled, settings.minutes, settings.library), (true, 60, false));
+    await worker.configureCheck(library: true);
+    // La libreria è vuota: niente in coda, ma il controllo resta annotato.
+    await worker.checkNow();
+    expect((await worker.checkSettings()).checkedAt, isNotNull);
+    expect(await files.jobs(), isEmpty);
+    await worker.close();
+    expect((await ServerWorker(files, environment(), blocked: () async => null).checkSettings()).minutes, 60);
+  });
+
+  test('spento in config.json (check.minutes null), il controllo parte spento', () async {
+    final worker = ServerWorker(files, environment(), blocked: () async => null, log: (_) {});
+    expect((await worker.checkSettings()).enabled, isFalse);
+  });
+
   test('un lavoro in attesa si toglie dalla coda', () async {
     final worker = ServerWorker(files, environment(), blocked: () async => 'fermo', log: (_) {});
     await files.enqueue(job('uno', 'https://example.com/x'));

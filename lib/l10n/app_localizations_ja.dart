@@ -1376,7 +1376,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get serverStep2 =>
-      'このコマンドをコンピューターのターミナルに貼り付けてください。Driveへの権限が含まれているので、誰にも送らないでください。';
+      'これらのコマンドをコンピューターのターミナルに貼り付けてください。1つ目がサーバーを起動し、2つ目がサーバーを自動で最新に保ちます。Driveへの権限が含まれているので、誰にも送らないでください。';
 
   @override
   String get serverCopyCommand => 'コマンドをコピー';
@@ -3211,4 +3211,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return '補正 $corrections · ジャンプ $jumps ($jumped px)';
   }
+
+  @override
+  String get serverCheckDaily => '新しい話の毎日のチェック';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return '毎日 $clock(サーバーの時刻)';
+  }
+
+  @override
+  String get serverCheckDailyOff => 'オフ:新しい話は手動でのみダウンロードされます';
+
+  @override
+  String get serverCheckLibrary => 'Drive のライブラリ全体';
+
+  @override
+  String get serverCheckLibraryOn => 'サーバーだけでなく、スマホや他の方法でダウンロードしたシリーズも';
+
+  @override
+  String get serverCheckLibraryOff => 'サーバーがダウンロードした連載中のシリーズのみ';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '新しい話があるシリーズ $count 件',
+      zero: '新しい話はありません',
+    );
+    return '前回のチェック $when:$_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => 'チェックの時刻';
 }

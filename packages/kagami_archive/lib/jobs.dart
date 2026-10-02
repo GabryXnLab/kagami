@@ -294,6 +294,22 @@ class ArchiveFiles {
   File get _mutex => File(p.join(directory.path, 'queue.lock'));
   File get runLock => File(p.join(directory.path, 'run.lock'));
   File get ongoing => File(p.join(directory.path, 'ongoing.json'));
+  File get _delegated => File(p.join(directory.path, 'server-check.json'));
+
+  /// La cartella di Drive di cui il server collegato controlla ogni giorno
+  /// tutta la libreria: le serie del telefono che scendono lì le segue lui,
+  /// e controllarle anche da qui scaricherebbe due volte gli stessi capitoli
+  /// nella stessa cartella. Un file, perché lo legge anche il controllo ad
+  /// app chiusa, che il server non lo conosce.
+  Future<String?> delegatedFolder() async => (await readJsonFile(_delegated))?['folderId'] as String?;
+
+  Future<void> delegate(String? folderId) async {
+    if (folderId == null) {
+      if (await _delegated.exists()) await _delegated.delete();
+    } else if (await delegatedFolder() != folderId) {
+      await writeAtomically(_delegated, utf8.encode(jsonEncode({'folderId': folderId})));
+    }
+  }
 
   /// Le tavole dei capitoli preparati per Drive, finché Drive non le ha.
   Directory staging(String folderId) => Directory(p.join(directory.path, 'staging', folderId));

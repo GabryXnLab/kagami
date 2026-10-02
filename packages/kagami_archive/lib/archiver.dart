@@ -8,6 +8,9 @@
 /// * ogni tavola ha dimensione e SHA-256 nel `chapter.json`, riscritto dopo
 ///   ogni tavola; `complete: true` arriva solo alla fine. Una ripresa salta
 ///   le tavole già verificate;
+/// * le tavole di un capitolo scendono su più corsie, e mentre un capitolo
+///   sale su Drive il seguente scende già dal sito: il tempo di un giro è
+///   quello della parte più lenta, non la somma delle due;
 /// * un capitolo che fallisce non ferma gli altri e resta da ritentare. Una
 ///   rete che manca invece ferma tutto ([ProviderOffline], [DriveOffline]):
 ///   non è un capitolo sbagliato, è un giro da riprendere.
@@ -136,6 +139,24 @@ Map<String, Object?> _measured(Map<String, Object?> record, Uint8List? body, [Pa
   return {...record, 'width': width, 'height': height};
 }
 
+/// Le partenze delle richieste al sito, distanziate di [interval] anche con
+/// più corsie: la pausa scelta dall'utente resta un ritmo, non una fila in
+/// cui ogni tavola aspetta la fine della precedente.
+class _Pacer {
+  _Pacer(this.interval);
+
+  final Duration interval;
+  DateTime _next = DateTime.fromMillisecondsSinceEpoch(0);
+
+  Future<void> wait() async {
+    if (interval <= Duration.zero) return;
+    final now = DateTime.now();
+    final start = _next.isAfter(now) ? _next : now;
+    _next = start.add(interval);
+    if (start.isAfter(now)) await Future<void>.delayed(start.difference(now));
+  }
+}
+
 Map<String, Object?> _withoutTiles(Map<String, Object?> record) =>
     {for (final entry in record.entries) if (entry.key != 'tiles') entry.key: entry.value};
 
@@ -147,6 +168,7 @@ class Archiver {
     required this.scratch,
     this.images = const NoImageTools(),
     this.delay = const Duration(milliseconds: 200),
+    this.lanes = 6,
     this.onEvent,
     this.cancelled,
   });
@@ -159,9 +181,15 @@ class Archiver {
   final Directory scratch;
   final ImageTools images;
 
-  /// La pausa fra una richiesta e l'altra: i siti non amano chi scarica a
-  /// raffica.
+  /// La distanza fra l'inizio di una richiesta al sito e il seguente: i siti
+  /// non amano chi scarica a raffica.
   final Duration delay;
+
+  /// Quante tavole scendono insieme. Una tavola sono pochi centinaia di
+  /// kilobyte e la richiesta è quasi tutta attesa del CDN: una corsia sola
+  /// lascia la linea vuota per gran parte del tempo, e a fare da freno resta
+  /// [delay].
+  final int lanes;
   final void Function(ArchiveEvent event)? onEvent;
   final bool Function()? cancelled;
 
@@ -171,9 +199,7 @@ class Archiver {
     if (cancelled?.call() ?? false) throw const ArchiveCancelled();
   }
 
-  Future<void> _pause() async {
-    if (delay > Duration.zero) await Future<void>.delayed(delay);
-  }
+  late final _Pacer _pacer = _Pacer(delay);
 
   /// Archivia [series]: tutta, i capitoli con gli id in [ids] o quelli dal
   /// capitolo [start] in poi.
@@ -200,43 +226,52 @@ class Archiver {
         if (!chosen.contains(chapter.id)) chapter.id,
     ]);
     var sinceIndex = 0;
-    for (var index = 0; index < selected.length; index++) {
-      _check();
-      final chapter = selected[index];
-      _emit(ChapterStarted(index + 1, selected.length, chapter.title));
-      final counts = [0, 0];
-      try {
-        await _chapter(folder, chapter, counts);
-        result.completed++;
-        result.settled.add(chapter.id);
-        _emit(ChapterFinished(index + 1, selected.length, chapter.title));
-        sinceIndex++;
-      } on ProviderOffline {
-        rethrow;
-      } on DriveOffline {
-        rethrow;
-      } on DriveAuthRequired {
-        rethrow;
-      } on ArchiveCancelled {
-        rethrow;
-      } on ProviderError catch (error) {
-        _fail(result, index, selected.length, chapter, error);
-      } on DriveException catch (error) {
-        _fail(result, index, selected.length, chapter, error);
-      } on FileSystemException catch (error) {
-        _fail(result, index, selected.length, chapter, error.message);
-      } finally {
-        result.pagesDownloaded += counts[0];
-        result.pagesSkipped += counts[1];
+    // Il caricamento del capitolo precedente, che corre mentre scende il
+    // seguente. Uno solo alla volta: i capitoli arrivano su Drive in ordine,
+    // e le tavole in attesa sul telefono sono al più due capitoli.
+    Future<void>? uploading;
+    try {
+      for (var index = 0; index < selected.length; index++) {
+        _check();
+        final chapter = selected[index];
+        _emit(ChapterStarted(index + 1, selected.length, chapter.title));
+        final counts = [0, 0];
+        Future<void> Function()? commit;
+        try {
+          await _guard(result, index, selected.length, chapter, () async {
+            commit = await _chapter(folder, chapter, counts);
+          });
+        } finally {
+          result.pagesDownloaded += counts[0];
+          result.pagesSkipped += counts[1];
+        }
+        await uploading;
+        uploading = null;
+        final ready = commit;
+        if (ready == null) continue;
+        uploading = () async {
+          if (!await _guard(result, index, selected.length, chapter, ready)) return;
+          result.completed++;
+          result.settled.add(chapter.id);
+          _emit(ChapterFinished(index + 1, selected.length, chapter.title));
+          // Ogni tanto gli indici si riscrivono anche a metà: una serie lunga
+          // compare nella libreria mentre scende, e un giro interrotto lascia
+          // leggibile ciò che ha già portato.
+          if (++sinceIndex >= 10) {
+            sinceIndex = 0;
+            await refreshIndexes(folder, manifest);
+          }
+        }();
+        // Un errore che arriva prima che qualcuno lo aspetti non deve
+        // finire fra quelli non gestiti: lo raccoglie il giro seguente.
+        uploading.ignore();
       }
-      // Ogni tanto gli indici si riscrivono anche a metà: una serie lunga
-      // compare nella libreria mentre scende, e un giro interrotto lascia
-      // leggibile ciò che ha già portato.
-      if (sinceIndex >= 10) {
-        await refreshIndexes(folder, manifest);
-        sinceIndex = 0;
-      }
-      if (index < selected.length - 1) await _pause();
+      await uploading;
+    } on Object {
+      // Un errore che ferma il giro non deve lasciare a metà, senza nessuno
+      // che lo aspetti, il caricamento del capitolo precedente.
+      await uploading?.catchError((Object _) {});
+      rethrow;
     }
     try {
       await refreshIndexes(folder, manifest);
@@ -248,6 +283,37 @@ class Archiver {
       result.failed.add(ArchiveFailure('indici di lettura', '$error'));
     }
     return result;
+  }
+
+  /// Fa [step] per un capitolo: un errore del capitolo lo segna fallito e
+  /// torna `false`, uno che riguarda tutto il giro (rete, permesso,
+  /// interruzione) passa oltre.
+  Future<bool> _guard(
+    ArchiveResult result,
+    int index,
+    int total,
+    Chapter chapter,
+    Future<void> Function() step,
+  ) async {
+    try {
+      await step();
+      return true;
+    } on ProviderOffline {
+      rethrow;
+    } on DriveOffline {
+      rethrow;
+    } on DriveAuthRequired {
+      rethrow;
+    } on ArchiveCancelled {
+      rethrow;
+    } on ProviderError catch (error) {
+      _fail(result, index, total, chapter, error);
+    } on DriveException catch (error) {
+      _fail(result, index, total, chapter, error);
+    } on FileSystemException catch (error) {
+      _fail(result, index, total, chapter, error.message);
+    }
+    return false;
   }
 
   void _fail(ArchiveResult result, int index, int total, Chapter chapter, Object error) {
@@ -339,6 +405,7 @@ class Archiver {
   }
 
   Future<({Uint8List body, String extension})> _image(String url, String referer) async {
+    await _pacer.wait();
     final result = await http.get(url, limit: 30000000, referer: referer);
     final extension = imageExtension(result.body);
     if (!result.contentType.startsWith('image/')) {
@@ -383,7 +450,10 @@ class Archiver {
     return true;
   }
 
-  Future<void> _chapter(String folder, Chapter chapter, List<int> counts) async {
+  /// Scarica le tavole di [chapter] e torna la consegna, da fare dopo: è la
+  /// parte che su Drive dura, e intanto può scendere il capitolo seguente.
+  Future<Future<void> Function()> _chapter(String folder, Chapter chapter, List<int> counts) async {
+    await _pacer.wait();
     final content = await provider.fetchPages(chapter, http);
     final path = p.posix.join(folder, 'chapters', chapterFolderName(chapter));
     final stored = await store.filesIn(path);
@@ -402,7 +472,7 @@ class Archiver {
       for (var i = 1; i <= content.pages.length; i++) {
         _emit(PageSaved(i, content.pages.length, saved: false, size: 0));
       }
-      return;
+      return () async {};
     }
     final work = await store.workspace(path);
     final previous = await readJsonFile(File(p.join(work.path, chapterManifestFile))) ?? storedManifest;
@@ -412,6 +482,7 @@ class Archiver {
       for (final record in oldPages.take(content.pages.length))
         record is Map<String, Object?> ? record : <String, Object?>{},
     ];
+    final known = records.length;
     final manifest = <String, Object?>{
       'schemaVersion': archiveSchemaVersion,
       'metadataSchemaVersion': metadataSchemaVersion,
@@ -424,13 +495,23 @@ class Archiver {
       'pages': records,
     };
     final manifestFile = File(p.join(work.path, chapterManifestFile));
+    // Le scritture del manifest una dopo l'altra: con più corsie due
+    // rinomine fuori ordine lascerebbero sul disco quella più vecchia.
+    var writing = Future<void>.value();
+    void save() {
+      writing = writing.then((_) => writeAtomically(manifestFile, _utf8(prettyJson(manifest))));
+    }
+
+    // Le tavole oltre quelle già note entrano nel manifest solo in fila,
+    // senza buchi: una ripresa le rilegge per posizione.
+    final arrived = <int, Map<String, Object?>>{};
     // Riusare una tavola che è già nella destinazione ma non qui ha senso
     // solo se il telefono non ne deve tenere una copia.
     final reuseRemote = store is DriveStore && mirror == null;
-    for (var index = 1; index <= content.pages.length; index++) {
+    Future<void> one(int index) async {
       _check();
       final page = content.pages[index - 1];
-      final record = index <= records.length ? records[index - 1] : <String, Object?>{};
+      final record = index <= known ? records[index - 1] : <String, Object?>{};
       final oldName = record['file'];
       final oldFile = oldName is String && oldName.isNotEmpty && !oldName.contains('/')
           ? File(p.join(work.path, oldName))
@@ -464,15 +545,36 @@ class Archiver {
         saved = true;
       }
       if (body != null) next = await _tile(work, next);
-      if (index <= records.length) {
+      if (index <= known) {
         records[index - 1] = next;
       } else {
-        records.add(next);
+        arrived[index] = next;
+        while (arrived.containsKey(records.length + 1)) {
+          records.add(arrived.remove(records.length + 1)!);
+        }
       }
-      await writeAtomically(manifestFile, _utf8(prettyJson(manifest)));
+      save();
       _emit(PageSaved(index, content.pages.length, saved: saved, size: saved ? next['size'] as int : 0));
-      if (index < content.pages.length) await _pause();
     }
+
+    // Alla prima tavola che fallisce le corsie smettono di prenderne altre,
+    // e il capitolo fallisce come prima: con quella tavola, da ritentare.
+    var taken = 0;
+    (Object, StackTrace)? failure;
+    Future<void> lane() async {
+      while (failure == null && taken < content.pages.length) {
+        final index = ++taken;
+        try {
+          await one(index);
+        } on Object catch (error, stack) {
+          failure ??= (error, stack);
+        }
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < lanes && i < content.pages.length; i++) lane()]);
+    await writing;
+    if (failure case (final error, final stack)) Error.throwWithStackTrace(error, stack);
     manifest['complete'] = true;
     manifest['completedAt'] = isoNow();
     await writeAtomically(manifestFile, _utf8(prettyJson(manifest)));
@@ -487,8 +589,10 @@ class Archiver {
       for (final name in files)
         if (await File(p.join(work.path, name)).exists()) name,
     ];
-    if (store is DriveStore) _emit(ChapterUploading(chapter.title, present.length + 1));
-    await store.commitChapter(path, work, [...present, chapterManifestFile]);
+    return () async {
+      if (store is DriveStore) _emit(ChapterUploading(chapter.title, present.length + 1));
+      await store.commitChapter(path, work, [...present, chapterManifestFile]);
+    };
   }
 
   bool _remoteKept(Map<String, Object?> record, String url, Map<String, StoredFile> stored) {

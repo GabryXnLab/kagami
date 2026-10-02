@@ -668,6 +668,13 @@ al posto dei risultati compare la riga che la apre. Scegliere un risultato
 - **con una pausa** fra le richieste, da niente a due secondi, perché i siti
   bloccano chi scarica a raffica.
 
+La pausa è un ritmo, non una fila: le tavole di un capitolo scendono su più
+corsie, e la pausa separa l'inizio di una richiesta dal seguente. Quando il
+sito o Drive rispondono «troppe richieste», aspettano tutte le corsie
+insieme, quanto chiede `Retry-After` o con un'attesa che raddoppia. Su Drive
+il capitolo finito sale mentre il seguente scende, i file piccoli in una
+richiesta sola (multipart), perché Drive conta le richieste e non i byte.
+
 Il download finisce in una coda che continua a schermo spento, con la
 notifica che dice a che punto è; la schermata mostra la serie in corso, le
 altre in attesa e com'è andata alle ultime. Rifare lo stesso download porta

@@ -48,6 +48,7 @@ class FakeDrive implements SyncRemote {
   final List<String> uploaded = [];
   int _active = 0;
   int mostAtOnce = 0;
+  void Function(String name)? onUpload;
 
   /// Il caricamento che fallisce, per nome.
   String? failUpload;
@@ -68,7 +69,8 @@ class FakeDrive implements SyncRemote {
   /// Un file messo da un altro, il server.
   void place(String path, List<int> bytes) {
     final parent = folder(p.posix.dirname(path) == '.' ? '' : p.posix.dirname(path));
-    final id = 'x${_next++}';
+    // Un file che c'è già si riscrive al suo posto, come farebbe Drive.
+    final id = find(path)?.id ?? 'x${_next++}';
     _put(DriveItem(id: id, name: p.posix.basename(path), size: bytes.length, md5: md5.convert(bytes).toString(), parents: [parent]));
     contents[id] = Uint8List.fromList(bytes);
   }
@@ -120,6 +122,7 @@ class FakeDrive implements SyncRemote {
     _active--;
     uploads++;
     uploaded.add(name ?? previous!.name);
+    onUpload?.call(name ?? previous!.name);
     final item = _put(DriveItem(
       id: id ?? 'u${_next++}',
       name: name ?? previous!.name,
@@ -165,6 +168,15 @@ void main() {
       );
 
   group('in una cartella del telefono', () {
+    test('le tavole di un capitolo scendono insieme, nell\'ordine giusto', () async {
+      http.imageDelay = const Duration(milliseconds: 20);
+      final result = await local().download(series, ids: {'1'});
+      expect(result.failed, isEmpty);
+      expect(http.mostAtOnce, 2);
+      final chapter = readJson(File(p.join(libraryPath(), result.folder, 'chapters', '0001 - Chapter 1 [C1]', 'chapter.json')));
+      expect((chapter['pages'] as List).map((page) => (page as Map)['source']), http.urls[1]);
+    });
+
     test('scarica, riprende e ripara', () async {
       final archiver = local();
       final first = await archiver.download(series);
@@ -333,6 +345,18 @@ void main() {
       expect(drive.uploaded.indexOf('0002.webp'), lessThan(chapter));
     });
 
+    test('il capitolo seguente scende mentre il precedente sale', () async {
+      http.imageDelay = const Duration(milliseconds: 20);
+      final timeline = <String>[];
+      drive.onUpload = (name) => timeline.add('su $name');
+      http.onImage = (url) => timeline.add('giù $url');
+      final result = await local(store: store()).download(series);
+      expect(result.failed, isEmpty);
+      // c.webp è del capitolo 2: parte prima che il capitolo 1 abbia
+      // consegnato la sua ricevuta.
+      expect(timeline.indexOf('giù ${http.urls[2]!.single}'), lessThan(timeline.indexOf('su chapter.json')));
+    });
+
     test('un capitolo già su Drive non si riscarica, e non si ricarica', () async {
       await local(store: store()).download(series);
       final requests = http.imageRequests.length;
@@ -389,6 +413,31 @@ void main() {
       // Nessun doppione: ogni cartella e ogni file una volta sola.
       final names = drive.items.values.map((item) => '${item.parents.first}/${item.name}').toList();
       expect(names.toSet().length, names.length);
+    });
+
+    test('un indice rimasto a metà si ripara: vale il chapter.json, non la voce vecchia', () async {
+      final first = await local(store: store()).download(series);
+      final folder = first.folder;
+      // Com'era Disfarming: il capitolo 1 indicizzato mentre saliva, il 2
+      // senza tavole in pages.json. Su Drive tutt'e due sono completi.
+      final index = driveJson(drive, '$folder/index.json');
+      final chapters = (index['chapters'] as List).cast<Map<String, Object?>>();
+      chapters[0]
+        ..['complete'] = false
+        ..['pageCount'] = 0
+        ..['bytes'] = 0;
+      chapters[1]['pageCount'] = 0;
+      drive.place('$folder/index.json', utf8.encode(jsonEncode(index)));
+      final pages = driveJson(drive, '$folder/pages.json');
+      (pages['pages'] as Map).clear();
+      drive.place('$folder/pages.json', utf8.encode(jsonEncode(pages)));
+
+      final again = await local(store: store()).download(series);
+      expect(again.pagesDownloaded, 0);
+      expect(again.failed, isEmpty);
+      final fixed = driveJson(drive, '$folder/index.json');
+      expect((fixed['chapters'] as List).map((c) => ((c as Map)['complete'], c['pageCount'])), [(true, 2), (true, 1)]);
+      expect(((driveJson(drive, '$folder/pages.json')['pages'] as Map)['C1'] as List), hasLength(2));
     });
 
     test('Drive e telefono: il capitolo resta anche in una cartella locale', () async {

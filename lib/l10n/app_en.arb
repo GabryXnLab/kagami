@@ -349,7 +349,7 @@
   "serverPreparing": "Preparing…",
   "serverGenerate": "Generate the command",
   "serverStep1": "Install Docker on the computer (docker.com), if it isn't there already.",
-  "serverStep2": "Paste this command into its terminal. It contains the permission for your Drive: don't send it to anyone.",
+  "serverStep2": "Paste these commands into its terminal: the first starts the server, the second keeps it up to date on its own. They contain the permission for your Drive: don't send them to anyone.",
   "serverCopyCommand": "Copy the command",
   "serverStep3": "Enter the computer's address here: at home, its local network address; from outside, its Tailscale name or the HTTPS address you expose it on.",
   "serverPortNote": "The server responds on port 8080.",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "Decode {decode} ms (max {decodeMax}) · arrival {arrival} ms (max {arrivalMax})",
   "readerProbeMemory": "Copy max {copy} ms · Android GC {gc} ({gcMs} ms) · blocking {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Drive waits {drive} · Dart fallbacks {fallbacks}",
-  "readerProbeJumps": "Corrections {corrections} · jumps {jumps} ({jumped} px)"
+  "readerProbeJumps": "Corrections {corrections} · jumps {jumps} ({jumped} px)",
+  "serverCheckDaily": "Daily check for new chapters",
+  "serverCheckDailyAt": "Every day at {clock}, server time",
+  "serverCheckDailyOff": "Off: new chapters are only downloaded by hand",
+  "serverCheckLibrary": "The whole library on Drive",
+  "serverCheckLibraryOn": "Also series downloaded by the phone or by others, not just by the server",
+  "serverCheckLibraryOff": "Only ongoing series downloaded by the server",
+  "serverCheckLast": "Last check {when}: {count, plural, =0{no new chapters} =1{1 series with new chapters} other{{count} series with new chapters}}",
+  "serverCheckTimeHelp": "Check time"
 }

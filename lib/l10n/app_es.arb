@@ -349,7 +349,7 @@
   "serverPreparing": "Preparando…",
   "serverGenerate": "Generar el comando",
   "serverStep1": "Instala Docker en el ordenador (docker.com), si aún no lo tiene.",
-  "serverStep2": "Pega este comando en su terminal. Contiene el permiso sobre tu Drive: no se lo envíes a nadie.",
+  "serverStep2": "Pega estos comandos en su terminal: el primero enciende el servidor, el segundo lo mantiene actualizado solo. Contienen el permiso sobre tu Drive: no se los envíes a nadie.",
   "serverCopyCommand": "Copiar el comando",
   "serverStep3": "Escribe aquí la dirección del ordenador: en casa, la de la red local; desde fuera, su nombre en Tailscale o la dirección HTTPS con la que lo expones.",
   "serverPortNote": "El servidor responde en el puerto 8080.",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "Decodificación {decode} ms (máx. {decodeMax}) · llegada {arrival} ms (máx. {arrivalMax})",
   "readerProbeMemory": "Copia máx. {copy} ms · GC Android {gc} ({gcMs} ms) · bloqueantes {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Esperas de Drive {drive} · alternativas Dart {fallbacks}",
-  "readerProbeJumps": "Correcciones {corrections} · saltos {jumps} ({jumped} px)"
+  "readerProbeJumps": "Correcciones {corrections} · saltos {jumps} ({jumped} px)",
+  "serverCheckDaily": "Comprobación diaria de capítulos nuevos",
+  "serverCheckDailyAt": "Cada día a las {clock}, hora del servidor",
+  "serverCheckDailyOff": "Apagado: los capítulos nuevos solo se descargan a mano",
+  "serverCheckLibrary": "Toda la biblioteca en Drive",
+  "serverCheckLibraryOn": "También las series descargadas desde el teléfono u otros, no solo desde el servidor",
+  "serverCheckLibraryOff": "Solo las series en curso descargadas por el servidor",
+  "serverCheckLast": "Última comprobación {when}: {count, plural, =0{ningún capítulo nuevo} =1{1 serie con capítulos nuevos} other{{count} series con capítulos nuevos}}",
+  "serverCheckTimeHelp": "Hora de la comprobación"
 }

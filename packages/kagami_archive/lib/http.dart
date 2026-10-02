@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'model.dart';
@@ -24,10 +25,19 @@ class ProviderOffline extends ProviderError {
 }
 
 class HttpStatusError extends ProviderError {
-  HttpStatusError(this.status, {bool cdn = false})
+  HttpStatusError(this.status, {bool cdn = false, this.retryAfter})
       : super('HTTP $status dal ${cdn ? 'CDN del ' : ''}provider.');
 
   final int status;
+
+  /// Quanto il sito ha chiesto di aspettare, se l'ha detto.
+  final Duration? retryAfter;
+}
+
+/// `Retry-After` in secondi; la forma con la data i siti di manga non la usano.
+Duration? _retryAfter(HttpClientResponse response) {
+  final seconds = int.tryParse(response.headers.value(HttpHeaders.retryAfterHeader)?.trim() ?? '');
+  return seconds == null ? null : Duration(seconds: seconds.clamp(0, 300));
 }
 
 typedef HttpResult = ({Uint8List body, String contentType});
@@ -64,7 +74,7 @@ const String defaultUserAgent =
 class SiteHttp implements ProviderHttp {
   SiteHttp(
     this.allowed, {
-    this.attempts = 3,
+    this.attempts = 5,
     this.delay = const Duration(milliseconds: 500),
     this.userAgent = defaultUserAgent,
     this.cookies,
@@ -110,16 +120,36 @@ class SiteHttp implements ProviderHttp {
 
   static bool _retryable(int status) => const {429, 500, 502, 503, 504}.contains(status);
 
+  /// Fino a quando il sito ha chiesto di lasciarlo in pace. Vale per tutte
+  /// le richieste in volo, non solo per quella respinta: le tavole scendono
+  /// su più corsie, e se ognuna riprovasse per conto suo il sito vedrebbe
+  /// la stessa raffica che l'ha fatto arrabbiare.
+  DateTime _calm = DateTime.fromMillisecondsSinceEpoch(0);
+  final Random _random = Random();
+
+  Future<void> _waitCalm() async {
+    final wait = _calm.difference(DateTime.now());
+    if (wait > Duration.zero) await Future<void>.delayed(wait);
+  }
+
   Future<T> _retrying<T>(Future<T> Function() once) async {
     for (var attempt = 0;; attempt++) {
+      await _waitCalm();
+      Duration? asked;
       try {
         return await once();
       } on HttpStatusError catch (error) {
         if (!_retryable(error.status) || attempt == attempts - 1) rethrow;
+        asked = error.retryAfter;
       } on ProviderOffline {
         if (attempt == attempts - 1) rethrow;
       }
-      await Future<void>.delayed(delay * (1 << attempt));
+      // Attesa che raddoppia, con un po' di caso perché le corsie non
+      // ripartano tutte nello stesso istante.
+      final backoff = delay * (1 << attempt) * (0.75 + _random.nextDouble() / 2);
+      final wait = asked != null && asked > backoff ? asked : backoff;
+      final until = DateTime.now().add(wait);
+      if (until.isAfter(_calm)) _calm = until;
     }
   }
 
@@ -141,7 +171,7 @@ class SiteHttp implements ProviderHttp {
           final challenged = response.headers.value('cf-mitigated') == 'challenge';
           await response.drain<void>();
           if (challenged) throw const CloudflareChallenge();
-          throw HttpStatusError(response.statusCode);
+          throw HttpStatusError(response.statusCode, retryAfter: _retryAfter(response));
         }
         final builder = BytesBuilder(copy: false);
         await for (final chunk in response.timeout(const Duration(seconds: 30))) {
@@ -175,7 +205,7 @@ class SiteHttp implements ProviderHttp {
         await response.drain<void>();
         if (response.statusCode == 404) return false;
         if (response.statusCode != 200) {
-          throw HttpStatusError(response.statusCode, cdn: true);
+          throw HttpStatusError(response.statusCode, cdn: true, retryAfter: _retryAfter(response));
         }
         if (!_type(response).startsWith('image/')) {
           throw const ProviderError('Il CDN non ha restituito un’immagine.');

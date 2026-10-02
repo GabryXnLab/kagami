@@ -349,7 +349,7 @@
   "serverPreparing": "正在准备…",
   "serverGenerate": "生成命令",
   "serverStep1": "在电脑上安装 Docker（docker.com），如果还没有的话。",
-  "serverStep2": "把这条命令粘贴到电脑的终端中。它包含你的 Drive 权限：不要发给任何人。",
+  "serverStep2": "把这些命令粘贴到电脑的终端中：第一条启动服务器，第二条让它自动保持最新。它们包含你的 Drive 权限：不要发给任何人。",
   "serverCopyCommand": "复制命令",
   "serverStep3": "在这里填写电脑的地址：在家里用局域网地址；在外面用它在 Tailscale 中的名称，或你对外开放的 HTTPS 地址。",
   "serverPortNote": "服务器使用 8080 端口响应。",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "解码 {decode} ms（最大 {decodeMax}）· 到达 {arrival} ms（最大 {arrivalMax}）",
   "readerProbeMemory": "复制最大 {copy} ms · Android GC {gc}（{gcMs} ms）· 阻塞 {blocking}（{blockingMs} ms）",
   "readerProbeWaits": "等待 Drive {drive} · Dart 回退 {fallbacks}",
-  "readerProbeJumps": "校正 {corrections} · 跳动 {jumps}（{jumped} px）"
+  "readerProbeJumps": "校正 {corrections} · 跳动 {jumps}（{jumped} px）",
+  "serverCheckDaily": "每日检查新章节",
+  "serverCheckDailyAt": "每天 {clock}（服务器时间）",
+  "serverCheckDailyOff": "已关闭：新章节只能手动下载",
+  "serverCheckLibrary": "Drive 上的整个书库",
+  "serverCheckLibraryOn": "也包括手机或其他方式下载的系列，而不只是服务器下载的",
+  "serverCheckLibraryOff": "仅限服务器下载的连载中系列",
+  "serverCheckLast": "上次检查 {when}：{count, plural, =0{没有新章节} other{{count} 个系列有新章节}}",
+  "serverCheckTimeHelp": "检查时间"
 }

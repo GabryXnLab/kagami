@@ -1482,7 +1482,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get serverStep2 =>
-      'الصق هذا الأمر في طرفيته. يحتوي على صلاحية Drive الخاص بك: لا ترسله لأحد.';
+      'الصق هذه الأوامر في طرفيته: الأول يشغّل الخادم، والثاني يبقيه محدّثًا تلقائيًا. تحتوي على صلاحية Drive الخاص بك: لا ترسلها لأحد.';
 
   @override
   String get serverCopyCommand => 'نسخ الأمر';
@@ -3425,4 +3425,41 @@ class AppLocalizationsAr extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return 'التصحيحات $corrections · القفزات $jumps ($jumped px)';
   }
+
+  @override
+  String get serverCheckDaily => 'فحص يومي للفصول الجديدة';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return 'كل يوم عند $clock بتوقيت الخادم';
+  }
+
+  @override
+  String get serverCheckDailyOff =>
+      'متوقف: لا تُنزَّل الفصول الجديدة إلا يدويًا';
+
+  @override
+  String get serverCheckLibrary => 'المكتبة كاملة على Drive';
+
+  @override
+  String get serverCheckLibraryOn =>
+      'وكذلك السلاسل التي نزّلها الهاتف أو غيره، لا الخادم وحده';
+
+  @override
+  String get serverCheckLibraryOff => 'السلاسل الجارية التي نزّلها الخادم فقط';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سلاسل بفصول جديدة',
+      one: 'سلسلة واحدة بفصول جديدة',
+      zero: 'لا فصول جديدة',
+    );
+    return 'آخر فحص $when: $_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => 'وقت الفحص';
 }

@@ -31,13 +31,15 @@ import java.util.concurrent.Executors
  * costerebbe l'ultima tessera quanto la tavola intera. Solo una tavola
  * troppo grande per stare in memoria si ritaglia dal file.
  *
- * Un thread solo in secondo piano: l'archivio scarica una tavola alla volta,
- * e il telefono intanto può stare leggendo.
+ * Due thread in secondo piano: l'archivio scarica più tavole insieme e con
+ * uno solo le tessere diventavano la fila; più di due tavole decodificate
+ * insieme (fino a 64 MB l'una) sono troppa memoria per un telefono che
+ * intanto può stare leggendo.
  */
 class ArchiveImages(messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
     private val channel = MethodChannel(messenger, "kagami/archive-images")
     private val main = Handler(Looper.getMainLooper())
-    private val worker = Executors.newSingleThreadExecutor { runnable ->
+    private val worker = Executors.newFixedThreadPool(2) { runnable ->
         Thread({
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             runnable.run()

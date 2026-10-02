@@ -34,6 +34,15 @@ class FakeJobs implements JobControl {
 
   @override
   Future<void> checkNow() async => checks++;
+
+  ServerCheck check = const ServerCheck();
+
+  @override
+  Future<ServerCheck> checkSettings() async => check;
+
+  @override
+  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library}) async =>
+      check = check.copyWith(enabled: enabled, minutes: minutes, library: library);
 }
 
 class FakeDrive implements DriveSetup {
@@ -111,7 +120,6 @@ class TestServer {
       identity: FakeIdentity(),
       accounts: accounts,
       images: true,
-      checkMinutes: 240,
       log: (_) {},
     );
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);

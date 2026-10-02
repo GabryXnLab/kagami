@@ -349,7 +349,7 @@
   "serverPreparing": "तैयार कर रहा है…",
   "serverGenerate": "कमांड बनाएँ",
   "serverStep1": "कंप्यूटर पर Docker इंस्टॉल करें (docker.com), अगर पहले से नहीं है।",
-  "serverStep2": "यह कमांड उसके टर्मिनल में पेस्ट करें। इसमें आपके Drive की अनुमति है: इसे किसी को न भेजें।",
+  "serverStep2": "ये कमांड उसके टर्मिनल में पेस्ट करें: पहली सर्वर चालू करती है, दूसरी उसे अपने आप अपडेट रखती है। इनमें आपके Drive की अनुमति है: इन्हें किसी को न भेजें।",
   "serverCopyCommand": "कमांड कॉपी करें",
   "serverStep3": "यहाँ कंप्यूटर का पता लिखें: घर में लोकल नेटवर्क वाला; बाहर से, Tailscale में उसका नाम या वह HTTPS पता जिससे आप उसे उपलब्ध कराते हैं।",
   "serverPortNote": "सर्वर पोर्ट 8080 पर जवाब देता है।",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "डिकोड {decode} ms (अधिकतम {decodeMax}) · आगमन {arrival} ms (अधिकतम {arrivalMax})",
   "readerProbeMemory": "कॉपी अधिकतम {copy} ms · GC Android {gc} ({gcMs} ms) · ब्लॉकिंग {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Drive से इंतज़ार {drive} · Dart फ़ॉलबैक {fallbacks}",
-  "readerProbeJumps": "सुधार {corrections} · छलाँगें {jumps} ({jumped} px)"
+  "readerProbeJumps": "सुधार {corrections} · छलाँगें {jumps} ({jumped} px)",
+  "serverCheckDaily": "नए अध्यायों की रोज़ाना जाँच",
+  "serverCheckDailyAt": "हर दिन {clock} बजे, सर्वर के समय से",
+  "serverCheckDailyOff": "बंद: नए अध्याय सिर्फ़ हाथ से डाउनलोड होते हैं",
+  "serverCheckLibrary": "Drive पर पूरी लाइब्रेरी",
+  "serverCheckLibraryOn": "सिर्फ़ सर्वर ही नहीं, फ़ोन या दूसरों से डाउनलोड की गई सीरीज़ भी",
+  "serverCheckLibraryOff": "सिर्फ़ सर्वर से डाउनलोड की गई चालू सीरीज़",
+  "serverCheckLast": "पिछली जाँच {when}: {count, plural, =0{कोई नया अध्याय नहीं} =1{1 सीरीज़ में नए अध्याय} other{{count} सीरीज़ में नए अध्याय}}",
+  "serverCheckTimeHelp": "जाँच का समय"
 }

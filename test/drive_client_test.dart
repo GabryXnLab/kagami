@@ -33,7 +33,7 @@ void main() {
       await temp.delete(recursive: true);
     });
 
-    DriveClient client(NetworkMonitor network, {Duration? stall}) => DriveClient(
+    DriveClient client(NetworkMonitor network, {Duration? stall, int? multipartLimit}) => DriveClient(
           ({refresh = false}) async => 'token',
           network: network,
           endpoint: (path, query) => Uri.http(
@@ -42,6 +42,7 @@ void main() {
             query,
           ),
           stall: stall ?? const Duration(seconds: 20),
+          multipartLimit: multipartLimit ?? 5 * 1024 * 1024,
         );
 
     test('un file per id: com\'è fatto, o che non c\'è', () async {
@@ -144,6 +145,53 @@ void main() {
       drive.close();
     });
 
+    test('un file piccolo sale in una richiesta sola, metadati e byte insieme',
+        () async {
+      final seen = <String>[];
+      List<int>? body;
+      String? type;
+      handle = (request) async {
+        seen.add('${request.method} ${request.uri.path} ${request.uri.queryParameters['uploadType']}');
+        type = request.headers.contentType?.mimeType;
+        body = [for (final chunk in await request.toList()) ...chunk];
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..write(jsonEncode({'id': 'NUOVO', 'name': '0001.webp', 'md5Checksum': 'abc'}));
+        await request.response.close();
+      };
+      final bytes = List.generate(300, (i) => i % 256);
+      final source = File(p.join(temp.path, 'tavola'));
+      await source.writeAsBytes(bytes);
+      final drive = client(monitor());
+      final item = await drive.upload(source, name: '0001.webp', parentId: 'CARTELLA');
+      expect(seen, ['POST /upload/drive/v3/files multipart']);
+      expect(type, 'multipart/related');
+      final text = latin1.decode(body!);
+      expect(text, contains('"parents":["CARTELLA"]'));
+      expect(text, contains(latin1.decode(bytes)));
+      expect(item.id, 'NUOVO');
+      drive.close();
+    });
+
+    test('Drive che rallenta si aspetta, poi si riprova', () async {
+      var calls = 0;
+      handle = (request) async {
+        await request.drain<void>();
+        if (calls++ == 0) {
+          request.response
+            ..statusCode = HttpStatus.forbidden
+            ..write('{"error":{"errors":[{"reason":"userRateLimitExceeded"}]}}');
+        } else {
+          request.response.write(jsonEncode({'id': 'F1', 'name': 'x'}));
+        }
+        await request.response.close();
+      };
+      final drive = client(monitor());
+      expect((await drive.file('F1')).id, 'F1');
+      expect(calls, 2);
+      drive.close();
+    });
+
     test('un caricamento apre la sessione e poi manda i byte a flusso',
         () async {
       final seen = <String>[];
@@ -175,7 +223,7 @@ void main() {
       };
       final source = File(p.join(temp.path, 'tavola'));
       await source.writeAsBytes(List.generate(300, (i) => i % 256));
-      final drive = client(monitor());
+      final drive = client(monitor(), multipartLimit: 0);
       final item = await drive.upload(
         source,
         name: '0001.webp',

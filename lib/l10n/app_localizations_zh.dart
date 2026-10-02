@@ -1379,7 +1379,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverStep1 => '在电脑上安装 Docker（docker.com），如果还没有的话。';
 
   @override
-  String get serverStep2 => '把这条命令粘贴到电脑的终端中。它包含你的 Drive 权限：不要发给任何人。';
+  String get serverStep2 =>
+      '把这些命令粘贴到电脑的终端中：第一条启动服务器，第二条让它自动保持最新。它们包含你的 Drive 权限：不要发给任何人。';
 
   @override
   String get serverCopyCommand => '复制命令';
@@ -3207,4 +3208,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return '校正 $corrections · 跳动 $jumps（$jumped px）';
   }
+
+  @override
+  String get serverCheckDaily => '每日检查新章节';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return '每天 $clock（服务器时间）';
+  }
+
+  @override
+  String get serverCheckDailyOff => '已关闭：新章节只能手动下载';
+
+  @override
+  String get serverCheckLibrary => 'Drive 上的整个书库';
+
+  @override
+  String get serverCheckLibraryOn => '也包括手机或其他方式下载的系列，而不只是服务器下载的';
+
+  @override
+  String get serverCheckLibraryOff => '仅限服务器下载的连载中系列';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个系列有新章节',
+      zero: '没有新章节',
+    );
+    return '上次检查 $when：$_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => '检查时间';
 }

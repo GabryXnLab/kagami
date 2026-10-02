@@ -244,6 +244,10 @@ class DriveStore extends ArchiveStore {
   final Map<String, Future<String>> _creating = {};
   final Map<String, String> _folders = {};
 
+  /// I capitoli consegnati da questo archivio, per percorso: gli
+  /// indici li prendono da qui invece che da Drive.
+  final Map<String, ArchivedChapter> _committed = {};
+
   String _parentPath(String relative) {
     final parent = p.posix.dirname(relative);
     return parent == '.' ? '' : parent;
@@ -369,9 +373,9 @@ class DriveStore extends ArchiveStore {
 
   /// Quanti file di un capitolo salgono insieme. Uno alla volta, un
   /// capitolo di un manhwa — decine di tavole, ognuna con le sue tessere —
-  /// erano minuti di richieste in fila; più di così Drive comincia a
-  /// rallentare chi chiede.
-  static const int _uploads = 4;
+  /// erano minuti di richieste in fila. Il limite vero lo dà Drive: quando
+  /// rallenta, il client fa aspettare tutte le corsie insieme.
+  static const int _uploads = 8;
 
   @override
   Future<void> commitChapter(String chapterPath, Directory work, List<String> files) async {
@@ -388,7 +392,12 @@ class DriveStore extends ArchiveStore {
 
     await Future.wait([for (var i = 0; i < _uploads; i++) lane()]);
     if (files.contains(chapterManifestFile)) {
-      await _put(p.posix.join(chapterPath, chapterManifestFile), File(p.join(work.path, chapterManifestFile)));
+      final manifest = File(p.join(work.path, chapterManifestFile));
+      await _put(p.posix.join(chapterPath, chapterManifestFile), manifest);
+      _committed[chapterPath] = ArchivedChapter.fromManifest(
+        'chapters/${p.posix.basename(chapterPath)}',
+        await readJsonFile(manifest) ?? const {},
+      );
     }
     final mirror = this.mirror;
     if (mirror != null) {
@@ -422,17 +431,28 @@ class DriveStore extends ArchiveStore {
       for (final item in (await _list(p.posix.join(folder, 'chapters'))).values)
         if (item.folder) item.name: item,
     };
-    // Gli indici di prima dicono già tutto dei capitoli che conoscono; si
-    // apre il `chapter.json` solo delle cartelle che non vi compaiono —
-    // quelle scritte da un altro, server o telefono, dopo l'ultimo indice.
+    // I capitoli consegnati in questo giro si conoscono dal loro manifest.
+    for (final name in folders.keys) {
+      final stored = _committed[p.posix.join(folder, 'chapters', name)];
+      final id = _chapterIdOf(name);
+      if (stored != null && id != null) result[id] = stored;
+    }
+    // Gli indici di prima dicono già tutto dei capitoli che conoscono, ma
+    // solo di quelli che allora erano finiti e con le loro tavole: una voce
+    // scritta a metà — un capitolo che stava salendo, un `pages.json` che
+    // non le aveva — copiata di indice in indice resterebbe a metà per
+    // sempre, anche dopo che il capitolo è stato completato. Le altre
+    // cartelle si aprono: quelle scritte da un altro, server o telefono,
+    // dopo l'ultimo indice, e quelle che l'indice dava incomplete.
     final index = await readJson(p.posix.join(folder, seriesIndexName));
     final pages = (await readJson(p.posix.join(folder, pagesIndexName)))?['pages'] as Map? ?? const {};
     for (final entry in (index?['chapters'] as List? ?? const []).whereType<Map<String, Object?>>()) {
       final id = entry['id'];
       final path = entry['path'];
-      if (id is! String || path is! String || !folders.containsKey(p.posix.basename(path))) continue;
+      if (id is! String || path is! String || result.containsKey(id)) continue;
+      if (!folders.containsKey(p.posix.basename(path))) continue;
       final stored = ArchivedChapter.fromIndex(entry, pages[id] as List?);
-      if (stored != null) result[id] = stored;
+      if (stored != null && stored.complete && stored.pages.isNotEmpty) result[id] = stored;
     }
     for (final name in folders.keys.toList()..sort()) {
       final id = _chapterIdOf(name);

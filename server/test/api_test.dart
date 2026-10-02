@@ -81,7 +81,10 @@ void main() {
       'owner': true,
       'drive': {'authorized': true, 'folderId': 'cartella-$owner', 'folderName': 'Manga'},
     });
-    expect(body['check'], {'minutes': 240});
+    expect(body['check'], {
+      'minutes': 240, 'time': 240, 'enabled': true, 'library': true,
+      'checked': 0, 'queued': 0, 'failed': 0,
+    });
   });
 
   test('gli utenti sono del proprietario: gli altri ricevono owner_only', () async {
@@ -219,6 +222,10 @@ void main() {
   test('controllo delle serie in corso a richiesta, e cartella di Drive scelta dall\'app', () async {
     expect((await call('POST', '/v2/check')).$1, 202);
     expect(jobs.checks, 1);
+    final (changed, check) = await call('PUT', '/v2/check', body: {'enabled': false, 'minutes': 90, 'library': false});
+    expect(changed, 200);
+    expect((check!['minutes'], check['time'], check['enabled'], check['library']), (null, 90, false, false));
+    expect((await call('PUT', '/v2/check', body: {'minutes': 1440})).$1, 400);
 
     final link = 'https://drive.google.com/drive/folders/1AbC_d-EF?usp=sharing';
     final (status, body) = await call('PUT', '/v2/me/folder', body: {'folderId': link});
@@ -237,7 +244,7 @@ void main() {
 
   test('senza configurazione ogni richiesta dice not_configured', () async {
     final bare = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    bare.listen(ServerApi(name: 'Vuoto', identity: null, accounts: null, images: false, checkMinutes: null, log: (_) {})
+    bare.listen(ServerApi(name: 'Vuoto', identity: null, accounts: null, images: false, log: (_) {})
         .handle);
     final request = await http.getUrl(Uri.parse('http://127.0.0.1:${bare.port}/v2/server'));
     request.headers.set(HttpHeaders.authorizationHeader, 'Bearer tok:$owner');

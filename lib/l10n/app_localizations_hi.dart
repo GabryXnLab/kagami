@@ -1420,7 +1420,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get serverStep2 =>
-      'यह कमांड उसके टर्मिनल में पेस्ट करें। इसमें आपके Drive की अनुमति है: इसे किसी को न भेजें।';
+      'ये कमांड उसके टर्मिनल में पेस्ट करें: पहली सर्वर चालू करती है, दूसरी उसे अपने आप अपडेट रखती है। इनमें आपके Drive की अनुमति है: इन्हें किसी को न भेजें।';
 
   @override
   String get serverCopyCommand => 'कमांड कॉपी करें';
@@ -3303,4 +3303,42 @@ class AppLocalizationsHi extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return 'सुधार $corrections · छलाँगें $jumps ($jumped px)';
   }
+
+  @override
+  String get serverCheckDaily => 'नए अध्यायों की रोज़ाना जाँच';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return 'हर दिन $clock बजे, सर्वर के समय से';
+  }
+
+  @override
+  String get serverCheckDailyOff =>
+      'बंद: नए अध्याय सिर्फ़ हाथ से डाउनलोड होते हैं';
+
+  @override
+  String get serverCheckLibrary => 'Drive पर पूरी लाइब्रेरी';
+
+  @override
+  String get serverCheckLibraryOn =>
+      'सिर्फ़ सर्वर ही नहीं, फ़ोन या दूसरों से डाउनलोड की गई सीरीज़ भी';
+
+  @override
+  String get serverCheckLibraryOff =>
+      'सिर्फ़ सर्वर से डाउनलोड की गई चालू सीरीज़';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़ में नए अध्याय',
+      one: '1 सीरीज़ में नए अध्याय',
+      zero: 'कोई नया अध्याय नहीं',
+    );
+    return 'पिछली जाँच $when: $_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => 'जाँच का समय';
 }

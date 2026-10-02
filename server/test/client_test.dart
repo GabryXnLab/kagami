@@ -169,6 +169,10 @@ void main() {
 
     await client.check();
     expect(jobs.checks, 1);
+    expect((await client.info()).check.library, isTrue);
+    final check = await client.configureCheck(enabled: false, minutes: 75);
+    expect((check.enabled, check.minutes, check.library), (false, 75, true));
+    expect((await client.info()).checkMinutes, isNull);
 
     final folder = await client.chooseFolder('nuova');
     expect(folder, (id: 'nuova', name: 'Scelta'));

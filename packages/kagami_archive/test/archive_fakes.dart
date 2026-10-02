@@ -84,6 +84,12 @@ class FakeMangaK implements ProviderHttp {
   final List<String> imageRequests = [];
   String? failOnce;
 
+  /// Quanto dura una tavola, per vedere quante ne scendono insieme.
+  Duration imageDelay = Duration.zero;
+  int _active = 0;
+  int mostAtOnce = 0;
+  void Function(String url)? onImage;
+
   /// Una tavola che il sito non dà più: il capitolo fallisce.
   final Set<String> broken = {};
 
@@ -124,9 +130,16 @@ class FakeMangaK implements ProviderHttp {
     final image = images[url];
     if (image != null) {
       imageRequests.add(url);
+      onImage?.call(url);
       if (failOnce == url || broken.contains(url)) {
         failOnce = null;
         throw const ProviderError('Immagine temporaneamente indisponibile.');
+      }
+      if (imageDelay > Duration.zero) {
+        _active++;
+        if (_active > mostAtOnce) mostAtOnce = _active;
+        await Future<void>.delayed(imageDelay);
+        _active--;
       }
       return _image(image);
     }

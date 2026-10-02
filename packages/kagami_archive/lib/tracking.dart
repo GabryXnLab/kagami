@@ -10,10 +10,16 @@
 /// il suo timer, e seguirle da tutt'e due vorrebbe dire scaricare due volte
 /// gli stessi capitoli. È stato del controllo, non un indice MALF, e resta
 /// nello spazio dell'app.
+///
+/// Il server può guardare anche tutta la libreria su Drive
+/// ([checkLibrary]): ogni serie di `library.json`, chiunque l'abbia
+/// scaricata — telefono, server, `mangaarchive`.
 library;
 
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:path/path.dart' as p;
 
 import 'http.dart';
 import 'jobs.dart';
@@ -90,6 +96,11 @@ class TrackedSeries {
 
 class CheckReport {
   int checked = 0;
+
+  /// Le serie in cui si sono rimessi in coda capitoli che su Drive c'erano
+  /// già ma che l'indice dava incompleti: il giro li salta e riscrive
+  /// l'indice.
+  final List<String> repaired = [];
   final List<String> queued = [];
   final List<String> removed = [];
   final List<({String title, String error})> failed = [];
@@ -157,8 +168,14 @@ class Tracking {
     bool Function()? cancelled,
   }) async {
     final report = CheckReport();
+    final delegated = await files.delegatedFolder();
     for (final entry in await load()) {
       if (cancelled?.call() ?? false) break;
+      if (delegated != null &&
+          entry.target.destination == ArchiveDestination.drive &&
+          entry.target.folderId == delegated) {
+        continue;
+      }
       final Series series;
       try {
         final provider = selectProvider(entry.url);
@@ -204,4 +221,87 @@ class Tracking {
     final entries = await load();
     await _save([for (final entry in entries) entry.key == updated.key ? updated : entry]);
   }
+}
+
+/// Il controllo di tutte le serie della libreria su Drive, anche di quelle
+/// che il server non ha scaricato.
+///
+/// Per ogni riga di `library.json` si legge l'`index.json` della serie: i
+/// capitoli nuovi sono quelli del sito che l'indice non elenca. Non quelli
+/// non archiviati: chi ha scaricato dal capitolo 16 in poi ha i precedenti
+/// nell'indice, non scaricati per scelta, e non deve ritrovarseli in coda.
+/// Una serie conclusa non si chiede nemmeno al sito. Un capitolo che l'indice
+/// dà a metà va in coda lo stesso, qualunque sia lo stato della serie: se su
+/// Drive è intero il giro lo salta e riscrive l'indice, se no lo completa.
+///
+/// Si saltano le serie in [skip] (quelle che segue già [Tracking]), quelle
+/// già in coda — un lavoro nuovo sullo stesso link prenderebbe il posto di
+/// quello dell'utente — e quelle dei siti dietro la verifica del browser, che
+/// senza il telefono non si leggono.
+Future<CheckReport> checkLibrary({
+  required ArchiveFiles files,
+  required ArchiveStore store,
+  required ArchiveTarget target,
+  required ProviderHttp Function(Provider provider) httpFor,
+  Set<String> skip = const {},
+  bool Function()? cancelled,
+  Duration pause = const Duration(seconds: 1),
+}) async {
+  final report = CheckReport();
+  final library = await store.readJson(libraryFile);
+  final queued = {for (final job in await files.jobs()) job.url};
+  var first = true;
+  for (final row in (library?['series'] as List? ?? const []).whereType<Map<String, Object?>>()) {
+    if (cancelled?.call() ?? false) break;
+    final key = row['key'];
+    final path = row['path'];
+    final url = row['source'];
+    if (key is! String || path is! String || url is! String) continue;
+    if (skip.contains(key) || queued.contains(url)) continue;
+    final Provider provider;
+    try {
+      provider = selectProvider(url);
+    } on ProviderError {
+      continue;
+    }
+    if (provider.needsBrowser) continue;
+    final title = row['title'] as String? ?? key;
+    final index = await store.readJson(p.posix.join(path, seriesIndexName));
+    final entries = (index?['chapters'] as List? ?? const []).whereType<Map<String, Object?>>().toList();
+    if (entries.isEmpty) continue;
+    final known = {for (final entry in entries) entry['id']};
+    final halfway = {
+      for (final entry in entries)
+        if (entry['archived'] == true && (entry['complete'] != true || entry['pageCount'] == 0))
+          entry['id'] as String,
+    };
+    final status = index?['releaseStatus'] ?? row['releaseStatus'];
+    var fresh = <String>[];
+    if (status != 'completed' && status != 'cancelled') {
+      if (!first && pause > Duration.zero) await Future<void>.delayed(pause);
+      first = false;
+      try {
+        final series = await provider.fetchSeries(url, httpFor(provider));
+        fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
+        report.checked++;
+      } on ProviderOffline {
+        rethrow;
+      } on ProviderError catch (error) {
+        report.failed.add((title: title, error: '$error'));
+        continue;
+      }
+    }
+    if (fresh.isEmpty && halfway.isEmpty) continue;
+    await files.enqueue(ArchiveJob(
+      id: 'library-$key-${DateTime.now().millisecondsSinceEpoch}',
+      url: url,
+      title: title,
+      target: target,
+      ids: {...fresh, ...halfway},
+      automatic: true,
+    ));
+    if (fresh.isNotEmpty) report.queued.add(title);
+    if (halfway.isNotEmpty) report.repaired.add(title);
+  }
+  return report;
 }

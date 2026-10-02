@@ -31,7 +31,12 @@ void main() {
     final command = serverCommand(setup, image: 'ghcr.io/esempio/kagami-server');
     expect(command, startsWith('docker run -d --name kagami-server'));
     expect(command, contains('-e KAGAMI_SETUP=$blob '));
-    expect(command, endsWith(' ghcr.io/esempio/kagami-server'));
+    final [server, updater] = command.split('\n');
+    expect(server, endsWith(' ghcr.io/esempio/kagami-server'));
+    expect(updater, startsWith('docker run -d --name kagami-updater'));
+    expect(updater, contains('-v /var/run/docker.sock:/var/run/docker.sock'));
+    expect(updater, endsWith(' ghcr.io/esempio/kagami-server update'));
+    expect(updater, isNot(contains('KAGAMI_SETUP')));
   });
 
   test('un collegamento della v1 perde la chiave e tiene l\'indirizzo', () {

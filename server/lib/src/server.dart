@@ -36,6 +36,7 @@ class ServerSpace implements UserSpace {
       serverEnvironment(files, drive.drive, Directory(p.join(directory.path, 'scratch')), images),
       blocked: drive.blocked,
       checkMinutes: checkMinutes,
+      folder: () => drive.folderId,
     )..start();
     return ServerSpace._(directory, files, drive, worker);
   }
@@ -114,7 +115,6 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
     identity: applied == null ? null : FirebaseVerifier(applied.project),
     accounts: accounts,
     images: vips,
-    checkMinutes: config.checkMinutes,
   );
 
   final server = await HttpServer.bind(host ?? config.host, port ?? config.port);

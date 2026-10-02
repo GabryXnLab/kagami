@@ -1423,7 +1423,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get serverStep2 =>
-      'Cole este comando no terminal dele. Ele contém a permissão do seu Drive: não envie a ninguém.';
+      'Cole estes comandos no terminal dele: o primeiro liga o servidor, o segundo o mantém atualizado sozinho. Eles contêm a permissão do seu Drive: não envie a ninguém.';
 
   @override
   String get serverCopyCommand => 'Copiar o comando';
@@ -3309,4 +3309,42 @@ class AppLocalizationsPt extends AppLocalizations {
   String readerProbeJumps(String corrections, String jumps, String jumped) {
     return 'Correções $corrections · saltos $jumps ($jumped px)';
   }
+
+  @override
+  String get serverCheckDaily => 'Verificação diária de capítulos novos';
+
+  @override
+  String serverCheckDailyAt(String clock) {
+    return 'Todos os dias às $clock, hora do servidor';
+  }
+
+  @override
+  String get serverCheckDailyOff =>
+      'Desligado: os capítulos novos só são baixados à mão';
+
+  @override
+  String get serverCheckLibrary => 'Toda a biblioteca no Drive';
+
+  @override
+  String get serverCheckLibraryOn =>
+      'Também as séries baixadas pelo celular ou por outros, não só pelo servidor';
+
+  @override
+  String get serverCheckLibraryOff =>
+      'Só as séries em andamento baixadas pelo servidor';
+
+  @override
+  String serverCheckLast(String when, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count séries com capítulos novos',
+      one: '1 série com capítulos novos',
+      zero: 'nenhum capítulo novo',
+    );
+    return 'Última verificação $when: $_temp0';
+  }
+
+  @override
+  String get serverCheckTimeHelp => 'Hora da verificação';
 }

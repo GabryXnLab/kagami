@@ -349,7 +349,7 @@
   "serverPreparing": "Preparando…",
   "serverGenerate": "Gerar o comando",
   "serverStep1": "Instale o Docker no computador (docker.com), se ainda não tiver.",
-  "serverStep2": "Cole este comando no terminal dele. Ele contém a permissão do seu Drive: não envie a ninguém.",
+  "serverStep2": "Cole estes comandos no terminal dele: o primeiro liga o servidor, o segundo o mantém atualizado sozinho. Eles contêm a permissão do seu Drive: não envie a ninguém.",
   "serverCopyCommand": "Copiar o comando",
   "serverStep3": "Digite aqui o endereço do computador: em casa, o da rede local; de fora, o nome dele no Tailscale ou o endereço HTTPS com que você o expõe.",
   "serverPortNote": "O servidor responde na porta 8080.",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "Decodificação {decode} ms (máx {decodeMax}) · chegada {arrival} ms (máx {arrivalMax})",
   "readerProbeMemory": "Cópia máx {copy} ms · GC Android {gc} ({gcMs} ms) · bloqueantes {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Esperas do Drive {drive} · alternativas Dart {fallbacks}",
-  "readerProbeJumps": "Correções {corrections} · saltos {jumps} ({jumped} px)"
+  "readerProbeJumps": "Correções {corrections} · saltos {jumps} ({jumped} px)",
+  "serverCheckDaily": "Verificação diária de capítulos novos",
+  "serverCheckDailyAt": "Todos os dias às {clock}, hora do servidor",
+  "serverCheckDailyOff": "Desligado: os capítulos novos só são baixados à mão",
+  "serverCheckLibrary": "Toda a biblioteca no Drive",
+  "serverCheckLibraryOn": "Também as séries baixadas pelo celular ou por outros, não só pelo servidor",
+  "serverCheckLibraryOff": "Só as séries em andamento baixadas pelo servidor",
+  "serverCheckLast": "Última verificação {when}: {count, plural, =0{nenhum capítulo novo} =1{1 série com capítulos novos} other{{count} séries com capítulos novos}}",
+  "serverCheckTimeHelp": "Hora da verificação"
 }

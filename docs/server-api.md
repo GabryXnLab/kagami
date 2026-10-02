@@ -126,7 +126,8 @@ il controllo di salute di Docker.
   "owner": "proprietario@gmail.com",
   "providers": [{"id": "mangak", "name": "MangaK"}, {"id": "manhwaread", "name": "ManhwaRead"}],
   "images": true,
-  "check": {"minutes": 240},
+  "check": {"minutes": 240, "time": 240, "enabled": true, "library": true,
+            "checkedAt": "…", "checked": 12, "queued": 2, "failed": 0},
   "me": {
     "email": "amico@gmail.com", "owner": false,
     "drive": {"authorized": true, "folderId": "1XyZ…", "folderName": "Manga"}
@@ -139,8 +140,12 @@ il controllo di salute di Docker.
   finisce tutto ciò che mette in coda.
 - `images`: il server fa miniature e tessere (MALF, «Tessere delle tavole
   alte»). Se è `false` la libreria resta valida, solo senza tessere.
-- `check.minutes`: l'ora del controllo quotidiano delle serie in corso, in
-  minuti dalla mezzanotte del server; `null` se è spento.
+- `check` è il controllo quotidiano di chi chiama (`PUT /v2/check`):
+  `time` l'ora, in minuti dalla mezzanotte del server; `minutes` la stessa
+  ora, `null` se è spento (`enabled`), come per i client di prima;
+  `library` se guarda tutta la libreria su Drive; `checkedAt`, `checked`,
+  `queued`, `failed` com'è andato l'ultimo: serie controllate, con capitoli
+  nuovi, con errori.
 
 ### `PUT /v2/me/drive` — dà al server il permesso sul proprio Drive
 
@@ -179,7 +184,7 @@ Come sopra, senza toccare il permesso.
 | `title` | stringa | da mostrare finché il server non ha letto la serie |
 | `start` | stringa o numero | dal capitolo con questo numero o id in poi |
 | `ids` | elenco di stringhe | solo questi capitoli, per id; non insieme a `start` |
-| `delayMs` | intero 0–5000 | pausa fra le richieste al sito (default 200) |
+| `delayMs` | intero 0–5000 | distanza fra l'inizio di una richiesta al sito e il seguente, che salgono su più corsie (default 200) |
 | `snapshot` | stringa | la pagina HTML della serie, solo per i siti dietro la verifica del browser (ManhwaRead) |
 
 Va nella coda di chi chiama e sul suo Drive, nella sua cartella: senza
@@ -243,9 +248,25 @@ conclusa esce da sola. Sono quelle di chi chiama.
 
 Smette di seguire la serie. I capitoli già archiviati restano.
 
+### `PUT /v2/check` — regola il proprio controllo quotidiano
+
+```json
+{"enabled": true, "minutes": 270, "library": true}
+```
+
+Ogni campo è facoltativo: cambia solo ciò che c'è. `minutes` da 0 a 1439.
+Risponde con lo stesso `check` di `GET /v2/server`.
+
+Con `library` il controllo guarda, oltre alle serie di `GET /v2/ongoing`,
+ogni serie del `library.json` della propria cartella: mette in coda (lavori
+`automatic`) i capitoli del sito che l'`index.json` della serie non elenca,
+e quelli che l'indice dà a metà, che il giro salta se su Drive sono interi
+riscrivendo l'indice. Salta le serie concluse (senza chiederle al sito),
+quelle già in coda e quelle dei siti con la verifica del browser.
+
 ### `POST /v2/check` → `202`
 
-Il controllo delle serie in corso di chi chiama, subito. Risponde prima di
+Il controllo quotidiano di chi chiama, subito, anche se è spento. Risponde prima di
 finire: i capitoli nuovi compaiono in `GET /v2/jobs`.
 
 ## Utenti — solo il proprietario

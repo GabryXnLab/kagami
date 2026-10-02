@@ -332,6 +332,7 @@ class ServerSection extends ConsumerWidget {
     ));
     if (info != null) {
       final minutes = info.checkMinutes;
+      final check = info.check;
       children.addAll([
         const SizedBox(height: 12),
         KGroup(
@@ -345,6 +346,33 @@ class ServerSection extends ConsumerWidget {
               ),
               onTap: view.error != null ? null : () => _checkNow(context, notifier),
             ),
+            KTile(
+              icon: LucideIcons.calendarClock,
+              title: l10n.serverCheckDaily,
+              subtitle: [
+                if (check.enabled) l10n.serverCheckDailyAt(clockOf(check.minutes)) else l10n.serverCheckDailyOff,
+                if (check.checkedAt case final at?) l10n.serverCheckLast(archiveWhen(at), check.queued),
+              ].join('\n'),
+              onTap: view.error != null || !check.enabled ? null : () => _checkTime(context, notifier, check),
+              trailing: Switch(
+                value: check.enabled,
+                onChanged: view.error != null
+                    ? null
+                    : (value) => _guard(context, () => notifier.configureCheck(enabled: value)),
+              ),
+            ),
+            if (check.enabled)
+              KTile(
+                icon: LucideIcons.libraryBig,
+                title: l10n.serverCheckLibrary,
+                subtitle: check.library ? l10n.serverCheckLibraryOn : l10n.serverCheckLibraryOff,
+                trailing: Switch(
+                  value: check.library,
+                  onChanged: view.error != null
+                      ? null
+                      : (value) => _guard(context, () => notifier.configureCheck(library: value)),
+                ),
+              ),
             for (final series in view.ongoing)
               KTile(
                 icon: series.problem == null ? LucideIcons.bookOpen : LucideIcons.triangleAlert,
@@ -387,6 +415,16 @@ class ServerSection extends ConsumerWidget {
       }
     });
     client.close();
+  }
+
+  static Future<void> _checkTime(BuildContext context, RemoteArchiveController notifier, RemoteCheck check) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: check.minutes ~/ 60, minute: check.minutes % 60),
+      helpText: context.l10n.serverCheckTimeHelp,
+    );
+    if (picked == null || !context.mounted) return;
+    await _guard(context, () => notifier.configureCheck(minutes: picked.hour * 60 + picked.minute));
   }
 
   static Future<void> _checkNow(BuildContext context, RemoteArchiveController notifier) async {

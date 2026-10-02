@@ -17,6 +17,11 @@ Uso: kagami-server [--data <cartella>] <comando>
   users                           gli account ammessi e chi ha già collegato il suo Drive
   status                          per ogni account: lavoro in corso, coda, ultimi esiti
   ping [--port P]                 esce con 0 se il server risponde (controllo di salute di Docker)
+  idle                            esce con 0 se nessun account sta scaricando
+  update [--every M] [--container C]
+                                  l'aggiornatore: ogni M minuti (default 60) scarica l'immagine del
+                                  contenitore C (default kagami-server) e, se è cambiata, lo ricrea;
+                                  vuole il socket di Docker in /var/run/docker.sock
 
 La cartella dei dati è --data, poi KAGAMI_DATA, poi ~/.local/share/kagami-server.
 Gli account si aggiungono e si tolgono dall'app, nella sezione Server.''';
@@ -29,6 +34,14 @@ Future<void> main(List<String> arguments) async {
   parser.addCommand('users');
   parser.addCommand('status');
   parser.addCommand('ping', ArgParser()..addOption('port'));
+  parser.addCommand('idle');
+  parser.addCommand(
+    'update',
+    ArgParser()
+      ..addOption('every', defaultsTo: '60')
+      ..addOption('container', defaultsTo: 'kagami-server')
+      ..addOption('apply'),
+  );
 
   final ArgResults args;
   try {
@@ -58,6 +71,10 @@ Future<void> main(List<String> arguments) async {
         await statusCommand(paths);
       case 'ping':
         await ping(paths, command.option('port'));
+      case 'idle':
+        await idleCommand(paths);
+      case 'update':
+        await updateCommand(command);
     }
   } on FormatException catch (error) {
     fail(error.message);
@@ -107,6 +124,34 @@ Future<void> _status(ArchiveFiles files) async {
   }
   for (final outcome in (await files.history()).take(5)) {
     stdout.writeln('${outcome.ok ? 'ok ' : 'err'} ${outcome.title}: ${outcome.message}');
+  }
+}
+
+/// Per l'aggiornatore, che non ricrea il server a metà di un download.
+Future<void> idleCommand(ServerPaths paths) async {
+  final setup = await AppliedSetup.load(paths);
+  if (setup == null) return;
+  final accounts = Accounts(paths.users, owner: setup.owner, open: (_) => throw UnsupportedError('solo lettura'));
+  for (final member in await accounts.list()) {
+    final status = await ArchiveFiles(paths.user(member.email).path).status();
+    if (status.state == ArchiveState.running) fail('${member.email} sta scaricando: ${status.title}');
+  }
+}
+
+Future<void> updateCommand(ArgResults command) async {
+  final docker = DockerApi();
+  try {
+    final apply = command.option('apply');
+    if (apply != null) {
+      await recreate(docker, apply, say: stdout.writeln);
+      return;
+    }
+    final every = int.tryParse(command.option('every')!);
+    if (every == null || every < 5) fail('--every vuole i minuti, almeno 5.');
+    await Updater(docker, server: command.option('container')!, self: Platform.localHostname)
+        .run(Duration(minutes: every));
+  } finally {
+    docker.close();
   }
 }
 

@@ -1857,6 +1857,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
         ref.invalidate(libraryCatalogProvider);
       }
       _lastOutcome = marker;
+      if (info != null) await _delegate(info);
       state = state.copyWith(
         info: info,
         queue: queue,
@@ -1913,6 +1914,21 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
 
   Future<void> check() => _live.check();
 
+  /// Il controllo quotidiano del server per questo account.
+  Future<void> configureCheck({bool? enabled, int? minutes, bool? library}) async {
+    final check = await _live.configureCheck(enabled: enabled, minutes: minutes, library: library);
+    final info = state.info?.withCheck(check);
+    if (info == null) return;
+    await _delegate(info);
+    state = state.copyWith(info: info);
+  }
+
+  /// Il controllo del telefono lascia al server le serie della cartella di
+  /// cui il server guarda ogni giorno tutta la libreria.
+  Future<void> _delegate(ServerInfo info) => ref.read(archiveFilesProvider).delegate(
+        info.ready && info.check.enabled && info.check.library ? info.folderId : null,
+      );
+
   /// Dice al server di scrivere nella cartella di Drive che legge l'app.
   Future<void> useFolder(DriveFolder folder) async {
     final chosen = await _live.chooseFolder(folder.id);
@@ -1963,6 +1979,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
         // lo si può togliere anche da myaccount.google.com.
       }
     }
+    await ref.read(archiveFilesProvider).delegate(null);
     await ref.read(serverLinkProvider.notifier).choose(null);
   }
 }

@@ -7,6 +7,7 @@ import 'package:test/test.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -99,6 +100,64 @@ void main() {
     expect(history.last.message, contains('Link non supportato'));
   });
 
+  group('la libreria intera', () {
+    // Una libreria come la lascia un altro archiviatore: la serie c'è, con il
+    // suo indice, ma nessuno la segue.
+    Future<String> archived({String? start}) async {
+      await files.enqueue(job(start: start));
+      await ArchiveRunner(files, environment()).run();
+      await Tracking(files.ongoing).forget('mangak:S1');
+      final rows = jsonDecode(File(p.join(root(), 'reading', 'downloads.json')).readAsStringSync())['series'];
+      File(p.join(root(), 'library.json')).writeAsStringSync(jsonEncode({'series': rows}));
+      return (rows as List).single['path'] as String;
+    }
+
+    Future<CheckReport> check({Set<String> skip = const {}}) => checkLibrary(
+          files: files,
+          store: LocalStore(root()),
+          target: ArchiveTarget(destination: ArchiveDestination.phone, root: root()),
+          httpFor: (provider) => http,
+          skip: skip,
+          pause: Duration.zero,
+        );
+
+    test('i capitoli usciti dopo vanno in coda, non quelli lasciati per scelta', () async {
+      await archived(start: '2');
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      final report = await check();
+      expect(report.checked, 1);
+      expect(report.queued, ['Test / Series']);
+      expect((await files.jobs()).single.ids, {'C3'});
+    });
+
+    test('niente di nuovo, niente in coda; una serie seguita si lascia a Tracking', () async {
+      await archived();
+      expect((await check()).queued, isEmpty);
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      expect((await check(skip: {'mangak:S1'})).checked, 0);
+      expect(await files.jobs(), isEmpty);
+    });
+
+    test('un capitolo che l\'indice dà a metà si rimette in coda, e il giro ripara l\'indice', () async {
+      final folder = await archived();
+      http.series['status'] = 'Completed';
+      final file = File(p.join(root(), folder, 'index.json'));
+      final index = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      ((index['chapters'] as List).first as Map)['complete'] = false;
+      index['releaseStatus'] = 'completed';
+      file.writeAsStringSync(jsonEncode(index));
+      final report = await check();
+      expect(report.checked, 0);
+      expect(report.repaired, ['Test / Series']);
+      expect((await files.jobs()).single.ids, {'C1'});
+      final requests = http.imageRequests.length;
+      await ArchiveRunner(files, environment()).run();
+      expect(http.imageRequests.skip(requests).where((url) => !url.contains('covers')), isEmpty);
+      final fixed = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      expect(((fixed['chapters'] as List).first as Map)['complete'], isTrue);
+    });
+  });
+
   group('serie in corso', () {
     Future<CheckReport> check() => Tracking(files.ongoing)
         .check(files, (provider) => override ?? http);
@@ -119,6 +178,16 @@ void main() {
       // delle tavole, scende solo quella nuova.
       expect(http.imageRequests.skip(requests).where((url) => !url.contains('covers')), ['https://rx.qvzre.org/d.webp']);
       expect((await tracked()).single.chapters, ['C1', 'C2', 'C3']);
+    });
+
+    test('una serie su Drive la lascia al server, se lui guarda tutta quella cartella', () async {
+      final series = await MangaK().fetchSeries('https://mangak.io/test-series', http);
+      const drive = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella');
+      await Tracking(files.ongoing).record(series, drive, settled: const ['C1'], metadata: const {'releaseStatus': 'ongoing'});
+      await files.delegate('cartella');
+      expect((await check()).checked, 0);
+      await files.delegate(null);
+      expect((await check()).queued, ['Test / Series']);
     });
 
     test('senza capitoli nuovi non mette in coda niente', () async {

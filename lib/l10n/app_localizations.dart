@@ -2209,7 +2209,7 @@ abstract class AppLocalizations {
   /// Passo 2 delle istruzioni per creare il server
   ///
   /// In it, this message translates to:
-  /// **'Incolla questo comando nel suo terminale. Contiene il permesso sul tuo Drive: non mandarlo a nessuno.'**
+  /// **'Incolla questi comandi nel suo terminale: il primo accende il server, il secondo lo tiene aggiornato da solo. Contengono il permesso sul tuo Drive: non mandarli a nessuno.'**
   String get serverStep2;
 
   /// Pulsante che copia il comando di avvio negli appunti
@@ -5112,6 +5112,54 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Correzioni {corrections} · salti {jumps} ({jumped} px)'**
   String readerProbeJumps(String corrections, String jumps, String jumped);
+
+  /// Titolo dell'interruttore del controllo quotidiano dei capitoli nuovi sul server
+  ///
+  /// In it, this message translates to:
+  /// **'Controllo giornaliero dei capitoli nuovi'**
+  String get serverCheckDaily;
+
+  /// Sottotitolo del controllo quotidiano acceso: l'ora; {clock} è l'ora già formattata
+  ///
+  /// In it, this message translates to:
+  /// **'Ogni giorno alle {clock}, ora del server'**
+  String serverCheckDailyAt(String clock);
+
+  /// Sottotitolo del controllo quotidiano del server spento
+  ///
+  /// In it, this message translates to:
+  /// **'Spento: i capitoli nuovi si scaricano solo a mano'**
+  String get serverCheckDailyOff;
+
+  /// Titolo dell'interruttore che fa controllare al server tutte le serie della libreria su Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta la libreria su Drive'**
+  String get serverCheckLibrary;
+
+  /// Sottotitolo dell'interruttore della libreria intera, acceso
+  ///
+  /// In it, this message translates to:
+  /// **'Anche le serie scaricate dal telefono o da altri, non solo dal server'**
+  String get serverCheckLibraryOn;
+
+  /// Sottotitolo dell'interruttore della libreria intera, spento
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le serie in corso scaricate dal server'**
+  String get serverCheckLibraryOff;
+
+  /// Esito dell'ultimo controllo del server; {when} è già formattato (es. «ieri alle 4:00»), {count} le serie con capitoli nuovi
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimo controllo {when}: {count, plural, =0{nessun capitolo nuovo} =1{1 serie con capitoli nuovi} other{{count} serie con capitoli nuovi}}'**
+  String serverCheckLast(String when, int count);
+
+  /// Titolo del selettore dell'ora del controllo quotidiano del server
+  ///
+  /// In it, this message translates to:
+  /// **'Ora del controllo'**
+  String get serverCheckTimeHelp;
 }
 
 class _AppLocalizationsDelegate

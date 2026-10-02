@@ -349,7 +349,7 @@
   "serverPreparing": "準備中…",
   "serverGenerate": "コマンドを生成",
   "serverStep1": "まだなければ、コンピューターにDockerをインストールしてください(docker.com)。",
-  "serverStep2": "このコマンドをコンピューターのターミナルに貼り付けてください。Driveへの権限が含まれているので、誰にも送らないでください。",
+  "serverStep2": "これらのコマンドをコンピューターのターミナルに貼り付けてください。1つ目がサーバーを起動し、2つ目がサーバーを自動で最新に保ちます。Driveへの権限が含まれているので、誰にも送らないでください。",
   "serverCopyCommand": "コマンドをコピー",
   "serverStep3": "ここにコンピューターのアドレスを入力してください。自宅ではローカルネットワークのアドレス、外出先ではTailscale上の名前、または公開しているHTTPSのアドレスです。",
   "serverPortNote": "サーバーはポート8080で応答します。",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "デコード {decode} ms (最大 {decodeMax}) · 到着 {arrival} ms (最大 {arrivalMax})",
   "readerProbeMemory": "コピー最大 {copy} ms · Android GC {gc} ({gcMs} ms) · ブロック {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "Drive待ち {drive} · Dartフォールバック {fallbacks}",
-  "readerProbeJumps": "補正 {corrections} · ジャンプ {jumps} ({jumped} px)"
+  "readerProbeJumps": "補正 {corrections} · ジャンプ {jumps} ({jumped} px)",
+  "serverCheckDaily": "新しい話の毎日のチェック",
+  "serverCheckDailyAt": "毎日 {clock}(サーバーの時刻)",
+  "serverCheckDailyOff": "オフ:新しい話は手動でのみダウンロードされます",
+  "serverCheckLibrary": "Drive のライブラリ全体",
+  "serverCheckLibraryOn": "サーバーだけでなく、スマホや他の方法でダウンロードしたシリーズも",
+  "serverCheckLibraryOff": "サーバーがダウンロードした連載中のシリーズのみ",
+  "serverCheckLast": "前回のチェック {when}:{count, plural, =0{新しい話はありません} other{新しい話があるシリーズ {count} 件}}",
+  "serverCheckTimeHelp": "チェックの時刻"
 }

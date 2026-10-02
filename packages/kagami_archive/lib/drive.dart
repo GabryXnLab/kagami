@@ -15,6 +15,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
@@ -135,6 +136,7 @@ class DriveClient {
     @visibleForTesting Uri Function(String path, Map<String, String> query)?
         endpoint,
     @visibleForTesting this.stall = const Duration(seconds: 20),
+    @visibleForTesting this.multipartLimit = 5 * 1024 * 1024,
   })  : _endpoint = endpoint ?? _drive,
         _http = HttpClient() {
     _http
@@ -142,7 +144,7 @@ class DriveClient {
       // Le tavole si scaricano in parallelo: con la stessa connessione si
       // risparmiano le strette di mano TLS, che su una rete mobile sono la
       // parte lenta.
-      ..maxConnectionsPerHost = 6
+      ..maxConnectionsPerHost = 8
       ..idleTimeout = const Duration(seconds: 30);
   }
 
@@ -154,6 +156,14 @@ class DriveClient {
 
   /// Quanto silenzio di una connessione aperta vale un'interruzione.
   final Duration stall;
+
+  /// Fin qui un file sale in una richiesta sola: è la misura che Google
+  /// indica per il caricamento multipart.
+  final int multipartLimit;
+
+  /// Fino a quando Drive ha chiesto di rallentare: vedere [_send].
+  DateTime _calm = DateTime.fromMillisecondsSinceEpoch(0);
+  final Random _random = Random();
 
   /// Ogni quanti byte ricevuti si scrive sul disco.
   static const int _writeBlock = 256 * 1024;
@@ -312,6 +322,8 @@ class DriveClient {
     var refreshed = false;
     var refresh = false;
     for (var attempt = 0;; attempt++) {
+      final calm = _calm.difference(DateTime.now());
+      if (calm > Duration.zero) await Future<void>.delayed(calm);
       final String token;
       try {
         token = await _token(refresh: refresh);
@@ -361,13 +373,20 @@ class DriveClient {
         continue;
       }
       // Drive rallenta chi chiede troppo in fretta, e il lettore chiede
-      // sessanta tavole in un colpo: aspettare un poco è la risposta giusta,
-      // arrendersi no.
+      // sessanta tavole in un colpo, l'archiviatore centinaia di file:
+      // aspettare è la risposta giusta, arrendersi no. L'attesa vale per
+      // tutte le richieste di questo client, non solo per quella respinta,
+      // altrimenti le altre corsie continuano a sbattere contro lo stesso
+      // limite e lo allungano.
       final throttled = status == 429 ||
           status >= 500 ||
           (status == HttpStatus.forbidden && body.contains('ateLimitExceeded'));
-      if (throttled && attempt < 4) {
-        await Future<void>.delayed(Duration(milliseconds: 400 << attempt));
+      if (throttled && attempt < 7) {
+        final backoff = Duration(milliseconds: (500 << attempt) * (0.75 + _random.nextDouble() / 2) ~/ 1);
+        final seconds = int.tryParse(response.headers.value(HttpHeaders.retryAfterHeader)?.trim() ?? '');
+        final asked = seconds == null ? null : Duration(seconds: seconds.clamp(0, 120));
+        final until = DateTime.now().add(asked != null && asked > backoff ? asked : backoff);
+        if (until.isAfter(_calm)) _calm = until;
         continue;
       }
       if (status == HttpStatus.unauthorized ||
@@ -412,10 +431,12 @@ class DriveClient {
   /// [id]. La data di modifica è quella del telefono, così chi confronta le
   /// due copie confronta le date giuste e non quella del caricamento.
   ///
-  /// Caricamento riprendibile di Drive in due tempi — prima i metadati, poi
-  /// i byte a flusso — perché è l'unico che accetti file di qualunque
-  /// misura senza tenerli in memoria. Se si interrompe si ricomincia il
-  /// file: una tavola sono pochi megabyte.
+  /// Un file piccolo — una tavola, una tessera, un indice — sale in una
+  /// richiesta sola, metadati e byte insieme: Drive conta le richieste, non
+  /// i byte, e un capitolo sono centinaia di file. Uno grande sale col
+  /// caricamento riprendibile, in due tempi — prima i metadati, poi i byte a
+  /// flusso — perché è l'unico che accetti file di qualunque misura senza
+  /// tenerli in memoria. Se si interrompe si ricomincia il file.
   Future<DriveItem> upload(
     File file, {
     String? id,
@@ -425,18 +446,46 @@ class DriveClient {
   }) async {
     assert(id != null || (name != null && parentId != null));
     final length = await file.length();
+    final metadata = <String, Object?>{
+      'name': ?name,
+      if (parentId != null && id == null) 'parents': [parentId],
+      'modifiedTime': ?modified?.toUtc().toIso8601String(),
+    };
+    final path = id == null ? '/upload/drive/v3/files' : '/upload/drive/v3/files/$id';
+    if (length <= multipartLimit) {
+      final bytes = await file.readAsBytes();
+      final boundary = 'kagami-${_random.nextInt(1 << 32)}-${DateTime.now().microsecondsSinceEpoch}';
+      final head = utf8.encode('--$boundary\r\n'
+          'Content-Type: application/json; charset=UTF-8\r\n\r\n'
+          '${jsonEncode(metadata)}\r\n'
+          '--$boundary\r\n'
+          'Content-Type: application/octet-stream\r\n\r\n');
+      final tail = utf8.encode('\r\n--$boundary--\r\n');
+      return _item(await _send(
+        id == null ? 'POST' : 'PATCH',
+        _endpoint(path, {
+          'uploadType': 'multipart',
+          'supportsAllDrives': 'true',
+          'fields': _itemFields,
+        }),
+        write: (request) async {
+          request.headers.set(HttpHeaders.contentTypeHeader, 'multipart/related; boundary=$boundary');
+          request.contentLength = head.length + bytes.length + tail.length;
+          request
+            ..add(head)
+            ..add(bytes)
+            ..add(tail);
+        },
+      ));
+    }
     final session = await _send(
       id == null ? 'POST' : 'PATCH',
-      _endpoint(id == null ? '/upload/drive/v3/files' : '/upload/drive/v3/files/$id', {
+      _endpoint(path, {
         'uploadType': 'resumable',
         'supportsAllDrives': 'true',
       }),
       headers: {'X-Upload-Content-Length': '$length'},
-      write: _jsonBody({
-        'name': ?name,
-        if (parentId != null && id == null) 'parents': [parentId],
-        'modifiedTime': ?modified?.toUtc().toIso8601String(),
-      }),
+      write: _jsonBody(metadata),
     );
     await session.drain<void>();
     final location = session.headers.value(HttpHeaders.locationHeader);

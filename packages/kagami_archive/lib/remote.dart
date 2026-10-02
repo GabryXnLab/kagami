@@ -109,13 +109,26 @@ class ServerSetup {
       .replaceAll('=', '');
 }
 
-/// Il comando che accende il server già configurato: Docker è l'unica cosa
-/// da avere, e il comando è l'unica cosa da fare.
+/// I comandi che accendono il server già configurato: Docker è l'unica cosa
+/// da avere, e incollarli è l'unica cosa da fare. Una riga per comando,
+/// perché `&&` non lo capisce ogni terminale (il PowerShell di Windows).
+///
+/// Il secondo accende l'aggiornatore (`kagami-server update`), che ricrea
+/// il server quando la CI pubblica un'immagine nuova. Ha il socket di Docker
+/// e gira come root, quindi è un contenitore a parte: il server, che parla
+/// con internet, non deve poter comandare la macchina. Senza controllo di
+/// salute, che chiede al server della porta 8080 e lì non c'è.
 String serverCommand(ServerSetup setup, {required String image, int port = 8080}) =>
     'docker run -d --name kagami-server --restart unless-stopped '
     '-p $port:8080 -v kagami-data:/data '
     '-e KAGAMI_SETUP=${setup.encode()} '
-    '$image';
+    '$image\n'
+    '${updaterCommand(image)}';
+
+String updaterCommand(String image) =>
+    'docker run -d --name kagami-updater --restart unless-stopped --no-healthcheck '
+    '-u 0 -v /var/run/docker.sock:/var/run/docker.sock '
+    '$image update';
 
 /// L'indirizzo scritto dall'utente, ripulito: senza schema è `http://`
 /// (in casa e dentro Tailscale lo si scrive così), senza la `/` finale.
@@ -215,7 +228,7 @@ class ServerInfo {
     this.folderId,
     this.folderName,
     this.images = false,
-    this.checkMinutes,
+    this.check = const RemoteCheck(),
   });
 
   factory ServerInfo.fromJson(Map<String, Object?> json) {
@@ -237,7 +250,7 @@ class ServerInfo {
       folderId: drive['folderId'] as String?,
       folderName: drive['folderName'] as String?,
       images: json['images'] == true,
-      checkMinutes: (check['minutes'] as num?)?.toInt(),
+      check: RemoteCheck.fromJson(check.cast<String, Object?>()),
     );
   }
 
@@ -258,7 +271,12 @@ class ServerInfo {
   final String? folderId;
   final String? folderName;
   final bool images;
-  final int? checkMinutes;
+
+  /// Il controllo quotidiano di chi chiama.
+  final RemoteCheck check;
+
+  /// L'ora del controllo, `null` se è spento.
+  int? get checkMinutes => check.enabled ? check.minutes : null;
 
   /// Se può ricevere lavori: ha il permesso di Drive di chi chiama e la sua
   /// cartella.
@@ -276,8 +294,60 @@ class ServerInfo {
         folderId: id,
         folderName: name,
         images: images,
-        checkMinutes: checkMinutes,
+        check: check,
       );
+
+  ServerInfo withCheck(RemoteCheck check) => ServerInfo(
+        name: name,
+        version: version,
+        api: api,
+        owner: owner,
+        providers: providers,
+        email: email,
+        isOwner: isOwner,
+        driveAuthorized: driveAuthorized,
+        folderId: folderId,
+        folderName: folderName,
+        images: images,
+        check: check,
+      );
+}
+
+/// Il controllo quotidiano sul server: se c'è, a che ora, se guarda tutta la
+/// libreria su Drive, e com'è andato l'ultimo.
+class RemoteCheck {
+  const RemoteCheck({
+    this.enabled = false,
+    this.minutes = 4 * 60,
+    this.library = false,
+    this.checkedAt,
+    this.checked = 0,
+    this.queued = 0,
+    this.failed = 0,
+  });
+
+  /// Un server di prima dà solo `minutes`, `null` se è spento, e guarda solo
+  /// le serie che ha scaricato lui.
+  factory RemoteCheck.fromJson(Map<String, Object?> json) {
+    final minutes = (json['minutes'] as num?)?.toInt();
+    return RemoteCheck(
+      enabled: json['enabled'] as bool? ?? minutes != null,
+      minutes: (json['time'] as num?)?.toInt() ?? minutes ?? 4 * 60,
+      library: json['library'] == true,
+      checkedAt: DateTime.tryParse('${json['checkedAt']}'),
+      checked: (json['checked'] as num?)?.toInt() ?? 0,
+      queued: (json['queued'] as num?)?.toInt() ?? 0,
+      failed: (json['failed'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final bool enabled;
+  final int minutes;
+  final bool library;
+  final DateTime? checkedAt;
+  final int checked;
+  final int queued;
+  final int failed;
 }
 
 class RemoteJob {
@@ -422,6 +492,13 @@ class ServerClient {
   Future<void> forget(String key) => _call('DELETE', '/v$serverApi/ongoing/${Uri.encodeComponent(key)}');
 
   Future<void> check() => _call('POST', '/v$serverApi/check');
+
+  Future<RemoteCheck> configureCheck({bool? enabled, int? minutes, bool? library}) async =>
+      RemoteCheck.fromJson((await _call('PUT', '/v$serverApi/check', body: {
+        'enabled': ?enabled,
+        'minutes': ?minutes,
+        'library': ?library,
+      }))!);
 
   /// Dà al server il permesso sul proprio Drive e la cartella dove scrivere.
   Future<({String? id, String? name})> grantDrive(String refreshToken, String folderId) async =>

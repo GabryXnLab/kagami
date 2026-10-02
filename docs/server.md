@@ -29,16 +29,20 @@ Nell'app: *Altro → Scarica un manga → Server → Crea il tuo server*.
 1. Se non l'hai già fatto, l'app ti chiede di accedere con Google e di
    scegliere la cartella dei manga su Drive.
 2. *Genera il comando*: Google ti chiede di permettere al server di scrivere
-   sul tuo Drive. L'app prepara un comando così:
+   sul tuo Drive. L'app prepara due comandi così:
 
    ```bash
    docker run -d --name kagami-server --restart unless-stopped \
      -p 8080:8080 -v kagami-data:/data \
      -e KAGAMI_SETUP=eyJ2IjoxLC… ghcr.io/gabryxnlab/kagami-server:latest
+   docker run -d --name kagami-updater --restart unless-stopped --no-healthcheck \
+     -u 0 -v /var/run/docker.sock:/var/run/docker.sock \
+     ghcr.io/gabryxnlab/kagami-server:latest update
    ```
 
-3. Copialo e incollalo nel terminale del computer. Scarica l'immagine, la
-   avvia e la fa ripartire da sola dopo un riavvio.
+3. Copiali e incollali nel terminale del computer. Il primo scarica
+   l'immagine, avvia il server e lo fa ripartire da solo dopo un riavvio; il
+   secondo lo tiene aggiornato (vedi [Aggiornamenti](#aggiornamenti)).
 4. Torna all'app e scrivi l'indirizzo del computer (vedi sotto): l'app
    verifica che il server ti riconosca come proprietario, e il server compare
    come destinazione, con la sua coda sotto quella del telefono.
@@ -52,8 +56,8 @@ Per cambiare cartella o rinnovare il permesso generi un comando nuovo, e
 ricrei il contenitore:
 
 ```bash
-docker rm -f kagami-server
-docker run … # il comando nuovo
+docker rm -f kagami-server kagami-updater
+docker run … # i comandi nuovi
 ```
 
 Il volume `kagami-data` resta: code, utenti e serie seguite non si perdono.
@@ -101,19 +105,55 @@ scrivere sul proprio Drive: l'app lo dice prima di chiederlo.
 docker logs kagami-server                          # avvio, proprietario, errori
 docker exec kagami-server kagami-server users      # account ammessi e chi ha collegato il Drive
 docker exec kagami-server kagami-server status     # per ogni account: lavoro, coda, esiti
-docker pull ghcr.io/gabryxnlab/kagami-server:latest # aggiornare: poi rm -f e lo stesso comando
+docker logs kagami-updater                         # controlli e aggiornamenti
 ```
 
 Spegnendolo, i lavori in corso si fermano e restano in coda; alla
 riaccensione ripartono da dove erano, senza riscaricare ciò che è già su
 Drive.
 
-## Serie in corso
+## Aggiornamenti
 
-Le serie che il sito dà per `ongoing`, scaricate dal server, le segue lui,
-per ogni account: ogni giorno alle 4:00 (ora del server: `-e TZ=Europe/Rome`
-nel comando per la tua; `check.minutes` in `config.json` nel volume, `null`
-per spegnerlo) mette in coda solo i capitoli nuovi.
+Il contenitore `kagami-updater` (il secondo comando) è la stessa immagine
+in un altro ruolo: ogni ora scarica `kagami-server:latest` e, se la CI del
+repo pubblico ne ha pubblicata una nuova, ricrea il server con la stessa
+configurazione — porta, volume, `KAGAMI_SETUP`, `TZ` — e l'immagine nuova,
+poi fa lo stesso con sé stesso. Se il server sta scaricando aspetta che
+finisca, al più sei ore: un lavoro interrotto riprende comunque da dove era.
+
+Ha bisogno del socket di Docker e gira come root, per questo è un
+contenitore a parte: il server, che parla con internet, resta senza. Si
+aggiorna solo un'immagine presa da un registro (`ghcr.io/…`), non una
+costruita dal sorgente né una fissata con `@sha256:`. Con Docker *rootless*
+il socket sta altrove: nel comando va il suo percorso
+(`-v $XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock`).
+
+Un server creato prima che l'aggiornatore esistesse lo riceve lanciando
+solo il secondo comando. Per spegnerlo: `docker rm -f kagami-updater`.
+`--every <minuti>` dopo `update` cambia l'intervallo dei controlli.
+
+## Controllo giornaliero dei capitoli nuovi
+
+Ogni account ha il suo, e lo regola dall'app (*Altro → Scarica un manga →
+Server*): acceso o spento, a che ora (ora del server: `-e TZ=Europe/Rome`
+nel comando per la tua) e su cosa.
+
+- **Serie in corso del server**: quelle che il sito dà `ongoing` e che ha
+  scaricato il server. Mette in coda solo i capitoli nuovi; una serie
+  conclusa esce da sola.
+- **Tutta la libreria su Drive** (acceso di partenza): anche ogni serie di
+  `library.json`, chiunque l'abbia scaricata — il telefono, il server o un
+  altro archiviatore. Sono nuovi i capitoli del sito che l'`index.json`
+  della serie non elenca: chi ha scaricato dal capitolo 16 in poi non si
+  ritrova in coda i precedenti. Le serie concluse non si chiedono al sito,
+  e quelle di ManhwaRead, dietro la verifica del browser, si saltano. Un
+  capitolo che l'indice dà a metà si rimette in coda: se su Drive è intero
+  il giro lo salta e ripara l'indice. Il telefono, finché è collegato, lascia
+  al server le serie che scendono in quella cartella, per non scaricarle due
+  volte.
+
+`check.minutes` in `config.json` nel volume è l'ora di partenza per gli
+account che non l'hanno ancora scelta (`null`: spento di partenza).
 
 ## ManhwaRead e Cloudflare
 

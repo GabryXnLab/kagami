@@ -349,7 +349,7 @@
   "serverPreparing": "جارٍ الإعداد…",
   "serverGenerate": "إنشاء الأمر",
   "serverStep1": "ثبّت Docker على الحاسوب (docker.com) إن لم يكن موجودًا.",
-  "serverStep2": "الصق هذا الأمر في طرفيته. يحتوي على صلاحية Drive الخاص بك: لا ترسله لأحد.",
+  "serverStep2": "الصق هذه الأوامر في طرفيته: الأول يشغّل الخادم، والثاني يبقيه محدّثًا تلقائيًا. تحتوي على صلاحية Drive الخاص بك: لا ترسلها لأحد.",
   "serverCopyCommand": "نسخ الأمر",
   "serverStep3": "اكتب هنا عنوان الحاسوب: في المنزل عنوان الشبكة المحلية؛ ومن الخارج اسمه في Tailscale أو عنوان HTTPS الذي تعرضه به.",
   "serverPortNote": "يستجيب الخادم على المنفذ 8080.",
@@ -829,5 +829,13 @@
   "readerProbeDecode": "فك الترميز {decode} ms (الأقصى {decodeMax}) · الوصول {arrival} ms (الأقصى {arrivalMax})",
   "readerProbeMemory": "أقصى نسخ {copy} ms · GC Android {gc} ({gcMs} ms) · الحاجبة {blocking} ({blockingMs} ms)",
   "readerProbeWaits": "انتظارات Drive {drive} · بدائل Dart {fallbacks}",
-  "readerProbeJumps": "التصحيحات {corrections} · القفزات {jumps} ({jumped} px)"
+  "readerProbeJumps": "التصحيحات {corrections} · القفزات {jumps} ({jumped} px)",
+  "serverCheckDaily": "فحص يومي للفصول الجديدة",
+  "serverCheckDailyAt": "كل يوم عند {clock} بتوقيت الخادم",
+  "serverCheckDailyOff": "متوقف: لا تُنزَّل الفصول الجديدة إلا يدويًا",
+  "serverCheckLibrary": "المكتبة كاملة على Drive",
+  "serverCheckLibraryOn": "وكذلك السلاسل التي نزّلها الهاتف أو غيره، لا الخادم وحده",
+  "serverCheckLibraryOff": "السلاسل الجارية التي نزّلها الخادم فقط",
+  "serverCheckLast": "آخر فحص {when}: {count, plural, =0{لا فصول جديدة} =1{سلسلة واحدة بفصول جديدة} other{{count} سلاسل بفصول جديدة}}",
+  "serverCheckTimeHelp": "وقت الفحص"
 }

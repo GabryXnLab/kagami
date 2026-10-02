@@ -1843,7 +1843,7 @@
   "@serverStep1": {
     "description": "Passo 1 delle istruzioni per creare il server"
   },
-  "serverStep2": "Incolla questo comando nel suo terminale. Contiene il permesso sul tuo Drive: non mandarlo a nessuno.",
+  "serverStep2": "Incolla questi comandi nel suo terminale: il primo accende il server, il secondo lo tiene aggiornato da solo. Contengono il permesso sul tuo Drive: non mandarli a nessuno.",
   "@serverStep2": {
     "description": "Passo 2 delle istruzioni per creare il server"
   },
@@ -4250,5 +4250,50 @@
         "type": "String"
       }
     }
+  },
+  "serverCheckDaily": "Controllo giornaliero dei capitoli nuovi",
+  "@serverCheckDaily": {
+    "description": "Titolo dell'interruttore del controllo quotidiano dei capitoli nuovi sul server"
+  },
+  "serverCheckDailyAt": "Ogni giorno alle {clock}, ora del server",
+  "@serverCheckDailyAt": {
+    "description": "Sottotitolo del controllo quotidiano acceso: l'ora; {clock} è l'ora già formattata",
+    "placeholders": {
+      "clock": {
+        "type": "String"
+      }
+    }
+  },
+  "serverCheckDailyOff": "Spento: i capitoli nuovi si scaricano solo a mano",
+  "@serverCheckDailyOff": {
+    "description": "Sottotitolo del controllo quotidiano del server spento"
+  },
+  "serverCheckLibrary": "Tutta la libreria su Drive",
+  "@serverCheckLibrary": {
+    "description": "Titolo dell'interruttore che fa controllare al server tutte le serie della libreria su Drive"
+  },
+  "serverCheckLibraryOn": "Anche le serie scaricate dal telefono o da altri, non solo dal server",
+  "@serverCheckLibraryOn": {
+    "description": "Sottotitolo dell'interruttore della libreria intera, acceso"
+  },
+  "serverCheckLibraryOff": "Solo le serie in corso scaricate dal server",
+  "@serverCheckLibraryOff": {
+    "description": "Sottotitolo dell'interruttore della libreria intera, spento"
+  },
+  "serverCheckLast": "Ultimo controllo {when}: {count, plural, =0{nessun capitolo nuovo} =1{1 serie con capitoli nuovi} other{{count} serie con capitoli nuovi}}",
+  "@serverCheckLast": {
+    "description": "Esito dell'ultimo controllo del server; {when} è già formattato (es. «ieri alle 4:00»), {count} le serie con capitoli nuovi",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverCheckTimeHelp": "Ora del controllo",
+  "@serverCheckTimeHelp": {
+    "description": "Titolo del selettore dell'ora del controllo quotidiano del server"
   }
 }

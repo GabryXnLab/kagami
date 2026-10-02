@@ -160,13 +160,14 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   test/                        provider con fixture copiate, motore su cartella e
                                Drive finto, coda, serie in corso (`dart test`)
 server/                        Kagami Server, Dart puro (`dart compile exe`)
-  bin/kagami_server.dart       riga di comando: serve, users, status, ping
+  bin/kagami_server.dart       riga di comando: serve, users, status, ping, idle, update
   lib/src/api.dart             l'API v2: rotte, chi chiama, utenti, validazione dei lavori
   lib/src/identity.dart        token d'identità di Firebase: firma RS256, progetto, account Google
   lib/src/users.dart           account ammessi, proprietario, uno spazio (coda, Drive, giro) per utente
   lib/src/google.dart          il Drive di un utente: refresh token e cartella
   lib/src/worker.dart          il giro della coda (ArchiveRunner) e il controllo quotidiano
   lib/src/images.dart          miniature e tessere con libvips
+  lib/src/updater.dart         l'aggiornatore: API di Docker sul socket, ricrea il server con l'immagine nuova
   lib/src/config.dart, server.dart  cartella dei dati, `KAGAMI_SETUP`, impostazioni, accensione
   test/                        firme vere con una chiave di prova, Google finto, API e client sul loopback, giro
   Dockerfile, docker-compose.yml  immagine con libvips; il target `test` fa girare anche i test di vips
@@ -280,6 +281,12 @@ nel proprio progetto Firebase.
     GHCR `ci.yml` dal repo pubblico, ed è quella del comando dell'app
     (`serverImage`): non contiene niente di personale. Sulla macchina
     condivisa si toglie per nome solo ciò che si è creato, mai con `prune`;
+  - si aggiorna da sé: il comando dell'app accende anche `kagami-updater`,
+    la stessa immagine con `update`, il socket di Docker e root, che ogni
+    ora scarica l'immagine e, se è cambiata e il server non scarica,
+    ricrea il contenitore con la sua configurazione (`recreateBody`) e poi
+    sé stesso. Niente Watchtower (fermo, e muto con Docker 29); il socket
+    non entra mai nel contenitore del server;
   - prima di ogni giro si chiede se il Drive di quell'account è pronto
     (`UserDrive.blocked`): senza, i lavori aspettano in coda invece di
     fallire tutti;
@@ -472,7 +479,17 @@ nel proprio progetto Firebase.
   invisibile e grande quanto lo schermo (`BrowserFetcher`): Cloudflare non
   risponde a `SiteHttp` nemmeno con quei cookie, e in una WebView di un
   pixel la verifica non si risolve da sola. Si seguono solo le serie in corso scaricate
-  dall'app: quelle del server le segue il suo timer.
+  dall'app: quelle del server le segue il suo timer. Il server, se l'account
+  lo lascia acceso, guarda anche tutta la libreria su Drive
+  (`checkLibrary`): nuovi sono i capitoli che l'`index.json` della serie non
+  elenca, non quelli non archiviati, che possono esserlo per scelta. Il
+  telefono gli lascia allora le sue serie di quella cartella
+  (`archive/server-check.json`), per non scaricarle due volte.
+- **Su Drive una voce d'indice si riusa solo se è intera.** Ricostruendo
+  `index.json` e `pages.json`, `DriveStore` riprende dall'indice di prima i
+  capitoli completi e con le tavole; gli altri li rilegge dal loro
+  `chapter.json`. Copiare anche le voci a metà le rendeva eterne: un
+  capitolo indicizzato mentre saliva restava «non scaricato» anche dopo.
 - **Lo scope è `drive.readonly`, e `drive` solo per chi carica.** Leggere,
   scaricare e sincronizzare in sola discesa usano la sola lettura; lo scope
   completo (dichiarato nella schermata di consenso del progetto Firebase) si

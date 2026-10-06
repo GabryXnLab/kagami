@@ -2417,6 +2417,30 @@
   "@settingsAbout": {
     "description": "Intestazione di sezione delle impostazioni: versione dell'app"
   },
+  "settingsTheme": "Tema",
+  "@settingsTheme": {
+    "description": "Riga delle impostazioni che sceglie tema chiaro, scuro o del sistema; accanto c'è la scelta attuale"
+  },
+  "settingsLibraryNote": "Cartella, indici e Google Drive",
+  "@settingsLibraryNote": {
+    "description": "Sottotitolo della voce «Libreria» nella pagina principale delle impostazioni, quando Google Drive è disponibile"
+  },
+  "settingsLibraryNoteLocal": "Cartella e indici",
+  "@settingsLibraryNoteLocal": {
+    "description": "Sottotitolo della voce «Libreria» nella pagina principale delle impostazioni, senza Google Drive"
+  },
+  "settingsReadingNote": "Modalità predefinita e misure del lettore",
+  "@settingsReadingNote": {
+    "description": "Sottotitolo della voce «Lettura» nella pagina principale delle impostazioni"
+  },
+  "settingsAccountNote": "Accesso con Google e sincronizzazione",
+  "@settingsAccountNote": {
+    "description": "Sottotitolo della voce «Account» nella pagina principale delle impostazioni"
+  },
+  "settingsDataNote": "Backup, ripristino e cancellazione",
+  "@settingsDataNote": {
+    "description": "Sottotitolo della voce «Dati» nella pagina principale delle impostazioni"
+  },
   "settingsAutoBackup": "Copia automatica nella libreria",
   "@settingsAutoBackup": {
     "description": "Interruttore della copia di backup giornaliera"

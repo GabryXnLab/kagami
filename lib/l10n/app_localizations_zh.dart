@@ -1816,6 +1816,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAbout => '关于';
 
   @override
+  String get settingsTheme => '主题';
+
+  @override
+  String get settingsLibraryNote => '文件夹、索引和 Google Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => '文件夹和索引';
+
+  @override
+  String get settingsReadingNote => '默认模式和阅读器测量';
+
+  @override
+  String get settingsAccountNote => 'Google 登录和同步';
+
+  @override
+  String get settingsDataNote => '备份、恢复和清除';
+
+  @override
   String get settingsAutoBackup => '自动备份到书库';
 
   @override

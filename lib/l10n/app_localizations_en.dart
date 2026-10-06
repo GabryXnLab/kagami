@@ -1869,6 +1869,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAbout => 'About';
 
   @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get settingsLibraryNote => 'Folder, indexes and Google Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => 'Folder and indexes';
+
+  @override
+  String get settingsReadingNote => 'Default mode and reader measurements';
+
+  @override
+  String get settingsAccountNote => 'Google sign-in and sync';
+
+  @override
+  String get settingsDataNote => 'Backups, restore and erase';
+
+  @override
   String get settingsAutoBackup => 'Automatic copy in the library';
 
   @override

@@ -1873,6 +1873,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsAbout => 'Sobre';
 
   @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsLibraryNote => 'Pasta, índices e Google Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => 'Pasta e índices';
+
+  @override
+  String get settingsReadingNote => 'Modo padrão e medições do leitor';
+
+  @override
+  String get settingsAccountNote => 'Login com Google e sincronização';
+
+  @override
+  String get settingsDataNote => 'Backups, restauração e exclusão';
+
+  @override
   String get settingsAutoBackup => 'Cópia automática na biblioteca';
 
   @override

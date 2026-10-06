@@ -1,8 +1,9 @@
-/// Impostazioni: aspetto, libreria, lettura e dati.
+/// Impostazioni: una pagina d'ingresso con chi legge, l'aspetto e le voci
+/// che portano alle pagine di libreria, lettura, account e dati.
 ///
-/// La sezione che conta è l'ultima. Da quando lo stato utente vive nel
-/// database dell'app, portarsi via i propri dati non è una funzione in più: è
-/// il modo in cui sopravvivono a una reinstallazione.
+/// La voce che conta è «Dati». Da quando lo stato utente vive nel database
+/// dell'app, portarsi via i propri dati non è una funzione in più: è il modo
+/// in cui sopravvivono a una reinstallazione.
 library;
 
 import 'dart:io';
@@ -33,6 +34,90 @@ String _themeLabel(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
       ThemeMode.system => l10n.settingsThemeSystem,
     };
 
+/// La scelta attuale accanto alla freccia, come in una riga che apre un
+/// elenco.
+class _Value extends StatelessWidget {
+  const _Value([this.value]);
+
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.tokens.muted;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (value != null) ...[
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: Text(
+              value!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: KagamiType.title(14, color: muted),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Icon(LucideIcons.chevronRight, size: 18, color: muted),
+      ],
+    );
+  }
+}
+
+/// Una scelta fra pochi valori in un foglio: si tocca e il foglio si chiude.
+Future<void> _choose<T>(
+  BuildContext context, {
+  required String title,
+  required T current,
+  required List<T> values,
+  required String Function(T) label,
+  required ValueChanged<T> onChosen,
+}) =>
+    showKagamiSheet<void>(
+      context,
+      title: title,
+      scrollable: true,
+      builder: (sheet) => RadioGroup<T>(
+        groupValue: current,
+        onChanged: (value) {
+          onChosen(value as T);
+          Navigator.of(sheet).pop();
+        },
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            for (final value in values)
+              RadioListTile<T>(value: value, title: Text(label(value))),
+          ],
+        ),
+      ),
+    );
+
+class _Theme extends ConsumerWidget {
+  const _Theme();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final mode = ref.watch(themeModeProvider).value ?? ThemeMode.dark;
+    return KTile(
+      icon: LucideIcons.sunMoon,
+      title: l10n.settingsTheme,
+      trailing: _Value(_themeLabel(l10n, mode)),
+      onTap: () => _choose<ThemeMode>(
+        context,
+        title: l10n.settingsTheme,
+        current: mode,
+        values: ThemeMode.values,
+        label: (value) => _themeLabel(l10n, value),
+        onChosen: ref.read(themeModeProvider.notifier).set,
+      ),
+    );
+  }
+}
+
 /// La lingua dell'interfaccia: quella del sistema o una delle tradotte.
 class _Language extends ConsumerWidget {
   const _Language();
@@ -41,41 +126,20 @@ class _Language extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final chosen = ref.watch(appLanguageProvider).value;
+    String label(Locale? locale) => locale == null
+        ? l10n.settingsLanguageSystem
+        : languageNames[locale.languageCode]!;
     return KTile(
       icon: LucideIcons.languages,
       title: l10n.settingsLanguage,
-      subtitle: chosen == null
-          ? l10n.settingsLanguageSystem
-          : languageNames[chosen.languageCode],
-      trailing: Icon(LucideIcons.chevronRight,
-          size: 18, color: context.tokens.muted),
-      onTap: () => showKagamiSheet<void>(
+      trailing: _Value(label(chosen)),
+      onTap: () => _choose<Locale?>(
         context,
         title: l10n.settingsLanguage,
-        scrollable: true,
-        builder: (sheet) => RadioGroup<Locale?>(
-          groupValue: chosen,
-          onChanged: (value) {
-            ref.read(appLanguageProvider.notifier).set(value);
-            Navigator.of(sheet).pop();
-          },
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              for (final locale in <Locale?>[
-                null,
-                ...AppLocalizations.supportedLocales,
-              ])
-                RadioListTile<Locale?>(
-                  value: locale,
-                  title: Text(locale == null
-                      ? l10n.settingsLanguageSystem
-                      : languageNames[locale.languageCode]!),
-                ),
-            ],
-          ),
-        ),
+        current: chosen,
+        values: [null, ...AppLocalizations.supportedLocales],
+        label: label,
+        onChosen: ref.read(appLanguageProvider.notifier).set,
       ),
     );
   }
@@ -87,121 +151,311 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final mode = ref.watch(themeModeProvider).value ?? ThemeMode.dark;
-    final root = ref.watch(libraryRootProvider);
-    final autoBackup = ref.watch(autoBackupProvider).value ?? true;
+    void open(Widget page) => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => page),
+        );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
+      appBar: AppBar(),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
         children: [
-          KSection(l10n.settingsAppearance),
-          KSegmented(
-            options: [
-              for (final value in ThemeMode.values) _themeLabel(l10n, value),
-            ],
-            icons: const [
-              LucideIcons.smartphone,
-              LucideIcons.sun,
-              LucideIcons.moon,
-            ],
-            index: ThemeMode.values.indexOf(mode),
-            onChanged: (index) => ref
-                .read(themeModeProvider.notifier)
-                .set(ThemeMode.values[index]),
-          ),
-          const SizedBox(height: 12),
-          const KGroup(children: [_Language()]),
-          const SizedBox(height: 26),
-          KSection(l10n.settingsLibrary),
-          KGroup(
-            children: [
-              KTile(
-                icon: LucideIcons.folder,
-                title: l10n.settingsFolder,
-                subtitle: root ?? l10n.settingsNoFolder,
-                trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                onTap: () async {
-                  final location =
-                      await ref.read(libraryLocationProvider.future);
-                  final chosen = await location.choose();
-                  if (chosen == null) return;
-                  ref.read(libraryRootProvider.notifier).select(chosen);
-                  ref.invalidate(libraryCatalogProvider);
-                  ref.invalidate(readingProvider);
-                },
-              ),
-              KTile(
-                icon: LucideIcons.refreshCw,
-                title: l10n.settingsReloadIndexes,
-                subtitle: l10n.settingsReloadIndexesNote,
-                onTap: () {
-                  ref.invalidate(libraryCatalogProvider);
-                  ref.invalidate(readingProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.settingsIndexesReloaded)),
-                  );
-                },
-              ),
-            ],
-          ),
+          Text(l10n.settingsTitle, style: KagamiType.display(30)),
           if (cloudAvailable) ...[
-            const SizedBox(height: 26),
-            KSection(l10n.settingsGoogleDrive),
-            const _Drive(),
+            const SizedBox(height: 28),
+            Entrance(child: _Profile(onTap: () => open(const _AccountPage()))),
           ],
-          const SizedBox(height: 26),
-          KSection(l10n.settingsReading),
-          const _ReaderDefaults(),
-          const SizedBox(height: 12),
-          const _ProbeSwitch(),
-          const SizedBox(height: 26),
-          KSection(l10n.settingsAccount),
-          const _Account(),
-          const SizedBox(height: 26),
-          KSection(l10n.settingsData),
-          KGroup(
-            children: [
-              KTile(
-                icon: LucideIcons.databaseBackup,
-                title: l10n.settingsAutoBackup,
-                subtitle: l10n.settingsAutoBackupNote,
-                onTap: () =>
-                    ref.read(autoBackupProvider.notifier).set(!autoBackup),
-                trailing: Switch(
-                  value: autoBackup,
-                  onChanged: (value) =>
-                      ref.read(autoBackupProvider.notifier).set(value),
-                ),
-              ),
-              KTile(
-                icon: LucideIcons.download,
-                title: l10n.settingsExport,
-                subtitle: l10n.settingsExportNote,
-                onTap: () => _export(context, ref),
-              ),
-              KTile(
-                icon: LucideIcons.upload,
-                title: l10n.settingsImport,
-                subtitle: l10n.settingsImportNote,
-                onTap: () => _import(context, ref),
-              ),
-              if (root != null) _AutoBackups(root: root),
-              KTile(
-                icon: LucideIcons.trash2,
-                title: l10n.settingsWipe,
-                subtitle: l10n.settingsWipeNote,
-                tint: context.tokens.danger,
-                onTap: () => _wipe(context, ref),
-              ),
-            ],
+          const SizedBox(height: 28),
+          const Entrance(
+            index: 1,
+            child: KGroup(children: [_Theme(), _Language()]),
           ),
-          const SizedBox(height: 26),
-          KSection(l10n.settingsAbout),
-          const KGroup(children: [_About()]),
+          const SizedBox(height: 22),
+          Entrance(
+            index: 2,
+            child: KGroup(
+              children: [
+                KTile(
+                  icon: LucideIcons.libraryBig,
+                  title: l10n.settingsLibrary,
+                  subtitle: cloudAvailable
+                      ? l10n.settingsLibraryNote
+                      : l10n.settingsLibraryNoteLocal,
+                  trailing: const _Value(),
+                  onTap: () => open(const _LibraryPage()),
+                ),
+                KTile(
+                  icon: LucideIcons.bookOpen,
+                  title: l10n.settingsReading,
+                  subtitle: l10n.settingsReadingNote,
+                  trailing: const _Value(),
+                  onTap: () => open(const _ReadingPage()),
+                ),
+                KTile(
+                  icon: LucideIcons.userRound,
+                  title: l10n.settingsAccount,
+                  subtitle: l10n.settingsAccountNote,
+                  trailing: const _Value(),
+                  onTap: () => open(const _AccountPage()),
+                ),
+                KTile(
+                  icon: LucideIcons.database,
+                  title: l10n.settingsData,
+                  subtitle: l10n.settingsDataNote,
+                  trailing: const _Value(),
+                  onTap: () => open(const _DataPage()),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          const Entrance(index: 3, child: KGroup(children: [_About()])),
         ],
       ),
+    );
+  }
+}
+
+/// Chi legge: la foto e il nome dell'account Google, o l'invito ad
+/// accedere. Toccandolo si apre la pagina dell'account.
+class _Profile extends ConsumerWidget {
+  const _Profile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final scheme = context.colors;
+    final muted = context.tokens.muted;
+    final account = ref.watch(cloudAccountProvider).account;
+    final placeholder = ColoredBox(
+      color: scheme.surfaceContainerHighest,
+      child: Center(
+        child: account == null
+            ? Icon(LucideIcons.userRound, size: 36, color: muted)
+            : Text(
+                account.label.characters.first.toUpperCase(),
+                style: KagamiType.display(36),
+              ),
+      ),
+    );
+    final photo = account?.photo;
+
+    return Semantics(
+      button: true,
+      label: l10n.settingsAccount,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                ClipOval(
+                  child: SizedBox.square(
+                    dimension: 88,
+                    child: photo == null
+                        ? placeholder
+                        : Image.network(
+                            photo,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => placeholder,
+                          ),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.primary,
+                      border: Border.all(color: scheme.surface, width: 2),
+                    ),
+                    child: Icon(
+                      account == null ? LucideIcons.logIn : LucideIcons.cloudCheck,
+                      size: 12,
+                      color: scheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              account?.label ?? l10n.settingsAccountSignIn,
+              textAlign: TextAlign.center,
+              style: KagamiType.title(19, weight: 800),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                account == null || account.label == account.email
+                    ? l10n.settingsAccountSignInNote
+                    : account.email,
+                textAlign: TextAlign.center,
+                style: KagamiType.body(13, color: muted),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Una pagina delle impostazioni: il titolo in alto e le sue schede.
+class _Page extends StatelessWidget {
+  const _Page({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          children: children,
+        ),
+      );
+}
+
+class _LibraryPage extends ConsumerWidget {
+  const _LibraryPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final root = ref.watch(libraryRootProvider);
+    return _Page(
+      title: l10n.settingsLibrary,
+      children: [
+        KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.folder,
+              title: l10n.settingsFolder,
+              subtitle: root ?? l10n.settingsNoFolder,
+              trailing: const _Value(),
+              onTap: () async {
+                final location = await ref.read(libraryLocationProvider.future);
+                final chosen = await location.choose();
+                if (chosen == null) return;
+                ref.read(libraryRootProvider.notifier).select(chosen);
+                ref.invalidate(libraryCatalogProvider);
+                ref.invalidate(readingProvider);
+              },
+            ),
+            KTile(
+              icon: LucideIcons.refreshCw,
+              title: l10n.settingsReloadIndexes,
+              subtitle: l10n.settingsReloadIndexesNote,
+              onTap: () {
+                ref.invalidate(libraryCatalogProvider);
+                ref.invalidate(readingProvider);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.settingsIndexesReloaded)),
+                );
+              },
+            ),
+          ],
+        ),
+        if (cloudAvailable) ...[
+          const SizedBox(height: 26),
+          KSection(l10n.settingsGoogleDrive),
+          const _Drive(),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReadingPage extends StatelessWidget {
+  const _ReadingPage();
+
+  @override
+  Widget build(BuildContext context) => _Page(
+        title: context.l10n.settingsReading,
+        children: const [
+          _ReaderDefaults(),
+          SizedBox(height: 12),
+          _ProbeSwitch(),
+        ],
+      );
+}
+
+/// L'account, cioè dove vivono i dati personali oltre a questo telefono.
+///
+/// È la stessa promessa del backup — voti, stati, capitoli letti, cronologia,
+/// raccolte e impostazioni non muoiono con l'installazione — senza il file da
+/// ricordarsi di fare.
+class _AccountPage extends StatelessWidget {
+  const _AccountPage();
+
+  @override
+  Widget build(BuildContext context) => _Page(
+        title: context.l10n.settingsAccount,
+        children: const [_Account()],
+      );
+}
+
+class _DataPage extends ConsumerWidget {
+  const _DataPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final root = ref.watch(libraryRootProvider);
+    final autoBackup = ref.watch(autoBackupProvider).value ?? true;
+    return _Page(
+      title: l10n.settingsData,
+      children: [
+        KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.databaseBackup,
+              title: l10n.settingsAutoBackup,
+              subtitle: l10n.settingsAutoBackupNote,
+              onTap: () =>
+                  ref.read(autoBackupProvider.notifier).set(!autoBackup),
+              trailing: Switch(
+                value: autoBackup,
+                onChanged: (value) =>
+                    ref.read(autoBackupProvider.notifier).set(value),
+              ),
+            ),
+            KTile(
+              icon: LucideIcons.download,
+              title: l10n.settingsExport,
+              subtitle: l10n.settingsExportNote,
+              onTap: () => _export(context, ref),
+            ),
+            KTile(
+              icon: LucideIcons.upload,
+              title: l10n.settingsImport,
+              subtitle: l10n.settingsImportNote,
+              onTap: () => _import(context, ref),
+            ),
+            if (root != null) _AutoBackups(root: root),
+          ],
+        ),
+        const SizedBox(height: 22),
+        KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.trash2,
+              title: l10n.settingsWipe,
+              subtitle: l10n.settingsWipeNote,
+              tint: context.tokens.danger,
+              onTap: () => _wipe(context, ref),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -343,11 +597,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// L'account, cioè dove vivono i dati personali oltre a questo telefono.
-///
-/// È la stessa promessa del backup — voti, stati, capitoli letti, cronologia,
-/// raccolte e impostazioni non muoiono con l'installazione — senza il file da
-/// ricordarsi di fare.
+
 /// Drive: la cartella, lo spazio che le tavole lette occupano, e dove
 /// vanno quelle scaricate.
 class _Drive extends ConsumerStatefulWidget {

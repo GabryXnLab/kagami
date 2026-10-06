@@ -1815,6 +1815,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsAbout => 'アプリについて';
 
   @override
+  String get settingsTheme => 'テーマ';
+
+  @override
+  String get settingsLibraryNote => 'フォルダ、インデックス、Google ドライブ';
+
+  @override
+  String get settingsLibraryNoteLocal => 'フォルダとインデックス';
+
+  @override
+  String get settingsReadingNote => '既定のモードとリーダーの計測';
+
+  @override
+  String get settingsAccountNote => 'Google ログインと同期';
+
+  @override
+  String get settingsDataNote => 'バックアップ、復元、消去';
+
+  @override
   String get settingsAutoBackup => 'ライブラリへの自動コピー';
 
   @override

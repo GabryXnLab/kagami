@@ -229,6 +229,7 @@ class ServerInfo {
     this.folderName,
     this.images = false,
     this.check = const RemoteCheck(),
+    this.features = const {},
   });
 
   factory ServerInfo.fromJson(Map<String, Object?> json) {
@@ -251,6 +252,7 @@ class ServerInfo {
       folderName: drive['folderName'] as String?,
       images: json['images'] == true,
       check: RemoteCheck.fromJson(check.cast<String, Object?>()),
+      features: {...(json['features'] as List? ?? const []).whereType<String>()},
     );
   }
 
@@ -275,6 +277,13 @@ class ServerInfo {
   /// Il controllo quotidiano di chi chiama.
   final RemoteCheck check;
 
+  /// Ciò che il server sa fare oltre alla v2 di partenza: un server di prima
+  /// non lo dice, e l'app non gli chiede quelle cose.
+  final Set<String> features;
+
+  /// Scarica «man mano» (`ahead` nei lavori, `PUT /ongoing/{key}`).
+  bool get ahead => features.contains('ahead');
+
   /// L'ora del controllo, `null` se è spento.
   int? get checkMinutes => check.enabled ? check.minutes : null;
 
@@ -295,6 +304,7 @@ class ServerInfo {
         folderName: name,
         images: images,
         check: check,
+        features: features,
       );
 
   ServerInfo withCheck(RemoteCheck check) => ServerInfo(
@@ -310,6 +320,7 @@ class ServerInfo {
         folderName: folderName,
         images: images,
         check: check,
+        features: features,
       );
 }
 
@@ -351,21 +362,40 @@ class RemoteCheck {
 }
 
 class RemoteJob {
-  const RemoteJob({required this.id, required this.url, required this.title, this.automatic = false});
+  const RemoteJob({
+    required this.id,
+    required this.url,
+    required this.title,
+    this.automatic = false,
+    this.start,
+    this.ids,
+    this.ahead,
+  });
 
   factory RemoteJob.fromJson(Map<String, Object?> json) => RemoteJob(
         id: json['id'] as String,
         url: json['url'] as String? ?? '',
         title: json['title'] as String? ?? '',
         automatic: json['automatic'] == true,
+        start: json['start'] == null ? null : '${json['start']}',
+        ids: (json['ids'] as List?)?.whereType<String>().toSet(),
+        ahead: (json['ahead'] as num?)?.toInt(),
       );
 
   final String id;
   final String url;
   final String title;
 
-  /// Messo in coda dal controllo delle serie in corso del server.
+  /// Messo in coda dal controllo delle serie in corso del server, o dall'app
+  /// per una serie man mano.
   final bool automatic;
+  final String? start;
+
+  /// Solo questi capitoli; `null` con [start] o per la serie intera.
+  final Set<String>? ids;
+
+  /// Scaricando man mano: quanti capitoli tenere pronti.
+  final int? ahead;
 }
 
 /// La coda del server: gli stessi campi di quella del telefono.
@@ -395,21 +425,40 @@ class RemoteQueue {
 }
 
 class RemoteSeries {
-  const RemoteSeries({required this.key, required this.title, required this.chapters, this.checkedAt, this.problem});
+  const RemoteSeries({
+    required this.key,
+    required this.title,
+    required this.chapters,
+    this.url = '',
+    this.checkedAt,
+    this.problem,
+    this.ahead,
+    this.wanted = 0,
+  });
 
   factory RemoteSeries.fromJson(Map<String, Object?> json) => RemoteSeries(
         key: json['key'] as String,
         title: json['title'] as String? ?? '',
+        url: json['url'] as String? ?? '',
         chapters: (json['chapters'] as num?)?.toInt() ?? 0,
         checkedAt: DateTime.tryParse('${json['checkedAt']}'),
         problem: json['problem'] as String?,
+        ahead: (json['ahead'] as num?)?.toInt(),
+        wanted: (json['wanted'] as num?)?.toInt() ?? 0,
       );
 
   final String key;
   final String title;
+  final String url;
   final int chapters;
   final DateTime? checkedAt;
   final String? problem;
+
+  /// Scaricata man mano: quanti capitoli tenere pronti.
+  final int? ahead;
+
+  /// Quanti capitoli nuovi del sito l'app ha chiesto.
+  final int wanted;
 }
 
 /// La versione dell'API che questo client parla.
@@ -467,6 +516,8 @@ class ServerClient {
     Set<String>? ids,
     int? delayMs,
     String? snapshot,
+    int? ahead,
+    bool automatic = false,
   }) async {
     final json = await _call('POST', '/v$serverApi/jobs', body: {
       'url': url,
@@ -475,6 +526,8 @@ class ServerClient {
       if (ids != null) 'ids': ids.toList(),
       'delayMs': ?delayMs,
       'snapshot': ?snapshot,
+      'ahead': ?ahead,
+      if (automatic) 'automatic': true,
     });
     return RemoteJob.fromJson(json!['job'] as Map<String, Object?>);
   }
@@ -490,6 +543,10 @@ class ServerClient {
       ];
 
   Future<void> forget(String key) => _call('DELETE', '/v$serverApi/ongoing/${Uri.encodeComponent(key)}');
+
+  /// Chiede [count] capitoli nuovi del sito per una serie man mano.
+  Future<void> want(String key, int count) =>
+      _call('PUT', '/v$serverApi/ongoing/${Uri.encodeComponent(key)}', body: {'wanted': count});
 
   Future<void> check() => _call('POST', '/v$serverApi/check');
 

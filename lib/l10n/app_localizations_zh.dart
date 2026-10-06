@@ -674,11 +674,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String archiveKnown(int archived, int total) {
-    return '书库中已有：$archived/$total 个章节。已有的会跳过。';
-  }
-
-  @override
   String get archiveWhatSection => '下载内容';
 
   @override
@@ -700,18 +695,112 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveModePickHint => '只下载点选的章节。其余章节仍在列表里，标为未下载。';
 
   @override
-  String get archiveChapterNumberHint => '章节编号，与网站上一致';
+  String get archiveChooseTitle => '下载什么';
 
   @override
-  String archivePickedCount(int count) {
+  String get archiveModeAhead => '边读边下';
+
+  @override
+  String get archiveModeAllLine => '每一话，只下一次';
+
+  @override
+  String archiveModeAheadLine(int count) {
+    return '先备好 $count 话，每读一话再下一话';
+  }
+
+  @override
+  String get archiveModeFromLine => '从某一话到最新一话';
+
+  @override
+  String get archiveModePickLine => '只下你点选的';
+
+  @override
+  String archiveModeAheadHint(int count) {
+    return '从所选的一话开始下载 $count 话。每读完一话就会下载新的一话，让你始终有 $count 话可读，直到系列结束；网站发布新话时也会这样送达。';
+  }
+
+  @override
+  String get archiveModeAheadUnavailable => '这个网站无法使用：每次访问都要求浏览器验证，手机无法自行通过。';
+
+  @override
+  String get archiveModeAheadServer =>
+      '已连接的服务器还不支持“边读边下”：新版本发布后一小时内会自动更新。在此之前，此模式由手机下载。';
+
+  @override
+  String get archiveChapterSearch => '按编号或标题搜索';
+
+  @override
+  String get archiveNewestFirst => '最新在前';
+
+  @override
+  String get archiveOldestFirst => '从第一话开始';
+
+  @override
+  String get archiveChooseStart => '点选要开始的一话。';
+
+  @override
+  String get archiveSelectMissing => '缺少的';
+
+  @override
+  String get archiveRangeHint => '长按某一话，可同时选中它与上次点选之间的所有话。';
+
+  @override
+  String get archivePickNone => '未选择任何话';
+
+  @override
+  String archiveSummaryChapters(int count, String where) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '已选 $count 项',
-      one: '已选 1 项',
+      other: '$count 话',
+    );
+    return '$_temp0 · $where';
+  }
+
+  @override
+  String archiveSummaryAhead(int count, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '先下 $count 话',
+    );
+    return '$_temp0，之后每读一话再下一话 · $where';
+  }
+
+  @override
+  String archiveDownloadAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '下载 $count 话，之后边读边下',
     );
     return '$_temp0';
   }
+
+  @override
+  String archiveInLibraryCount(int archived, int total) {
+    return '已在书库：$total 话中的 $archived 话';
+  }
+
+  @override
+  String get archiveChapterInLibrary => '已在书库';
+
+  @override
+  String get archiveChapterStart => '从这里开始';
+
+  @override
+  String get archiveChapterLater => '阅读时送达';
+
+  @override
+  String get archiveAdvanced => '高级';
+
+  @override
+  String archiveAdvancedLine(String pause) {
+    return '请求间隔：$pause';
+  }
+
+  @override
+  String get archiveReopen => '选择要下载的内容';
 
   @override
   String get archiveSelectAll => '全选';
@@ -771,9 +860,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get archiveDownloadAll => '下载整部作品';
-
-  @override
-  String get archiveDownloadFrom => '从所选章节起下载';
 
   @override
   String archiveDownloadPicked(int count) {
@@ -878,6 +964,27 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get archiveRecent => '最近下载';
+
+  @override
+  String archiveRecentLineRuns(String when, int runs, String message) {
+    return '$when · $runs 次下载 · $message';
+  }
+
+  @override
+  String get archiveRetry => '重试';
+
+  @override
+  String archiveJobAhead(int count, String destination) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 话',
+    );
+    return '边读边下：$_temp0 · $destination';
+  }
+
+  @override
   String get archiveSites => '支持的网站';
 
   @override
@@ -961,6 +1068,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String archiveTrackedAhead(int count, String destination) {
+    return '边读边下，备好 $count 话 · $destination';
+  }
+
+  @override
   String get archiveStopFollowing => '不再跟进';
 
   @override
@@ -1013,38 +1125,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveForgetConfirm => '不再跟进';
 
   @override
-  String archiveStartIntro(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '共 $count 个章节。',
-      one: '共 1 个章节。',
-    );
-    return '$_temp0可以全部下载，也可以选择从哪一章开始：之前的章节仍会显示在阅读器的列表中，但没有页面。';
-  }
-
-  @override
   String get archiveStartNoMatch => '没有这个编号的章节。';
-
-  @override
-  String archiveStartFrom(String title, int remaining) {
-    String _temp0 = intl.Intl.pluralLogic(
-      remaining,
-      locale: localeName,
-      other: '$remaining 个章节',
-      one: '1 个章节',
-    );
-    return '从“$title”起：$_temp0。';
-  }
-
-  @override
-  String get archiveStartNone => '未选择章节：可以全部下载。';
-
-  @override
-  String get archiveStartAll => '全部下载';
-
-  @override
-  String get archiveStartHere => '从这里开始';
 
   @override
   String get browserTitle => '网站验证';
@@ -1229,6 +1310,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serverJobQueued => '排队中 · 在服务器上';
+
+  @override
+  String serverJobAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 话',
+    );
+    return '边读边下：$_temp0';
+  }
+
+  @override
+  String serverSeriesAhead(int count) {
+    return '边读边下，备好 $count 话：你阅读时由应用请求章节';
+  }
 
   @override
   String get serverOngoingTitle => '服务器上连载中的作品';
@@ -2523,24 +2619,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shellTabCollections => '合集';
 
   @override
-  String get shellTabMore => '更多';
-
-  @override
-  String get moreTitle => '更多';
-
-  @override
-  String get moreSectionLibrary => '书库';
-
-  @override
-  String get moreSectionReading => '你的阅读';
-
-  @override
-  String get moreSectionPrivacy => '隐私';
-
-  @override
-  String get moreSectionApp => '应用';
-
-  @override
   String get moreDownload => '下载漫画';
 
   @override
@@ -2563,12 +2641,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get moreIncognitoSubtitle => '不记录阅读位置、读完的章节和阅读时长';
-
-  @override
-  String get moreSettings => '设置';
-
-  @override
-  String get moreSettingsSubtitle => '外观、书库、阅读、备份';
 
   @override
   String get historyTitle => '阅读历史';
@@ -2771,6 +2843,53 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cleanupNeedsNetwork => '从 Drive 删除需要网络';
+
+  @override
+  String removeSeriesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '删除 $count 个系列？',
+      one: '删除这个系列？',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesBody(int count, String title) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '这些系列将从书库中移除：手机上的章节会被删除，也不会再收到新章节。阅读进度会保留。',
+      one: '“$title”将从书库中移除：手机上的章节会被删除，也不会再收到新章节。阅读进度会保留。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get removeSeriesDrive => 'Drive 上的文件夹会移到回收站，三十天内可从那里恢复。';
+
+  @override
+  String get removeSeriesConfirm => '删除';
+
+  @override
+  String removeSeriesDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已删除 $count 个系列。',
+      one: '已删除系列。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesFailed(String error) {
+    return '无法全部删除：$error';
+  }
+
+  @override
+  String get removeSeriesAction => '从书库删除';
 
   @override
   String cleanupIntroDrive(int count) {

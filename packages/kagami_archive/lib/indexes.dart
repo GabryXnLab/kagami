@@ -239,11 +239,19 @@ Map<String, Object?> summarize(
 /// Le altre righe restano come sono: le ha scritte chi le ha scritte, server
 /// compreso, e una serie archiviata qui non deve costringere a rileggere le
 /// altre.
-Map<String, Object?> libraryWith(Map<String, Object?>? previous, Map<String, Object?> row) {
+Map<String, Object?> libraryWith(Map<String, Object?>? previous, Map<String, Object?> row) =>
+    _library(previous, '${row['key']}', row);
+
+/// `library.json` senza la serie [key]: chi la toglie dalla libreria toglie
+/// la sua riga e lascia quelle degli altri.
+Map<String, Object?> libraryWithout(Map<String, Object?>? previous, String key) =>
+    _library(previous, key, null);
+
+Map<String, Object?> _library(Map<String, Object?>? previous, String key, Map<String, Object?>? row) {
   final rows = [
     for (final entry in (previous?['series'] as List? ?? const []).whereType<Map<String, Object?>>())
-      if (entry['key'] != row['key']) entry,
-    row,
+      if (entry['key'] != key) entry,
+    ?row,
   ];
   // Stabile come `sorted` di Python: due titoli uguali restano nell'ordine
   // in cui erano.

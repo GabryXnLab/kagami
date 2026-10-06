@@ -243,3 +243,27 @@ Map<String, Object?> decodeJsonObject(Uint8List body) {
   }
   return value;
 }
+
+/// Una pagina della serie già in mano, letta nella WebView di un sito
+/// protetto (`Provider.browser`): la serie si legge da lì, capitoli e tavole
+/// passano da [inner] come sempre.
+class SnapshotHttp implements ProviderHttp {
+  SnapshotHttp(this.inner, this.url, this.body);
+
+  final ProviderHttp inner;
+  final String url;
+  final Uint8List body;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    if (url == this.url) return (body: body, contentType: 'text/html');
+    return inner.get(url, limit: limit, referer: referer);
+  }
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) =>
+      inner.imageExists(url, referer: referer);
+
+  @override
+  Future<Map<String, Object?>> json(String url) => inner.json(url);
+}

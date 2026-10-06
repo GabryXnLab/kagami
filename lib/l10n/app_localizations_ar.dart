@@ -730,11 +730,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String archiveKnown(int archived, int total) {
-    return 'موجودة في المكتبة: $archived من $total فصل. الفصول الموجودة تُتخطى.';
-  }
-
-  @override
   String get archiveWhatSection => 'ما الذي يُنزَّل';
 
   @override
@@ -759,21 +754,117 @@ class AppLocalizationsAr extends AppLocalizations {
       'الفصول التي تلمسها فقط. الباقي يبقى في القائمة غير منزَّل.';
 
   @override
-  String get archiveChapterNumberHint => 'رقم الفصل كما في الموقع';
+  String get archiveChooseTitle => 'ما الذي يُنزَّل';
 
   @override
-  String archivePickedCount(int count) {
+  String get archiveModeAhead => 'أثناء القراءة';
+
+  @override
+  String get archiveModeAllLine => 'كل فصل، مرة واحدة';
+
+  @override
+  String archiveModeAheadLine(int count) {
+    return '$count جاهزة، ثم فصل لكل فصل يُقرأ';
+  }
+
+  @override
+  String get archiveModeFromLine => 'من فصل حتى الأخير';
+
+  @override
+  String get archiveModePickLine => 'فقط ما تلمسه';
+
+  @override
+  String archiveModeAheadHint(int count) {
+    return 'ينزّل $count فصول بدءًا من الفصل المختار. كل فصل تقرؤه يجلب فصلًا جديدًا، فيبقى لديك دائمًا $count للقراءة حتى نهاية السلسلة؛ وحين ينشر الموقع فصولًا أخرى تصل بالطريقة نفسها.';
+  }
+
+  @override
+  String get archiveModeAheadUnavailable =>
+      'غير ممكن مع هذا الموقع: يطلب تحقق المتصفح في كل زيارة، ولا يستطيع الهاتف اجتيازه وحده.';
+
+  @override
+  String get archiveModeAheadServer =>
+      'الخادم المتصل لا يعرف بعد التنزيل أثناء القراءة: يحدّث نفسه خلال ساعة من صدور نسخة جديدة. حتى ذلك الحين ينزّل هذا الوضع من الهاتف.';
+
+  @override
+  String get archiveChapterSearch => 'ابحث بالرقم أو العنوان';
+
+  @override
+  String get archiveNewestFirst => 'الأحدث أولًا';
+
+  @override
+  String get archiveOldestFirst => 'من الأول';
+
+  @override
+  String get archiveChooseStart => 'المس الفصل الذي تبدأ منه.';
+
+  @override
+  String get archiveSelectMissing => 'الناقصة';
+
+  @override
+  String get archiveRangeHint =>
+      'اضغط مطولًا على فصل لتأخذ أيضًا كل الفصول بينه وبين آخر فصل لمسته.';
+
+  @override
+  String get archivePickNone => 'لم يُختر أي فصل';
+
+  @override
+  String archiveSummaryChapters(int count, String where) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count مختار',
-      many: '$count مختارًا',
-      few: '$count مختارة',
-      two: 'اثنان مختاران',
-      one: 'واحد مختار',
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return '$_temp0 · $where';
+  }
+
+  @override
+  String archiveSummaryAhead(int count, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول الآن',
+      one: 'فصل واحد الآن',
+    );
+    return '$_temp0، ثم فصل لكل فصل يُقرأ · $where';
+  }
+
+  @override
+  String archiveDownloadAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'نزّل $count فصول ثم أثناء القراءة',
+      one: 'نزّل فصلًا واحدًا ثم أثناء القراءة',
     );
     return '$_temp0';
   }
+
+  @override
+  String archiveInLibraryCount(int archived, int total) {
+    return 'في المكتبة: $archived من $total';
+  }
+
+  @override
+  String get archiveChapterInLibrary => 'في المكتبة';
+
+  @override
+  String get archiveChapterStart => 'البداية من هنا';
+
+  @override
+  String get archiveChapterLater => 'سيصل أثناء القراءة';
+
+  @override
+  String get archiveAdvanced => 'متقدم';
+
+  @override
+  String archiveAdvancedLine(String pause) {
+    return 'مهلة بين الطلبات: $pause';
+  }
+
+  @override
+  String get archiveReopen => 'اختر ما يُنزَّل';
 
   @override
   String get archiveSelectAll => 'الكل';
@@ -834,9 +925,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get archiveDownloadAll => 'تنزيل السلسلة كاملة';
-
-  @override
-  String get archiveDownloadFrom => 'تنزيل من الفصل المختار';
 
   @override
   String archiveDownloadPicked(int count) {
@@ -948,6 +1036,28 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get archiveRecent => 'نُزِّلت مؤخرًا';
+
+  @override
+  String archiveRecentLineRuns(String when, int runs, String message) {
+    return '$when · $runs تنزيلات · $message';
+  }
+
+  @override
+  String get archiveRetry => 'أعد المحاولة';
+
+  @override
+  String archiveJobAhead(int count, String destination) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return 'أثناء القراءة: $_temp0 · $destination';
+  }
+
+  @override
   String get archiveSites => 'المواقع المدعومة';
 
   @override
@@ -1041,6 +1151,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String archiveTrackedAhead(int count, String destination) {
+    return 'أثناء القراءة، $count جاهزة للقراءة · $destination';
+  }
+
+  @override
   String get archiveStopFollowing => 'إيقاف المتابعة';
 
   @override
@@ -1096,44 +1211,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get archiveForgetConfirm => 'إيقاف';
 
   @override
-  String archiveStartIntro(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count فصل.',
-      many: '$count فصلًا.',
-      few: '$count فصول.',
-      two: 'فصلان.',
-      one: 'فصل واحد.',
-    );
-    return '$_temp0 نزّل الكل أو اختر الفصل الذي تبدأ منه: السابقة تبقى في القائمة داخل القارئ، بلا لوحات.';
-  }
-
-  @override
   String get archiveStartNoMatch => 'لا يوجد فصل بهذا الرقم.';
-
-  @override
-  String archiveStartFrom(String title, int remaining) {
-    String _temp0 = intl.Intl.pluralLogic(
-      remaining,
-      locale: localeName,
-      other: '$remaining فصل',
-      many: '$remaining فصلًا',
-      few: '$remaining فصول',
-      two: 'فصلان',
-      one: 'فصل واحد',
-    );
-    return 'من «$title» فصاعدًا: $_temp0.';
-  }
-
-  @override
-  String get archiveStartNone => 'لم يُختر أي فصل: يمكن تنزيل الكل.';
-
-  @override
-  String get archiveStartAll => 'تنزيل الكل';
-
-  @override
-  String get archiveStartHere => 'من هنا';
 
   @override
   String get browserTitle => 'التحقق من الموقع';
@@ -1327,6 +1405,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get serverJobQueued => 'في قائمة الانتظار · على الخادم';
+
+  @override
+  String serverJobAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return 'أثناء القراءة: $_temp0';
+  }
+
+  @override
+  String serverSeriesAhead(int count) {
+    return 'أثناء القراءة، $count جاهزة للقراءة: يطلب التطبيق الفصول وأنت تقرأ';
+  }
 
   @override
   String get serverOngoingTitle => 'سلاسل مستمرة على الخادم';
@@ -2684,24 +2778,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shellTabCollections => 'المجموعات';
 
   @override
-  String get shellTabMore => 'المزيد';
-
-  @override
-  String get moreTitle => 'المزيد';
-
-  @override
-  String get moreSectionLibrary => 'المكتبة';
-
-  @override
-  String get moreSectionReading => 'قراءتك';
-
-  @override
-  String get moreSectionPrivacy => 'الخصوصية';
-
-  @override
-  String get moreSectionApp => 'التطبيق';
-
-  @override
   String get moreDownload => 'تنزيل مانغا';
 
   @override
@@ -2725,13 +2801,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get moreIncognitoSubtitle =>
       'لا يسجل الموضع ولا الفصول المنتهية ولا وقت القراءة';
-
-  @override
-  String get moreSettings => 'الإعدادات';
-
-  @override
-  String get moreSettingsSubtitle =>
-      'المظهر، المكتبة، القراءة، النسخ الاحتياطي';
 
   @override
   String get historyTitle => 'السجل';
@@ -2955,6 +3024,55 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cleanupNeedsNetwork => 'الحذف من Drive يتطلب شبكة';
+
+  @override
+  String removeSeriesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'حذف $count سلاسل؟',
+      one: 'حذف السلسلة؟',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesBody(int count, String title) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تخرج من المكتبة: تُمحى فصولها على الهاتف ولن تصل فصول جديدة. يبقى تقدّم القراءة.',
+      one:
+          'تخرج «$title» من المكتبة: تُمحى فصولها على الهاتف ولن تصل فصول جديدة. يبقى تقدّم القراءة.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get removeSeriesDrive =>
+      'على Drive ينتقل المجلد إلى سلة المهملات: يمكن استعادته من هناك لمدة ثلاثين يومًا.';
+
+  @override
+  String get removeSeriesConfirm => 'احذف';
+
+  @override
+  String removeSeriesDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'حُذفت $count سلاسل.',
+      one: 'حُذفت السلسلة.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesFailed(String error) {
+    return 'تعذّر حذف كل شيء: $error';
+  }
+
+  @override
+  String get removeSeriesAction => 'احذف من المكتبة';
 
   @override
   String cleanupIntroDrive(int count) {

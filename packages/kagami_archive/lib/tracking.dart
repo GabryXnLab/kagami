@@ -1,10 +1,21 @@
 /// Le serie in corso scaricate dall'app, e il controllo dei capitoli nuovi.
 ///
-/// Porting di `mangaarchive/tracking.py`. Al download, se il sito dice che
-/// la serie è `ongoing`, i capitoli già a posto — archiviati o saltati per
+/// Porting di `mangaarchive/tracking.py`. Al download, se il sito non dice
+/// che la serie è finita, i capitoli già a posto — archiviati o saltati per
 /// scelta — si annotano qui; il controllo rilegge la serie e mette in coda
-/// solo quelli comparsi dopo. Una serie che il sito dà per conclusa esce da
-/// sola. Il sito si ricava dal link, quindi vale per ogni provider.
+/// solo quelli comparsi dopo. Una serie che il sito dà per conclusa o
+/// cancellata esce da sola, dopo aver messo in coda gli ultimi capitoli. Il
+/// sito si ricava dal link, quindi vale per ogni provider.
+///
+/// Diversamente da `mangaarchive`, una serie in pausa o con uno stato che il
+/// sito non scrive in modo riconoscibile resta seguita: lasciarla cadere
+/// perché la pagina ha cambiato una parola faceva sparire le serie dal
+/// controllo senza che nessuno se ne accorgesse.
+///
+/// Le serie scaricate «man mano» ([TrackedSeries.ahead]) restano seguite
+/// anche concluse, finché l'utente non smette: il controllo mette in coda
+/// solo i capitoli nuovi che l'app ha chiesto ([TrackedSeries.wanted]),
+/// perché gli altri li chiede lei a mano a mano che si legge.
 ///
 /// Si seguono solo le serie scaricate dall'app: quelle del server le segue
 /// il suo timer, e seguirle da tutt'e due vorrebbe dire scaricare due volte
@@ -38,6 +49,8 @@ class TrackedSeries {
     required this.addedAt,
     this.checkedAt,
     this.problem,
+    this.ahead,
+    this.wanted = 0,
   });
 
   factory TrackedSeries.fromJson(Map<String, Object?> json) => TrackedSeries(
@@ -50,6 +63,8 @@ class TrackedSeries {
         addedAt: DateTime.tryParse('${json['addedAt']}') ?? DateTime.now(),
         checkedAt: DateTime.tryParse('${json['checkedAt']}'),
         problem: json['problem'] as String?,
+        ahead: (json['ahead'] as num?)?.toInt(),
+        wanted: (json['wanted'] as num?)?.toInt() ?? 0,
       );
 
   final String provider;
@@ -66,9 +81,16 @@ class TrackedSeries {
   /// Perché l'ultimo controllo non è riuscito, se non è riuscito.
   final String? problem;
 
+  /// Scaricata «man mano»: quanti capitoli da leggere tenere pronti.
+  final int? ahead;
+
+  /// Quanti capitoli nuovi del sito l'app vorrebbe adesso, perché quelli
+  /// che conosceva sono già tutti scaricati.
+  final int wanted;
+
   String get key => '$provider:$id';
 
-  TrackedSeries copyWith({DateTime? checkedAt, String? problem, bool clearProblem = false}) =>
+  TrackedSeries copyWith({DateTime? checkedAt, String? problem, bool clearProblem = false, int? wanted}) =>
       TrackedSeries(
         provider: provider,
         id: id,
@@ -79,6 +101,8 @@ class TrackedSeries {
         addedAt: addedAt,
         checkedAt: checkedAt ?? this.checkedAt,
         problem: clearProblem ? null : problem ?? this.problem,
+        ahead: ahead,
+        wanted: wanted ?? this.wanted,
       );
 
   Map<String, Object?> toJson() => {
@@ -91,8 +115,13 @@ class TrackedSeries {
         'addedAt': addedAt.toIso8601String(),
         'checkedAt': ?checkedAt?.toIso8601String(),
         'problem': ?problem,
+        'ahead': ?ahead,
+        if (wanted > 0) 'wanted': wanted,
       };
 }
+
+/// Una serie che il sito dà per finita: dopo, capitoli nuovi non ne arrivano.
+bool _finished(Object? releaseStatus) => releaseStatus == 'completed' || releaseStatus == 'cancelled';
 
 class CheckReport {
   int checked = 0;
@@ -128,19 +157,22 @@ class Tracking {
     await _save([for (final entry in entries) if (entry.key != key) entry]);
   }
 
-  /// Annota la serie se è in corso, altrimenti la dimentica. [settled] sono
-  /// i capitoli a posto: un capitolo tentato e fallito non ci entra, così il
-  /// controllo lo ritenta.
+  /// Annota la serie se non è finita, altrimenti la dimentica. [settled]
+  /// sono i capitoli a posto: un capitolo tentato e fallito non ci entra,
+  /// così il controllo lo ritenta. Con [ahead] la serie si scarica «man
+  /// mano», e resta seguita comunque.
   Future<void> record(
     Series series,
     ArchiveTarget target, {
     required List<String> settled,
     required Map<String, Object?> metadata,
+    int? ahead,
   }) async {
     final entries = await load();
     final previous = entries.where((entry) => entry.key == series.key).firstOrNull;
     final rest = [for (final entry in entries) if (entry.key != series.key) entry];
-    if (metadata['releaseStatus'] != 'ongoing') {
+    final smart = ahead ?? previous?.ahead;
+    if (smart == null && _finished(metadata['releaseStatus'])) {
       if (previous != null) await _save(rest);
       return;
     }
@@ -155,22 +187,35 @@ class Tracking {
         chapters: {...?previous?.chapters, ...settled}.toList(),
         addedAt: previous?.addedAt ?? DateTime.now(),
         checkedAt: DateTime.now(),
+        ahead: smart,
+        wanted: previous?.wanted ?? 0,
       ),
     ]);
   }
 
+  /// L'app chiede [count] capitoli nuovi per una serie scaricata «man
+  /// mano»: il controllo li mette in coda appena il sito li ha.
+  Future<void> want(String key, int count) async {
+    final entries = await load();
+    final entry = entries.where((entry) => entry.key == key).firstOrNull;
+    if (entry == null || entry.ahead == null || entry.wanted == count) return;
+    await _update(entry.copyWith(wanted: count));
+  }
+
   /// Rilegge le serie e mette in coda i capitoli nuovi. Un errore su una
   /// serie non ferma le altre: resta annotata, e si riprova al controllo
-  /// seguente.
+  /// seguente. Con [only] si guardano solo quelle serie.
   Future<CheckReport> check(
     ArchiveFiles files,
     ProviderHttp Function(Provider provider) httpFor, {
     bool Function()? cancelled,
+    Set<String>? only,
   }) async {
     final report = CheckReport();
     final delegated = await files.delegatedFolder();
     for (final entry in await load()) {
       if (cancelled?.call() ?? false) break;
+      if (only != null && !only.contains(entry.key)) continue;
       if (delegated != null &&
           entry.target.destination == ArchiveDestination.drive &&
           entry.target.folderId == delegated) {
@@ -192,27 +237,33 @@ class Tracking {
       }
       report.checked++;
       final metadata = normalizeMetadata(series.metadata);
-      if (metadata['releaseStatus'] != 'ongoing') {
+      final known = entry.chapters.toSet();
+      final fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
+      // L'ultimo capitolo esce spesso proprio quando il sito scrive
+      // «concluso»: si mette in coda prima di smettere di seguire la serie.
+      final queued = entry.ahead == null ? fresh : fresh.take(entry.wanted).toList();
+      if (queued.isNotEmpty) {
+        await files.enqueue(ArchiveJob(
+          id: 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
+          url: entry.url,
+          title: series.title,
+          target: entry.target,
+          ids: queued.toSet(),
+          automatic: true,
+          ahead: entry.ahead,
+        ));
+        report.queued.add(series.title);
+      }
+      if (entry.ahead == null && _finished(metadata['releaseStatus'])) {
         await forget(entry.key);
         report.removed.add(entry.title);
         continue;
       }
-      final known = entry.chapters.toSet();
-      final fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
-      if (fresh.isEmpty) {
-        await _update(entry.copyWith(checkedAt: DateTime.now(), clearProblem: true));
-        continue;
-      }
-      await files.enqueue(ArchiveJob(
-        id: 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
-        url: entry.url,
-        title: series.title,
-        target: entry.target,
-        ids: fresh.toSet(),
-        automatic: true,
+      await _update(entry.copyWith(
+        checkedAt: DateTime.now(),
+        clearProblem: true,
+        wanted: entry.wanted - (entry.ahead == null ? 0 : queued.length),
       ));
-      await _update(entry.copyWith(checkedAt: DateTime.now(), clearProblem: true));
-      report.queued.add(series.title);
     }
     return report;
   }

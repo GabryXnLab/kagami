@@ -30,6 +30,7 @@ import 'widgets/cleanup_sheet.dart';
 import 'widgets/collection_sheet.dart';
 import 'widgets/kit.dart';
 import 'widgets/origin.dart';
+import 'widgets/remove_sheet.dart';
 import 'widgets/series_cover.dart';
 
 /// Un getter e non una costante: il testo dipende dalla lingua scelta.
@@ -604,7 +605,7 @@ class _Cover extends StatelessWidget {
       pinned: true,
       stretch: true,
       leading: const _GlassBack(),
-      actions: [_GlassMute(signals: signals)],
+      actions: [_GlassMute(signals: signals), _GlassRemove(entry: entry)],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(
@@ -715,6 +716,37 @@ class _GlassMute extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Toglie la serie dalla libreria, anche da Drive. Accanto alla campanella,
+/// perché anche questa è una scelta sulla serie intera.
+class _GlassRemove extends ConsumerWidget {
+  const _GlassRemove({required this.entry});
+
+  final SeriesEntry entry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 6, 6, 6),
+        child: Tooltip(
+          message: context.l10n.removeSeriesAction,
+          child: KPress(
+            onTap: () async {
+              final navigator = Navigator.of(context);
+              if (await confirmRemoveSeries(context, ref, [entry])) navigator.maybePop();
+            },
+            child: Container(
+              width: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.45),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(LucideIcons.trash2, size: 19, color: Colors.white),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Chi è questa serie: stato, tipo, lingua, titolo, chi l'ha fatta.

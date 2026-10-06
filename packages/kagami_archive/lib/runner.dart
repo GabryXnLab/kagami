@@ -15,7 +15,6 @@ import 'image_tools.dart';
 import 'jobs.dart';
 import 'model.dart';
 import 'providers.dart';
-import 'providers/manhwaread.dart';
 import 'stores.dart';
 import 'tracking.dart';
 
@@ -138,7 +137,7 @@ class ArchiveRunner {
       http = environment.httpFor(provider, userAgent: job.userAgent, cookies: job.cookies);
       var reader = http;
       final snapshot = job.snapshot;
-      if (snapshot != null && provider is ManhwaRead) {
+      if (snapshot != null && provider.needsBrowser) {
         reader = SnapshotHttp(http, provider.canonical(job.url), await File(snapshot).readAsBytes());
       }
       final series = await provider.fetchSeries(job.url, reader);
@@ -158,6 +157,7 @@ class ArchiveRunner {
         job.target,
         settled: result.settled,
         metadata: result.metadata,
+        ahead: job.ahead,
       );
       await _finish(job, ArchiveOutcome(
         title: series.title,
@@ -165,6 +165,7 @@ class ArchiveRunner {
         message: _message(job, result),
         finishedAt: DateTime.now(),
         seriesKey: series.key,
+        url: job.url,
       ));
       return null;
     } on ArchiveCancelled {
@@ -207,6 +208,7 @@ class ArchiveRunner {
         ok: false,
         message: message,
         finishedAt: DateTime.now(),
+        url: job.url,
       );
 
   Future<void> _finish(ArchiveJob job, ArchiveOutcome outcome) async {
@@ -225,7 +227,9 @@ class ArchiveRunner {
       return 'Archiviati ${result.completed} capitoli dal capitolo scelto in poi; '
           'i precedenti restano in elenco, senza tavole.';
     }
-    if (job.ids != null) return 'Archiviati ${result.completed} capitoli.';
+    if (job.ids != null) {
+      return result.completed == 1 ? 'Archiviato 1 capitolo.' : 'Archiviati ${result.completed} capitoli.';
+    }
     return 'Serie archiviata completamente.';
   }
 }

@@ -753,6 +753,14 @@ class DriveFiles implements RemoteFiles {
     _saveChapters();
   }
 
+  /// Butta dalla cache tutta la serie: è stata tolta dalla libreria.
+  Future<void> forgetSeries(String series) async {
+    await _loadChapters();
+    await forgetChapters(series, {
+      for (final row in _chapters.values) if (row.series == series) row.chapter,
+    });
+  }
+
   /// Le miniature della griglia valgono quanto il capitolo che si sta
   /// leggendo: sono piccole, e senza la libreria offline è un muro grigio.
   CacheRank _rankOf(String key) =>

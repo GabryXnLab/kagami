@@ -8,7 +8,7 @@ Google Drive, o tutte e due insieme, e la presenta come un lettore musicale
 presenta una discoteca — raccolte, ripresa della lettura, stato e voto per
 ogni serie. Da Drive legge in streaming e scarica sul telefono solo ciò che
 l'utente sceglie. Può anche archiviare da sé: da una ricerca o da un link
-(Altro → Scarica un manga) scarica una serie dal sito nella cartella di Drive o sul telefono,
+(Impostazioni → Scarica un manga) scarica una serie dal sito nella cartella di Drive o sul telefono,
 con lo stesso motore dell'estensione MangaArchive portato in Dart
 (`packages/kagami_archive/`). Lo stesso motore gira anche in **Kagami
 Server** (`server/`), un programma che chiunque può tenere acceso su un suo
@@ -107,6 +107,8 @@ lib/
     data/network.dart          se c'è rete e quando torna (+ NetworkWatcher.kt)
     data/downloads.dart        da Drive alla cartella: il pulsante «Scarica»
     data/cleanup.dart          capitoli letti da togliere dal telefono: cosa e quanto
+    data/series_removal.dart   togliere una serie: telefono, Drive nel cestino, coda, serie seguite
+    data/read_ahead.dart       scaricare man mano: quali capitoli mancano davanti al lettore
     data/folder_sync.dart      cartella del telefono ↔ Drive: piano, giro, ricordi
     data/folder_sync_schedule.dart  giro a mano e programmato (+ FolderSyncWorker.kt)
     data/db/database.dart      schema SQLite dei dati personali (+ .g.dart)
@@ -131,12 +133,13 @@ lib/
     ui/collections_screen.dart raccolte automatiche e manuali
     ui/history_screen.dart     cronologia per giorno e incognito
     ui/statistics_screen.dart  numeri e grafici della lettura
-    ui/settings_screen.dart    aspetto, libreria, lettura, dati
-    ui/more_screen.dart        la destinazione che raccoglie le tre sopra
-    ui/archive_screen.dart     Scarica un manga: ricerca, link, capitoli, destinazione, coda
+    ui/settings_screen.dart    la quarta destinazione: profilo, scaricare, cronologia, statistiche,
+                               incognito, aspetto; pagine di libreria, lettura, account, dati
+    ui/archive_screen.dart     Scarica un manga: ricerca, link, coda, scaricate di recente, serie seguite
+    ui/archive_series.dart     la pagina di una serie letta dal sito: modalità, capitoli, destinazione
     ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
     data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
-    ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare su ManhwaRead
+    ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare sui siti protetti
     ui/setup_screen.dart       permesso, cartella, stati vuoti e di errore
     ui/reader_metrics.dart     geometria della striscia a fasce, senza schermo
     ui/page_bands.dart         magazzino delle fasce, catena delle fonti, disegno
@@ -147,7 +150,10 @@ lib/
     ui/widgets/                copertina, origine, fogli raccolte e pulizia, grafici
 packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il server
   lib/model.dart, names.dart, images.dart   metadati, nomi di cartella, header
-  lib/http.dart, providers.dart, providers/ client limitato ai domini, MangaK, ManhwaRead
+  lib/http.dart                client limitato ai domini, pagina presa dalla WebView
+  lib/providers.dart           registro dei siti, `Provider`, `BrowserGate`
+  lib/providers/kit.dart       attrezzi comuni dei siti: link, testi, ordine dei capitoli
+  lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans
   lib/archiver.dart            dal sito alla libreria: manifest, ripresa, tessere
   lib/indexes.dart             index.json, pages.json, riga di libreria, firma
   lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)
@@ -157,8 +163,8 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/image_tools.dart         miniature e tessere: l'interfaccia, chi le fa è fuori
   lib/jobs.dart, runner.dart   coda, avanzamento, storico, il giro
   lib/tracking.dart            serie in corso e controllo dei capitoli nuovi
-  test/                        provider con fixture copiate, motore su cartella e
-                               Drive finto, coda, serie in corso (`dart test`)
+  test/                        provider con fixture copiate, contratto di ogni sito,
+                               motore su cartella e Drive finto, coda, serie in corso (`dart test`)
 server/                        Kagami Server, Dart puro (`dart compile exe`)
   bin/kagami_server.dart       riga di comando: serve, users, status, ping, idle, update
   lib/src/api.dart             l'API v2: rotte, chi chiama, utenti, validazione dei lavori
@@ -287,6 +293,14 @@ nel proprio progetto Firebase.
     ricrea il contenitore con la sua configurazione (`recreateBody`) e poi
     sé stesso. Niente Watchtower (fermo, e muto con Docker 29); il socket
     non entra mai nel contenitore del server;
+  - «man mano» sul server: la serie la segue lui (`ahead`), i capitoli li
+    chiede l'app, che sa cosa si legge (`POST /v2/jobs` con `automatic`,
+    `PUT /v2/ongoing/{key}`). L'app lo offre solo a un server che elenca
+    `ahead` fra le `features` di `/v2/server`: una funzione nuova del
+    protocollo si dichiara lì, perché il server si aggiorna quando vuole;
+  - il target `test` del Dockerfile è quello che blocca la pubblicazione
+    dell'immagine in CI: ciò che i test leggono fuori da `server/` e dal
+    motore (le icone di `assets/providers`) va copiato lì;
   - prima di ogni giro si chiede se il Drive di quell'account è pronto
     (`UserDrive.blocked`): senza, i lavori aspettano in coda invece di
     fallire tutti;
@@ -304,6 +318,18 @@ nel proprio progetto Firebase.
   telefono `DriveAuth`), la rete (`NetworkState`, sul telefono
   `NetworkMonitor`) e i guasti (`ArchiveRunner.onError`, sul telefono
   Sentry).
+- **Un sito è un file, e nient'altro lo nomina.** Ogni provider sta in
+  `packages/kagami_archive/lib/providers/<id>.dart`, usa `providers/kit.dart`
+  per ciò che deve valere uguale per tutti (link accettati, testi, ordine e
+  unicità dei capitoli) e si registra in `providers`; l'icona è
+  `assets/providers/<id>.png`. App, server, coda e serie in corso non
+  chiedono mai «quale sito»: un sito dietro Cloudflare lo dice con
+  `Provider.browser` (`BrowserGate`: host dei cookie, segni della pagina
+  vera), e da lì seguono WebView, ricerca invisibile, `snapshot` per il
+  server e salto nei controlli automatici. `provider_contract_test.dart`
+  ferma un sito registrato senza icona, con un id non valido o con una
+  verifica su host non suoi. Un attrezzo che serve a due siti va nel kit,
+  non copiato.
 - **Gli indici non si ricostruiscono qui**, se non per le serie che l'app
   archivia lei (`packages/kagami_archive/`). `library.json`, `index.json` e
   `pages.json` di una libreria esistente li scrive l'archiviatore. Se mancano, l'app lo dice e
@@ -408,8 +434,12 @@ nel proprio progetto Firebase.
   servire. Un capitolo locale conta solo se la sua cartella c'è davvero
   (una lettura di `chapters/` per serie), altrimenti si legge da Drive o si
   mostra come non scaricato. L'icona d'origine compare solo quando Drive c'è.
-- **L'app cancella solo dal foglio «Libera spazio»** (`data/cleanup.dart`),
-  e solo capitoli già letti: cartella scelta, spazio dell'app, cache di
+- **L'app cancella solo quando lo chiede l'utente**: eliminando una serie
+  (`data/series_removal.dart`: cartelle sul telefono, su Drive nel cestino
+  con la sua riga di `library.json`, coda e serie seguite; le serie tolte
+  restano nascoste per firma in `library.removed`, perché una copia locale
+  vecchia di `library.json` non le riporti) o dal foglio «Libera spazio»
+  (`data/cleanup.dart`), solo capitoli già letti: cartella scelta, spazio dell'app, cache di
   Drive e, se lo si accende (spento di partenza), Drive stesso — nel
   cestino. Si propone aprendo la scheda solo per ciò che sta sul telefono,
   finché l'utente non dice «Non chiedere più» (`cleanup.quiet`, nel backup).
@@ -479,7 +509,16 @@ nel proprio progetto Firebase.
   invisibile e grande quanto lo schermo (`BrowserFetcher`): Cloudflare non
   risponde a `SiteHttp` nemmeno con quei cookie, e in una WebView di un
   pixel la verifica non si risolve da sola. Si seguono solo le serie in corso scaricate
-  dall'app: quelle del server le segue il suo timer. Il server, se l'account
+  dall'app: quelle del server le segue il suo timer. Una serie esce dal
+  controllo solo se il sito la dà per conclusa o cancellata, dopo aver messo
+  in coda gli ultimi capitoli; un lavoro automatico si aggiunge a quello
+  dell'utente per la stessa serie, non lo sostituisce. Scaricando «man
+  mano» (`ArchiveJob.ahead`, `TrackedSeries.ahead`) l'app tiene cinque
+  capitoli da leggere davanti al lettore (`data/read_ahead.dart`, a ogni
+  stato pubblicato e libreria riletta), e il controllo porta dal sito solo i
+  capitoli nuovi che lei chiede (`TrackedSeries.wanted`). Il controllo
+  quotidiano senza rete si riprova dopo mezz'ora, e all'avvio l'app rimette
+  la catena se si è spezzata (`ExistingWorkPolicy.KEEP`). Il server, se l'account
   lo lascia acceso, guarda anche tutta la libreria su Drive
   (`checkLibrary`): nuovi sono i capitoli che l'`index.json` della serie non
   elenca, non quelli non archiviati, che possono esserlo per scelta. Il

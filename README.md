@@ -74,8 +74,8 @@ scarica solo ciò che gli chiedi. L'interfaccia è in italiano.
 
 ## Funzionalità
 
-Quattro destinazioni: **Home**, **Libreria**, **Raccolte** e **Altro**
-(cronologia, statistiche, impostazioni, Scarica un manga). Tema scuro di
+Quattro destinazioni: **Home**, **Libreria**, **Raccolte** e **Impostazioni**
+(Scarica un manga, cronologia, statistiche, incognito e impostazioni). Tema scuro di
 partenza, perché si legge di sera; chiaro o come il sistema a scelta.
 
 ### Libreria
@@ -131,8 +131,8 @@ partenza, perché si legge di sera; chiaro o come il sistema a scelta.
 
 ### Scaricare le serie
 
-- Da **Altro → Scarica un manga**: cerchi un titolo (MangaK, ManhwaRead) o ne
-  incolli il link, controlli copertina, autori e capitoli, e scegli.
+- Da **Impostazioni → Scarica un manga**: cerchi un titolo (MangaK, ManhwaRead, Asura
+  Scans) o ne incolli il link, controlli copertina, autori e capitoli, e scegli.
 - Tutta la serie, dal capitolo scelto in poi o solo i capitoli selezionati;
   sulla cartella di Drive, su Drive e sul telefono, o solo sul telefono.
 - Una pausa regolabile fra le richieste, perché i siti bloccano chi scarica a
@@ -179,7 +179,7 @@ MALF, chiunque l'abbia scritta.
 
 ```mermaid
 flowchart LR
-  sites["Siti<br/>MangaK · ManhwaRead"]
+  sites["Siti<br/>MangaK · ManhwaRead · Asura Scans"]
   phone["Kagami sul telefono<br/>Scarica un manga"]
   server["Kagami Server<br/>su un tuo computer"]
   others["Altri archiviatori<br/>che scrivono MALF"]
@@ -242,7 +242,7 @@ Access Framework, costa una chiamata di sistema per ogni file, e una libreria
 sono decine di migliaia di immagini. Fuori dal suo spazio Kagami scrive solo
 ciò che gli chiedi: i capitoli che scarichi, quelli letti che togli, ciò che
 porta la sincronizzazione se l'hai accesa. Poi si sceglie la cartella, oppure
-si collega Drive da *Altro → Impostazioni → Google Drive*.
+si collega Drive da *Impostazioni → Libreria → Google Drive*.
 
 ### iOS
 
@@ -303,7 +303,7 @@ cartella di Drive della libreria, e il telefono può spegnersi. È lo stesso
 motore dell'app, quindi scrive la stessa libreria e convive con i download
 fatti dal telefono.
 
-Nell'app, *Altro → Scarica un manga → Server → Crea il tuo server*: l'app
+Nell'app, *Impostazioni → Scarica un manga → Server → Crea il tuo server*: l'app
 prepara un comando solo, da incollare su un computer con Docker.
 
 ```bash
@@ -454,7 +454,8 @@ I dettagli dei workflow sono in
    consenso OAuth aggiungi gli scope `drive.readonly` e `drive` e il tuo
    account fra gli utenti di test.
 
-Ricompila, e in *Altro → Impostazioni* compaiono «Account» e «Google Drive».
+Ricompila, e in *Impostazioni* compaiono il profilo dell'account e, in
+*Libreria*, «Google Drive».
 
 </details>
 

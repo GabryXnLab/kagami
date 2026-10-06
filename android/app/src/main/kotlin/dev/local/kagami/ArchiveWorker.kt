@@ -52,6 +52,9 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     @Volatile
     private var end = "done"
 
+    @Volatile
+    private var checkFailed = false
+
     private val check get() = inputData.getBoolean(CHECK, false)
 
     override fun doWork(): Result {
@@ -74,6 +77,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                         when (call.method) {
                             "done" -> {
                                 end = call.argument<String>("end") ?: "done"
+                                checkFailed = call.argument<Boolean>("checkFailed") ?: false
                                 result.success(null)
                                 finished.countDown()
                             }
@@ -123,7 +127,15 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         if (check && !isStopped) {
             val minutes = inputData.getInt(MINUTES, -1)
             if (minutes >= 0) {
-                schedule(applicationContext, minutes, inputData.getBoolean(WIFI_ONLY, true), ExistingWorkPolicy.APPEND_OR_REPLACE)
+                // Senza rete all'ora scelta il controllo si perdeva fino al
+                // giorno dopo: si riprova fra mezz'ora, e da lì si torna all'ora.
+                schedule(
+                    applicationContext,
+                    minutes,
+                    inputData.getBoolean(WIFI_ONLY, true),
+                    ExistingWorkPolicy.APPEND_OR_REPLACE,
+                    retryMinutes = if (checkFailed) RETRY_MINUTES else null,
+                )
             }
         }
         // Fermato dal sistema, il lavoro lo riprova WorkManager; tolto
@@ -181,6 +193,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         private const val CHECK_ENTRYPOINT = "archiveCheckMain"
         private const val NOTIFICATION_CHANNEL = "archive"
         private const val NOTIFICATION_ID = 11
+        private const val RETRY_MINUTES = 30L
 
         /** Il giro della coda. `KEEP` dall'app: se sta già girando, prende da sé ciò che arriva. */
         fun start(context: Context, delayMinutes: Int = 0, policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP) {
@@ -200,7 +213,13 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
          * finito, mette in coda quello del giorno dopo, come la
          * sincronizzazione ([FolderSyncScheduler]).
          */
-        fun schedule(context: Context, minutes: Int, wifiOnly: Boolean, policy: ExistingWorkPolicy) {
+        fun schedule(
+            context: Context,
+            minutes: Int,
+            wifiOnly: Boolean,
+            policy: ExistingWorkPolicy,
+            retryMinutes: Long? = null,
+        ) {
             val now = System.currentTimeMillis()
             val next = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, minutes / 60)
@@ -209,8 +228,9 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 set(Calendar.MILLISECOND, 0)
                 if (timeInMillis <= now) add(Calendar.DAY_OF_YEAR, 1)
             }
+            val delay = retryMinutes?.let { TimeUnit.MINUTES.toMillis(it) } ?: (next.timeInMillis - now)
             val request = OneTimeWorkRequest.Builder(ArchiveWorker::class.java)
-                .setInitialDelay(next.timeInMillis - now, TimeUnit.MILLISECONDS)
+                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
@@ -246,11 +266,13 @@ class ArchiveScheduler(messenger: BinaryMessenger, private val context: Context)
         when (call.method) {
             "start" -> ArchiveWorker.start(context)
             "stop" -> ArchiveWorker.stop(context)
+            // `keep`: all'avvio dell'app si rimette il controllo solo se la
+            // catena dei giorni si è spezzata, senza spostare quello in attesa.
             "schedule" -> ArchiveWorker.schedule(
                 context,
                 call.argument<Int>("minutes")!!,
                 call.argument<Boolean>("wifiOnly")!!,
-                ExistingWorkPolicy.REPLACE,
+                if (call.argument<Boolean>("keep") == true) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE,
             )
             "unschedule" -> WorkManager.getInstance(context).cancelUniqueWork(ArchiveWorker.CHECK_NAME)
             // I cookie della WebView che ha superato la verifica del sito,

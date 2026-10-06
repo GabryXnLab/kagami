@@ -96,13 +96,20 @@ class ArchiveScheduler {
     if (_native) await _channel.invokeMethod<void>('stop');
   }
 
-  Future<void> apply(CheckSettings settings) async {
+  /// Con [keep] non sposta un controllo già in attesa: serve all'avvio, a
+  /// rimettere in piedi la catena dei giorni se un giro è morto prima di
+  /// accodare il seguente.
+  Future<void> apply(CheckSettings settings, {bool keep = false}) async {
     if (!_native) return;
     final minutes = settings.minutes;
     if (minutes == null) {
-      await _channel.invokeMethod<void>('unschedule');
+      if (!keep) await _channel.invokeMethod<void>('unschedule');
     } else {
-      await _channel.invokeMethod<void>('schedule', {'minutes': minutes, 'wifiOnly': settings.wifiOnly});
+      await _channel.invokeMethod<void>('schedule', {
+        'minutes': minutes,
+        'wifiOnly': settings.wifiOnly,
+        'keep': keep,
+      });
     }
   }
 }

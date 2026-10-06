@@ -58,7 +58,7 @@ Future<void> offerCleanup(
   }
   DriveClient? writer;
   if (choice.remote) {
-    writer = await _driveWriter(ref, messenger, l10n);
+    writer = await driveWriter(ref, messenger, l10n);
     if (writer == null) return;
   }
   try {
@@ -99,7 +99,7 @@ Future<void> offerCleanup(
 /// Un client che può scrivere su Drive, chiedendo il permesso se non c'è
 /// ancora. `null` se l'utente rinuncia o se manca la rete: senza, spostare
 /// nel cestino non si può, e il resto della scelta aspetta con lui.
-Future<DriveClient?> _driveWriter(
+Future<DriveClient?> driveWriter(
   WidgetRef ref,
   ScaffoldMessengerState messenger,
   AppLocalizations l10n,

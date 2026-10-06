@@ -13,6 +13,9 @@ RUN dart pub get && dart compile exe bin/kagami_server.dart -o /kagami-server
 # Qui girano anche i test di miniature e tessere, che fuori si saltano dove
 # libvips manca.
 FROM build AS test
+# Il contratto dei siti controlla che ognuno abbia la sua icona fra gli asset
+# dell'app: le icone entrano solo qui, l'immagine del server non le usa.
+COPY assets/providers /src/assets/providers
 RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools \
     && rm -rf /var/lib/apt/lists/*
 RUN cd /src/packages/kagami_archive && dart test && cd /src/server && dart analyze --fatal-infos && dart test

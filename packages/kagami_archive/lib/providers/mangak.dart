@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import '../http.dart';
 import '../model.dart';
 import '../providers.dart';
+import 'kit.dart';
 
 final RegExp _nextData = RegExp(
   r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
@@ -31,8 +32,6 @@ Map<String, Object?> _payload(Uint8List body) {
   }
 }
 
-bool _text(Object? value) => value is String && value.isNotEmpty;
-
 class MangaK extends Provider {
   @override
   String get id => 'mangak';
@@ -44,15 +43,7 @@ class MangaK extends Provider {
   String get home => 'https://mangak.io';
 
   @override
-  bool accepts(String url) {
-    final uri = Uri.tryParse(url);
-    return uri != null &&
-        uri.scheme == 'https' &&
-        uri.host == 'mangak.io' &&
-        uri.userInfo.isEmpty &&
-        !uri.hasPort &&
-        _slug.hasMatch(uri.path);
-  }
+  bool accepts(String url) => siteLink(url, hosts: const {'mangak.io'}, path: _slug);
 
   @override
   bool allowedHost(Uri uri) =>
@@ -64,11 +55,7 @@ class MangaK extends Provider {
     if (!accepts(url)) {
       throw const ProviderError('Inserisci il link della serie MangaK, non di un capitolo.');
     }
-    var path = Uri.parse(url).path;
-    while (path.endsWith('/')) {
-      path = path.substring(0, path.length - 1);
-    }
-    final canonical = 'https://mangak.io$path';
+    final canonical = 'https://mangak.io${trimSlashes(Uri.parse(url).path)}';
     final data = _payload((await http.get(canonical)).body);
     final manga = data['initialManga'];
     if (manga is! Map<String, Object?> || !_present(manga['id']) || !_present(manga['name'])) {
@@ -85,14 +72,14 @@ class MangaK extends Provider {
     final seriesUrl = manga['url'];
     // Non tutti i capitoli sono `chapter-…`: Kidnapped Dragons ha un
     // `/notice` fra gli altri. Basta che stia subito sotto la serie.
-    final prefix = '${seriesUrl is String ? _trimSlash(seriesUrl) : ''}/';
+    final prefix = '${seriesUrl is String ? trimSlashes(seriesUrl) : ''}/';
     final chapters = <Chapter>[];
     final seen = <String>{};
     for (final item in raw.reversed) {
       if (item is! Map<String, Object?> ||
-          !_text(item['id']) ||
-          !_text(item['name']) ||
-          !_text(item['url'])) {
+          !isText(item['id']) ||
+          !isText(item['name']) ||
+          !isText(item['url'])) {
         throw const ProviderError('Capitolo MangaK incompleto.');
       }
       final chapterUrl = 'https://mangak.io${item['url']}';
@@ -117,22 +104,21 @@ class MangaK extends Provider {
     }
     final stats = manga['stats'];
     final expected = stats is Map ? stats['chaptersCount'] : null;
-    if (expected is int && expected != chapters.length) {
+    // Il conteggio sta nella pagina, che il sito tiene in cache, e l'elenco
+    // arriva dall'API: quando esce un capitolo l'elenco ne ha uno in più per
+    // un po'. Uno in meno, invece, è un elenco tagliato.
+    if (expected is int && chapters.length < expected) {
       throw ProviderError('Elenco incompleto: ${chapters.length} capitoli su $expected.');
     }
     final cover = manga['cover'];
-    if (_text(cover)) validateUrl(cover as String);
-    const hidden = {'chapters', 'latestComments', 'userBookmark', 'userHistory', 'userReview'};
+    if (isText(cover)) validateUrl(cover as String);
     return Series(
       provider: id,
       id: '${manga['id']}',
       title: '${manga['name']}',
       url: canonical,
-      coverUrl: _text(cover) ? cover as String : null,
-      metadata: {
-        for (final MapEntry(:key, :value) in manga.entries)
-          if (!hidden.contains(key)) key: value,
-      },
+      coverUrl: isText(cover) ? cover as String : null,
+      metadata: withoutKeys(manga, const {'chapters', 'latestComments', 'userBookmark', 'userHistory', 'userReview'}),
       chapters: chapters,
     );
   }
@@ -149,7 +135,7 @@ class MangaK extends Provider {
     if (items is! List) throw const ProviderError('Risposta della ricerca MangaK cambiata.');
     final results = <SearchResult>[];
     for (final item in items) {
-      if (item is! Map<String, Object?> || !_text(item['name']) || !_text(item['url'])) continue;
+      if (item is! Map<String, Object?> || !isText(item['name']) || !isText(item['url'])) continue;
       final url = 'https://mangak.io${item['url']}';
       if (!accepts(url)) continue;
       final cover = item['cover'];
@@ -160,21 +146,12 @@ class MangaK extends Provider {
         provider: id,
         title: item['name'] as String,
         url: url,
-        coverUrl: _text(cover) && _allowed(cover as String) ? cover : null,
+        coverUrl: isText(cover) && allows(cover as String) ? cover : null,
         chapters: count is int ? count : null,
         releaseStatus: releaseStatus(item['status']),
       ));
     }
     return results;
-  }
-
-  bool _allowed(String url) {
-    try {
-      validateUrl(url);
-      return true;
-    } on ProviderError {
-      return false;
-    }
   }
 
   @override
@@ -203,21 +180,9 @@ class MangaK extends Provider {
         detail['height'] is int ? detail['height'] as int : null,
       ));
     }
-    const hidden = {'images', 'pages', 'latest_comments'};
-    return ChapterContent(pages, {
-      for (final MapEntry(:key, :value) in raw.entries)
-        if (!hidden.contains(key)) key: value,
-    });
+    return ChapterContent(pages, withoutKeys(raw, const {'images', 'pages', 'latest_comments'}));
   }
 }
 
 bool _present(Object? value) =>
     value != null && value != false && value != '' && value != 0;
-
-String _trimSlash(String value) {
-  var result = value;
-  while (result.endsWith('/')) {
-    result = result.substring(0, result.length - 1);
-  }
-  return result;
-}

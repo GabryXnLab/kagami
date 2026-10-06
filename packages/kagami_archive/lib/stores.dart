@@ -90,6 +90,10 @@ abstract class ArchiveStore {
 
   /// La riga della serie nella libreria.
   Future<void> writeLibraryRow(Map<String, Object?> row);
+
+  /// Toglie la serie [key], che sta in [folder]: la cartella e la sua riga.
+  /// Quello che non c'è già più non è un errore.
+  Future<void> removeSeries(String folder, String key);
 }
 
 /// L'id del capitolo nel nome della sua cartella: `… [id]`.
@@ -207,6 +211,26 @@ class LocalStore extends ArchiveStore {
       final nomedia = File(p.join(root, nomediaFile));
       if (!await nomedia.exists()) await nomedia.create(recursive: true);
     }
+  }
+
+  /// La riga sta in `reading/downloads.json`; quella di `library.json`, se
+  /// la cartella è una copia di Drive, la toglie chi toglie la serie da lì.
+  @override
+  Future<void> removeSeries(String folder, String key) async {
+    final directory = _directory(folder);
+    if (folder.isNotEmpty && await directory.exists()) await directory.delete(recursive: true);
+    final previous = await readJsonFile(_downloads);
+    if (previous == null) return;
+    final rows = (previous['series'] as List? ?? const []).whereType<Map<String, Object?>>().toList();
+    if (!rows.any((row) => row['key'] == key)) return;
+    await writeAtomically(
+      _downloads,
+      utf8.encode(jsonEncode({
+        'format': malfFormatName,
+        'formatVersion': malfVersion,
+        'series': [for (final row in rows) if (row['key'] != key) row],
+      })),
+    );
   }
 }
 
@@ -472,6 +496,27 @@ class DriveStore extends ArchiveStore {
     // la galleria di un telefono che la sincronizza si riempie di album.
     if (await _item(nomediaFile) == null) await _putBytes(nomediaFile, Uint8List(0));
     await mirror?.writeLibraryRow(row);
+  }
+
+  /// La cartella va nel cestino di Drive, non sparisce: si recupera da lì
+  /// per trenta giorni.
+  @override
+  Future<void> removeSeries(String folder, String key) async {
+    if (folder.isNotEmpty) {
+      final item = await _item(folder);
+      if (item != null) {
+        await remote.trash(item.id);
+        (await _list(_parentPath(folder))).remove(p.posix.basename(folder));
+        _listings.remove(folder);
+        _folders.remove(folder);
+      }
+    }
+    final previous = await readJson(libraryFile);
+    if (previous != null &&
+        (previous['series'] as List? ?? const []).whereType<Map<String, Object?>>().any((row) => row['key'] == key)) {
+      await _putBytes(libraryFile, Uint8List.fromList(utf8.encode(prettyJson(libraryWithout(previous, key)))));
+    }
+    await mirror?.removeSeries(folder, key);
   }
 
   /// Dimentica gli elenchi: al giro seguente si rileggono da Drive.

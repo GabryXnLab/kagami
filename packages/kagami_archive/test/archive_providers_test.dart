@@ -10,6 +10,7 @@ import 'package:kagami_archive/images.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/names.dart';
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/providers/asurascans.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/providers/manhwaread.dart';
 
@@ -85,6 +86,14 @@ void main() {
         MangaK().fetchSeries('https://mangak.io/test-series', http),
         throwsA(isA<ProviderError>()),
       );
+    });
+
+    test('un conteggio della pagina rimasto indietro non ferma l\'elenco', () async {
+      final http = FakeMangaK();
+      http.addChapter(3, 'Chapter 3', 'C3', const []);
+      (http.series['stats'] as Map)['chaptersCount'] = 2;
+      final series = await MangaK().fetchSeries('https://mangak.io/test-series', http);
+      expect(series.chapters.map((c) => c.id), ['C1', 'C2', 'C3']);
     });
 
     test('la ricerca è quella del sito, e tiene solo serie sue', () async {
@@ -229,6 +238,108 @@ void main() {
       expect(provider.search('zzz', SearchHttp(error: HttpStatusError(403))),
           throwsA(isA<CloudflareChallenge>()));
       expect(provider.search('zzz', ChallengedHttp()), throwsA(isA<CloudflareChallenge>()));
+    });
+  });
+
+  group('Asura Scans', () {
+    final provider = AsuraScans();
+    // Il link come lo dà il sito, col suffisso che cambia.
+    const url = 'https://asurascans.com/comics/war-of-extinction-bd5bdaf8';
+
+    test('link della serie, non dei capitoli né di altri siti', () {
+      expect(selectProvider(url).id, 'asurascans');
+      expect(selectProvider('https://www.asurascans.com/comics/nano-machine/').id, 'asurascans');
+      for (final other in [
+        '$url/chapter/1',
+        'http://asurascans.com/comics/nano-machine',
+        'https://asurascans.com/comics/nano-machine?ref=1',
+        'https://asurascans.com:8443/comics/nano-machine',
+        'https://asuracomic.net/series/nano-machine',
+      ]) {
+        expect(provider.accepts(other), isFalse, reason: other);
+      }
+      expect(provider.canonical(url), 'https://asurascans.com/comics/war-of-extinction');
+      expect(provider.needsBrowser, isFalse);
+      expect(() => provider.validateUrl('https://example.com/x.webp'), throwsA(isA<ProviderError>()));
+    });
+
+    test('serie dall\'API, capitoli dal primo e senza quelli a pagamento', () async {
+      final http = FakeAsuraScans();
+      final series = await provider.fetchSeries(url, http);
+      expect(http.requests.first, '${FakeAsuraScans.api}/series/war-of-extinction');
+      expect((series.key, series.title, series.url),
+          ('asurascans:war-of-extinction', 'War of Extinction', 'https://asurascans.com/comics/war-of-extinction'));
+      expect(series.coverUrl, FakeAsuraScans.cover);
+      expect(series.chapters.map((c) => (c.id, c.number, c.title)), [
+        ('101', '1', 'Chapter 1'),
+        ('102', '2', 'Chapter 2 - The Arena'),
+      ]);
+      expect(series.chapters.first.url, 'https://asurascans.com/comics/war-of-extinction/chapter/1');
+      expect(chapterFolderName(series.chapters.last), '0002 - Chapter 2 - The Arena [102]');
+      final metadata = normalizeMetadata(series.metadata);
+      expect(metadata['description'], 'Heavenly Demons. Hunters.\n\n[Game Character\nAbilities Synchronized.]');
+      expect(metadata['authors'], ['Writer']);
+      expect(metadata['artists'], ['Studio']);
+      expect(metadata['genres'], ['Action', 'Fantasy']);
+      expect(metadata['alternativeTitles'], ['멸망전쟁']);
+      expect(metadata['releaseStatus'], 'ongoing');
+      expect(metadata['publishedAt'], isNull);
+      expect(metadata['type'], 'manhwa');
+    });
+
+    test('tavole con le misure quando l\'API le dà', () async {
+      final http = FakeAsuraScans();
+      final series = await provider.fetchSeries(url, http);
+      final content = await provider.fetchPages(series.chapters.first, http);
+      expect(http.requests.last,
+          '${FakeAsuraScans.api}/series/war-of-extinction/chapters/ac158a3a-7e87-4492-b792-cf36c9ef9dd5');
+      expect(content.pages.map((page) => (page.url, page.width, page.height)), [
+        (http.chapterPages[101]![0], 900, 16000),
+        (http.chapterPages[101]![1], null, null),
+      ]);
+      expect(content.metadata.containsKey('pages'), isFalse);
+    });
+
+    test('un capitolo chiuso non passa per vuoto', () async {
+      final http = FakeAsuraScans();
+      final series = await provider.fetchSeries(url, http);
+      http.locked.add(102);
+      await expectLater(
+        provider.fetchPages(series.chapters.last, http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('abbonati'))),
+      );
+    });
+
+    test('uno slug che finisce come il suffisso si cerca anche intero', () async {
+      final http = FakeAsuraScans();
+      await expectLater(
+        provider.fetchSeries('https://asurascans.com/comics/missing-0badcafe', http),
+        throwsA(isA<ProviderError>()),
+      );
+      expect(http.requests.where((r) => r.contains('missing')),
+          ['${FakeAsuraScans.api}/series/missing', '${FakeAsuraScans.api}/series/missing-0badcafe']);
+    });
+
+    test('la ricerca è quella del sito, senza romanzi', () async {
+      final http = SearchHttp(response: {
+        'data': [
+          {
+            'id': 2017, 'slug': 'nano-machine', 'title': 'Nano Machine', 'type': 'manhwa',
+            'cover': 'https://cdn.asurascans.com/asura-images/covers/nano-machine.e31bdb.webp',
+            'status': 'ongoing', 'chapter_count': 332, 'public_url': '/comics/nano-machine-bd5bdaf8',
+          },
+          {'id': 9, 'slug': 'black-badger', 'title': 'Black Badger', 'type': 'novel'},
+          {'id': 1933, 'slug': 'my-path', 'title': 'My Path', 'status': 'dropped', 'cover': 'https://example.com/c.webp'},
+        ],
+        'meta': {'total': 3, 'per_page': 20},
+      });
+      final results = await provider.search(' nano ', http);
+      expect(Uri.parse(http.requests.single).queryParameters, {'q': 'nano'});
+      expect(results.map((r) => r.url),
+          ['https://asurascans.com/comics/nano-machine', 'https://asurascans.com/comics/my-path']);
+      expect((results.first.chapters, results.first.releaseStatus), (332, 'ongoing'));
+      expect(results.first.coverUrl, 'https://cdn.asurascans.com/asura-images/covers/nano-machine.e31bdb.webp');
+      expect((results.last.coverUrl, results.last.releaseStatus), (null, 'cancelled'));
     });
   });
 

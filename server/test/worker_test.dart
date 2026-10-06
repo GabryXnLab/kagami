@@ -1,12 +1,35 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
+import 'package:kagami_archive/tracking.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
+
+/// Un sito irraggiungibile: la rete del server è caduta.
+class _Offline implements ProviderHttp {
+  int calls = 0;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    calls++;
+    throw const ProviderOffline();
+  }
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => throw const ProviderOffline();
+
+  @override
+  Future<Map<String, Object?>> json(String url) async {
+    calls++;
+    throw const ProviderOffline();
+  }
+}
 
 void main() {
   late Directory dir;
@@ -88,6 +111,34 @@ void main() {
     expect(await files.jobs(), isEmpty);
     await worker.close();
     expect((await ServerWorker(files, environment(), blocked: () async => null).checkSettings()).minutes, 60);
+  });
+
+  test('senza rete il controllo si riprova presto, non il giorno dopo', () async {
+    final offline = _Offline();
+    await files.ongoing.parent.create(recursive: true);
+    await Tracking(files.ongoing).record(
+      Series(provider: 'mangak', id: 'S1', title: 'S', url: 'https://mangak.io/s', coverUrl: null,
+          metadata: const {}, chapters: const []),
+      const ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'f'),
+      settled: const [],
+      metadata: const {'releaseStatus': 'ongoing'},
+    );
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(p.join(dir.path, 'libreria')),
+        httpFor: (provider, {userAgent, cookies = const {}}) => offline,
+      ),
+      blocked: () async => null,
+      checkRetry: const Duration(milliseconds: 50),
+      log: (_) {},
+    );
+    await worker.checkNow();
+    final first = offline.calls;
+    expect(first, greaterThan(0));
+    await until(() async => offline.calls > first);
+    await worker.close();
   });
 
   test('spento in config.json (check.minutes null), il controllo parte spento', () async {

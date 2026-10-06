@@ -11,6 +11,7 @@ import 'package:kagami_archive/archiver.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/indexes.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/providers/asurascans.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/drive.dart';
@@ -311,6 +312,30 @@ void main() {
     });
   });
 
+  test('Asura Scans fa la stessa strada degli altri siti', () async {
+    final asura = FakeAsuraScans();
+    final provider = AsuraScans();
+    final series = await provider.fetchSeries('https://asurascans.com/comics/war-of-extinction-bd5bdaf8', asura);
+    final result = await Archiver(
+      provider: provider,
+      http: asura,
+      store: LocalStore(libraryPath()),
+      scratch: Directory(p.join(temporary.path, 'scratch')),
+      images: images,
+      delay: Duration.zero,
+    ).download(series);
+    expect((result.completed, result.pagesDownloaded), (2, 3));
+    expect(result.failed, isEmpty);
+    final folder = p.join(libraryPath(), result.folder);
+    expect(p.basename(folder), 'War of Extinction [asurascans-war-of-extinction]');
+    final manifest = readJson(File(p.join(folder, 'series.json')));
+    expect((manifest['metadata'] as Map)['genres'], ['Action', 'Fantasy']);
+    final chapters = Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)).toList()..sort();
+    expect(chapters, ['0001 - Chapter 1 [101]', '0002 - Chapter 2 - The Arena [102]']);
+    final index = readJson(File(p.join(folder, 'index.json')));
+    expect((index['chapters'] as List).map((c) => ((c as Map)['id'], c['complete'])), [('101', true), ('102', true)]);
+  });
+
   group('direttamente su Drive', () {
     late FakeDrive drive;
     DriveStore store({LocalStore? mirror}) => DriveStore(
@@ -449,6 +474,23 @@ void main() {
       expect(drive.namesIn('${result.folder}/chapters/0001 - Chapter 1 [C1]'), ['0001.webp', '0002.webp', 'chapter.json']);
       expect(File(p.join(libraryPath(), result.folder, 'index.json')).existsSync(), isTrue);
       expect(File(p.join(libraryPath(), 'reading', 'downloads.json')).existsSync(), isTrue);
+    });
+
+    test('togliere una serie la manda nel cestino e lascia le righe degli altri', () async {
+      final other = {'key': 'mangak:ALTRO', 'path': 'Altro [mangak-ALTRO]', 'title': 'Altro'};
+      drive.place('library.json', utf8.encode(jsonEncode({'format': 'malf', 'formatVersion': 1, 'series': [other]})));
+      final mirror = LocalStore(libraryPath());
+      final result = await local(store: store(mirror: mirror)).download(series, ids: {'1'});
+      await store(mirror: mirror).removeSeries(result.folder, 'mangak:S1');
+      expect(drive.namesIn(''), ['.nomedia', 'library.json']);
+      final library = driveJson(drive, 'library.json');
+      expect((library['series'] as List).map((row) => (row as Map)['key']), ['mangak:ALTRO']);
+      expect(library['seriesCount'], 1);
+      expect(Directory(p.join(libraryPath(), result.folder)).existsSync(), isFalse);
+      final downloads = readJson(File(p.join(libraryPath(), 'reading', 'downloads.json')));
+      expect(downloads['series'], isEmpty);
+      // Una seconda volta non c'è più niente da togliere, e non è un errore.
+      await store().removeSeries(result.folder, 'mangak:S1');
     });
   });
 }

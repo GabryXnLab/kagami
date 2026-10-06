@@ -31,7 +31,11 @@ altri:
   conosce;
 - `library.json` si riscrive tenendo le righe degli altri: Kagami sostituisce
   solo la riga della serie che ha scritto, chi riscrive l'indice intero
-  (MangaArchive) aggiunge le righe di Drive delle serie che non ha in locale.
+  (MangaArchive) aggiunge le righe di Drive delle serie che non ha in locale;
+- una serie si toglie spostando la sua cartella nel cestino di Drive e
+  togliendo la sua riga da `library.json`. Chi riscrive l'indice intero non
+  rimette la riga di una serie la cui cartella su Drive non c'è più, e chi
+  la segue per i capitoli nuovi smette.
 
 Scrivendo solo sul telefono, senza Drive, Kagami non tocca `library.json`
 della cartella (che potrebbe essere la copia di una scritta altrove): le sue

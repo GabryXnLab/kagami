@@ -84,6 +84,19 @@ SeriesIndex chapters(List<ChapterEntry> rows) => SeriesIndex(
     );
 
 void main() {
+  test('una serie tolta resta fuori finché qualcuno non la riscarica', () {
+    final drive = FakeDrive();
+    final catalog = Library.merge({
+      drive: index([entry('mangak:S1'), entry('mangak:S2')]),
+    });
+    final hidden = catalog.hiding({'mangak:S1': 's'});
+    expect(hidden.index.series.map((row) => row.key), ['mangak:S2']);
+    expect(hidden.holders.keys, ['mangak:S2']);
+    expect(hidden.places.keys, ['mangak:S2']);
+    // Con un'altra firma la serie è stata riscaricata, e torna.
+    expect(catalog.hiding({'mangak:S1': 'vecchia'}).index.series, hasLength(2));
+  });
+
   group('libreria unita', () {
     test('ogni serie sa dove sta, e la riga di Drive vince', () {
       final local = LibraryRepository('/nessuna');

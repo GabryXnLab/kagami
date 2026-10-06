@@ -809,7 +809,7 @@
   },
   "archiveTitle": "Scarica un manga",
   "@archiveTitle": {
-    "description": "Titolo della schermata per archiviare una serie dal sito (Altro → Scarica un manga)"
+    "description": "Titolo della schermata per archiviare una serie dal sito (Impostazioni → Scarica un manga)"
   },
   "archiveIntro": "Cerca un titolo sui siti supportati, o incolla il link di una serie: Kagami la scarica dal sito, con metadati, copertina e l'elenco completo dei capitoli, nella libreria.",
   "@archiveIntro": {
@@ -3318,33 +3318,9 @@
   "@shellTabCollections": {
     "description": "Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici"
   },
-  "shellTabMore": "Altro",
-  "@shellTabMore": {
-    "description": "Barra di navigazione in basso: destinazione che raccoglie cronologia, statistiche, download e impostazioni"
-  },
-  "moreTitle": "Altro",
-  "@moreTitle": {
-    "description": "Titolo della schermata Altro"
-  },
-  "moreSectionLibrary": "Libreria",
-  "@moreSectionLibrary": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra «Scarica un manga»"
-  },
-  "moreSectionReading": "La tua lettura",
-  "@moreSectionReading": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra cronologia e statistiche"
-  },
-  "moreSectionPrivacy": "Privatezza",
-  "@moreSectionPrivacy": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra la lettura in incognito"
-  },
-  "moreSectionApp": "App",
-  "@moreSectionApp": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra le impostazioni"
-  },
   "moreDownload": "Scarica un manga",
   "@moreDownload": {
-    "description": "Voce di Altro che apre la schermata per archiviare una serie da un sito"
+    "description": "Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito"
   },
   "moreDownloadSubtitle": "Cerca un titolo o incolla un link",
   "@moreDownloadSubtitle": {
@@ -3352,7 +3328,7 @@
   },
   "moreHistory": "Cronologia",
   "@moreHistory": {
-    "description": "Voce di Altro che apre la cronologia di lettura"
+    "description": "Voce delle Impostazioni che apre la cronologia di lettura"
   },
   "moreHistorySubtitle": "Cosa hai letto e quando",
   "@moreHistorySubtitle": {
@@ -3360,7 +3336,7 @@
   },
   "moreStatistics": "Statistiche",
   "@moreStatistics": {
-    "description": "Voce di Altro che apre le statistiche di lettura"
+    "description": "Voce delle Impostazioni che apre le statistiche di lettura"
   },
   "moreStatisticsSubtitle": "Quanto leggi, cosa leggi, quando",
   "@moreStatisticsSubtitle": {
@@ -3368,19 +3344,11 @@
   },
   "moreIncognito": "Lettura in incognito",
   "@moreIncognito": {
-    "description": "Interruttore in Altro: la lettura non lascia tracce"
+    "description": "Interruttore nelle Impostazioni: la lettura non lascia tracce"
   },
   "moreIncognitoSubtitle": "Non registra posizione, capitoli finiti né tempo di lettura",
   "@moreIncognitoSubtitle": {
     "description": "Sottotitolo dell'interruttore della lettura in incognito"
-  },
-  "moreSettings": "Impostazioni",
-  "@moreSettings": {
-    "description": "Voce di Altro che apre le impostazioni dell'app"
-  },
-  "moreSettingsSubtitle": "Aspetto, libreria, lettura, backup",
-  "@moreSettingsSubtitle": {
-    "description": "Sottotitolo della voce Impostazioni: elenca cosa contiene"
   },
   "historyTitle": "Cronologia",
   "@historyTitle": {

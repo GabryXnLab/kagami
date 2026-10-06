@@ -18,7 +18,7 @@ import 'archive_screen.dart';
 import 'collections_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
-import 'more_screen.dart';
+import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -323,14 +323,14 @@ Widget _screenOf(ShellTab tab) => switch (tab) {
       ShellTab.home => const HomeScreen(),
       ShellTab.library => const LibraryScreen(),
       ShellTab.collections => const CollectionsScreen(),
-      ShellTab.more => const MoreScreen(),
+      ShellTab.settings => const SettingsScreen(),
     };
 
 List<({IconData icon, String label})> _destinations(AppLocalizations l10n) => [
   (icon: LucideIcons.house, label: l10n.shellTabHome),
   (icon: LucideIcons.libraryBig, label: l10n.shellTabLibrary),
   (icon: LucideIcons.bookmark, label: l10n.shellTabCollections),
-  (icon: LucideIcons.ellipsis, label: l10n.shellTabMore),
+  (icon: LucideIcons.settings, label: l10n.settingsTitle),
 ];
 
 /// La barra sospesa: una pastiglia che galleggia sul contenuto. L'etichetta

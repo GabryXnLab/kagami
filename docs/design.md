@@ -16,7 +16,7 @@ L'app è quindi la metà "lettore" di un lettore musicale: la libreria è già l
 il valore è in come la si percorre e in cosa ricorda.
 
 Da quando legge e scrive Drive, l'app può anche fare la parte del server:
-**Altro → Scarica un manga** porta una serie dal sito alla libreria con lo
+**Impostazioni → Scarica un manga** porta una serie dal sito alla libreria con lo
 stesso motore di MangaArchive, portato in Dart, senza server in mezzo. Il
 server resta dov'è, e i due scrivono nella stessa cartella (vedi «Scaricare
 dai siti»).
@@ -142,7 +142,7 @@ Due modalità, scelte per serie e ricordate:
 - **continua** (webtoon): tutte le tavole del capitolo una sotto l'altra,
   attaccate — nessun margine, nessun separatore, nessun riquadro: un capitolo
   è una striscia sola che si scorre dall'inizio alla fine, che è come sono
-  fatti i manhwa da MangaK e ManhwaRead;
+  fatti i manhwa da MangaK, ManhwaRead e Asura Scans;
 - **paginata**: una tavola per volta, con direzione destra→sinistra o
   sinistra→destra.
 
@@ -246,8 +246,9 @@ telefono, il resto da Drive.
 ## Interfaccia
 
 Navigazione a quattro destinazioni: **Home** (ripresa, aggiornamenti,
-suggerimenti), **Libreria**, **Raccolte**, **Altro** (cronologia, statistiche,
-impostazioni). La ricerca è sopra la libreria, non una destinazione a sé.
+suggerimenti), **Libreria**, **Raccolte**, **Impostazioni** (profilo, scaricare,
+cronologia, statistiche, incognito e le impostazioni vere, ognuna nella sua
+pagina). La ricerca è sopra la libreria, non una destinazione a sé.
 
 La barra di navigazione è **sospesa** sopra il contenuto, una pastiglia che
 galleggia invece di una fascia opaca che taglia l'ultima riga della griglia;
@@ -645,14 +646,15 @@ migliaia di letture.
 
 ### Scaricare dai siti
 
-Altro → Scarica un manga fa dal telefono quello che il pannello MangaArchive
+Impostazioni → Scarica un manga fa dal telefono quello che il pannello MangaArchive
 di Cobalt fa dal server: si cerca un titolo o si incolla il link di una
-serie (MangaK, ManhwaRead), la si verifica — titolo, copertina, autori,
-generi, capitoli — e la si scarica.
+serie (MangaK, ManhwaRead, Asura Scans), la si verifica — titolo,
+copertina, autori, generi, capitoli — e la si scarica.
 
 La ricerca dà, mentre si scrive, quello che darebbe la barra di ricerca di
-ogni sito: MangaK con la sua API (`titles/search`), ManhwaRead con la pagina
-dei risultati (`/?s=…`), letta da una WebView invisibile perché Cloudflare
+ogni sito: MangaK con la sua API (`titles/search`), Asura Scans con la sua
+(`api/search`, senza i romanzi), ManhwaRead con la pagina dei risultati
+(`/?s=…`), letta da una WebView invisibile perché Cloudflare
 non risponde al client HTTP dell'app nemmeno dopo la verifica, e blocca a
 parte la ricerca rapida di `admin-ajax.php`. Se la verifica chiede un tocco,
 al posto dei risultati compare la riga che la apre. Scegliere un risultato
@@ -689,6 +691,13 @@ ManhwaRead sta spesso dietro la verifica di Cloudflare: sul server la passa
 Chromium; qui la pagina si apre in una WebView, la verifica la supera chi
 usa il telefono, e appena compare l'elenco dei capitoli l'app se lo prende
 e torna indietro da sola.
+
+Asura Scans dà tutto dalla sua API (`api.asurascans.com`): serie, elenco
+completo dei capitoli e tavole con le misure. I capitoli in accesso
+anticipato, che senza abbonamento non hanno tavole, restano fuori
+dall'elenco finché non si liberano, e allora arrivano come capitoli nuovi.
+I link del sito portano un suffisso che cambia (`/comics/nano-machine-bd5bdaf8`):
+in libreria resta quello senza, che il sito ridirige.
 
 ### Scaricare dal proprio server
 

@@ -2600,24 +2600,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shellTabCollections => 'कलेक्शन';
 
   @override
-  String get shellTabMore => 'और';
-
-  @override
-  String get moreTitle => 'और';
-
-  @override
-  String get moreSectionLibrary => 'लाइब्रेरी';
-
-  @override
-  String get moreSectionReading => 'आपका पढ़ना';
-
-  @override
-  String get moreSectionPrivacy => 'निजता';
-
-  @override
-  String get moreSectionApp => 'ऐप';
-
-  @override
   String get moreDownload => 'मांगा डाउनलोड करें';
 
   @override
@@ -2642,12 +2624,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get moreIncognitoSubtitle =>
       'जगह, पूरे किए अध्याय और पढ़ने का समय दर्ज नहीं होता';
-
-  @override
-  String get moreSettings => 'सेटिंग';
-
-  @override
-  String get moreSettingsSubtitle => 'रूप, लाइब्रेरी, पढ़ना, बैकअप';
 
   @override
   String get historyTitle => 'इतिहास';

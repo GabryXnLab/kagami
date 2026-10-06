@@ -2618,24 +2618,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shellTabCollections => 'Collections';
 
   @override
-  String get shellTabMore => 'Plus';
-
-  @override
-  String get moreTitle => 'Plus';
-
-  @override
-  String get moreSectionLibrary => 'Bibliothèque';
-
-  @override
-  String get moreSectionReading => 'Ta lecture';
-
-  @override
-  String get moreSectionPrivacy => 'Confidentialité';
-
-  @override
-  String get moreSectionApp => 'Appli';
-
-  @override
   String get moreDownload => 'Télécharger un manga';
 
   @override
@@ -2659,13 +2641,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get moreIncognitoSubtitle =>
       'N\'enregistre ni la position, ni les chapitres terminés, ni le temps de lecture';
-
-  @override
-  String get moreSettings => 'Paramètres';
-
-  @override
-  String get moreSettingsSubtitle =>
-      'Apparence, bibliothèque, lecture, sauvegarde';
 
   @override
   String get historyTitle => 'Historique';

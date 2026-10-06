@@ -11,6 +11,7 @@ import 'package:kagami_archive/archiver.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/indexes.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/providers/asurascans.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/drive.dart';
@@ -309,6 +310,30 @@ void main() {
       await archiver.download(series, ids: {'1'});
       expect(images.tilesMade, made + 1);
     });
+  });
+
+  test('Asura Scans fa la stessa strada degli altri siti', () async {
+    final asura = FakeAsuraScans();
+    final provider = AsuraScans();
+    final series = await provider.fetchSeries('https://asurascans.com/comics/war-of-extinction-bd5bdaf8', asura);
+    final result = await Archiver(
+      provider: provider,
+      http: asura,
+      store: LocalStore(libraryPath()),
+      scratch: Directory(p.join(temporary.path, 'scratch')),
+      images: images,
+      delay: Duration.zero,
+    ).download(series);
+    expect((result.completed, result.pagesDownloaded), (2, 3));
+    expect(result.failed, isEmpty);
+    final folder = p.join(libraryPath(), result.folder);
+    expect(p.basename(folder), 'War of Extinction [asurascans-war-of-extinction]');
+    final manifest = readJson(File(p.join(folder, 'series.json')));
+    expect((manifest['metadata'] as Map)['genres'], ['Action', 'Fantasy']);
+    final chapters = Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)).toList()..sort();
+    expect(chapters, ['0001 - Chapter 1 [101]', '0002 - Chapter 2 - The Arena [102]']);
+    final index = readJson(File(p.join(folder, 'index.json')));
+    expect((index['chapters'] as List).map((c) => ((c as Map)['id'], c['complete'])), [('101', true), ('102', true)]);
   });
 
   group('direttamente su Drive', () {

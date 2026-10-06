@@ -15,7 +15,6 @@ import 'image_tools.dart';
 import 'jobs.dart';
 import 'model.dart';
 import 'providers.dart';
-import 'providers/manhwaread.dart';
 import 'stores.dart';
 import 'tracking.dart';
 
@@ -138,7 +137,7 @@ class ArchiveRunner {
       http = environment.httpFor(provider, userAgent: job.userAgent, cookies: job.cookies);
       var reader = http;
       final snapshot = job.snapshot;
-      if (snapshot != null && provider is ManhwaRead) {
+      if (snapshot != null && provider.needsBrowser) {
         reader = SnapshotHttp(http, provider.canonical(job.url), await File(snapshot).readAsBytes());
       }
       final series = await provider.fetchSeries(job.url, reader);

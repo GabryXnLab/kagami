@@ -45,7 +45,7 @@ void main() {
     expect(info.email, owner);
     expect(info.owner, owner);
     expect(info.folderName, 'Manga');
-    expect(info.providers, containsAll(['mangak', 'manhwaread']));
+    expect(info.providers, containsAll(['mangak', 'manhwaread', 'asurascans']));
 
     final job = await client.enqueue(url: 'https://mangak.io/x', title: 'X', ids: {'a', 'b'}, delayMs: 500);
     final queue = await client.queue();

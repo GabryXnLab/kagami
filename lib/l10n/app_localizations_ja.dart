@@ -2523,24 +2523,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shellTabCollections => 'コレクション';
 
   @override
-  String get shellTabMore => 'その他';
-
-  @override
-  String get moreTitle => 'その他';
-
-  @override
-  String get moreSectionLibrary => 'ライブラリ';
-
-  @override
-  String get moreSectionReading => 'あなたの読書';
-
-  @override
-  String get moreSectionPrivacy => 'プライバシー';
-
-  @override
-  String get moreSectionApp => 'アプリ';
-
-  @override
   String get moreDownload => 'マンガをダウンロード';
 
   @override
@@ -2563,12 +2545,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get moreIncognitoSubtitle => '位置、読了した話、読書時間を記録しません';
-
-  @override
-  String get moreSettings => '設定';
-
-  @override
-  String get moreSettingsSubtitle => '外観、ライブラリ、読書、バックアップ';
 
   @override
   String get historyTitle => '履歴';

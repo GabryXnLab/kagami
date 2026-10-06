@@ -22,7 +22,6 @@ import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/names.dart';
 import 'package:kagami_archive/providers.dart';
-import 'package:kagami_archive/providers/manhwaread.dart';
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -102,8 +101,6 @@ String _destinationName(AppLocalizations l10n, ArchiveDestination destination) =
       ArchiveDestination.phone => l10n.archiveWherePhone,
     };
 
-const List<String> _manhwaReadHosts = ['manhwaread.com', 'www.manhwaread.com'];
-
 class ArchiveScreen extends ConsumerStatefulWidget {
   const ArchiveScreen({super.key});
 
@@ -120,10 +117,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   int _searchRun = 0;
   final Map<String, _Found> _found = {};
 
-  /// ManhwaRead si cerca da una WebView invisibile: a `SiteHttp`
-  /// Cloudflare non risponde nemmeno dopo la verifica.
-  BrowserFetcher? _fetcher;
-  static const String _searchReady = "!!document.getElementById('inputQuickSearch')";
+  /// I siti dietro una verifica del browser si cercano da una WebView
+  /// invisibile, una per sito: a `SiteHttp` Cloudflare non risponde nemmeno
+  /// dopo la verifica.
+  final Map<String, BrowserFetcher> _fetchers = {};
 
   _Inspected? _inspected;
   bool _busy = false;
@@ -176,13 +173,15 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   Future<void> _searchOn(Provider provider, String query, int run) async {
     final SiteHttp? site;
     final ProviderHttp http;
-    if (provider is ManhwaRead) {
+    if (provider.browser case final gate?) {
       site = null;
-      if (_fetcher == null) {
+      var fetcher = _fetchers[provider.id];
+      if (fetcher == null) {
+        fetcher = BrowserFetcher(ready: gate.searchReady);
         // La WebView deve entrare nell'albero prima di caricare.
-        setState(() => _fetcher = BrowserFetcher(ready: _searchReady));
+        setState(() => _fetchers[provider.id] = fetcher!);
       }
-      http = _fetcher!;
+      http = fetcher;
     } else {
       http = site = SiteHttp(provider.allowedHost);
     }
@@ -190,7 +189,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     try {
       found = _Found.results(await provider.search(query, http));
     } on CloudflareChallenge {
-      found = provider is ManhwaRead
+      found = provider.needsBrowser
           ? const _Found.challenged()
           : _Found.error(currentL10n().archiveErrChallenge);
     } on ProviderOffline {
@@ -208,11 +207,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   /// barra di ricerca del sito: i cookie delle WebView sono gli stessi in
   /// tutta l'app, e la WebView che cerca li trova già.
   Future<void> _verifySearch(Provider provider) async {
+    final gate = provider.browser!;
     final pass = await BrowserCheckPage.open(
       context,
       provider.home,
-      _manhwaReadHosts,
-      ready: _searchReady,
+      gate.hosts,
+      ready: gate.searchReady,
       waitingFor: BrowserWaiting.search,
     );
     if (pass == null || !mounted) return;
@@ -259,12 +259,14 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       try {
         series = await provider.fetchSeries(url, http);
       } on CloudflareChallenge {
-        if (provider is! ManhwaRead || !mounted) rethrow;
+        final gate = provider.browser;
+        if (gate == null || !mounted) rethrow;
         final canonical = provider.canonical(url);
         pass = await BrowserCheckPage.open(
           context,
           canonical,
-          _manhwaReadHosts,
+          gate.hosts,
+          ready: gate.seriesReady,
         );
         if (pass == null) {
           setState(() => _error = currentL10n().archiveErrVerifyIncomplete);
@@ -453,7 +455,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       appBar: AppBar(title: Text(l10n.archiveTitle)),
       body: Stack(
         children: [
-          if (_fetcher case final fetcher?) Positioned.fill(child: fetcher.view()),
+          for (final fetcher in _fetchers.values) Positioned.fill(child: fetcher.view()),
           ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: ListView(

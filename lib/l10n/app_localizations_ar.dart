@@ -2684,24 +2684,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shellTabCollections => 'المجموعات';
 
   @override
-  String get shellTabMore => 'المزيد';
-
-  @override
-  String get moreTitle => 'المزيد';
-
-  @override
-  String get moreSectionLibrary => 'المكتبة';
-
-  @override
-  String get moreSectionReading => 'قراءتك';
-
-  @override
-  String get moreSectionPrivacy => 'الخصوصية';
-
-  @override
-  String get moreSectionApp => 'التطبيق';
-
-  @override
   String get moreDownload => 'تنزيل مانغا';
 
   @override
@@ -2725,13 +2707,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get moreIncognitoSubtitle =>
       'لا يسجل الموضع ولا الفصول المنتهية ولا وقت القراءة';
-
-  @override
-  String get moreSettings => 'الإعدادات';
-
-  @override
-  String get moreSettingsSubtitle =>
-      'المظهر، المكتبة، القراءة، النسخ الاحتياطي';
 
   @override
   String get historyTitle => 'السجل';

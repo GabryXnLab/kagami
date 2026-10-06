@@ -8,7 +8,7 @@ Google Drive, o tutte e due insieme, e la presenta come un lettore musicale
 presenta una discoteca — raccolte, ripresa della lettura, stato e voto per
 ogni serie. Da Drive legge in streaming e scarica sul telefono solo ciò che
 l'utente sceglie. Può anche archiviare da sé: da una ricerca o da un link
-(Altro → Scarica un manga) scarica una serie dal sito nella cartella di Drive o sul telefono,
+(Impostazioni → Scarica un manga) scarica una serie dal sito nella cartella di Drive o sul telefono,
 con lo stesso motore dell'estensione MangaArchive portato in Dart
 (`packages/kagami_archive/`). Lo stesso motore gira anche in **Kagami
 Server** (`server/`), un programma che chiunque può tenere acceso su un suo
@@ -131,12 +131,12 @@ lib/
     ui/collections_screen.dart raccolte automatiche e manuali
     ui/history_screen.dart     cronologia per giorno e incognito
     ui/statistics_screen.dart  numeri e grafici della lettura
-    ui/settings_screen.dart    aspetto, libreria, lettura, dati
-    ui/more_screen.dart        la destinazione che raccoglie le tre sopra
+    ui/settings_screen.dart    la quarta destinazione: profilo, scaricare, cronologia, statistiche,
+                               incognito, aspetto; pagine di libreria, lettura, account, dati
     ui/archive_screen.dart     Scarica un manga: ricerca, link, capitoli, destinazione, coda
     ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
     data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
-    ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare su ManhwaRead
+    ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare sui siti protetti
     ui/setup_screen.dart       permesso, cartella, stati vuoti e di errore
     ui/reader_metrics.dart     geometria della striscia a fasce, senza schermo
     ui/page_bands.dart         magazzino delle fasce, catena delle fonti, disegno
@@ -147,7 +147,10 @@ lib/
     ui/widgets/                copertina, origine, fogli raccolte e pulizia, grafici
 packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il server
   lib/model.dart, names.dart, images.dart   metadati, nomi di cartella, header
-  lib/http.dart, providers.dart, providers/ client limitato ai domini, MangaK, ManhwaRead
+  lib/http.dart                client limitato ai domini, pagina presa dalla WebView
+  lib/providers.dart           registro dei siti, `Provider`, `BrowserGate`
+  lib/providers/kit.dart       attrezzi comuni dei siti: link, testi, ordine dei capitoli
+  lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans
   lib/archiver.dart            dal sito alla libreria: manifest, ripresa, tessere
   lib/indexes.dart             index.json, pages.json, riga di libreria, firma
   lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)
@@ -157,8 +160,8 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/image_tools.dart         miniature e tessere: l'interfaccia, chi le fa è fuori
   lib/jobs.dart, runner.dart   coda, avanzamento, storico, il giro
   lib/tracking.dart            serie in corso e controllo dei capitoli nuovi
-  test/                        provider con fixture copiate, motore su cartella e
-                               Drive finto, coda, serie in corso (`dart test`)
+  test/                        provider con fixture copiate, contratto di ogni sito,
+                               motore su cartella e Drive finto, coda, serie in corso (`dart test`)
 server/                        Kagami Server, Dart puro (`dart compile exe`)
   bin/kagami_server.dart       riga di comando: serve, users, status, ping, idle, update
   lib/src/api.dart             l'API v2: rotte, chi chiama, utenti, validazione dei lavori
@@ -304,6 +307,18 @@ nel proprio progetto Firebase.
   telefono `DriveAuth`), la rete (`NetworkState`, sul telefono
   `NetworkMonitor`) e i guasti (`ArchiveRunner.onError`, sul telefono
   Sentry).
+- **Un sito è un file, e nient'altro lo nomina.** Ogni provider sta in
+  `packages/kagami_archive/lib/providers/<id>.dart`, usa `providers/kit.dart`
+  per ciò che deve valere uguale per tutti (link accettati, testi, ordine e
+  unicità dei capitoli) e si registra in `providers`; l'icona è
+  `assets/providers/<id>.png`. App, server, coda e serie in corso non
+  chiedono mai «quale sito»: un sito dietro Cloudflare lo dice con
+  `Provider.browser` (`BrowserGate`: host dei cookie, segni della pagina
+  vera), e da lì seguono WebView, ricerca invisibile, `snapshot` per il
+  server e salto nei controlli automatici. `provider_contract_test.dart`
+  ferma un sito registrato senza icona, con un id non valido o con una
+  verifica su host non suoi. Un attrezzo che serve a due siti va nel kit,
+  non copiato.
 - **Gli indici non si ricostruiscono qui**, se non per le serie che l'app
   archivia lei (`packages/kagami_archive/`). `library.json`, `index.json` e
   `pages.json` di una libreria esistente li scrive l'archiviatore. Se mancano, l'app lo dice e

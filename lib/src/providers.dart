@@ -1547,7 +1547,7 @@ final incognitoProvider = AsyncNotifierProvider<Incognito, bool>(Incognito.new);
 
 /// Le destinazioni della navigazione. Stanno nel grafo e non nella shell
 /// perché anche le raccolte automatiche vi mandano l'utente.
-enum ShellTab { home, library, collections, more }
+enum ShellTab { home, library, collections, settings }
 
 class ShellTabNotifier extends Notifier<ShellTab> {
   @override

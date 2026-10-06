@@ -1,5 +1,6 @@
-/// Impostazioni: una pagina d'ingresso con chi legge, l'aspetto e le voci
-/// che portano alle pagine di libreria, lettura, account e dati.
+/// Impostazioni: la destinazione con chi legge, le schermate in cui si entra
+/// di proposito, l'aspetto e le voci che portano alle pagine di libreria,
+/// lettura, account e dati.
 ///
 /// La voce che conta è «Dati». Da quando lo stato utente vive nel database
 /// dell'app, portarsi via i propri dati non è una funzione in più: è il modo
@@ -23,7 +24,11 @@ import '../data/reader_probe.dart';
 import '../data/reader_settings.dart';
 import '../l10n.dart';
 import '../providers.dart';
+import 'app_shell.dart';
+import 'archive_screen.dart';
 import 'drive_ui.dart';
+import 'history_screen.dart';
+import 'statistics_screen.dart';
 import 'sync_screen.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -145,72 +150,127 @@ class _Language extends ConsumerWidget {
   }
 }
 
+/// La quarta destinazione: chi legge, ciò in cui si entra di proposito —
+/// scaricare, cronologia, statistiche, incognito — e le impostazioni vere,
+/// ognuna nella sua pagina.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final incognito = ref.watch(incognitoProvider).value ?? false;
     void open(Widget page) => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => page),
         );
 
     return Scaffold(
-      appBar: AppBar(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-        children: [
-          Text(l10n.settingsTitle, style: KagamiType.display(30)),
-          if (cloudAvailable) ...[
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, navBarInset),
+          children: [
+            Text(l10n.settingsTitle, style: KagamiType.display(30)),
+            if (cloudAvailable) ...[
+              const SizedBox(height: 28),
+              Entrance(child: _Profile(onTap: () => open(const _AccountPage()))),
+            ],
             const SizedBox(height: 28),
-            Entrance(child: _Profile(onTap: () => open(const _AccountPage()))),
-          ],
-          const SizedBox(height: 28),
-          const Entrance(
-            index: 1,
-            child: KGroup(children: [_Theme(), _Language()]),
-          ),
-          const SizedBox(height: 22),
-          Entrance(
-            index: 2,
-            child: KGroup(
-              children: [
-                KTile(
-                  icon: LucideIcons.libraryBig,
-                  title: l10n.settingsLibrary,
-                  subtitle: cloudAvailable
-                      ? l10n.settingsLibraryNote
-                      : l10n.settingsLibraryNoteLocal,
-                  trailing: const _Value(),
-                  onTap: () => open(const _LibraryPage()),
-                ),
-                KTile(
-                  icon: LucideIcons.bookOpen,
-                  title: l10n.settingsReading,
-                  subtitle: l10n.settingsReadingNote,
-                  trailing: const _Value(),
-                  onTap: () => open(const _ReadingPage()),
-                ),
-                KTile(
-                  icon: LucideIcons.userRound,
-                  title: l10n.settingsAccount,
-                  subtitle: l10n.settingsAccountNote,
-                  trailing: const _Value(),
-                  onTap: () => open(const _AccountPage()),
-                ),
-                KTile(
-                  icon: LucideIcons.database,
-                  title: l10n.settingsData,
-                  subtitle: l10n.settingsDataNote,
-                  trailing: const _Value(),
-                  onTap: () => open(const _DataPage()),
-                ),
-              ],
+            Entrance(
+              index: 1,
+              child: KGroup(
+                children: [
+                  KTile(
+                    icon: LucideIcons.download,
+                    title: l10n.moreDownload,
+                    subtitle: l10n.moreDownloadSubtitle,
+                    trailing: const _Value(),
+                    onTap: () => open(const ArchiveScreen()),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 22),
-          const Entrance(index: 3, child: KGroup(children: [_About()])),
-        ],
+            const SizedBox(height: 22),
+            Entrance(
+              index: 2,
+              child: KGroup(
+                children: [
+                  KTile(
+                    icon: LucideIcons.history,
+                    title: l10n.moreHistory,
+                    subtitle: l10n.moreHistorySubtitle,
+                    trailing: const _Value(),
+                    onTap: () => open(const HistoryScreen()),
+                  ),
+                  KTile(
+                    icon: LucideIcons.chartColumn,
+                    title: l10n.moreStatistics,
+                    subtitle: l10n.moreStatisticsSubtitle,
+                    trailing: const _Value(),
+                    onTap: () => open(const StatisticsScreen()),
+                  ),
+                  KTile(
+                    icon: incognito ? LucideIcons.eyeOff : LucideIcons.eye,
+                    title: l10n.moreIncognito,
+                    subtitle: l10n.moreIncognitoSubtitle,
+                    tint: incognito ? context.colors.primary : null,
+                    onTap: ref.read(incognitoProvider.notifier).toggle,
+                    trailing: Switch(
+                      value: incognito,
+                      onChanged: (_) =>
+                          ref.read(incognitoProvider.notifier).toggle(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Entrance(
+              index: 3,
+              child: KGroup(children: [_Theme(), _Language()]),
+            ),
+            const SizedBox(height: 22),
+            Entrance(
+              index: 4,
+              child: KGroup(
+                children: [
+                  KTile(
+                    icon: LucideIcons.libraryBig,
+                    title: l10n.settingsLibrary,
+                    subtitle: cloudAvailable
+                        ? l10n.settingsLibraryNote
+                        : l10n.settingsLibraryNoteLocal,
+                    trailing: const _Value(),
+                    onTap: () => open(const _LibraryPage()),
+                  ),
+                  KTile(
+                    icon: LucideIcons.bookOpen,
+                    title: l10n.settingsReading,
+                    subtitle: l10n.settingsReadingNote,
+                    trailing: const _Value(),
+                    onTap: () => open(const _ReadingPage()),
+                  ),
+                  KTile(
+                    icon: LucideIcons.userRound,
+                    title: l10n.settingsAccount,
+                    subtitle: l10n.settingsAccountNote,
+                    trailing: const _Value(),
+                    onTap: () => open(const _AccountPage()),
+                  ),
+                  KTile(
+                    icon: LucideIcons.database,
+                    title: l10n.settingsData,
+                    subtitle: l10n.settingsDataNote,
+                    trailing: const _Value(),
+                    onTap: () => open(const _DataPage()),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            const Entrance(index: 5, child: KGroup(children: [_About()])),
+          ],
+        ),
       ),
     );
   }

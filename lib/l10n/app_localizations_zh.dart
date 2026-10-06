@@ -2523,24 +2523,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shellTabCollections => '合集';
 
   @override
-  String get shellTabMore => '更多';
-
-  @override
-  String get moreTitle => '更多';
-
-  @override
-  String get moreSectionLibrary => '书库';
-
-  @override
-  String get moreSectionReading => '你的阅读';
-
-  @override
-  String get moreSectionPrivacy => '隐私';
-
-  @override
-  String get moreSectionApp => '应用';
-
-  @override
   String get moreDownload => '下载漫画';
 
   @override
@@ -2563,12 +2545,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get moreIncognitoSubtitle => '不记录阅读位置、读完的章节和阅读时长';
-
-  @override
-  String get moreSettings => '设置';
-
-  @override
-  String get moreSettingsSubtitle => '外观、书库、阅读、备份';
 
   @override
   String get historyTitle => '阅读历史';

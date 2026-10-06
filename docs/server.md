@@ -24,7 +24,7 @@ dal comando che genera l'app.
 
 ## 1. Crearlo dall'app
 
-Nell'app: *Altro → Scarica un manga → Server → Crea il tuo server*.
+Nell'app: *Impostazioni → Scarica un manga → Server → Crea il tuo server*.
 
 1. Se non l'hai già fatto, l'app ti chiede di accedere con Google e di
    scegliere la cartella dei manga su Drive.
@@ -134,7 +134,7 @@ solo il secondo comando. Per spegnerlo: `docker rm -f kagami-updater`.
 
 ## Controllo giornaliero dei capitoli nuovi
 
-Ogni account ha il suo, e lo regola dall'app (*Altro → Scarica un manga →
+Ogni account ha il suo, e lo regola dall'app (*Impostazioni → Scarica un manga →
 Server*): acceso o spento, a che ora (ora del server: `-e TZ=Europe/Rome`
 nel comando per la tua) e su cosa.
 

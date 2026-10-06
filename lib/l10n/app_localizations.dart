@@ -1120,7 +1120,7 @@ abstract class AppLocalizations {
   /// **'Blocca la rotazione'**
   String get readerLockRotation;
 
-  /// Titolo della schermata per archiviare una serie dal sito (Altro → Scarica un manga)
+  /// Titolo della schermata per archiviare una serie dal sito (Impostazioni → Scarica un manga)
   ///
   /// In it, this message translates to:
   /// **'Scarica un manga'**
@@ -4108,43 +4108,7 @@ abstract class AppLocalizations {
   /// **'Raccolte'**
   String get shellTabCollections;
 
-  /// Barra di navigazione in basso: destinazione che raccoglie cronologia, statistiche, download e impostazioni
-  ///
-  /// In it, this message translates to:
-  /// **'Altro'**
-  String get shellTabMore;
-
-  /// Titolo della schermata Altro
-  ///
-  /// In it, this message translates to:
-  /// **'Altro'**
-  String get moreTitle;
-
-  /// Intestazione di sezione nella schermata Altro, sopra «Scarica un manga»
-  ///
-  /// In it, this message translates to:
-  /// **'Libreria'**
-  String get moreSectionLibrary;
-
-  /// Intestazione di sezione nella schermata Altro, sopra cronologia e statistiche
-  ///
-  /// In it, this message translates to:
-  /// **'La tua lettura'**
-  String get moreSectionReading;
-
-  /// Intestazione di sezione nella schermata Altro, sopra la lettura in incognito
-  ///
-  /// In it, this message translates to:
-  /// **'Privatezza'**
-  String get moreSectionPrivacy;
-
-  /// Intestazione di sezione nella schermata Altro, sopra le impostazioni
-  ///
-  /// In it, this message translates to:
-  /// **'App'**
-  String get moreSectionApp;
-
-  /// Voce di Altro che apre la schermata per archiviare una serie da un sito
+  /// Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito
   ///
   /// In it, this message translates to:
   /// **'Scarica un manga'**
@@ -4156,7 +4120,7 @@ abstract class AppLocalizations {
   /// **'Cerca un titolo o incolla un link'**
   String get moreDownloadSubtitle;
 
-  /// Voce di Altro che apre la cronologia di lettura
+  /// Voce delle Impostazioni che apre la cronologia di lettura
   ///
   /// In it, this message translates to:
   /// **'Cronologia'**
@@ -4168,7 +4132,7 @@ abstract class AppLocalizations {
   /// **'Cosa hai letto e quando'**
   String get moreHistorySubtitle;
 
-  /// Voce di Altro che apre le statistiche di lettura
+  /// Voce delle Impostazioni che apre le statistiche di lettura
   ///
   /// In it, this message translates to:
   /// **'Statistiche'**
@@ -4180,7 +4144,7 @@ abstract class AppLocalizations {
   /// **'Quanto leggi, cosa leggi, quando'**
   String get moreStatisticsSubtitle;
 
-  /// Interruttore in Altro: la lettura non lascia tracce
+  /// Interruttore nelle Impostazioni: la lettura non lascia tracce
   ///
   /// In it, this message translates to:
   /// **'Lettura in incognito'**
@@ -4191,18 +4155,6 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Non registra posizione, capitoli finiti né tempo di lettura'**
   String get moreIncognitoSubtitle;
-
-  /// Voce di Altro che apre le impostazioni dell'app
-  ///
-  /// In it, this message translates to:
-  /// **'Impostazioni'**
-  String get moreSettings;
-
-  /// Sottotitolo della voce Impostazioni: elenca cosa contiene
-  ///
-  /// In it, this message translates to:
-  /// **'Aspetto, libreria, lettura, backup'**
-  String get moreSettingsSubtitle;
 
   /// Titolo della schermata della cronologia di lettura
   ///

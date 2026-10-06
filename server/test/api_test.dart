@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/tracking.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:test/test.dart';
 
@@ -75,7 +76,7 @@ void main() {
     expect(body!['api'], 2);
     expect(body['name'], 'Prova');
     expect(body['owner'], owner);
-    expect([for (final row in body['providers'] as List) (row as Map)['id']], containsAll(['mangak', 'manhwaread']));
+    expect([for (final row in body['providers'] as List) (row as Map)['id']], containsAll(['mangak', 'manhwaread', 'asurascans']));
     expect(body['me'], {
       'email': owner,
       'owner': true,
@@ -234,6 +235,51 @@ void main() {
     final (bad, error) = await call('PUT', '/v2/me/folder', body: {'folderId': 'non-esiste'});
     expect(bad, 400);
     expect((error!['error'] as Map)['code'], 'bad_folder');
+  });
+
+  test('man mano: il lavoro lo porta, la serie seguita dice quanti ne servono e l\'app li chiede', () async {
+    final (_, info) = await call('GET', '/v2/server');
+    expect(info!['features'], contains('ahead'));
+    final (status, body) = await call('POST', '/v2/jobs', body: {
+      'url': 'https://mangak.io/x',
+      'ids': ['C1', 'C2'],
+      'ahead': 5,
+    });
+    expect(status, 201);
+    expect((body!['job'] as Map)['ahead'], 5);
+    expect((await files.jobs()).single.ahead, 5);
+    // Quelli che l'app mette in coda dopo si aggiungono, non sostituiscono.
+    await call('POST', '/v2/jobs', body: {'url': 'https://mangak.io/x', 'ids': ['C3'], 'ahead': 5, 'automatic': true});
+    expect((await files.jobs()).single.ids, {'C1', 'C2', 'C3'});
+    expect((await call('POST', '/v2/jobs', body: {'url': 'https://mangak.io/x', 'ahead': 0})).$1, 400);
+    expect((await call('POST', '/v2/jobs', body: {
+      'url': 'https://manhwaread.com/manhwa/disfarming/',
+      'ahead': 5,
+    })).$1, 400);
+
+    const target = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella-$owner');
+    await files.ongoing.parent.create(recursive: true);
+    await files.ongoing.writeAsString(jsonEncode({
+      'series': [
+        TrackedSeries(provider: 'mangak', id: 'S1', title: 'Man mano', url: 'https://mangak.io/x',
+            target: target, chapters: const ['C1'], addedAt: DateTime.now(), ahead: 5).toJson(),
+        TrackedSeries(provider: 'mangak', id: 'S2', title: 'Tutta', url: 'https://mangak.io/y',
+            target: target, chapters: const ['C1'], addedAt: DateTime.now(), checkedAt: DateTime.now()).toJson(),
+      ],
+    }));
+    final (_, ongoing) = await call('GET', '/v2/ongoing');
+    final rows = (ongoing!['series'] as List).cast<Map>();
+    expect((rows.first['ahead'], rows.first['wanted']), (5, 0));
+    expect(rows.last.containsKey('ahead'), isFalse);
+
+    final (wanted, answer) = await call('PUT', '/v2/ongoing/mangak:S1', body: {'wanted': 2});
+    expect(wanted, 200);
+    expect(answer!['checking'], isTrue);
+    expect(jobs.seriesChecks, ['mangak:S1']);
+    expect((await Tracking(files.ongoing).load()).first.wanted, 2);
+    expect(code((await call('PUT', '/v2/ongoing/mangak:S2', body: {'wanted': 1})).$2), 'not_ahead');
+    expect((await call('PUT', '/v2/ongoing/mangak:NO', body: {'wanted': 1})).$1, 404);
+    expect((await call('PUT', '/v2/ongoing/mangak:S1', body: {'wanted': -1})).$1, 400);
   });
 
   test('indirizzi sconosciuti sono 404, anche con un token buono', () async {

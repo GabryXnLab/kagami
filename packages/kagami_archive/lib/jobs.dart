@@ -86,6 +86,7 @@ class ArchiveJob {
     this.userAgent,
     this.cookies = const {},
     this.automatic = false,
+    this.ahead,
   });
 
   factory ArchiveJob.fromJson(Map<String, Object?> json) => ArchiveJob(
@@ -103,6 +104,7 @@ class ArchiveJob {
             '$key': '$value',
         },
         automatic: json['automatic'] == true,
+        ahead: (json['ahead'] as num?)?.toInt(),
       );
 
   final String id;
@@ -131,6 +133,27 @@ class ArchiveJob {
   /// Messo in coda dal controllo delle serie in corso, non da una persona.
   final bool automatic;
 
+  /// Scaricando «man mano»: quanti capitoli da leggere tenere pronti. Il
+  /// giro lo annota fra le serie seguite ([Tracking]), e da lì l'app mette in
+  /// coda i seguenti a mano a mano che si leggono.
+  final int? ahead;
+
+  /// Lo stesso lavoro con [more] capitoli in più.
+  ArchiveJob including(Set<String> more) => ArchiveJob(
+        id: id,
+        url: url,
+        title: title,
+        target: target,
+        start: start,
+        ids: {...?ids, ...more},
+        delayMs: delayMs,
+        snapshot: snapshot,
+        userAgent: userAgent,
+        cookies: cookies,
+        automatic: automatic,
+        ahead: ahead,
+      );
+
   Map<String, Object?> toJson() => {
         'id': id,
         'url': url,
@@ -143,6 +166,7 @@ class ArchiveJob {
         'userAgent': ?userAgent,
         if (cookies.isNotEmpty) 'cookies': cookies,
         if (automatic) 'automatic': true,
+        'ahead': ?ahead,
       };
 }
 
@@ -240,6 +264,7 @@ class ArchiveOutcome {
     required this.message,
     required this.finishedAt,
     this.seriesKey,
+    this.url,
   });
 
   factory ArchiveOutcome.fromJson(Map<String, Object?> json) => ArchiveOutcome(
@@ -248,6 +273,7 @@ class ArchiveOutcome {
         message: json['message'] as String? ?? '',
         finishedAt: DateTime.tryParse('${json['finishedAt']}') ?? DateTime.now(),
         seriesKey: json['key'] as String?,
+        url: json['url'] as String?,
       );
 
   final String title;
@@ -256,12 +282,16 @@ class ArchiveOutcome {
   final DateTime finishedAt;
   final String? seriesKey;
 
+  /// Il link chiesto: un download fallito si riprova da lì.
+  final String? url;
+
   Map<String, Object?> toJson() => {
         'title': title,
         'ok': ok,
         'message': message,
         'finishedAt': finishedAt.toIso8601String(),
         'key': ?seriesKey,
+        'url': ?url,
       };
 }
 
@@ -353,13 +383,22 @@ class ArchiveFiles {
 
   Future<void> enqueue(ArchiveJob job) => _exclusive(() async {
         final queue = await jobs();
-        // La stessa serie due volte in coda è un doppione: vale l'ultima
-        // richiesta, che è quella che l'utente ha in mente.
-        final same = queue.indexWhere((other) => other.url == job.url);
-        if (same >= 0) {
-          queue[same] = job;
-        } else {
+        // Quello che sta girando non si tocca: lo toglie il giro quando
+        // finisce, e con lui ciò che gli si fosse aggiunto.
+        final current = await status();
+        final running = current.state == ArchiveState.running ? current.jobId : null;
+        final same = queue.indexWhere((other) => other.url == job.url && other.id != running);
+        if (same < 0) {
           queue.add(job);
+        } else if (!job.automatic) {
+          // La stessa serie due volte in coda è un doppione: vale l'ultima
+          // richiesta, che è quella che l'utente ha in mente.
+          queue[same] = job;
+        } else if (queue[same].ids != null) {
+          // Un lavoro messo in coda dall'app non prende il posto di un
+          // altro: gli aggiunge i suoi capitoli. Uno che prende tutta la
+          // serie, o da un capitolo in poi, li comprende già.
+          queue[same] = queue[same].including(job.ids ?? const {});
         }
         await _writeJobs(queue);
       });
@@ -388,8 +427,10 @@ class ArchiveFiles {
           ArchiveOutcome.fromJson(row),
       ];
 
+  /// Gli ultimi esiti. Scaricando man mano ogni capitolo è un lavoro, e la
+  /// stessa serie ne lascia parecchi: l'interfaccia li raccoglie per serie.
   Future<void> remember(ArchiveOutcome outcome) async {
-    final rows = [outcome, ...await history()].take(20);
+    final rows = [outcome, ...await history()].take(60);
     await writeAtomically(
       _history,
       utf8.encode(jsonEncode({'outcomes': [for (final row in rows) row.toJson()]})),

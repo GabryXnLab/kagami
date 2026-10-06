@@ -809,7 +809,7 @@
   },
   "archiveTitle": "Scarica un manga",
   "@archiveTitle": {
-    "description": "Titolo della schermata per archiviare una serie dal sito (Altro → Scarica un manga)"
+    "description": "Titolo della schermata per archiviare una serie dal sito (Impostazioni → Scarica un manga)"
   },
   "archiveIntro": "Cerca un titolo sui siti supportati, o incolla il link di una serie: Kagami la scarica dal sito, con metadati, copertina e l'elenco completo dei capitoli, nella libreria.",
   "@archiveIntro": {
@@ -850,18 +850,6 @@
       }
     }
   },
-  "archiveKnown": "Già in libreria: {archived} di {total} capitoli. Quelli che ci sono si saltano.",
-  "@archiveKnown": {
-    "description": "Avviso sulla scheda della serie che è già in libreria: quanti capitoli archiviati sul totale",
-    "placeholders": {
-      "archived": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "archiveWhatSection": "Cosa scaricare",
   "@archiveWhatSection": {
     "description": "Titolo della sezione in cui si sceglie quali capitoli scaricare"
@@ -890,18 +878,153 @@
   "@archiveModePickHint": {
     "description": "Spiegazione della modalità «Scelti»"
   },
-  "archiveChapterNumberHint": "Numero del capitolo, come sul sito",
-  "@archiveChapterNumberHint": {
-    "description": "Suggerimento del campo in cui si scrive il numero del capitolo da cui partire"
+  "archiveChooseTitle": "Cosa scaricare",
+  "@archiveChooseTitle": {
+    "description": "Titolo della pagina che si apre dopo aver letto una serie dal sito: lì si sceglie cosa scaricare e dove"
   },
-  "archivePickedCount": "{count, plural, =1{1 scelto} other{{count} scelti}}",
-  "@archivePickedCount": {
-    "description": "Quanti capitoli sono stati toccati nella scelta uno per uno",
+  "archiveModeAhead": "Man mano",
+  "@archiveModeAhead": {
+    "description": "Scheda della modalità che scarica pochi capitoli alla volta e poi il seguente a ogni capitolo letto"
+  },
+  "archiveModeAllLine": "Ogni capitolo, una volta sola",
+  "@archiveModeAllLine": {
+    "description": "Riga breve sotto la scheda «Tutta»"
+  },
+  "archiveModeAheadLine": "{count} pronti, poi uno per ogni capitolo letto",
+  "@archiveModeAheadLine": {
+    "description": "Riga breve sotto la scheda «Man mano»",
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
+  },
+  "archiveModeFromLine": "Da un capitolo fino all'ultimo",
+  "@archiveModeFromLine": {
+    "description": "Riga breve sotto la scheda «Dal capitolo»"
+  },
+  "archiveModePickLine": "Solo quelli che tocchi",
+  "@archiveModePickLine": {
+    "description": "Riga breve sotto la scheda «Scelti»"
+  },
+  "archiveModeAheadHint": "Dal capitolo scelto ne scarica {count}. Ogni capitolo letto ne porta uno nuovo, così ne hai sempre {count} da leggere, fino alla fine della serie; quando il sito ne pubblica altri arrivano allo stesso modo.",
+  "@archiveModeAheadHint": {
+    "description": "Spiegazione della modalità «Man mano»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveModeAheadUnavailable": "Man mano non si può con questo sito: vuole la verifica del browser a ogni lettura, e da solo il telefono non la supera.",
+  "@archiveModeAheadUnavailable": {
+    "description": "Avviso quando si tocca «Man mano» per un sito protetto da Cloudflare"
+  },
+  "archiveModeAheadServer": "Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un'ora dall'uscita di una versione nuova. Intanto man mano scarica dal telefono.",
+  "@archiveModeAheadServer": {
+    "description": "Nota sotto le destinazioni in modalità «Man mano», quando il server collegato è di una versione che non la sa fare e quindi non compare fra le scelte"
+  },
+  "archiveChapterSearch": "Cerca per numero o titolo",
+  "@archiveChapterSearch": {
+    "description": "Suggerimento del campo che filtra l'elenco dei capitoli; Invio sceglie il capitolo con quel numero"
+  },
+  "archiveNewestFirst": "Dal più recente",
+  "@archiveNewestFirst": {
+    "description": "Suggerimento del pulsante che mette in cima i capitoli più recenti"
+  },
+  "archiveOldestFirst": "Dal primo",
+  "@archiveOldestFirst": {
+    "description": "Suggerimento del pulsante che mette in cima il primo capitolo"
+  },
+  "archiveChooseStart": "Tocca il capitolo da cui partire.",
+  "@archiveChooseStart": {
+    "description": "Indicazione sopra l'elenco dei capitoli nelle modalità che partono da un capitolo"
+  },
+  "archiveSelectMissing": "Quelli che mancano",
+  "@archiveSelectMissing": {
+    "description": "Pastiglia che sceglie tutti i capitoli non ancora in libreria"
+  },
+  "archiveRangeHint": "Tieni premuto un capitolo per prendere anche tutti quelli fra lui e l'ultimo toccato.",
+  "@archiveRangeHint": {
+    "description": "Suggerimento sotto le pastiglie di selezione, nella scelta dei capitoli uno per uno"
+  },
+  "archivePickNone": "Nessun capitolo scelto",
+  "@archivePickNone": {
+    "description": "Riepilogo in fondo alla pagina quando non si è scelto nessun capitolo"
+  },
+  "archiveSummaryChapters": "{count, plural, =1{1 capitolo} other{{count} capitoli}} · {where}",
+  "@archiveSummaryChapters": {
+    "description": "Riepilogo in fondo alla pagina: quanti capitoli e la destinazione",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveSummaryAhead": "{count, plural, =1{1 capitolo subito} other{{count} capitoli subito}}, poi uno per ogni capitolo letto · {where}",
+  "@archiveSummaryAhead": {
+    "description": "Riepilogo in fondo alla pagina in modalità «Man mano»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveDownloadAhead": "{count, plural, =1{Scarica 1 capitolo e poi man mano} other{Scarica {count} capitoli e poi man mano}}",
+  "@archiveDownloadAhead": {
+    "description": "Pulsante che avvia la modalità «Man mano»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveInLibraryCount": "In libreria: {archived} di {total}",
+  "@archiveInLibraryCount": {
+    "description": "Pastiglia sotto il titolo: quanti capitoli della serie ci sono già",
+    "placeholders": {
+      "archived": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveChapterInLibrary": "in libreria",
+  "@archiveChapterInLibrary": {
+    "description": "Accanto a un capitolo già scaricato, nell'elenco dei capitoli da scegliere"
+  },
+  "archiveChapterStart": "si parte da qui",
+  "@archiveChapterStart": {
+    "description": "Accanto al capitolo da cui parte il download"
+  },
+  "archiveChapterLater": "arriverà leggendo",
+  "@archiveChapterLater": {
+    "description": "Accanto ai capitoli che in modalità «Man mano» arriveranno solo leggendo"
+  },
+  "archiveAdvanced": "Avanzate",
+  "@archiveAdvanced": {
+    "description": "Riga che apre le impostazioni avanzate del download"
+  },
+  "archiveAdvancedLine": "Pausa fra le richieste: {pause}",
+  "@archiveAdvancedLine": {
+    "description": "Sotto «Avanzate»: il valore scelto",
+    "placeholders": {
+      "pause": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveReopen": "Scegli cosa scaricare",
+  "@archiveReopen": {
+    "description": "Pulsante che riapre la pagina di scelta per la serie appena letta"
   },
   "archiveSelectAll": "Tutti",
   "@archiveSelectAll": {
@@ -982,10 +1105,6 @@
   "archiveDownloadAll": "Scarica tutta la serie",
   "@archiveDownloadAll": {
     "description": "Pulsante di download, modalità serie intera"
-  },
-  "archiveDownloadFrom": "Scarica dal capitolo scelto",
-  "@archiveDownloadFrom": {
-    "description": "Pulsante di download, modalità dal capitolo scelto"
   },
   "archiveDownloadPicked": "{count, plural, =1{Scarica 1 capitolo} other{Scarica {count} capitoli}}",
   "@archiveDownloadPicked": {
@@ -1134,6 +1253,41 @@
       }
     }
   },
+  "archiveRecent": "Scaricate di recente",
+  "@archiveRecent": {
+    "description": "Titolo della sezione con le serie scaricate da poco, una per riga"
+  },
+  "archiveRecentLineRuns": "{when} · {runs} download · {message}",
+  "@archiveRecentLineRuns": {
+    "description": "Sotto una serie scaricata di recente con più download: quando l'ultimo, quanti, e com'è andato l'ultimo",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "runs": {
+        "type": "int"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRetry": "Riprova",
+  "@archiveRetry": {
+    "description": "Pulsante che riapre il link di un download fallito per riprovarlo"
+  },
+  "archiveJobAhead": "Man mano: {count, plural, =1{1 capitolo} other{{count} capitoli}} · {destination}",
+  "@archiveJobAhead": {
+    "description": "Sottotitolo di un lavoro in coda messo dalla modalità «Man mano»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
   "archiveSites": "Siti supportati",
   "@archiveSites": {
     "description": "Titolo della sezione con i siti da cui si può scaricare"
@@ -1240,6 +1394,18 @@
       }
     }
   },
+  "archiveTrackedAhead": "Man mano, {count} da leggere pronti · {destination}",
+  "@archiveTrackedAhead": {
+    "description": "Sottotitolo di una serie seguita in modalità «Man mano», fra le serie seguite",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
   "archiveStopFollowing": "Smetti di seguirla",
   "@archiveStopFollowing": {
     "description": "Tooltip del pulsante che smette di seguire una serie in corso"
@@ -1313,42 +1479,9 @@
   "@archiveForgetConfirm": {
     "description": "Pulsante che conferma di smettere di seguire la serie"
   },
-  "archiveStartIntro": "{count, plural, =1{1 capitolo.} other{{count} capitoli.}} Scarica tutto oppure scegli da quale capitolo partire: i precedenti restano in elenco nel lettore, senza tavole.",
-  "@archiveStartIntro": {
-    "description": "Introduzione del foglio che chiede se scaricare tutta la serie o da un capitolo",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "archiveStartNoMatch": "Nessun capitolo con questo numero.",
   "@archiveStartNoMatch": {
     "description": "Il numero scritto non corrisponde a nessun capitolo"
-  },
-  "archiveStartFrom": "Da «{title}» in poi: {remaining, plural, =1{1 capitolo} other{{remaining} capitoli}}.",
-  "@archiveStartFrom": {
-    "description": "Riepilogo della scelta: dal capitolo indicato in poi, quanti capitoli restano",
-    "placeholders": {
-      "title": {
-        "type": "String"
-      },
-      "remaining": {
-        "type": "int"
-      }
-    }
-  },
-  "archiveStartNone": "Nessun capitolo scelto: si può scaricare tutto.",
-  "@archiveStartNone": {
-    "description": "Nessun capitolo scelto nel foglio di partenza"
-  },
-  "archiveStartAll": "Scarica tutto",
-  "@archiveStartAll": {
-    "description": "Pulsante del foglio: scarica la serie intera"
-  },
-  "archiveStartHere": "Da qui",
-  "@archiveStartHere": {
-    "description": "Pulsante del foglio: scarica dal capitolo scelto in poi"
   },
   "browserTitle": "Verifica del sito",
   "@browserTitle": {
@@ -1622,6 +1755,24 @@
   "serverJobQueued": "In coda · sul server",
   "@serverJobQueued": {
     "description": "Sottotitolo di un lavoro in coda sul server"
+  },
+  "serverJobAhead": "Man mano: {count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@serverJobAhead": {
+    "description": "Sottotitolo di un lavoro nella coda del server messo dalla modalità «Man mano»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverSeriesAhead": "Man mano, {count} da leggere pronti: i capitoli li chiede l'app mentre leggi",
+  "@serverSeriesAhead": {
+    "description": "Sottotitolo di una serie che il server scarica man mano, fra le serie che segue",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "serverOngoingTitle": "Serie in corso sul server",
   "@serverOngoingTitle": {
@@ -3318,33 +3469,9 @@
   "@shellTabCollections": {
     "description": "Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici"
   },
-  "shellTabMore": "Altro",
-  "@shellTabMore": {
-    "description": "Barra di navigazione in basso: destinazione che raccoglie cronologia, statistiche, download e impostazioni"
-  },
-  "moreTitle": "Altro",
-  "@moreTitle": {
-    "description": "Titolo della schermata Altro"
-  },
-  "moreSectionLibrary": "Libreria",
-  "@moreSectionLibrary": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra «Scarica un manga»"
-  },
-  "moreSectionReading": "La tua lettura",
-  "@moreSectionReading": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra cronologia e statistiche"
-  },
-  "moreSectionPrivacy": "Privatezza",
-  "@moreSectionPrivacy": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra la lettura in incognito"
-  },
-  "moreSectionApp": "App",
-  "@moreSectionApp": {
-    "description": "Intestazione di sezione nella schermata Altro, sopra le impostazioni"
-  },
   "moreDownload": "Scarica un manga",
   "@moreDownload": {
-    "description": "Voce di Altro che apre la schermata per archiviare una serie da un sito"
+    "description": "Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito"
   },
   "moreDownloadSubtitle": "Cerca un titolo o incolla un link",
   "@moreDownloadSubtitle": {
@@ -3352,7 +3479,7 @@
   },
   "moreHistory": "Cronologia",
   "@moreHistory": {
-    "description": "Voce di Altro che apre la cronologia di lettura"
+    "description": "Voce delle Impostazioni che apre la cronologia di lettura"
   },
   "moreHistorySubtitle": "Cosa hai letto e quando",
   "@moreHistorySubtitle": {
@@ -3360,7 +3487,7 @@
   },
   "moreStatistics": "Statistiche",
   "@moreStatistics": {
-    "description": "Voce di Altro che apre le statistiche di lettura"
+    "description": "Voce delle Impostazioni che apre le statistiche di lettura"
   },
   "moreStatisticsSubtitle": "Quanto leggi, cosa leggi, quando",
   "@moreStatisticsSubtitle": {
@@ -3368,19 +3495,11 @@
   },
   "moreIncognito": "Lettura in incognito",
   "@moreIncognito": {
-    "description": "Interruttore in Altro: la lettura non lascia tracce"
+    "description": "Interruttore nelle Impostazioni: la lettura non lascia tracce"
   },
   "moreIncognitoSubtitle": "Non registra posizione, capitoli finiti né tempo di lettura",
   "@moreIncognitoSubtitle": {
     "description": "Sottotitolo dell'interruttore della lettura in incognito"
-  },
-  "moreSettings": "Impostazioni",
-  "@moreSettings": {
-    "description": "Voce di Altro che apre le impostazioni dell'app"
-  },
-  "moreSettingsSubtitle": "Aspetto, libreria, lettura, backup",
-  "@moreSettingsSubtitle": {
-    "description": "Sottotitolo della voce Impostazioni: elenca cosa contiene"
   },
   "historyTitle": "Cronologia",
   "@historyTitle": {
@@ -3626,6 +3745,57 @@
   "cleanupNeedsNetwork": "Per togliere da Drive serve la rete",
   "@cleanupNeedsNetwork": {
     "description": "Avviso: senza rete non si possono spostare capitoli di Drive nel cestino"
+  },
+  "removeSeriesTitle": "{count, plural, =1{Eliminare la serie?} other{Eliminare {count} serie?}}",
+  "@removeSeriesTitle": {
+    "description": "Titolo del foglio che conferma l'eliminazione di una o più serie dalla libreria",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeSeriesBody": "{count, plural, =1{«{title}» sparisce dalla libreria: i capitoli sul telefono si cancellano e non ne arrivano più di nuovi. Lo stato di lettura resta.} other{Spariscono dalla libreria: i capitoli sul telefono si cancellano e non ne arrivano più di nuovi. Lo stato di lettura resta.}}",
+  "@removeSeriesBody": {
+    "description": "Spiegazione nel foglio di eliminazione; title è il titolo della serie quando è una sola",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "removeSeriesDrive": "Su Drive la cartella va nel cestino: per trenta giorni si recupera da lì.",
+  "@removeSeriesDrive": {
+    "description": "Nota nel foglio di eliminazione quando la serie è anche su Drive"
+  },
+  "removeSeriesConfirm": "Elimina",
+  "@removeSeriesConfirm": {
+    "description": "Pulsante che conferma l'eliminazione delle serie"
+  },
+  "removeSeriesDone": "{count, plural, =1{Serie eliminata.} other{{count} serie eliminate.}}",
+  "@removeSeriesDone": {
+    "description": "Avviso dopo l'eliminazione",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "removeSeriesFailed": "Non è stato possibile eliminare tutto: {error}",
+  "@removeSeriesFailed": {
+    "description": "Avviso quando Drive rifiuta l'eliminazione",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "removeSeriesAction": "Elimina dalla libreria",
+  "@removeSeriesAction": {
+    "description": "Suggerimento del pulsante cestino nella selezione della libreria e sulla scheda della serie"
   },
   "cleanupIntroDrive": "{count, plural, =1{Un capitolo già letto è ancora su Drive.} other{{count} capitoli già letti sono ancora su Drive.}}",
   "@cleanupIntroDrive": {

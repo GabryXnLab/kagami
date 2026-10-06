@@ -1120,7 +1120,7 @@ abstract class AppLocalizations {
   /// **'Blocca la rotazione'**
   String get readerLockRotation;
 
-  /// Titolo della schermata per archiviare una serie dal sito (Altro → Scarica un manga)
+  /// Titolo della schermata per archiviare una serie dal sito (Impostazioni → Scarica un manga)
   ///
   /// In it, this message translates to:
   /// **'Scarica un manga'**
@@ -1168,12 +1168,6 @@ abstract class AppLocalizations {
   /// **'{site} · {count, plural, =1{1 capitolo} other{{count} capitoli}} · {status}'**
   String archiveSeriesSummary(String site, int count, String status);
 
-  /// Avviso sulla scheda della serie che è già in libreria: quanti capitoli archiviati sul totale
-  ///
-  /// In it, this message translates to:
-  /// **'Già in libreria: {archived} di {total} capitoli. Quelli che ci sono si saltano.'**
-  String archiveKnown(int archived, int total);
-
   /// Titolo della sezione in cui si sceglie quali capitoli scaricare
   ///
   /// In it, this message translates to:
@@ -1216,17 +1210,161 @@ abstract class AppLocalizations {
   /// **'Solo i capitoli toccati. Gli altri restano nell\'elenco, non scaricati.'**
   String get archiveModePickHint;
 
-  /// Suggerimento del campo in cui si scrive il numero del capitolo da cui partire
+  /// Titolo della pagina che si apre dopo aver letto una serie dal sito: lì si sceglie cosa scaricare e dove
   ///
   /// In it, this message translates to:
-  /// **'Numero del capitolo, come sul sito'**
-  String get archiveChapterNumberHint;
+  /// **'Cosa scaricare'**
+  String get archiveChooseTitle;
 
-  /// Quanti capitoli sono stati toccati nella scelta uno per uno
+  /// Scheda della modalità che scarica pochi capitoli alla volta e poi il seguente a ogni capitolo letto
   ///
   /// In it, this message translates to:
-  /// **'{count, plural, =1{1 scelto} other{{count} scelti}}'**
-  String archivePickedCount(int count);
+  /// **'Man mano'**
+  String get archiveModeAhead;
+
+  /// Riga breve sotto la scheda «Tutta»
+  ///
+  /// In it, this message translates to:
+  /// **'Ogni capitolo, una volta sola'**
+  String get archiveModeAllLine;
+
+  /// Riga breve sotto la scheda «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'{count} pronti, poi uno per ogni capitolo letto'**
+  String archiveModeAheadLine(int count);
+
+  /// Riga breve sotto la scheda «Dal capitolo»
+  ///
+  /// In it, this message translates to:
+  /// **'Da un capitolo fino all\'ultimo'**
+  String get archiveModeFromLine;
+
+  /// Riga breve sotto la scheda «Scelti»
+  ///
+  /// In it, this message translates to:
+  /// **'Solo quelli che tocchi'**
+  String get archiveModePickLine;
+
+  /// Spiegazione della modalità «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'Dal capitolo scelto ne scarica {count}. Ogni capitolo letto ne porta uno nuovo, così ne hai sempre {count} da leggere, fino alla fine della serie; quando il sito ne pubblica altri arrivano allo stesso modo.'**
+  String archiveModeAheadHint(int count);
+
+  /// Avviso quando si tocca «Man mano» per un sito protetto da Cloudflare
+  ///
+  /// In it, this message translates to:
+  /// **'Man mano non si può con questo sito: vuole la verifica del browser a ogni lettura, e da solo il telefono non la supera.'**
+  String get archiveModeAheadUnavailable;
+
+  /// Nota sotto le destinazioni in modalità «Man mano», quando il server collegato è di una versione che non la sa fare e quindi non compare fra le scelte
+  ///
+  /// In it, this message translates to:
+  /// **'Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un\'ora dall\'uscita di una versione nuova. Intanto man mano scarica dal telefono.'**
+  String get archiveModeAheadServer;
+
+  /// Suggerimento del campo che filtra l'elenco dei capitoli; Invio sceglie il capitolo con quel numero
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca per numero o titolo'**
+  String get archiveChapterSearch;
+
+  /// Suggerimento del pulsante che mette in cima i capitoli più recenti
+  ///
+  /// In it, this message translates to:
+  /// **'Dal più recente'**
+  String get archiveNewestFirst;
+
+  /// Suggerimento del pulsante che mette in cima il primo capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Dal primo'**
+  String get archiveOldestFirst;
+
+  /// Indicazione sopra l'elenco dei capitoli nelle modalità che partono da un capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca il capitolo da cui partire.'**
+  String get archiveChooseStart;
+
+  /// Pastiglia che sceglie tutti i capitoli non ancora in libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Quelli che mancano'**
+  String get archiveSelectMissing;
+
+  /// Suggerimento sotto le pastiglie di selezione, nella scelta dei capitoli uno per uno
+  ///
+  /// In it, this message translates to:
+  /// **'Tieni premuto un capitolo per prendere anche tutti quelli fra lui e l\'ultimo toccato.'**
+  String get archiveRangeHint;
+
+  /// Riepilogo in fondo alla pagina quando non si è scelto nessun capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun capitolo scelto'**
+  String get archivePickNone;
+
+  /// Riepilogo in fondo alla pagina: quanti capitoli e la destinazione
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo} other{{count} capitoli}} · {where}'**
+  String archiveSummaryChapters(int count, String where);
+
+  /// Riepilogo in fondo alla pagina in modalità «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo subito} other{{count} capitoli subito}}, poi uno per ogni capitolo letto · {where}'**
+  String archiveSummaryAhead(int count, String where);
+
+  /// Pulsante che avvia la modalità «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Scarica 1 capitolo e poi man mano} other{Scarica {count} capitoli e poi man mano}}'**
+  String archiveDownloadAhead(int count);
+
+  /// Pastiglia sotto il titolo: quanti capitoli della serie ci sono già
+  ///
+  /// In it, this message translates to:
+  /// **'In libreria: {archived} di {total}'**
+  String archiveInLibraryCount(int archived, int total);
+
+  /// Accanto a un capitolo già scaricato, nell'elenco dei capitoli da scegliere
+  ///
+  /// In it, this message translates to:
+  /// **'in libreria'**
+  String get archiveChapterInLibrary;
+
+  /// Accanto al capitolo da cui parte il download
+  ///
+  /// In it, this message translates to:
+  /// **'si parte da qui'**
+  String get archiveChapterStart;
+
+  /// Accanto ai capitoli che in modalità «Man mano» arriveranno solo leggendo
+  ///
+  /// In it, this message translates to:
+  /// **'arriverà leggendo'**
+  String get archiveChapterLater;
+
+  /// Riga che apre le impostazioni avanzate del download
+  ///
+  /// In it, this message translates to:
+  /// **'Avanzate'**
+  String get archiveAdvanced;
+
+  /// Sotto «Avanzate»: il valore scelto
+  ///
+  /// In it, this message translates to:
+  /// **'Pausa fra le richieste: {pause}'**
+  String archiveAdvancedLine(String pause);
+
+  /// Pulsante che riapre la pagina di scelta per la serie appena letta
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli cosa scaricare'**
+  String get archiveReopen;
 
   /// Pulsante che seleziona tutti i capitoli da scaricare
   ///
@@ -1323,12 +1461,6 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Scarica tutta la serie'**
   String get archiveDownloadAll;
-
-  /// Pulsante di download, modalità dal capitolo scelto
-  ///
-  /// In it, this message translates to:
-  /// **'Scarica dal capitolo scelto'**
-  String get archiveDownloadFrom;
 
   /// Pulsante di download, modalità capitoli scelti
   ///
@@ -1474,6 +1606,30 @@ abstract class AppLocalizations {
   /// **'{when} · {message}'**
   String archiveHistoryLine(String when, String message);
 
+  /// Titolo della sezione con le serie scaricate da poco, una per riga
+  ///
+  /// In it, this message translates to:
+  /// **'Scaricate di recente'**
+  String get archiveRecent;
+
+  /// Sotto una serie scaricata di recente con più download: quando l'ultimo, quanti, e com'è andato l'ultimo
+  ///
+  /// In it, this message translates to:
+  /// **'{when} · {runs} download · {message}'**
+  String archiveRecentLineRuns(String when, int runs, String message);
+
+  /// Pulsante che riapre il link di un download fallito per riprovarlo
+  ///
+  /// In it, this message translates to:
+  /// **'Riprova'**
+  String get archiveRetry;
+
+  /// Sottotitolo di un lavoro in coda messo dalla modalità «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'Man mano: {count, plural, =1{1 capitolo} other{{count} capitoli}} · {destination}'**
+  String archiveJobAhead(int count, String destination);
+
   /// Titolo della sezione con i siti da cui si può scaricare
   ///
   /// In it, this message translates to:
@@ -1582,6 +1738,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 capitolo noto} other{{count} capitoli noti}} · {destination} · controllata {when}'**
   String archiveTrackedLineChecked(int count, String destination, String when);
 
+  /// Sottotitolo di una serie seguita in modalità «Man mano», fra le serie seguite
+  ///
+  /// In it, this message translates to:
+  /// **'Man mano, {count} da leggere pronti · {destination}'**
+  String archiveTrackedAhead(int count, String destination);
+
   /// Tooltip del pulsante che smette di seguire una serie in corso
   ///
   /// In it, this message translates to:
@@ -1654,41 +1816,11 @@ abstract class AppLocalizations {
   /// **'Smetti'**
   String get archiveForgetConfirm;
 
-  /// Introduzione del foglio che chiede se scaricare tutta la serie o da un capitolo
-  ///
-  /// In it, this message translates to:
-  /// **'{count, plural, =1{1 capitolo.} other{{count} capitoli.}} Scarica tutto oppure scegli da quale capitolo partire: i precedenti restano in elenco nel lettore, senza tavole.'**
-  String archiveStartIntro(int count);
-
   /// Il numero scritto non corrisponde a nessun capitolo
   ///
   /// In it, this message translates to:
   /// **'Nessun capitolo con questo numero.'**
   String get archiveStartNoMatch;
-
-  /// Riepilogo della scelta: dal capitolo indicato in poi, quanti capitoli restano
-  ///
-  /// In it, this message translates to:
-  /// **'Da «{title}» in poi: {remaining, plural, =1{1 capitolo} other{{remaining} capitoli}}.'**
-  String archiveStartFrom(String title, int remaining);
-
-  /// Nessun capitolo scelto nel foglio di partenza
-  ///
-  /// In it, this message translates to:
-  /// **'Nessun capitolo scelto: si può scaricare tutto.'**
-  String get archiveStartNone;
-
-  /// Pulsante del foglio: scarica la serie intera
-  ///
-  /// In it, this message translates to:
-  /// **'Scarica tutto'**
-  String get archiveStartAll;
-
-  /// Pulsante del foglio: scarica dal capitolo scelto in poi
-  ///
-  /// In it, this message translates to:
-  /// **'Da qui'**
-  String get archiveStartHere;
 
   /// Titolo della pagina in cui si supera la verifica anti-robot di un sito
   ///
@@ -1995,6 +2127,18 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'In coda · sul server'**
   String get serverJobQueued;
+
+  /// Sottotitolo di un lavoro nella coda del server messo dalla modalità «Man mano»
+  ///
+  /// In it, this message translates to:
+  /// **'Man mano: {count, plural, =1{1 capitolo} other{{count} capitoli}}'**
+  String serverJobAhead(int count);
+
+  /// Sottotitolo di una serie che il server scarica man mano, fra le serie che segue
+  ///
+  /// In it, this message translates to:
+  /// **'Man mano, {count} da leggere pronti: i capitoli li chiede l\'app mentre leggi'**
+  String serverSeriesAhead(int count);
 
   /// Titolo della voce sulle serie in corso che il server segue
   ///
@@ -4108,43 +4252,7 @@ abstract class AppLocalizations {
   /// **'Raccolte'**
   String get shellTabCollections;
 
-  /// Barra di navigazione in basso: destinazione che raccoglie cronologia, statistiche, download e impostazioni
-  ///
-  /// In it, this message translates to:
-  /// **'Altro'**
-  String get shellTabMore;
-
-  /// Titolo della schermata Altro
-  ///
-  /// In it, this message translates to:
-  /// **'Altro'**
-  String get moreTitle;
-
-  /// Intestazione di sezione nella schermata Altro, sopra «Scarica un manga»
-  ///
-  /// In it, this message translates to:
-  /// **'Libreria'**
-  String get moreSectionLibrary;
-
-  /// Intestazione di sezione nella schermata Altro, sopra cronologia e statistiche
-  ///
-  /// In it, this message translates to:
-  /// **'La tua lettura'**
-  String get moreSectionReading;
-
-  /// Intestazione di sezione nella schermata Altro, sopra la lettura in incognito
-  ///
-  /// In it, this message translates to:
-  /// **'Privatezza'**
-  String get moreSectionPrivacy;
-
-  /// Intestazione di sezione nella schermata Altro, sopra le impostazioni
-  ///
-  /// In it, this message translates to:
-  /// **'App'**
-  String get moreSectionApp;
-
-  /// Voce di Altro che apre la schermata per archiviare una serie da un sito
+  /// Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito
   ///
   /// In it, this message translates to:
   /// **'Scarica un manga'**
@@ -4156,7 +4264,7 @@ abstract class AppLocalizations {
   /// **'Cerca un titolo o incolla un link'**
   String get moreDownloadSubtitle;
 
-  /// Voce di Altro che apre la cronologia di lettura
+  /// Voce delle Impostazioni che apre la cronologia di lettura
   ///
   /// In it, this message translates to:
   /// **'Cronologia'**
@@ -4168,7 +4276,7 @@ abstract class AppLocalizations {
   /// **'Cosa hai letto e quando'**
   String get moreHistorySubtitle;
 
-  /// Voce di Altro che apre le statistiche di lettura
+  /// Voce delle Impostazioni che apre le statistiche di lettura
   ///
   /// In it, this message translates to:
   /// **'Statistiche'**
@@ -4180,7 +4288,7 @@ abstract class AppLocalizations {
   /// **'Quanto leggi, cosa leggi, quando'**
   String get moreStatisticsSubtitle;
 
-  /// Interruttore in Altro: la lettura non lascia tracce
+  /// Interruttore nelle Impostazioni: la lettura non lascia tracce
   ///
   /// In it, this message translates to:
   /// **'Lettura in incognito'**
@@ -4191,18 +4299,6 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Non registra posizione, capitoli finiti né tempo di lettura'**
   String get moreIncognitoSubtitle;
-
-  /// Voce di Altro che apre le impostazioni dell'app
-  ///
-  /// In it, this message translates to:
-  /// **'Impostazioni'**
-  String get moreSettings;
-
-  /// Sottotitolo della voce Impostazioni: elenca cosa contiene
-  ///
-  /// In it, this message translates to:
-  /// **'Aspetto, libreria, lettura, backup'**
-  String get moreSettingsSubtitle;
 
   /// Titolo della schermata della cronologia di lettura
   ///
@@ -4467,6 +4563,48 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Per togliere da Drive serve la rete'**
   String get cleanupNeedsNetwork;
+
+  /// Titolo del foglio che conferma l'eliminazione di una o più serie dalla libreria
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Eliminare la serie?} other{Eliminare {count} serie?}}'**
+  String removeSeriesTitle(int count);
+
+  /// Spiegazione nel foglio di eliminazione; title è il titolo della serie quando è una sola
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{«{title}» sparisce dalla libreria: i capitoli sul telefono si cancellano e non ne arrivano più di nuovi. Lo stato di lettura resta.} other{Spariscono dalla libreria: i capitoli sul telefono si cancellano e non ne arrivano più di nuovi. Lo stato di lettura resta.}}'**
+  String removeSeriesBody(int count, String title);
+
+  /// Nota nel foglio di eliminazione quando la serie è anche su Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Su Drive la cartella va nel cestino: per trenta giorni si recupera da lì.'**
+  String get removeSeriesDrive;
+
+  /// Pulsante che conferma l'eliminazione delle serie
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get removeSeriesConfirm;
+
+  /// Avviso dopo l'eliminazione
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Serie eliminata.} other{{count} serie eliminate.}}'**
+  String removeSeriesDone(int count);
+
+  /// Avviso quando Drive rifiuta l'eliminazione
+  ///
+  /// In it, this message translates to:
+  /// **'Non è stato possibile eliminare tutto: {error}'**
+  String removeSeriesFailed(String error);
+
+  /// Suggerimento del pulsante cestino nella selezione della libreria e sulla scheda della serie
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina dalla libreria'**
+  String get removeSeriesAction;
 
   /// Introduzione del foglio «Libera spazio» quando i capitoli letti sono solo su Google Drive
   ///

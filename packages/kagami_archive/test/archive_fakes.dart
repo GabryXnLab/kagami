@@ -1,5 +1,6 @@
-// Siti finti per i test dell'archivio: rispondono da memoria come MangaK e
-// ManhwaRead, con le fixture di `mangaarchive/tests` sul server.
+// Siti finti per i test dell'archivio: rispondono da memoria come MangaK,
+// ManhwaRead e Asura Scans, con le fixture di `mangaarchive/tests` sul server
+// e, per Asura, risposte dell'API vera ridotte all'osso.
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -217,6 +218,97 @@ class FakeManhwaRead implements ProviderHttp {
 
   @override
   Future<Map<String, Object?>> json(String url) => throw UnimplementedError();
+}
+
+/// L'API di Asura Scans: la serie, l'elenco dal più recente con un capitolo
+/// in accesso anticipato, e le tavole di ogni capitolo.
+class FakeAsuraScans implements ProviderHttp {
+  FakeAsuraScans() {
+    for (final pages in chapterPages.values) {
+      for (final page in pages) {
+        images[page] = webp(80, 120, page);
+      }
+    }
+    images[cover] = webp(80, 120, 'cover');
+  }
+
+  static const String api = 'https://api.asurascans.com/api';
+  static const String cover = 'https://cdn.asurascans.com/asura-images/covers/war-of-extinction.f60b25.webp';
+
+  final Map<String, Object?> series = {
+    'id': '6090', 'slug': 'war-of-extinction', 'title': 'War of Extinction',
+    'alt_titles': ['멸망전쟁'],
+    'description': '<p>Heavenly Demons. Hunters.</p><p>[Game Character<br>Abilities Synchronized.]</p>',
+    'cover': cover, 'status': 'ongoing', 'type': 'manhwa',
+    'author': 'Writer', 'artist': 'Studio', 'chapter_count': 3,
+    'created_at': '0001-01-01T00:00:00Z', 'updated_at': '2026-10-06T15:05:06Z',
+    'public_url': '/comics/war-of-extinction-bd5bdaf8', 'source_url': '/s/6090',
+    'genres': [{'id': 1, 'name': 'Action', 'slug': 'action'}, {'id': 16, 'name': 'Fantasy', 'slug': 'fantasy'}],
+  };
+
+  final List<Map<String, Object?>> chapters = [
+    {'id': 103, 'number': 3, 'slug': 'chapter-3', 'is_premium': true, 'series_slug': 'war-of-extinction'},
+    {'id': 102, 'number': 2, 'title': 'The Arena', 'slug': 'chapter-2', 'is_premium': false, 'series_slug': 'war-of-extinction'},
+    {
+      'id': 101, 'number': 1, 'slug': 'ac158a3a-7e87-4492-b792-cf36c9ef9dd5', 'is_premium': false,
+      'series_slug': 'war-of-extinction', 'published_at': '2026-09-17T02:01:53Z',
+    },
+  ];
+
+  final Map<int, List<String>> chapterPages = {
+    101: [
+      'https://cdn.asurascans.com/asura-images/chapters/war-of-extinction/1/7812b6.webp?v=1789613919',
+      'https://cdn.asurascans.com/asura-images/chapters/war-of-extinction/1/b69f1b.webp?v=1789613919',
+    ],
+    102: ['https://cdn.asurascans.com/asura-images/chapters/war-of-extinction/2/8cdc64.webp?v=1790787858'],
+  };
+
+  final Map<String, Uint8List> images = {};
+  final List<String> requests = [];
+
+  /// I capitoli che l'API dà chiusi, come durante l'accesso anticipato.
+  final Set<int> locked = {};
+
+  Map<String, Object?> _chapter(int id) {
+    final item = chapters.firstWhere((c) => c['id'] == id);
+    return {
+      'access_gate': '',
+      'is_locked': locked.contains(id),
+      'chapter': {
+        ...item,
+        if (!locked.contains(id))
+          'pages': [
+            for (final (i, url) in chapterPages[id]!.indexed)
+              {'url': url, if (i == 0) 'width': 900, if (i == 0) 'height': 16000},
+          ],
+      },
+    };
+  }
+
+  @override
+  Future<Map<String, Object?>> json(String url) async {
+    requests.add(url);
+    if (url == '$api/series/war-of-extinction') {
+      return {'series': series, 'recommended_series': <Object?>[], 'linked_ebook': null};
+    }
+    if (url == '$api/series/war-of-extinction/chapters') return {'data': chapters};
+    for (final item in chapters) {
+      if (url == '$api/series/war-of-extinction/chapters/${item['slug']}') return {'data': _chapter(item['id'] as int)};
+    }
+    if (url.startsWith('$api/series/')) throw HttpStatusError(404);
+    throw StateError(url);
+  }
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    requests.add(url);
+    final image = images[url];
+    if (image != null) return _image(image);
+    throw StateError(url);
+  }
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) => throw UnimplementedError();
 }
 
 class ChallengedHttp implements ProviderHttp {

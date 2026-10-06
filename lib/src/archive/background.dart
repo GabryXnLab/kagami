@@ -51,6 +51,8 @@ Future<void> runBackgroundArchive({required bool check}) async {
     if (call.method == 'stop') stopped = true;
   });
   var end = RunEnd.done;
+  // Il controllo non riuscito per la rete si ritenta fra poco, non domani.
+  var checkFailed = false;
   DriveClient? client;
   _RunLock? lock;
   try {
@@ -68,6 +70,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
         );
       } on ProviderOffline {
         end = RunEnd.retry;
+        checkFailed = true;
       }
     }
     // Un altro motore sta già scaricando: i capitoli messi in coda dal
@@ -101,6 +104,6 @@ Future<void> runBackgroundArchive({required bool check}) async {
   } finally {
     await lock?.release();
     client?.close();
-    await channel.invokeMethod<void>('done', {'end': end.name});
+    await channel.invokeMethod<void>('done', {'end': end.name, 'checkFailed': checkFailed});
   }
 }

@@ -2,10 +2,10 @@
 ///
 /// La pagina della serie spesso è dietro la verifica di Cloudflare: il
 /// provider lo dice con [CloudflareChallenge] e chi lo usa la fa superare in
-/// una WebView, poi gli ripassa la pagina ([SnapshotHttp]). Le tavole invece
-/// stanno su `manread.xyz`, che non chiede niente: quando anche la pagina di
-/// un capitolo è bloccata, gli id della serie bastano a trovarle provando i
-/// nomi in ordine ([_probeCdn]).
+/// una WebView ([ManhwaRead.browser]), poi gli ripassa la pagina
+/// ([SnapshotHttp]). Le tavole invece stanno su `manread.xyz`, che non chiede
+/// niente: quando anche la pagina di un capitolo è bloccata, gli id della
+/// serie bastano a trovarle provando i nomi in ordine ([_probeCdn]).
 library;
 
 import 'dart:convert';
@@ -17,6 +17,7 @@ import 'package:html/parser.dart' as html;
 import '../http.dart';
 import '../model.dart';
 import '../providers.dart';
+import 'kit.dart';
 
 final RegExp _seriesPath = RegExp(r'^/manhwa/([a-z0-9]+(?:-[a-z0-9]+)*)/?$');
 final RegExp _chapterData = RegExp(r'\bchapterData\s*=\s*');
@@ -204,28 +205,26 @@ class ManhwaRead extends Provider {
   @override
   String get home => 'https://manhwaread.com';
 
+  /// Il segno che la verifica è passata: c'è l'elenco dei capitoli nelle
+  /// forme che [fetchSeries] sa leggere, o la barra di ricerca del sito.
   @override
-  bool get needsBrowser => true;
+  BrowserGate get browser => const BrowserGate(
+        hosts: ['manhwaread.com', 'www.manhwaread.com'],
+        seriesReady:
+            "!!document.querySelector('#chaptersList, #groupChapterList, .chapters-list, li.wp-manga-chapter')",
+        searchReady: "!!document.getElementById('inputQuickSearch')",
+      );
 
   @override
-  bool accepts(String url) {
-    final uri = Uri.tryParse(url);
-    return uri != null &&
-        uri.scheme == 'https' &&
-        const {'manhwaread.com', 'www.manhwaread.com'}.contains(uri.host) &&
-        !uri.hasPort &&
-        uri.userInfo.isEmpty &&
-        !uri.hasQuery &&
-        !uri.hasFragment &&
-        _seriesPath.hasMatch(uri.path);
-  }
+  bool accepts(String url) =>
+      siteLink(url, hosts: const {'manhwaread.com', 'www.manhwaread.com'}, path: _seriesPath, plain: true);
 
   @override
   bool allowedHost(Uri uri) =>
       const {'manhwaread.com', 'www.manhwaread.com', 'manread.xyz', 'mancover.xyz'}
           .contains(uri.host);
 
-  /// L'indirizzo della serie nella forma che il sito usa per sé.
+  @override
   String canonical(String url) =>
       'https://manhwaread.com/manhwa/${_seriesPath.firstMatch(Uri.parse(url).path)![1]}/';
 
@@ -330,14 +329,6 @@ class ManhwaRead extends Provider {
     if (chapters.isEmpty) {
       throw const ProviderError('Elenco capitoli ManhwaRead assente o incompleto.');
     }
-    final ordered = [
-      for (final chapter in chapters)
-        if (chapterNumberPattern.firstMatch(chapter.title) case final match?)
-          (int.parse(match[1]!), int.parse(match[2] ?? '0')),
-    ];
-    final reversed = ordered.length >= 2 &&
-        (ordered.first.$1 > ordered.last.$1 ||
-            (ordered.first.$1 == ordered.last.$1 && ordered.first.$2 > ordered.last.$2));
     return Series(
       provider: id,
       id: slug,
@@ -345,7 +336,7 @@ class ManhwaRead extends Provider {
       url: canonicalUrl,
       coverUrl: cover,
       metadata: metadata,
-      chapters: reversed ? chapters.reversed.toList() : chapters,
+      chapters: oldestFirst(chapters),
     );
   }
 
@@ -516,27 +507,4 @@ class ManhwaRead extends Provider {
     }
     throw ProviderError('Troppe immagini nel capitolo ${chapter.title}; verifica il CDN.');
   }
-}
-
-/// Una pagina della serie già in mano, letta nella WebView: la serie si
-/// legge da lì, capitoli e tavole passano da [inner] come sempre.
-class SnapshotHttp implements ProviderHttp {
-  SnapshotHttp(this.inner, this.url, this.body);
-
-  final ProviderHttp inner;
-  final String url;
-  final Uint8List body;
-
-  @override
-  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
-    if (url == this.url) return (body: body, contentType: 'text/html');
-    return inner.get(url, limit: limit, referer: referer);
-  }
-
-  @override
-  Future<bool> imageExists(String url, {required String referer}) =>
-      inner.imageExists(url, referer: referer);
-
-  @override
-  Future<Map<String, Object?>> json(String url) => inner.json(url);
 }

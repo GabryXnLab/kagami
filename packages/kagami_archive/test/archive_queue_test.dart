@@ -208,6 +208,77 @@ void main() {
       expect(await tracked(), isEmpty);
     });
 
+    test('l\'ultimo capitolo, uscito con la serie conclusa, va in coda lo stesso', () async {
+      await files.enqueue(job());
+      await ArchiveRunner(files, environment()).run();
+      http.series['status'] = 'Completed';
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      final report = await check();
+      expect(report.queued, ['Test / Series']);
+      expect(report.removed, ['Test / Series']);
+      expect((await files.jobs()).single.ids, {'C3'});
+    });
+
+    test('una serie in pausa o con uno stato che non si capisce resta seguita', () async {
+      for (final status in ['Hiatus', 'Boh']) {
+        http.series['status'] = status;
+        await files.enqueue(job());
+        await ArchiveRunner(files, environment()).run();
+        expect((await tracked()).single.chapters, ['C1', 'C2'], reason: status);
+        await check();
+        expect(await tracked(), hasLength(1), reason: status);
+      }
+    });
+
+    test('un capitolo nuovo non prende il posto della serie chiesta dall\'utente', () async {
+      await files.enqueue(job());
+      await ArchiveRunner(files, environment()).run();
+      await files.enqueue(job(id: 'utente', ids: {'C1'}));
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      await check();
+      final queued = (await files.jobs()).single;
+      expect((queued.id, queued.automatic), ('utente', false));
+      expect(queued.ids, {'C1', 'C3'});
+      await files.enqueue(job(id: 'tutta'));
+      await check();
+      expect((await files.jobs()).single.ids, isNull);
+    });
+
+    group('man mano', () {
+      ArchiveJob ahead(Set<String> ids) => ArchiveJob(
+            id: 'm',
+            url: 'https://mangak.io/test-series',
+            title: 'Test',
+            target: ArchiveTarget(destination: ArchiveDestination.phone, root: root()),
+            ids: ids,
+            delayMs: 0,
+            ahead: 5,
+          );
+
+      test('i capitoli nuovi scendono solo quando l\'app li chiede', () async {
+        await files.enqueue(ahead({'C1'}));
+        await ArchiveRunner(files, environment()).run();
+        expect((await tracked()).single.ahead, 5);
+        http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+        http.addChapter(4, 'Chapter 4', 'C4', ['https://rx.qvzre.org/e.webp']);
+        expect((await check()).queued, isEmpty);
+        await Tracking(files.ongoing).want('mangak:S1', 1);
+        expect((await check()).queued, ['Test / Series']);
+        final queued = (await files.jobs()).single;
+        expect(queued.ids, {'C3'});
+        expect(queued.ahead, 5);
+        expect((await tracked()).single.wanted, 0);
+      });
+
+      test('resta seguita anche conclusa', () async {
+        http.series['status'] = 'Completed';
+        await files.enqueue(ahead({'C1'}));
+        await ArchiveRunner(files, environment()).run();
+        await check();
+        expect((await tracked()).single.ahead, 5);
+      });
+    });
+
     test('partendo da un capitolo, i precedenti non si riscaricano da soli', () async {
       await files.enqueue(job(start: '2'));
       await ArchiveRunner(files, environment()).run();

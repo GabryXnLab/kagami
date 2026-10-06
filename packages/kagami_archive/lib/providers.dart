@@ -4,10 +4,25 @@
 /// [providers]: il motore non conosce l'HTML di nessuno. È lo stesso registro
 /// di `mangaarchive/providers/__init__.py`, e i due vanno tenuti allineati:
 /// una serie archiviata da una parte si aggiorna dall'altra.
+///
+/// Aggiungere un sito:
+/// 1. `providers/<id>.dart`, una sottoclasse di [Provider] che usa gli
+///    attrezzi di `providers/kit.dart` per link, testi e ordine dei capitoli;
+/// 2. registrarlo in [providers];
+/// 3. l'icona in `assets/providers/<id>.png` (96×96);
+/// 4. le risposte finte in `test/archive_fakes.dart` e i suoi casi in
+///    `test/archive_providers_test.dart`; `test/provider_contract_test.dart`
+///    controlla da solo ciò che ogni sito deve avere.
+///
+/// Il resto — app, server, coda, serie in corso — non nomina nessun sito: se
+/// uno sta dietro una verifica del browser lo dice [Provider.browser], e la
+/// WebView, la pagina mandata al server e il salto nel controllo ad app chiusa
+/// seguono da lì.
 library;
 
 import 'http.dart';
 import 'model.dart';
+import 'providers/asurascans.dart';
 import 'providers/mangak.dart';
 import 'providers/manhwaread.dart';
 
@@ -38,8 +53,46 @@ abstract class Provider {
 
   void validateUrl(String url) => checkUrl(url, allowedHost);
 
+  /// Se [url] si può chiedere per conto del sito: [validateUrl] senza
+  /// eccezione, per le copertine che si mostrano solo se sono sue.
+  bool allows(String url) {
+    try {
+      validateUrl(url);
+      return true;
+    } on ProviderError {
+      return false;
+    }
+  }
+
+  /// L'indirizzo della serie nella forma che il sito usa per sé: è quello che
+  /// la WebView apre e che la pagina mandata al server sostituisce.
+  String canonical(String url) => url;
+
+  /// Come far passare la verifica del sito in una WebView; `null` per i siti
+  /// che rispondono al client HTTP dell'app.
+  BrowserGate? get browser => null;
+
   /// Se la serie passa da una verifica che solo una WebView supera.
-  bool get needsBrowser => false;
+  bool get needsBrowser => browser != null;
+}
+
+/// Ciò che serve all'app per aprire un sito protetto in una WebView: di chi
+/// portarsi dietro i cookie e come riconoscere, in JavaScript, che la pagina
+/// vera è arrivata al posto della verifica.
+class BrowserGate {
+  const BrowserGate({
+    required this.hosts,
+    required this.seriesReady,
+    required this.searchReady,
+  });
+
+  final List<String> hosts;
+
+  /// Sulla pagina di una serie: c'è l'elenco dei capitoli.
+  final String seriesReady;
+
+  /// Sulla pagina principale o dei risultati: c'è la ricerca del sito.
+  final String searchReady;
 }
 
 /// Una serie trovata cercando: quanto basta a riconoscerla e il link da
@@ -68,7 +121,7 @@ class SearchResult {
 /// tendina, non di una pagina di risultati.
 const int searchLimit = 10;
 
-final List<Provider> providers = [MangaK(), ManhwaRead()];
+final List<Provider> providers = [MangaK(), ManhwaRead(), AsuraScans()];
 
 final RegExp chapterNumberPattern =
     RegExp(r'\bchapter\s*0*(\d+)(?:[.,](\d+))?\b', caseSensitive: false);

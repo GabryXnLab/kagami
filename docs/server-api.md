@@ -124,8 +124,10 @@ il controllo di salute di Docker.
   "service": "kagami-server", "version": "0.2.0", "api": 2,
   "name": "Il server di Gabry",
   "owner": "proprietario@gmail.com",
-  "providers": [{"id": "mangak", "name": "MangaK"}, {"id": "manhwaread", "name": "ManhwaRead"}],
+  "providers": [{"id": "mangak", "name": "MangaK"}, {"id": "manhwaread", "name": "ManhwaRead"},
+                {"id": "asurascans", "name": "Asura Scans"}],
   "images": true,
+  "features": ["ahead"],
   "check": {"minutes": 240, "time": 240, "enabled": true, "library": true,
             "checkedAt": "…", "checked": 12, "queued": 2, "failed": 0},
   "me": {
@@ -140,6 +142,10 @@ il controllo di salute di Docker.
   finisce tutto ciò che mette in coda.
 - `images`: il server fa miniature e tessere (MALF, «Tessere delle tavole
   alte»). Se è `false` la libreria resta valida, solo senza tessere.
+- `features`: ciò che il server sa fare oltre alla v2 di partenza. Un
+  client offre una funzione solo a un server che la elenca; un server di
+  prima non ha il campo. `ahead`: scarica «man mano» (`ahead` e
+  `automatic` in `POST /v2/jobs`, `PUT /v2/ongoing/{key}`).
 - `check` è il controllo quotidiano di chi chiama (`PUT /v2/check`):
   `time` l'ora, in minuti dalla mezzanotte del server; `minutes` la stessa
   ora, `null` se è spento (`enabled`), come per i client di prima;
@@ -186,11 +192,14 @@ Come sopra, senza toccare il permesso.
 | `ids` | elenco di stringhe | solo questi capitoli, per id; non insieme a `start` |
 | `delayMs` | intero 0–5000 | distanza fra l'inizio di una richiesta al sito e il seguente, che salgono su più corsie (default 200) |
 | `snapshot` | stringa | la pagina HTML della serie, solo per i siti dietro la verifica del browser (ManhwaRead) |
+| `ahead` | intero 1–50 | scarica «man mano»: la serie resta seguita, anche conclusa, e i capitoli seguenti li chiede l'app (sotto); non per i siti dietro la verifica del browser |
+| `automatic` | booleano | il lavoro non lo chiede una persona ma l'app: se la stessa serie è già in coda con `ids`, gli aggiunge i suoi invece di sostituirlo |
 
 Va nella coda di chi chiama e sul suo Drive, nella sua cartella: senza
 permesso o cartella, `409 drive_not_ready`. Senza `start` né `ids` si
 scarica tutta la serie. In ogni caso `series.json` ha l'elenco completo dei
-capitoli (MALF). Lo stesso link già in coda viene sostituito. Risponde
+capitoli (MALF). Lo stesso link già in coda viene sostituito, se non è
+quello in corso e se il lavoro nuovo non è `automatic`. Risponde
 `201`:
 
 ```json
@@ -219,7 +228,7 @@ che lo dice.
 
 `state` è `idle`, `running` o `waiting` (rete o Drive: `message` dice
 perché). Il primo della coda è quello in corso. `history` tiene gli ultimi
-venti esiti, dal più recente. Sono gli stessi campi della coda del telefono.
+sessanta esiti, dal più recente, ciascuno col suo `url`. Sono gli stessi campi della coda del telefono.
 Un lavoro appena finito esce dalla coda un attimo prima che il suo esito
 entri in `history`: un client che guarda la coda non ne deduce che è stato
 annullato. Ogni utente vede solo la sua coda.
@@ -237,12 +246,37 @@ Dimentica gli esiti.
 
 ```json
 {"series": [{"key": "mangak:KY55w5Y9", "title": "…", "url": "…", "chapters": 169,
-             "addedAt": "…", "checkedAt": "…", "problem": null}]}
+             "addedAt": "…", "checkedAt": "…", "problem": null},
+            {"key": "mangak:A1", "title": "…", "url": "…", "chapters": 40,
+             "addedAt": "…", "checkedAt": "…", "ahead": 5, "wanted": 0}]}
 ```
 
-Una serie che il sito dà `ongoing`, scaricata dal server, entra qui da sola;
-il controllo quotidiano mette in coda solo i capitoli nuovi, e una serie
-conclusa esce da sola. Sono quelle di chi chiama.
+Una serie scaricata dal server entra qui da sola, se il sito non la dà per
+conclusa o cancellata; il controllo quotidiano mette in coda solo i
+capitoli nuovi, e una serie conclusa esce da sola dopo aver messo in coda
+gli ultimi. Se il controllo non arriva al sito o a Drive si riprova dopo
+mezz'ora. Sono quelle di chi chiama.
+
+Con `ahead` la serie si scarica man mano e resta anche conclusa: il
+controllo mette in coda solo i capitoli nuovi che l'app ha chiesto
+(`wanted`). I capitoli che l'indice della serie già elenca li chiede l'app
+con `POST /v2/jobs` (`ids`, `ahead`, `automatic`), perché è lei a sapere
+cosa si legge.
+
+### `PUT /v2/ongoing/{key}` — quanti capitoli nuovi servono
+
+```json
+{"wanted": 2}
+```
+
+Solo per le serie con `ahead` (altrimenti `409 not_ahead`); `wanted` va da 0
+a 50. Il controllo seguente metterà in coda al più quel numero di capitoli
+nuovi del sito. Se il sito non è stato guardato da sei ore, lo si guarda
+subito, per quella serie sola. Risponde `200`:
+
+```json
+{"key": "mangak:A1", "wanted": 2, "checking": true}
+```
 
 ### `DELETE /v2/ongoing/{key}` → `204`
 

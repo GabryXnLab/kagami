@@ -33,6 +33,7 @@ import 'data/library_repository.dart';
 import 'data/library_view.dart';
 import 'data/network.dart';
 import 'data/notifications.dart';
+import 'data/read_ahead.dart';
 import 'data/reader_settings.dart';
 import 'data/server_access.dart';
 import 'data/statistics.dart';
@@ -419,10 +420,41 @@ class DownloadPlace extends AsyncNotifier<bool> {
 final downloadPrivateProvider =
     AsyncNotifierProvider<DownloadPlace, bool>(DownloadPlace.new);
 
+/// Le serie tolte dalla libreria, chiave → firma della riga di allora. Sta
+/// fra le impostazioni del database, quindi viaggia con backup e account:
+/// una copia di `library.json` rimasta indietro su un altro telefono non le
+/// rimette in griglia.
+class RemovedSeries extends AsyncNotifier<Map<String, String>> {
+  static const String _key = 'library.removed';
+
+  @override
+  Future<Map<String, String>> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    if (value == null || value.isEmpty) return const {};
+    try {
+      return {
+        for (final MapEntry(:key, :value) in (jsonDecode(value) as Map).entries) '$key': '$value',
+      };
+    } on Object {
+      return const {};
+    }
+  }
+
+  Future<void> hide(Iterable<SeriesEntry> entries) async {
+    final next = {...await future, for (final entry in entries) entry.key: entry.signature};
+    state = AsyncData(next);
+    await ref.read(userRepositoryProvider).writeSetting(_key, jsonEncode(next));
+  }
+}
+
+final removedSeriesProvider =
+    AsyncNotifierProvider<RemovedSeries, Map<String, String>>(RemovedSeries.new);
+
 final libraryCatalogProvider = FutureProvider<LibraryCatalog>((ref) async {
   final library = ref.watch(libraryProvider);
   if (library == null) return LibraryCatalog.empty;
-  final catalog = await library.load();
+  final removed = await ref.watch(removedSeriesProvider.future);
+  final catalog = (await library.load()).hiding(removed);
   final drive = ref.read(driveRepositoryProvider);
   // Aperta dall'istantanea, la libreria di Drive si rilegge dietro alla
   // griglia già disegnata, e la si rifà solo se è cambiato qualcosa.
@@ -1547,7 +1579,7 @@ final incognitoProvider = AsyncNotifierProvider<Incognito, bool>(Incognito.new);
 
 /// Le destinazioni della navigazione. Stanno nel grafo e non nella shell
 /// perché anche le raccolte automatiche vi mandano l'utente.
-enum ShellTab { home, library, collections, more }
+enum ShellTab { home, library, collections, settings }
 
 class ShellTabNotifier extends Notifier<ShellTab> {
   @override
@@ -1687,6 +1719,166 @@ class ArchiveController extends Notifier<ArchiveView> {
 
 final archiveProvider =
     NotifierProvider.autoDispose<ArchiveController, ArchiveView>(ArchiveController.new);
+
+/// Le serie scaricate «man mano»: a ogni stato di lettura pubblicato —
+/// uscendo dal lettore — e a ogni libreria riletta si guarda se davanti al
+/// lettore mancano capitoli, e si mettono in coda. Vive accanto alla shell,
+/// come [arrivalsProvider], perché si legge da ogni destinazione.
+///
+/// Le serie le segue chi le scarica: la coda del telefono o il server
+/// collegato. Il server non sa cosa si legge, quindi anche per le sue i
+/// capitoli li chiede l'app: quelli che l'indice conosce in coda sul server
+/// (`POST /v2/jobs` con `ahead` e `automatic`), quelli nuovi del sito con
+/// `PUT /v2/ongoing/{key}`, che li fa cercare a lui.
+class ReadAhead extends Notifier<void> {
+  Future<void> _work = Future.value();
+  Timer? _soon;
+
+  /// L'ultimo download finito visto qui, dal telefono e dal server: uno più
+  /// recente vuol dire capitoli che la libreria in memoria non conosce
+  /// ancora, e che altrimenti si rimetterebbero in coda.
+  DateTime? _seenLocal;
+  DateTime? _seenServer;
+
+  /// Il controllo sul sito per una serie arrivata in fondo: non a ogni
+  /// uscita dal lettore, che in fondo alla serie sono tutte uguali.
+  static const Duration _recheck = Duration(hours: 6);
+
+  @override
+  void build() {
+    ref.listen(readingProvider, (_, _) => _schedule());
+    ref.listen(libraryCatalogProvider, (_, _) => _schedule());
+    ref.onDispose(() => _soon?.cancel());
+  }
+
+  /// Pubblicare lo stato e rileggere la libreria arrivano spesso insieme.
+  void _schedule() {
+    _soon?.cancel();
+    _soon = Timer(const Duration(seconds: 2), () {
+      _work = _work.then((_) => _plan()).catchError((Object _) {});
+    });
+  }
+
+  /// Il catalogo è più vecchio dell'ultimo download finito: lo si rilegge,
+  /// e il catalogo nuovo fa ripartire il giro.
+  bool _stale(DateTime? latest, DateTime? seen) {
+    if (seen == null || latest == null || latest == seen) return false;
+    ref.read(driveRepositoryProvider)?.refresh();
+    ref.invalidate(libraryCatalogProvider);
+    return true;
+  }
+
+  /// Cosa manca davanti al lettore per la serie [key], con [pending]
+  /// capitoli già in coda; `null` se la libreria non la conosce ancora.
+  Future<AheadPlan?> _planOf(String key, int window, Set<String> pending) async {
+    final catalog = ref.read(libraryCatalogProvider).value;
+    final library = ref.read(libraryProvider);
+    final reading = ref.read(readingProvider).value;
+    if (catalog == null || library == null || reading == null) return null;
+    final row = catalog.index.series.firstWhereOrNull((row) => row.key == key);
+    if (row == null) return null;
+    final chapters = await library.loadSeries(row, catalog.holders[key] ?? const []);
+    if (chapters == null) return null;
+    return planAhead(
+      chapters: chapters.index.chapters,
+      state: reading.of(key),
+      pending: pending,
+      window: window,
+    );
+  }
+
+  static bool _due(DateTime? checked) => checked == null || DateTime.now().difference(checked) > _recheck;
+
+  Future<void> _plan() async {
+    if (await _planServer()) return;
+    await _planPhone();
+  }
+
+  /// `true` se il catalogo va riletto prima di decidere.
+  Future<bool> _planServer() async {
+    final link = ref.read(serverLinkProvider).value;
+    if (link == null) return false;
+    final client = serverClient(ref, link);
+    try {
+      final smart = [for (final series in await client.ongoing()) if (series.ahead != null) series];
+      if (smart.isEmpty) return false;
+      final queue = await client.queue();
+      final seen = _seenServer;
+      _seenServer = queue.history.firstOrNull?.finishedAt;
+      if (_stale(_seenServer, seen)) return true;
+      for (final series in smart) {
+        final same = [for (final job in queue.jobs) if (job.url == series.url) job];
+        if (same.any((job) => job.ids == null)) continue;
+        final plan = await _planOf(series.key, series.ahead!, {for (final job in same) ...?job.ids});
+        if (plan == null) continue;
+        if (plan.enqueue.isNotEmpty) {
+          await client.enqueue(
+            url: series.url,
+            title: series.title,
+            ids: plan.enqueue.toSet(),
+            ahead: series.ahead,
+            automatic: true,
+          );
+        }
+        if (plan.wanted != series.wanted) await client.want(series.key, plan.wanted);
+      }
+    } on ServerException {
+      // Server spento, account non ammesso, versione vecchia: ci si riprova
+      // alla prossima uscita dal lettore.
+    } on IOException {
+      // Lo stesso, senza rete.
+    } finally {
+      client.close();
+    }
+    return false;
+  }
+
+  Future<void> _planPhone() async {
+    final files = ref.read(archiveFilesProvider);
+    final tracking = Tracking(files.ongoing);
+    final smart = [for (final entry in await tracking.load()) if (entry.ahead != null) entry];
+    if (smart.isEmpty) return;
+    final seen = _seenLocal;
+    _seenLocal = (await files.history()).firstOrNull?.finishedAt;
+    if (_stale(_seenLocal, seen)) return;
+    final jobs = await files.jobs();
+    var queued = false;
+    final check = <String>{};
+    for (final entry in smart) {
+      final same = [for (final job in jobs) if (job.url == entry.url) job];
+      // Una serie che scende per intero, o da un capitolo in poi, porta già
+      // tutto quello che si potrebbe chiedere.
+      if (same.any((job) => job.ids == null)) continue;
+      final plan = await _planOf(entry.key, entry.ahead!, {for (final job in same) ...?job.ids});
+      if (plan == null) continue;
+      if (plan.enqueue.isNotEmpty) {
+        await files.enqueue(ArchiveJob(
+          id: 'ahead-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
+          url: entry.url,
+          title: entry.title,
+          target: entry.target,
+          ids: plan.enqueue.toSet(),
+          automatic: true,
+          ahead: entry.ahead,
+        ));
+        queued = true;
+      }
+      await tracking.want(entry.key, plan.wanted);
+      if (plan.wanted > 0 && _due(entry.checkedAt)) check.add(entry.key);
+    }
+    if (check.isNotEmpty) {
+      try {
+        final report = await tracking.check(files, (provider) => SiteHttp(provider.allowedHost), only: check);
+        if (report.queued.isNotEmpty) queued = true;
+      } on ProviderOffline {
+        // Lo rifà il controllo quotidiano, o la prossima uscita dal lettore.
+      }
+    }
+    if (queued) await const ArchiveScheduler().start();
+  }
+}
+
+final readAheadProvider = NotifierProvider<ReadAhead, void>(ReadAhead.new);
 
 /// Il server che scarica al posto del telefono: il suo indirizzo. Sta fra
 /// le impostazioni del database, quindi viaggia con backup e account come la
@@ -1884,6 +2076,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     Set<String>? ids,
     int? delayMs,
     String? snapshot,
+    int? ahead,
   }) async {
     final job = await _live.enqueue(
       url: url,
@@ -1892,6 +2085,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
       ids: ids,
       delayMs: delayMs,
       snapshot: snapshot,
+      ahead: ahead,
     );
     await refresh();
     return job;

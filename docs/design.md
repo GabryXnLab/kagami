@@ -16,7 +16,7 @@ L'app è quindi la metà "lettore" di un lettore musicale: la libreria è già l
 il valore è in come la si percorre e in cosa ricorda.
 
 Da quando legge e scrive Drive, l'app può anche fare la parte del server:
-**Altro → Scarica un manga** porta una serie dal sito alla libreria con lo
+**Impostazioni → Scarica un manga** porta una serie dal sito alla libreria con lo
 stesso motore di MangaArchive, portato in Dart, senza server in mezzo. Il
 server resta dov'è, e i due scrivono nella stessa cartella (vedi «Scaricare
 dai siti»).
@@ -142,7 +142,7 @@ Due modalità, scelte per serie e ricordate:
 - **continua** (webtoon): tutte le tavole del capitolo una sotto l'altra,
   attaccate — nessun margine, nessun separatore, nessun riquadro: un capitolo
   è una striscia sola che si scorre dall'inizio alla fine, che è come sono
-  fatti i manhwa da MangaK e ManhwaRead;
+  fatti i manhwa da MangaK, ManhwaRead e Asura Scans;
 - **paginata**: una tavola per volta, con direzione destra→sinistra o
   sinistra→destra.
 
@@ -246,8 +246,9 @@ telefono, il resto da Drive.
 ## Interfaccia
 
 Navigazione a quattro destinazioni: **Home** (ripresa, aggiornamenti,
-suggerimenti), **Libreria**, **Raccolte**, **Altro** (cronologia, statistiche,
-impostazioni). La ricerca è sopra la libreria, non una destinazione a sé.
+suggerimenti), **Libreria**, **Raccolte**, **Impostazioni** (profilo, scaricare,
+cronologia, statistiche, incognito e le impostazioni vere, ognuna nella sua
+pagina). La ricerca è sopra la libreria, non una destinazione a sé.
 
 La barra di navigazione è **sospesa** sopra il contenuto, una pastiglia che
 galleggia invece di una fascia opaca che taglia l'ultima riga della griglia;
@@ -608,7 +609,27 @@ incompleto si apre per le pagine che ci sono; un indice più vecchio dei file si
 rilegge alla prossima apertura. Un capitolo che l'indice dice leggibile ma la
 cui cartella non c'è si legge da Drive, o si mostra come non scaricato: la
 cartella dei capitoli si elenca una volta per serie. L'app non cancella niente
-dalla libreria se non glielo chiede l'utente, dal foglio «Libera spazio».
+dalla libreria se non glielo chiede l'utente, dal foglio «Libera spazio» o
+eliminando una serie.
+
+### Eliminare una serie
+
+Dalla selezione della libreria (tocco lungo) o dal cestino sulla copertina
+della scheda, una o più serie si tolgono per intero: la cartella sparisce
+dal telefono — cartella scelta e spazio dell'app — e su Drive va nel
+cestino, da cui si recupera per trenta giorni, con la sua riga di
+`library.json`. Smette anche tutto quello che la riporterebbe: il controllo
+dei capitoli nuovi, i lavori in coda (fermando quello che gira), lo scarico
+man mano e, se c'è un server collegato, il suo controllo. Come per «Libera
+spazio» la sincronizzazione di Kagami annota le cartelle tolte, e mentre un
+giro è in corso il foglio aspetta.
+
+Una copia locale di `library.json` rimasta indietro elencherebbe ancora la
+serie finché la sincronizzazione non porta quella nuova: l'app ricorda le
+serie tolte con la firma della loro riga (`library.removed`, fra le
+impostazioni e quindi nel backup) e non le mostra. Riscaricata, una serie ha
+un'altra firma e torna. Lo stato di lettura resta: cronologia e statistiche
+sono letture fatte.
 
 ### Liberare spazio dai capitoli letti
 
@@ -645,28 +666,54 @@ migliaia di letture.
 
 ### Scaricare dai siti
 
-Altro → Scarica un manga fa dal telefono quello che il pannello MangaArchive
+Impostazioni → Scarica un manga fa dal telefono quello che il pannello MangaArchive
 di Cobalt fa dal server: si cerca un titolo o si incolla il link di una
-serie (MangaK, ManhwaRead), la si verifica — titolo, copertina, autori,
-generi, capitoli — e la si scarica.
+serie (MangaK, ManhwaRead, Asura Scans), la si verifica — titolo,
+copertina, autori, generi, capitoli — e la si scarica.
 
 La ricerca dà, mentre si scrive, quello che darebbe la barra di ricerca di
-ogni sito: MangaK con la sua API (`titles/search`), ManhwaRead con la pagina
-dei risultati (`/?s=…`), letta da una WebView invisibile perché Cloudflare
+ogni sito: MangaK con la sua API (`titles/search`), Asura Scans con la sua
+(`api/search`, senza i romanzi), ManhwaRead con la pagina dei risultati
+(`/?s=…`), letta da una WebView invisibile perché Cloudflare
 non risponde al client HTTP dell'app nemmeno dopo la verifica, e blocca a
 parte la ricerca rapida di `admin-ajax.php`. Se la verifica chiede un tocco,
 al posto dei risultati compare la riga che la apre. Scegliere un risultato
-è incollarne il link: stessa verifica, stessa domanda, stesso modulo. Poi:
+è incollarne il link. Letta la serie si apre una pagina sua, con la
+copertina e quello che il sito ne dice, in cui si sceglie:
 
-- **tutta**, **dal capitolo scelto in poi** (dalla griglia dei capitoli o
-  scrivendo il numero del sito) o **solo i capitoli toccati**. In ogni caso
-  `series.json` ha l'elenco completo: gli altri restano visibili come non
-  scaricati;
+- **tutta**, **man mano**, **dal capitolo scelto in poi** o **solo i
+  capitoli toccati**, quattro schede con quello che fanno scritto sotto.
+  L'elenco dei capitoli scorre con la pagina, si filtra per numero o titolo
+  (Invio sceglie il capitolo con quel numero), si gira dal più recente,
+  segna quelli già in libreria e, scegliendoli uno per uno, prende un
+  intervallo col tocco lungo. In ogni caso `series.json` ha l'elenco
+  completo: gli altri restano visibili come non scaricati;
 - **dove**: nella cartella di Drive della libreria, e le tavole lasciano il
   telefono appena Drive le ha; su Drive e anche sul telefono; o, senza
   Drive, sul telefono;
 - **con una pausa** fra le richieste, da niente a due secondi, perché i siti
-  bloccano chi scarica a raffica.
+  bloccano chi scarica a raffica. Sta fra le «Avanzate»: quella di partenza
+  va bene quasi sempre.
+
+In fondo alla pagina resta il riepilogo — quanti capitoli, dove — con il
+pulsante. Chiudendola senza scegliere, la serie resta sotto la ricerca e la
+pagina si riapre da lì.
+
+**Man mano** scarica cinque capitoli dal capitolo scelto (di partenza il
+primo non letto) e poi tiene sempre cinque capitoli da leggere davanti
+all'ultimo letto o aperto: uscendo dal lettore, o quando la libreria si
+rilegge, l'app mette in coda quelli che mancano (`data/read_ahead.dart`).
+I capitoli prima del primo che si ha non arrivano da soli: chi parte dal 40
+non vuole i primi trentanove. Arrivati in fondo all'elenco che si
+conosceva, i capitoli nuovi li porta il controllo delle serie seguite, solo
+quanti ne servono, e una serie man mano resta seguita anche conclusa,
+finché non si smette. Con un server collegato è lui a scaricare e a
+seguire la serie, ma i capitoli glieli chiede l'app, che sa cosa si legge:
+quelli dell'indice li mette nella sua coda, quelli nuovi del sito glieli fa
+cercare (`docs/server-api.md`, `PUT /v2/ongoing/{key}`). Un server di
+prima, che non elenca `ahead` fra le sue `features`, non lo offre: man
+mano allora scarica il telefono. Non c'è con i siti dietro la verifica del
+browser, che né il telefono né il server superano da soli.
 
 La pausa è un ritmo, non una fila: le tavole di un capitolo scendono su più
 corsie, e la pausa separa l'inizio di una richiesta dal seguente. Quando il
@@ -676,19 +723,36 @@ il capitolo finito sale mentre il seguente scende, i file piccoli in una
 richiesta sola (multipart), perché Drive conta le richieste e non i byte.
 
 Il download finisce in una coda che continua a schermo spento, con la
-notifica che dice a che punto è; la schermata mostra la serie in corso, le
-altre in attesa e com'è andata alle ultime. Rifare lo stesso download porta
-solo ciò che manca o è rovinato.
+notifica che dice a che punto è; la schermata mostra la serie in corso e le
+altre in attesa, e sotto le **serie scaricate di recente**, una per riga
+con l'esito più recente e quante volte è scesa (man mano ogni capitolo è un
+lavoro): la riga apre la serie se è in libreria, e un download fallito si
+riprova dal suo link. Rifare lo stesso download porta solo ciò che manca o
+è rovinato.
 
 Le **serie in corso** scaricate da qui si ricontrollano, a mano o ogni
 giorno a un'ora (solo col Wi-Fi, se si vuole), e arrivano solo i capitoli
-nuovi, nella stessa destinazione; una serie che il sito dà per conclusa
-esce da sola. Quelle del server le segue il suo timer.
+nuovi, nella stessa destinazione. Una serie esce da sola solo quando il sito
+la dà per conclusa o cancellata, dopo aver messo in coda gli ultimi
+capitoli, che spesso escono proprio insieme a «concluso»; in pausa, o con
+uno stato che il sito scrive in un modo che non si riconosce, resta seguita.
+Un lavoro messo in coda dal controllo aggiunge i suoi capitoli a quello
+chiesto dall'utente per la stessa serie, invece di prenderne il posto. Se
+all'ora del controllo manca la rete si riprova mezz'ora dopo, e aprendo
+l'app la catena dei controlli si rimette in piedi se si era spezzata.
+Quelle del server le segue il suo timer.
 
 ManhwaRead sta spesso dietro la verifica di Cloudflare: sul server la passa
 Chromium; qui la pagina si apre in una WebView, la verifica la supera chi
 usa il telefono, e appena compare l'elenco dei capitoli l'app se lo prende
 e torna indietro da sola.
+
+Asura Scans dà tutto dalla sua API (`api.asurascans.com`): serie, elenco
+completo dei capitoli e tavole con le misure. I capitoli in accesso
+anticipato, che senza abbonamento non hanno tavole, restano fuori
+dall'elenco finché non si liberano, e allora arrivano come capitoli nuovi.
+I link del sito portano un suffisso che cambia (`/comics/nano-machine-bd5bdaf8`):
+in libreria resta quello senza, che il sito ridirige.
 
 ### Scaricare dal proprio server
 

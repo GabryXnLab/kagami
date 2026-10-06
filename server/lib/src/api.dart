@@ -127,6 +127,7 @@ class ServerApi {
       ('DELETE', ['history']) => await _clearHistory(me),
       ('GET', ['ongoing']) => (HttpStatus.ok, await _ongoing(me)),
       ('DELETE', ['ongoing', final key]) => await _forget(me, key),
+      ('PUT', ['ongoing', final key]) => (HttpStatus.ok, await _want(me, key, await _body(request))),
       ('POST', ['check']) => _check(me),
       ('PUT', ['check']) => (HttpStatus.ok, await _configureCheck(me, await _body(request))),
       ('GET', ['users']) => (HttpStatus.ok, await _users(_owner(accounts, email))),
@@ -187,6 +188,9 @@ class ServerApi {
           for (final provider in providers) {'id': provider.id, 'name': provider.name},
         ],
         'images': images,
+        // Ciò che questo server sa fare oltre alla v2 di partenza: l'app
+        // offre una funzione solo a un server che la elenca.
+        'features': const ['ahead'],
         'check': _checkJson(await me.jobs.checkSettings()),
         'me': {'email': email, 'owner': email == accounts.owner, 'drive': await _drive(me.drive)},
       };
@@ -205,6 +209,7 @@ class ServerApi {
         if (job.ids != null) 'ids': job.ids!.toList(),
         'delayMs': job.delayMs,
         if (job.automatic) 'automatic': true,
+        'ahead': ?job.ahead,
       };
 
   Future<Map<String, Object?>> _jobs(UserSpace me) async => {
@@ -244,6 +249,18 @@ class ServerApi {
     if (delay != null && (delay is! int || delay < 0 || delay > 5000)) {
       throw const ApiError(HttpStatus.badRequest, 'bad_request', '«delayMs» va da 0 a 5000.');
     }
+    final ahead = body['ahead'];
+    if (ahead != null && (ahead is! int || ahead < 1 || ahead > 50)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«ahead» va da 1 a 50.');
+    }
+    if (ahead != null && provider.needsBrowser) {
+      throw ApiError(HttpStatus.badRequest, 'bad_request',
+          'Man mano non si può con ${provider.name}: ogni lettura vuole la verifica del browser.');
+    }
+    final automatic = body['automatic'];
+    if (automatic != null && automatic is! bool) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«automatic» è vero o falso.');
+    }
     final snapshot = body['snapshot'];
     if (snapshot != null && (snapshot is! String || !provider.needsBrowser)) {
       throw ApiError(HttpStatus.badRequest, 'bad_request',
@@ -271,6 +288,8 @@ class ServerApi {
       ids: ids,
       delayMs: delay as int? ?? 200,
       snapshot: page,
+      automatic: automatic == true,
+      ahead: ahead as int?,
     );
     await files.enqueue(job);
     me.jobs.wake();
@@ -300,9 +319,36 @@ class ServerApi {
               'addedAt': entry.addedAt.toIso8601String(),
               'checkedAt': ?entry.checkedAt?.toIso8601String(),
               'problem': ?entry.problem,
+              'ahead': ?entry.ahead,
+              if (entry.ahead != null) 'wanted': entry.wanted,
             },
         ],
       };
+
+  /// L'app, che sa cosa si legge, chiede per una serie man mano quanti
+  /// capitoli nuovi servono. Se il sito non è stato guardato da un po', lo
+  /// si guarda subito per quella serie sola.
+  Future<Map<String, Object?>> _want(UserSpace me, String key, Map<String, Object?> body) async {
+    final wanted = body['wanted'];
+    if (wanted is! int || wanted < 0 || wanted > 50) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«wanted» va da 0 a 50.');
+    }
+    final tracking = Tracking(me.files.ongoing);
+    final entry = (await tracking.load()).where((entry) => entry.key == key).firstOrNull;
+    if (entry == null) throw const ApiError(HttpStatus.notFound, 'not_found', 'Il server non segue questa serie.');
+    if (entry.ahead == null) {
+      throw const ApiError(HttpStatus.conflict, 'not_ahead', 'La serie non si scarica man mano.');
+    }
+    await tracking.want(key, wanted);
+    final checked = entry.checkedAt;
+    final checking = wanted > 0 && (checked == null || DateTime.now().difference(checked) > recheck);
+    if (checking) unawaited(me.jobs.checkSeries(key));
+    return {'key': key, 'wanted': wanted, 'checking': checking};
+  }
+
+  /// Quanto aspettare prima di riguardare il sito per una serie man mano
+  /// arrivata in fondo: ogni uscita dal lettore la chiede di nuovo.
+  static const Duration recheck = Duration(hours: 6);
 
   Future<(int, Object?)> _forget(UserSpace me, String key) async {
     final tracking = Tracking(me.files.ongoing);

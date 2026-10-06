@@ -132,6 +132,10 @@ abstract interface class JobControl {
   /// Il controllo delle serie in corso, adesso.
   Future<void> checkNow();
 
+  /// Il controllo di una serie sola, adesso: una serie man mano arrivata in
+  /// fondo a ciò che si conosceva.
+  Future<void> checkSeries(String key);
+
   Future<ServerCheck> checkSettings();
 
   /// Cambia il controllo quotidiano e lo riprogramma.
@@ -146,6 +150,7 @@ class ServerWorker implements JobControl {
     this.checkMinutes,
     this.folder,
     this.retryAfter = const Duration(minutes: 1),
+    this.checkRetry = const Duration(minutes: 30),
     this.log = _stderr,
   });
 
@@ -164,6 +169,10 @@ class ServerWorker implements JobControl {
   /// La cartella della libreria di questo account, per guardarla tutta.
   final String? Function()? folder;
   final Duration retryAfter;
+
+  /// Un controllo andato a vuoto per la rete o per Drive si riprova dopo
+  /// questo, non il giorno dopo.
+  final Duration checkRetry;
   final void Function(String line) log;
 
   static void _stderr(String line) => stderr.writeln(line);
@@ -175,6 +184,7 @@ class ServerWorker implements JobControl {
   /// comincia nemmeno.
   bool _woken = false;
   Timer? _checkTimer;
+  Timer? _retryTimer;
   String? _running;
   String? _cancelling;
   Future<void>? _loop;
@@ -188,6 +198,7 @@ class ServerWorker implements JobControl {
   Future<void> close() async {
     _closed = true;
     _checkTimer?.cancel();
+    _retryTimer?.cancel();
     wake();
     await _loop;
     await _checking;
@@ -299,6 +310,28 @@ class ServerWorker implements JobControl {
   @override
   Future<void> checkNow() => _checking ??= _check().whenComplete(() => _checking = null);
 
+  @override
+  Future<void> checkSeries(String key) async {
+    if (await blocked() != null) return;
+    try {
+      final report = await Tracking(files.ongoing).check(
+        files,
+        (provider) => environment.httpFor(provider),
+        cancelled: () => _closed,
+        only: {key},
+      );
+      if (report.queued.isNotEmpty) wake();
+    } on ProviderOffline {
+      log('Controllo di $key: rete assente.');
+    }
+  }
+
+  void _retryCheck(String why) {
+    log('Controllo: $why, si riprova fra ${checkRetry.inMinutes} minuti.');
+    _retryTimer?.cancel();
+    if (!_closed) _retryTimer = Timer(checkRetry, () => unawaited(checkNow()));
+  }
+
   Future<void> _check() async {
     if (await blocked() != null) return;
     final settings = await checkSettings();
@@ -334,10 +367,10 @@ class ServerWorker implements JobControl {
             'nuovi, ${library.repaired.length} con l\'indice da riparare.');
       }
     } on ProviderOffline {
-      log('Controllo: rete assente, si riprova al prossimo.');
+      _retryCheck('rete assente');
       return;
     } on DriveException catch (error) {
-      log('Controllo: Drive non risponde ($error), si riprova al prossimo.');
+      _retryCheck('Drive non risponde ($error)');
       return;
     }
     await _saveCheck((await checkSettings())

@@ -35,11 +35,6 @@ class BrowserPass {
 /// Oltre, non è la pagina di una serie.
 const int _maxHtml = 8000000;
 
-/// Il segno che la verifica è passata sulla pagina di una serie: c'è l'elenco
-/// dei capitoli, nelle forme che il provider sa leggere.
-const String _chapters =
-    "!!document.querySelector('#chaptersList, #groupChapterList, .chapters-list, li.wp-manga-chapter')";
-
 /// Che cosa l'utente vedrà comparire a verifica superata.
 enum BrowserWaiting { chapters, search }
 
@@ -47,7 +42,7 @@ class BrowserCheckPage extends StatefulWidget {
   const BrowserCheckPage({
     required this.url,
     required this.hosts,
-    this.ready = _chapters,
+    required this.ready,
     this.waitingFor = BrowserWaiting.chapters,
     super.key,
   });
@@ -67,7 +62,7 @@ class BrowserCheckPage extends StatefulWidget {
     BuildContext context,
     String url,
     List<String> hosts, {
-    String ready = _chapters,
+    required String ready,
     BrowserWaiting waitingFor = BrowserWaiting.chapters,
   }) =>
       Navigator.of(context).push<BrowserPass>(

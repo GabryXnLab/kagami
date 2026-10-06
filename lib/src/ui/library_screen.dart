@@ -19,6 +19,7 @@ import 'theme.dart';
 import 'widgets/collection_sheet.dart';
 import 'drive_ui.dart';
 import 'widgets/kit.dart';
+import 'widgets/remove_sheet.dart';
 import 'widgets/origin.dart';
 import 'widgets/series_cover.dart';
 
@@ -489,6 +490,13 @@ class _SelectionActions extends ConsumerWidget {
                   tooltip: l10n.libraryAddToCollection,
                   onPressed: () => showCollectionSheet(context, keys.toList()),
                   icon: const Icon(LucideIcons.listPlus),
+                ),
+                IconButton(
+                  tooltip: l10n.removeSeriesAction,
+                  onPressed: () => confirmRemoveSeries(context, ref, [
+                    for (final key in keys) ?ref.read(seriesEntryProvider(key)),
+                  ]),
+                  icon: Icon(LucideIcons.trash2, color: context.tokens.danger),
                 ),
               ],
             ),

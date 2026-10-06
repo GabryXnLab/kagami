@@ -3,16 +3,17 @@
 /// È il pannello MangaArchive di Cobalt portato nell'app, con le stesse
 /// scelte — la serie intera, dal capitolo scelto in poi o solo alcuni
 /// capitoli, la pausa fra le richieste, l'orario del controllo delle serie
-/// in corso — e una in più: la destinazione, che qui può essere la cartella
-/// di Drive della libreria, o un Kagami Server collegato. Il lavoro vero lo
-/// fa `packages/kagami_archive/`, in un lavoro in primo piano che continua a
+/// in corso — e due in più: scaricare «man mano», pochi capitoli davanti a
+/// quello che si legge, e la destinazione, che qui può essere la cartella di
+/// Drive della libreria, o un Kagami Server collegato. La scelta per una
+/// serie sta nella sua pagina (`archive_series.dart`). Il lavoro vero lo fa
+/// `packages/kagami_archive/`, in un lavoro in primo piano che continua a
 /// schermo spento, o sul server.
 library;
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,18 +21,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
-import 'package:kagami_archive/names.dart';
 import 'package:kagami_archive/providers.dart';
-import 'package:kagami_archive/providers/manhwaread.dart';
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../providers.dart';
+import 'archive_series.dart';
 import 'archive_server.dart';
 import 'browser_check_page.dart';
 import '../l10n.dart';
@@ -49,39 +48,6 @@ class _Inspected {
 
   /// La verifica di Cloudflare superata nella WebView, se è servita.
   final BrowserPass? pass;
-}
-
-enum _Mode { all, from, pick }
-
-/// Dove va una serie: una delle destinazioni del telefono, o il server.
-enum _Where {
-  server,
-  drive,
-  driveAndPhone,
-  phone;
-
-  /// La destinazione della coda del telefono; `null` per il server, che ha
-  /// la sua.
-  ArchiveDestination? get local => switch (this) {
-        server => null,
-        drive => ArchiveDestination.drive,
-        driveAndPhone => ArchiveDestination.driveAndPhone,
-        phone => ArchiveDestination.phone,
-      };
-
-  String label(AppLocalizations l10n) => switch (this) {
-        server => l10n.archiveWhereServer,
-        drive => l10n.archiveWhereDrive,
-        driveAndPhone => l10n.archiveWhereDriveAndPhone,
-        phone => l10n.archiveWherePhone,
-      };
-
-  IconData get icon => switch (this) {
-        server => LucideIcons.server,
-        drive => LucideIcons.cloud,
-        driveAndPhone => LucideIcons.cloudDownload,
-        phone => LucideIcons.smartphone,
-      };
 }
 
 /// Cosa ha risposto un sito all'ultima ricerca.
@@ -102,8 +68,6 @@ String _destinationName(AppLocalizations l10n, ArchiveDestination destination) =
       ArchiveDestination.phone => l10n.archiveWherePhone,
     };
 
-const List<String> _manhwaReadHosts = ['manhwaread.com', 'www.manhwaread.com'];
-
 class ArchiveScreen extends ConsumerStatefulWidget {
   const ArchiveScreen({super.key});
 
@@ -113,34 +77,27 @@ class ArchiveScreen extends ConsumerStatefulWidget {
 
 class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   final TextEditingController _link = TextEditingController();
-  final TextEditingController _number = TextEditingController();
   final TextEditingController _query = TextEditingController();
 
   Timer? _searchTimer;
   int _searchRun = 0;
   final Map<String, _Found> _found = {};
 
-  /// ManhwaRead si cerca da una WebView invisibile: a `SiteHttp`
-  /// Cloudflare non risponde nemmeno dopo la verifica.
-  BrowserFetcher? _fetcher;
-  static const String _searchReady = "!!document.getElementById('inputQuickSearch')";
+  /// I siti dietro una verifica del browser si cercano da una WebView
+  /// invisibile, una per sito: a `SiteHttp` Cloudflare non risponde nemmeno
+  /// dopo la verifica.
+  final Map<String, BrowserFetcher> _fetchers = {};
 
   _Inspected? _inspected;
   bool _busy = false;
   String? _error;
 
-  _Mode _mode = _Mode.all;
-  String? _from;
-  final Set<String> _picked = {};
-  _Where? _destination;
+  ArchiveWhere? _destination;
   int _delayMs = 200;
-
-  static const List<int> _delays = [0, 200, 500, 1000, 2000];
 
   @override
   void dispose() {
     _link.dispose();
-    _number.dispose();
     _query.dispose();
     _searchTimer?.cancel();
     super.dispose();
@@ -176,13 +133,15 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   Future<void> _searchOn(Provider provider, String query, int run) async {
     final SiteHttp? site;
     final ProviderHttp http;
-    if (provider is ManhwaRead) {
+    if (provider.browser case final gate?) {
       site = null;
-      if (_fetcher == null) {
+      var fetcher = _fetchers[provider.id];
+      if (fetcher == null) {
+        fetcher = BrowserFetcher(ready: gate.searchReady);
         // La WebView deve entrare nell'albero prima di caricare.
-        setState(() => _fetcher = BrowserFetcher(ready: _searchReady));
+        setState(() => _fetchers[provider.id] = fetcher!);
       }
-      http = _fetcher!;
+      http = fetcher;
     } else {
       http = site = SiteHttp(provider.allowedHost);
     }
@@ -190,7 +149,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     try {
       found = _Found.results(await provider.search(query, http));
     } on CloudflareChallenge {
-      found = provider is ManhwaRead
+      found = provider.needsBrowser
           ? const _Found.challenged()
           : _Found.error(currentL10n().archiveErrChallenge);
     } on ProviderOffline {
@@ -208,11 +167,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   /// barra di ricerca del sito: i cookie delle WebView sono gli stessi in
   /// tutta l'app, e la WebView che cerca li trova già.
   Future<void> _verifySearch(Provider provider) async {
+    final gate = provider.browser!;
     final pass = await BrowserCheckPage.open(
       context,
       provider.home,
-      _manhwaReadHosts,
-      ready: _searchReady,
+      gate.hosts,
+      ready: gate.searchReady,
       waitingFor: BrowserWaiting.search,
     );
     if (pass == null || !mounted) return;
@@ -259,12 +219,14 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       try {
         series = await provider.fetchSeries(url, http);
       } on CloudflareChallenge {
-        if (provider is! ManhwaRead || !mounted) rethrow;
+        final gate = provider.browser;
+        if (gate == null || !mounted) rethrow;
         final canonical = provider.canonical(url);
         pass = await BrowserCheckPage.open(
           context,
           canonical,
-          _manhwaReadHosts,
+          gate.hosts,
+          ready: gate.seriesReady,
         );
         if (pass == null) {
           setState(() => _error = currentL10n().archiveErrVerifyIncomplete);
@@ -281,14 +243,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       }
       if (!mounted) return;
       final inspected = _Inspected(series, normalizeMetadata(series.metadata), pass: pass);
-      setState(() {
-        _inspected = inspected;
-        _mode = _Mode.all;
-        _from = null;
-        _picked.clear();
-        _number.clear();
-      });
-      unawaited(_ask(inspected));
+      setState(() => _inspected = inspected);
+      unawaited(_choose(inspected));
     } on ProviderOffline {
       setState(() => _error = currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
@@ -299,62 +255,45 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     }
   }
 
-  /// La domanda che segue il link, come nel bot di Telegram e nella GUI di
-  /// Cobalt: tutta la serie o da quale capitolo. Chiudendola senza scegliere
-  /// resta la scheda sotto, con la scelta dei capitoli uno per uno.
-  Future<void> _ask(_Inspected inspected) async {
+  /// Dopo il link, la pagina in cui si sceglie cosa scaricare e dove.
+  /// Chiudendola senza scegliere la serie resta qui sotto, da riaprire.
+  Future<void> _choose(_Inspected inspected) async {
     final destinations = _destinations();
-    final choice = await showKagamiSheet<_Start>(
+    final choice = await ArchiveSeriesPage.open(
       context,
-      title: inspected.series.title,
-      scrollable: true,
-      builder: (context) => _StartSheet(
-        chapters: inspected.series.chapters,
-        destinations: destinations,
-        destination: destinations.contains(_destination) ? _destination! : destinations.first,
-      ),
+      series: inspected.series,
+      metadata: inspected.metadata,
+      destinations: destinations,
+      destination: destinations.contains(_destination) ? _destination! : destinations.first,
+      delayMs: _delayMs,
+      serverHint: _serverWhere(),
+      serverAhead: ref.read(remoteArchiveProvider).info?.ahead ?? false,
     );
     if (choice == null || !mounted || _inspected != inspected) return;
     setState(() {
-      _mode = choice.from == null ? _Mode.all : _Mode.from;
-      _from = choice.from;
-      _number.clear();
-      _destination = choice.destination;
+      _destination = choice.where;
+      _delayMs = choice.delayMs;
     });
-    await _download();
+    await _download(inspected, choice);
   }
 
   /// Il server per primo, se c'è ed è pronto: chi l'ha collegato vuole che
   /// scarichi lui.
-  List<_Where> _destinations() {
+  List<ArchiveWhere> _destinations() {
     // La cartella può arrivare da un backup anche in una build senza
     // Firebase, dove Drive non si può aprire.
     final drive =
         cloudAvailable && ref.read(driveFolderProvider).value != null;
     return [
-      if (ref.read(remoteArchiveProvider).ready) _Where.server,
-      ...drive ? const [_Where.drive, _Where.driveAndPhone] : const [_Where.phone],
+      if (ref.read(remoteArchiveProvider).ready) ArchiveWhere.server,
+      ...drive ? const [ArchiveWhere.drive, ArchiveWhere.driveAndPhone] : const [ArchiveWhere.phone],
     ];
   }
 
-  String? _start() => switch (_mode) {
-        _Mode.from => _number.text.trim().isNotEmpty ? _number.text.trim() : _from,
-        _ => null,
-      };
-
-  bool get _ready => switch (_mode) {
-        _Mode.all => true,
-        _Mode.from => (_start() ?? '').isNotEmpty,
-        _Mode.pick => _picked.isNotEmpty,
-      };
-
-  Future<void> _download() async {
-    final inspected = _inspected;
-    if (inspected == null || !_ready) return;
+  Future<void> _download(_Inspected inspected, ArchiveChoice choice) async {
     final messenger = ScaffoldMessenger.of(context);
-    final where = _destination ?? _destinations().first;
-    final destination = where.local;
-    if (destination == null) return _sendToServer(inspected);
+    final destination = choice.where.local;
+    if (destination == null) return _sendToServer(inspected, choice);
     final folder = ref.read(driveFolderProvider).value;
     String? root;
     var private = false;
@@ -395,12 +334,13 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
             root: root,
             private: private,
           ),
-          start: _start(),
-          ids: _mode == _Mode.pick ? {..._picked} : null,
-          delayMs: _delayMs,
+          start: choice.start,
+          ids: choice.ids,
+          delayMs: choice.delayMs,
           snapshot: snapshot,
           userAgent: pass?.userAgent,
           cookies: pass?.cookies ?? const {},
+          ahead: choice.ahead,
         ));
     if (!mounted) return;
     messenger.showSnackBar(SnackBar(
@@ -414,16 +354,17 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
 
   /// Al server va il link con le stesse scelte; la pagina della serie solo se
   /// è servita la verifica del browser, perché il server non ne ha uno.
-  Future<void> _sendToServer(_Inspected inspected) async {
+  Future<void> _sendToServer(_Inspected inspected, ArchiveChoice choice) async {
     final messenger = ScaffoldMessenger.of(context);
     final name = ref.read(remoteArchiveProvider).info?.name ?? currentL10n().archiveServerFallbackName;
     try {
       await ref.read(remoteArchiveProvider.notifier).enqueue(
             url: inspected.series.url,
             title: inspected.series.title,
-            start: _start(),
-            ids: _mode == _Mode.pick ? {..._picked} : null,
-            delayMs: _delayMs,
+            start: choice.start,
+            ids: choice.ids,
+            delayMs: choice.delayMs,
+            ahead: choice.ahead,
             snapshot: inspected.pass == null ? null : utf8.decode(inspected.pass!.html, allowMalformed: true),
           );
     } on ServerException catch (error) {
@@ -453,7 +394,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       appBar: AppBar(title: Text(l10n.archiveTitle)),
       body: Stack(
         children: [
-          if (_fetcher case final fetcher?) Positioned.fill(child: fetcher.view()),
+          for (final fetcher in _fetchers.values) Positioned.fill(child: fetcher.view()),
           ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: ListView(
@@ -517,9 +458,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                   const SizedBox(height: 12),
                   Text(_error!, style: KagamiType.body(13, height: 1.45, color: context.tokens.danger)),
                 ],
-                if (inspected != null) ..._choices(inspected),
+                if (inspected != null) ..._pending(inspected),
                 ..._queue(view),
-                const ServerSection(),
+                ServerSection(onRetry: _busy ? null : _retry),
                 ..._tracked(view),
                 ..._sites(),
               ],
@@ -530,189 +471,69 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     );
   }
 
-  List<Widget> _choices(_Inspected inspected) {
+  /// La serie letta e non ancora scaricata: la pagina della scelta si
+  /// riapre da qui.
+  List<Widget> _pending(_Inspected inspected) {
     final series = inspected.series;
-    final metadata = inspected.metadata;
-    final muted = context.tokens.muted;
-    final known = ref.watch(seriesEntryProvider(series.key));
-    final destinations = _destinations();
-    final destination = destinations.contains(_destination) ? _destination! : destinations.first;
     final l10n = context.l10n;
-    final authors = (metadata['authors'] as List).cast<String>();
-    final tags = [...(metadata['genres'] as List).cast<String>(), ...(metadata['tags'] as List).cast<String>()];
+    final placeholder = ColoredBox(color: context.tokens.muted.withValues(alpha: .15));
     return [
-      const SizedBox(height: 24),
+      const SizedBox(height: 20),
       KCard(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
+        onTap: () => _choose(inspected),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                width: 72,
-                height: 104,
+                width: 44,
+                height: 62,
                 child: series.coverUrl == null
-                    ? ColoredBox(color: context.tokens.muted.withValues(alpha: .15))
+                    ? placeholder
                     : Image.network(
                         series.coverUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: 132,
                         headers: {'Referer': series.url, 'User-Agent': defaultUserAgent},
-                        errorBuilder: (_, _, _) =>
-                            ColoredBox(color: context.tokens.muted.withValues(alpha: .15)),
+                        errorBuilder: (_, _, _) => placeholder,
                       ),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(series.title, style: KagamiType.body(16, weight: 700, height: 1.25)),
-                  const SizedBox(height: 4),
+                  Text(
+                    series.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KagamiType.title(14.5, color: context.colors.onSurface),
+                  ),
+                  const SizedBox(height: 3),
                   Text(
                     l10n.archiveSeriesSummary(
                       providerById(series.provider)?.name ?? series.provider,
                       series.chapters.length,
-                      _status(l10n, metadata['releaseStatus']),
+                      archiveStatusLabel(l10n, inspected.metadata['releaseStatus']),
                     ),
-                    style: KagamiType.body(12.5, color: muted),
+                    style: KagamiType.body(12.5, color: context.tokens.muted),
                   ),
-                  if (authors.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(authors.take(3).join(', '), style: KagamiType.body(12.5, color: muted)),
-                  ],
-                  if (tags.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 5,
-                      runSpacing: 5,
-                      children: [for (final tag in tags.take(6)) KTag(label: tag, dense: true)],
-                    ),
-                  ],
-                  if (known != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.archiveKnown(known.archivedChapterCount, known.chapterCount),
-                      style: KagamiType.body(12.5, weight: 600, color: context.colors.primary),
-                    ),
-                  ],
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            Icon(LucideIcons.chevronRight, size: 18, color: context.tokens.muted),
           ],
         ),
       ),
-      const SizedBox(height: 22),
-      KSection(l10n.archiveWhatSection),
-      KSegmented(
-        options: [l10n.archiveModeAll, l10n.archiveModeFrom, l10n.archiveModePick],
-        icons: const [LucideIcons.library, LucideIcons.skipForward, LucideIcons.listChecks],
-        index: _mode.index,
-        onChanged: (index) => setState(() => _mode = _Mode.values[index]),
-      ),
       const SizedBox(height: 10),
-      Text(
-        switch (_mode) {
-          _Mode.all => l10n.archiveModeAllHint,
-          _Mode.from => l10n.archiveModeFromHint,
-          _Mode.pick => l10n.archiveModePickHint,
-        },
-        style: KagamiType.body(12.5, height: 1.45, color: muted),
-      ),
-      if (_mode == _Mode.from) ...[
-        const SizedBox(height: 12),
-        TextField(
-          controller: _number,
-          keyboardType: TextInputType.text,
-          onChanged: (_) => setState(() {}),
-          decoration: InputDecoration(
-            hintText: l10n.archiveChapterNumberHint,
-            prefixIcon: const Icon(LucideIcons.hash, size: 18),
-          ),
-        ),
-      ],
-      if (_mode != _Mode.all) ...[
-        const SizedBox(height: 12),
-        _ChapterGrid(
-          chapters: series.chapters,
-          selected: _mode == _Mode.from ? {?_from} : _picked,
-          onTap: (chapter) => setState(() {
-            if (_mode == _Mode.from) {
-              _from = chapter.id;
-              _number.clear();
-            } else if (!_picked.remove(chapter.id)) {
-              _picked.add(chapter.id);
-            }
-          }),
-        ),
-        if (_mode == _Mode.pick)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: [
-                Text(l10n.archivePickedCount(_picked.length), style: KagamiType.body(12.5, color: muted)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => setState(() => _picked
-                    ..clear()
-                    ..addAll(series.chapters.map((c) => c.id))),
-                  child: Text(l10n.archiveSelectAll),
-                ),
-                TextButton(
-                  onPressed: () => setState(_picked.clear),
-                  child: Text(l10n.archiveSelectNone),
-                ),
-              ],
-            ),
-          ),
-      ],
-      const SizedBox(height: 22),
-      KSection(l10n.archiveWhereSection),
-      if (destinations.length > 1)
-        KSegmented(
-          options: [for (final value in destinations) value.label(l10n)],
-          icons: [for (final value in destinations) value.icon],
-          index: destinations.indexOf(destination),
-          onChanged: (index) => setState(() => _destination = destinations[index]),
-        ),
-      const SizedBox(height: 10),
-      Text(
-        switch (destination) {
-          _Where.server => _serverWhere(),
-          _Where.drive => l10n.archiveWhereDriveHint,
-          _Where.driveAndPhone => l10n.archiveWhereDriveAndPhoneHint,
-          _Where.phone => l10n.archiveWherePhoneHint,
-        },
-        style: KagamiType.body(12.5, height: 1.45, color: muted),
-      ),
-      const SizedBox(height: 22),
-      KSection(l10n.archiveDelaySection),
-      KSegmented(
-        options: [
-          for (final ms in _delays)
-            ms == 0
-                ? l10n.archiveDelayNone
-                : l10n.archiveDelaySeconds(NumberFormat.decimalPattern(l10n.localeName).format(ms / 1000)),
-        ],
-        index: math.max(0, _delays.indexOf(_delayMs)),
-        onChanged: (index) => setState(() => _delayMs = _delays[index]),
-      ),
-      const SizedBox(height: 10),
-      Text(
-        l10n.archiveDelayHint,
-        style: KagamiType.body(12.5, height: 1.45, color: muted),
-      ),
-      const SizedBox(height: 20),
       KButton(
-        label: switch (_mode) {
-          _Mode.all => l10n.archiveDownloadAll,
-          _Mode.from => l10n.archiveDownloadFrom,
-          _Mode.pick => l10n.archiveDownloadPicked(_picked.length),
-        },
-        icon: LucideIcons.download,
+        label: l10n.archiveReopen,
+        icon: LucideIcons.listChecks,
         expand: true,
-        onPressed: _ready ? _download : null,
+        onPressed: () => _choose(inspected),
       ),
     ];
   }
@@ -748,7 +569,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                           referer: provider.home,
                           details: [
                             if (result.chapters case final count?) l10n.archiveChaptersCount(count),
-                            if (result.releaseStatus != 'unknown') _status(l10n, result.releaseStatus),
+                            if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
                           ].join(' · '),
                           onTap: _busy ? null : () => _pick(result),
                         ),
@@ -774,69 +595,81 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     ];
   }
 
-  static String _status(AppLocalizations l10n, Object? value) => switch (value) {
-        'ongoing' => l10n.archiveStatusOngoing,
-        'completed' => l10n.archiveStatusCompleted,
-        'hiatus' => l10n.archiveStatusHiatus,
-        'cancelled' => l10n.archiveStatusCancelled,
-        _ => l10n.archiveStatusUnknown,
-      };
-
   List<Widget> _queue(ArchiveView view) {
     final notifier = ref.read(archiveProvider.notifier);
     final l10n = context.l10n;
     final status = view.status;
     final current = view.current;
     final waiting = [for (final job in view.jobs) if (job.id != current?.id) job];
-    if (view.jobs.isEmpty && view.history.isEmpty) return const [];
+    final recent = recentOutcomes(view.history);
     return [
-      const SizedBox(height: 30),
-      KSection(
-        l10n.archiveDownloads,
-        trailing: view.history.isEmpty
-            ? null
-            : TextButton(onPressed: notifier.clearHistory, child: Text(l10n.archiveClearHistory)),
-      ),
-      KGroup(
-        children: [
-          if (current != null)
-            ArchiveProgressRow(
-              title: current.title,
-              status: status,
-              onCancel: () => notifier.remove(current),
-            ),
-          if (current == null && view.jobs.isNotEmpty)
-            KTile(
-              icon: LucideIcons.play,
-              title: l10n.archiveQueueStopped,
-              subtitle: status.state == ArchiveState.waiting
-                  ? status.message
-                  : l10n.archiveQueueResumeHint,
-              onTap: notifier.resume,
-            ),
-          for (final job in waiting)
-            KTile(
-              icon: job.automatic ? LucideIcons.refreshCw : LucideIcons.clock,
-              title: job.title,
-              subtitle: job.automatic
-                  ? l10n.archiveJobAutomatic(_destinationName(l10n, job.target.destination))
-                  : l10n.archiveJobQueued(_destinationName(l10n, job.target.destination)),
-              trailing: IconButton(
-                tooltip: l10n.archiveRemoveFromQueue,
-                icon: const Icon(LucideIcons.x, size: 18),
-                onPressed: () => notifier.remove(job),
+      if (view.jobs.isNotEmpty) ...[
+        const SizedBox(height: 30),
+        KSection(l10n.archiveDownloads),
+        KGroup(
+          children: [
+            if (current != null)
+              ArchiveProgressRow(
+                title: current.title,
+                status: status,
+                onCancel: () => notifier.remove(current),
               ),
-            ),
-          for (final outcome in view.history.take(8))
-            KTile(
-              icon: outcome.ok ? LucideIcons.circleCheck : LucideIcons.triangleAlert,
-              tint: outcome.ok ? null : context.tokens.danger,
-              title: outcome.title,
-              subtitle: l10n.archiveHistoryLine(archiveWhen(outcome.finishedAt), outcome.message),
-            ),
-        ],
-      ),
+            if (current == null)
+              KTile(
+                icon: LucideIcons.play,
+                title: l10n.archiveQueueStopped,
+                subtitle: status.state == ArchiveState.waiting
+                    ? status.message
+                    : l10n.archiveQueueResumeHint,
+                onTap: notifier.resume,
+              ),
+            for (final job in waiting)
+              KTile(
+                icon: job.ahead != null
+                    ? LucideIcons.sparkles
+                    : job.automatic
+                        ? LucideIcons.refreshCw
+                        : LucideIcons.clock,
+                title: job.title,
+                subtitle: job.ahead != null
+                    ? l10n.archiveJobAhead(job.ids?.length ?? 0, _destinationName(l10n, job.target.destination))
+                    : job.automatic
+                        ? l10n.archiveJobAutomatic(_destinationName(l10n, job.target.destination))
+                        : l10n.archiveJobQueued(_destinationName(l10n, job.target.destination)),
+                trailing: IconButton(
+                  tooltip: l10n.archiveRemoveFromQueue,
+                  icon: const Icon(LucideIcons.x, size: 18),
+                  onPressed: () => notifier.remove(job),
+                ),
+              ),
+          ],
+        ),
+      ],
+      if (recent.isNotEmpty) ...[
+        const SizedBox(height: 30),
+        KSection(
+          l10n.archiveRecent,
+          trailing: TextButton(onPressed: notifier.clearHistory, child: Text(l10n.archiveClearHistory)),
+        ),
+        KGroup(
+          children: [
+            for (final (:outcome, :runs) in recent.take(10))
+              ArchiveRecentTile(
+                outcome: outcome,
+                runs: runs,
+                onRetry: outcome.ok || outcome.url == null || _busy ? null : () => _retry(outcome.url!),
+              ),
+          ],
+        ),
+      ],
     ];
+  }
+
+  /// Un download fallito si riprova dal suo link: stessa verifica, stessa
+  /// pagina di scelta.
+  void _retry(String url) {
+    _link.text = url;
+    _verify();
   }
 
   /// I siti da cui si può scaricare, col loro indirizzo: il link giusto è
@@ -951,11 +784,17 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           ),
           for (final series in view.tracked)
             KTile(
-              icon: series.problem == null ? LucideIcons.bookOpen : LucideIcons.triangleAlert,
+              icon: series.problem != null
+                  ? LucideIcons.triangleAlert
+                  : series.ahead != null
+                      ? LucideIcons.sparkles
+                      : LucideIcons.bookOpen,
               tint: series.problem == null ? null : context.tokens.danger,
               title: series.title,
               subtitle: series.problem ??
-                  (series.checkedAt == null
+                  (series.ahead != null
+                      ? l10n.archiveTrackedAhead(series.ahead!, _destinationName(l10n, series.target.destination))
+                      : series.checkedAt == null
                       ? l10n.archiveTrackedLine(
                           series.chapters.length,
                           _destinationName(l10n, series.target.destination),
@@ -1095,208 +934,6 @@ class _ResultTile extends StatelessWidget {
             const Icon(LucideIcons.download, size: 18),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// I capitoli da toccare: in ordine di lettura, col numero del sito.
-class _ChapterGrid extends StatelessWidget {
-  const _ChapterGrid({required this.chapters, required this.selected, required this.onTap});
-
-  final List<Chapter> chapters;
-  final Set<String> selected;
-  final ValueChanged<Chapter> onTap;
-
-  static String _label(Chapter chapter) =>
-      chapter.number.isNotEmpty && chapter.number.length <= 8 ? chapter.number : chapter.title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 280),
-      child: GridView.builder(
-        shrinkWrap: true,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 72,
-          mainAxisExtent: 38,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-        ),
-        itemCount: chapters.length,
-        itemBuilder: (context, index) {
-          final chapter = chapters[index];
-          final active = selected.contains(chapter.id);
-          return Tooltip(
-            message: chapter.title,
-            child: Material(
-              color: active ? colors.primary : colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: () => onTap(chapter),
-                child: Center(
-                  child: Text(
-                    _label(chapter),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KagamiType.body(
-                      12.5,
-                      weight: 600,
-                      color: active ? colors.onPrimary : colors.onSurface,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Cosa si è scelto nel foglio: da dove partire (`null`, tutta) e dove.
-class _Start {
-  const _Start(this.from, this.destination);
-
-  final String? from;
-  final _Where destination;
-}
-
-/// «Scarica tutto oppure scegli da quale capitolo partire»: la stessa
-/// domanda di `ChapterPicker.svelte` e della tastiera del bot di Telegram,
-/// con i capitoli da toccare o il numero da scrivere.
-class _StartSheet extends StatefulWidget {
-  const _StartSheet({
-    required this.chapters,
-    required this.destinations,
-    required this.destination,
-  });
-
-  final List<Chapter> chapters;
-  final List<_Where> destinations;
-  final _Where destination;
-
-  @override
-  State<_StartSheet> createState() => _StartSheetState();
-}
-
-class _StartSheetState extends State<_StartSheet> {
-  final TextEditingController _written = TextEditingController();
-  String? _selected;
-  late _Where _destination = widget.destination;
-
-  @override
-  void dispose() {
-    _written.dispose();
-    super.dispose();
-  }
-
-  /// Il capitolo che corrisponde al numero scritto, se c'è.
-  Chapter? get _typed {
-    final text = _written.text.trim();
-    if (text.isEmpty) return null;
-    try {
-      return widget.chapters[startIndex(widget.chapters, text)];
-    } on ProviderError {
-      return null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final muted = context.tokens.muted;
-    final l10n = context.l10n;
-    final chapters = widget.chapters;
-    final typed = _typed;
-    final chosen = typed ??
-        chapters.where((chapter) => chapter.id == _selected).firstOrNull;
-    final remaining = chosen == null ? 0 : chapters.length - chapters.indexOf(chosen);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            l10n.archiveStartIntro(chapters.length),
-            style: KagamiType.body(13, height: 1.45, color: muted),
-          ),
-          const SizedBox(height: 14),
-          _ChapterGrid(
-            chapters: chapters,
-            selected: {?chosen?.id},
-            onTap: (chapter) => setState(() {
-              _selected = chapter.id;
-              _written.clear();
-            }),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _written,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: l10n.archiveChapterNumberHint,
-              prefixIcon: const Icon(LucideIcons.hash, size: 18),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _written.text.trim().isNotEmpty && typed == null
-                ? l10n.archiveStartNoMatch
-                : chosen != null
-                    ? l10n.archiveStartFrom(chosen.title, remaining)
-                    : l10n.archiveStartNone,
-            style: KagamiType.body(
-              12.5,
-              height: 1.4,
-              color: _written.text.trim().isNotEmpty && typed == null
-                  ? context.tokens.danger
-                  : muted,
-            ),
-          ),
-          if (widget.destinations.length > 1) ...[
-            const SizedBox(height: 16),
-            KSection(l10n.archiveWhereSection),
-            KSegmented(
-              options: [for (final value in widget.destinations) value.label(l10n)],
-              icons: [for (final value in widget.destinations) value.icon],
-              index: widget.destinations.indexOf(_destination),
-              onChanged: (index) =>
-                  setState(() => _destination = widget.destinations[index]),
-            ),
-          ],
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: KButton(
-                  label: l10n.archiveStartAll,
-                  icon: LucideIcons.library,
-                  tone: context.colors.surfaceContainerHighest,
-                  expand: true,
-                  onPressed: () =>
-                      Navigator.of(context).pop(_Start(null, _destination)),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: KButton(
-                  label: l10n.archiveStartHere,
-                  icon: LucideIcons.skipForward,
-                  expand: true,
-                  onPressed: chosen == null
-                      ? null
-                      : () => Navigator.of(context)
-                          .pop(_Start(chosen.id, _destination)),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

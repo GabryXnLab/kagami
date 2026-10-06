@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../archive/device.dart';
 import '../data/notifications.dart';
 import '../l10n.dart';
 import '../providers.dart';
@@ -18,7 +19,7 @@ import 'archive_screen.dart';
 import 'collections_screen.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
-import 'more_screen.dart';
+import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -48,6 +49,12 @@ class _AppShellState extends ConsumerState<AppShell>
     notifications.launched().then((key) {
       if (key != null) _openFromNotification(key);
     });
+    // Il controllo delle serie seguite si accoda da solo giorno dopo giorno;
+    // se un giro è morto prima di farlo, la catena si rimette qui.
+    unawaited(ref
+        .read(archiveFilesProvider)
+        .settings()
+        .then((settings) => const ArchiveScheduler().apply(settings, keep: true)));
   }
 
   @override
@@ -168,6 +175,9 @@ class _AppShellState extends ConsumerState<AppShell>
     // I capitoli nuovi si contano a ogni lettura della libreria, qualunque
     // destinazione sia aperta: tenerli vivi qui non ricostruisce la shell.
     ref.listen(arrivalsProvider, (_, _) {});
+    // Le serie scaricate man mano chiedono il capitolo seguente uscendo dal
+    // lettore, qualunque destinazione sia aperta.
+    ref.listen(readAheadProvider, (_, _) {});
     // Le cartelle cambiate vanno scritte dove le legge il giro programmato,
     // anche se nessuno apre la schermata della sincronizzazione.
     ref.listen(folderSyncSettingsProvider, (_, _) {});
@@ -323,14 +333,14 @@ Widget _screenOf(ShellTab tab) => switch (tab) {
       ShellTab.home => const HomeScreen(),
       ShellTab.library => const LibraryScreen(),
       ShellTab.collections => const CollectionsScreen(),
-      ShellTab.more => const MoreScreen(),
+      ShellTab.settings => const SettingsScreen(),
     };
 
 List<({IconData icon, String label})> _destinations(AppLocalizations l10n) => [
   (icon: LucideIcons.house, label: l10n.shellTabHome),
   (icon: LucideIcons.libraryBig, label: l10n.shellTabLibrary),
   (icon: LucideIcons.bookmark, label: l10n.shellTabCollections),
-  (icon: LucideIcons.ellipsis, label: l10n.shellTabMore),
+  (icon: LucideIcons.settings, label: l10n.settingsTitle),
 ];
 
 /// La barra sospesa: una pastiglia che galleggia sul contenuto. L'etichetta

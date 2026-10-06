@@ -45,7 +45,7 @@ void main() {
     expect(info.email, owner);
     expect(info.owner, owner);
     expect(info.folderName, 'Manga');
-    expect(info.providers, containsAll(['mangak', 'manhwaread']));
+    expect(info.providers, containsAll(['mangak', 'manhwaread', 'asurascans']));
 
     final job = await client.enqueue(url: 'https://mangak.io/x', title: 'X', ids: {'a', 'b'}, delayMs: 500);
     final queue = await client.queue();
@@ -182,5 +182,29 @@ void main() {
     expect((await client.queue()).history.single.title, 'Fatta');
     await client.clearHistory();
     expect((await client.queue()).history, isEmpty);
+  });
+
+  test('man mano dal client: il server lo dichiara, il lavoro lo porta, la serie chiede i capitoli', () async {
+    expect((await client.info()).ahead, isTrue);
+    await client.enqueue(url: 'https://mangak.io/s1', ids: {'c1'}, ahead: 5);
+    await client.enqueue(url: 'https://mangak.io/s1', ids: {'c2'}, ahead: 5, automatic: true);
+    final job = (await client.queue()).jobs.single;
+    expect((job.ahead, job.start), (5, null));
+    expect(job.ids, {'c1', 'c2'});
+
+    await Tracking(files.ongoing).record(
+      const Series(provider: 'mangak', id: 'S1', title: 'Man mano', url: 'https://mangak.io/s1',
+          coverUrl: null, metadata: {}, chapters: []),
+      const ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'f'),
+      settled: const ['c1'],
+      metadata: const {'releaseStatus': 'completed'},
+      ahead: 5,
+    );
+    final series = (await client.ongoing()).single;
+    expect((series.ahead, series.wanted, series.url), (5, 0, 'https://mangak.io/s1'));
+    await client.want(series.key, 3);
+    expect((await client.ongoing()).single.wanted, 3);
+    // Appena scaricata è anche appena guardata: il sito non si richiede.
+    expect(jobs.seriesChecks, isEmpty);
   });
 }

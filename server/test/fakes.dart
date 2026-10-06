@@ -35,6 +35,11 @@ class FakeJobs implements JobControl {
   @override
   Future<void> checkNow() async => checks++;
 
+  final List<String> seriesChecks = [];
+
+  @override
+  Future<void> checkSeries(String key) async => seriesChecks.add(key);
+
   ServerCheck check = const ServerCheck();
 
   @override

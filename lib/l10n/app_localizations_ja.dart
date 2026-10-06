@@ -670,11 +670,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String archiveKnown(int archived, int total) {
-    return 'すでにライブラリにあります: 全$total話中$archived話。ある話はスキップされます。';
-  }
-
-  @override
   String get archiveWhatSection => 'ダウンロードする範囲';
 
   @override
@@ -698,12 +693,113 @@ class AppLocalizationsJa extends AppLocalizations {
       'タップした話だけをダウンロードします。ほかの話は一覧に未ダウンロードのまま残ります。';
 
   @override
-  String get archiveChapterNumberHint => 'サイトと同じ話数';
+  String get archiveChooseTitle => 'ダウンロードする内容';
 
   @override
-  String archivePickedCount(int count) {
-    return '$count話選択中';
+  String get archiveModeAhead => '読みながら';
+
+  @override
+  String get archiveModeAllLine => 'すべての話を一度だけ';
+
+  @override
+  String archiveModeAheadLine(int count) {
+    return '$count話を用意し、読むたびに1話ずつ';
   }
+
+  @override
+  String get archiveModeFromLine => '選んだ話から最新話まで';
+
+  @override
+  String get archiveModePickLine => 'タップした話だけ';
+
+  @override
+  String archiveModeAheadHint(int count) {
+    return '選んだ話から$count話をダウンロードします。1話読むたびに新しい話が届き、シリーズの最後までいつでも$count話読めます。サイトに新しい話が出たときも同じように届きます。';
+  }
+
+  @override
+  String get archiveModeAheadUnavailable =>
+      'このサイトでは使えません。毎回ブラウザの確認を求められ、スマホだけでは通過できません。';
+
+  @override
+  String get archiveModeAheadServer =>
+      '接続中のサーバーはまだ「読みながら」に対応していません。新しいバージョンが出ると1時間以内に自動で更新されます。それまではスマホからダウンロードします。';
+
+  @override
+  String get archiveChapterSearch => '番号やタイトルで検索';
+
+  @override
+  String get archiveNewestFirst => '新しい順';
+
+  @override
+  String get archiveOldestFirst => '最初から';
+
+  @override
+  String get archiveChooseStart => '開始する話をタップしてください。';
+
+  @override
+  String get archiveSelectMissing => '足りない話';
+
+  @override
+  String get archiveRangeHint => '話を長押しすると、最後にタップした話との間をまとめて選べます。';
+
+  @override
+  String get archivePickNone => '話が選ばれていません';
+
+  @override
+  String archiveSummaryChapters(int count, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count話',
+    );
+    return '$_temp0 · $where';
+  }
+
+  @override
+  String archiveSummaryAhead(int count, String where) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'まず$count話',
+    );
+    return '$_temp0、その後は読むたびに1話 · $where';
+  }
+
+  @override
+  String archiveDownloadAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count話をダウンロードして読みながら続ける',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveInLibraryCount(int archived, int total) {
+    return 'ライブラリ内: $total話中$archived話';
+  }
+
+  @override
+  String get archiveChapterInLibrary => 'ライブラリにあり';
+
+  @override
+  String get archiveChapterStart => 'ここから開始';
+
+  @override
+  String get archiveChapterLater => '読むと届きます';
+
+  @override
+  String get archiveAdvanced => '詳細設定';
+
+  @override
+  String archiveAdvancedLine(String pause) {
+    return 'リクエストの間隔: $pause';
+  }
+
+  @override
+  String get archiveReopen => 'ダウンロードする内容を選ぶ';
 
   @override
   String get archiveSelectAll => 'すべて';
@@ -763,9 +859,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveDownloadAll => '作品全体をダウンロード';
-
-  @override
-  String get archiveDownloadFrom => '選んだ話からダウンロード';
 
   @override
   String archiveDownloadPicked(int count) {
@@ -871,6 +964,27 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get archiveRecent => '最近ダウンロードしたシリーズ';
+
+  @override
+  String archiveRecentLineRuns(String when, int runs, String message) {
+    return '$when · $runs回 · $message';
+  }
+
+  @override
+  String get archiveRetry => '再試行';
+
+  @override
+  String archiveJobAhead(int count, String destination) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count話',
+    );
+    return '読みながら: $_temp0 · $destination';
+  }
+
+  @override
   String get archiveSites => '対応サイト';
 
   @override
@@ -954,6 +1068,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String archiveTrackedAhead(int count, String destination) {
+    return '読みながら、$count話を用意 · $destination';
+  }
+
+  @override
   String get archiveStopFollowing => '追跡をやめる';
 
   @override
@@ -1006,38 +1125,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get archiveForgetConfirm => 'やめる';
 
   @override
-  String archiveStartIntro(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count話。',
-      one: '1話。',
-    );
-    return '$_temp0すべてダウンロードするか、開始する話を選んでください。それより前の話はリーダーの一覧に残りますが、ページはありません。';
-  }
-
-  @override
   String get archiveStartNoMatch => 'この番号の話はありません。';
-
-  @override
-  String archiveStartFrom(String title, int remaining) {
-    String _temp0 = intl.Intl.pluralLogic(
-      remaining,
-      locale: localeName,
-      other: '$remaining話',
-      one: '1話',
-    );
-    return '「$title」以降: $_temp0。';
-  }
-
-  @override
-  String get archiveStartNone => '話が選択されていません。すべてダウンロードできます。';
-
-  @override
-  String get archiveStartAll => 'すべてダウンロード';
-
-  @override
-  String get archiveStartHere => 'ここから';
 
   @override
   String get browserTitle => 'サイトの認証';
@@ -1223,6 +1311,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get serverJobQueued => '待機中 · サーバー上';
+
+  @override
+  String serverJobAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count話',
+    );
+    return '読みながら: $_temp0';
+  }
+
+  @override
+  String serverSeriesAhead(int count) {
+    return '読みながら、$count話を用意: 読んでいる間にアプリが話を頼みます';
+  }
 
   @override
   String get serverOngoingTitle => 'サーバー上の連載中の作品';
@@ -2523,24 +2626,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shellTabCollections => 'コレクション';
 
   @override
-  String get shellTabMore => 'その他';
-
-  @override
-  String get moreTitle => 'その他';
-
-  @override
-  String get moreSectionLibrary => 'ライブラリ';
-
-  @override
-  String get moreSectionReading => 'あなたの読書';
-
-  @override
-  String get moreSectionPrivacy => 'プライバシー';
-
-  @override
-  String get moreSectionApp => 'アプリ';
-
-  @override
   String get moreDownload => 'マンガをダウンロード';
 
   @override
@@ -2563,12 +2648,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get moreIncognitoSubtitle => '位置、読了した話、読書時間を記録しません';
-
-  @override
-  String get moreSettings => '設定';
-
-  @override
-  String get moreSettingsSubtitle => '外観、ライブラリ、読書、バックアップ';
 
   @override
   String get historyTitle => '履歴';
@@ -2771,6 +2850,53 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get cleanupNeedsNetwork => 'Driveから削除するにはネットワークが必要です';
+
+  @override
+  String removeSeriesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のシリーズを削除しますか?',
+      one: 'シリーズを削除しますか?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesBody(int count, String title) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ライブラリから削除します。スマホ上の話は消去され、新しい話も届かなくなります。読書の進み具合は残ります。',
+      one: '「$title」をライブラリから削除します。スマホ上の話は消去され、新しい話も届かなくなります。読書の進み具合は残ります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get removeSeriesDrive => 'Drive のフォルダはゴミ箱に移動し、30日間はそこから復元できます。';
+
+  @override
+  String get removeSeriesConfirm => '削除';
+
+  @override
+  String removeSeriesDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のシリーズを削除しました。',
+      one: 'シリーズを削除しました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String removeSeriesFailed(String error) {
+    return 'すべてを削除できませんでした: $error';
+  }
+
+  @override
+  String get removeSeriesAction => 'ライブラリから削除';
 
   @override
   String cleanupIntroDrive(int count) {

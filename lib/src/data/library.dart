@@ -99,6 +99,32 @@ class LibraryCatalog {
   /// della libreria.
   final List<Object> notices;
 
+  /// Il catalogo senza le serie tolte dall'utente ([removed], chiave →
+  /// firma): una copia locale di `library.json` le elenca finché la
+  /// sincronizzazione non porta quella nuova. Una serie riscaricata dopo ha
+  /// un'altra firma, e torna.
+  LibraryCatalog hiding(Map<String, String> removed) {
+    if (removed.isEmpty) return this;
+    final series = [
+      for (final entry in index.series)
+        if (removed[entry.key] != entry.signature) entry,
+    ];
+    if (series.length == index.series.length) return this;
+    final kept = {for (final entry in series) entry.key};
+    return LibraryCatalog(
+      index: LibraryIndex(
+        generatedAt: index.generatedAt,
+        series: series,
+        chapterCount: series.fold(0, (sum, row) => sum + row.chapterCount),
+        pageCount: series.fold(0, (sum, row) => sum + row.pageCount),
+        bytes: series.fold(0, (sum, row) => sum + row.bytes),
+      ),
+      holders: {for (final MapEntry(:key, :value) in holders.entries) if (kept.contains(key)) key: value},
+      places: {for (final MapEntry(:key, :value) in places.entries) if (kept.contains(key)) key: value},
+      notices: notices,
+    );
+  }
+
   LibraryCatalog withNotice(Object notice) => LibraryCatalog(
         index: index,
         holders: holders,

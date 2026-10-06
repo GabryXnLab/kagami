@@ -18,9 +18,11 @@ import '../data/server_access.dart';
 import '../l10n.dart';
 import '../providers.dart';
 import 'drive_ui.dart';
+import 'library_screen.dart' show openSeries;
 import 'sync_screen.dart' show clockOf;
 import 'theme.dart';
 import 'widgets/kit.dart';
+import 'widgets/series_cover.dart';
 
 String archiveSize(int bytes) {
   if (bytes < 1 << 20) return '${(bytes / 1024).toStringAsFixed(0)} KB';
@@ -83,6 +85,111 @@ class ArchiveProgressRow extends StatelessWidget {
   }
 }
 
+/// Gli esiti raccolti per serie, il più recente per primo e quante volte è
+/// scesa: scaricando man mano ogni capitolo letto lascia un esito, e la
+/// stessa serie riempirebbe l'elenco.
+List<({ArchiveOutcome outcome, int runs})> recentOutcomes(List<ArchiveOutcome> history) {
+  final recent = <String, ({ArchiveOutcome outcome, int runs})>{};
+  for (final outcome in history) {
+    final key = outcome.seriesKey ?? outcome.url ?? outcome.title;
+    final seen = recent[key];
+    recent[key] = seen == null ? (outcome: outcome, runs: 1) : (outcome: seen.outcome, runs: seen.runs + 1);
+  }
+  return recent.values.toList();
+}
+
+/// Una serie scaricata da poco: la copertina se è già in libreria, com'è
+/// andata l'ultima volta, e il tocco che la apre — o la riprova, se è
+/// andata male.
+class ArchiveRecentTile extends ConsumerWidget {
+  const ArchiveRecentTile({required this.outcome, required this.runs, this.onRetry, super.key});
+
+  final ArchiveOutcome outcome;
+  final int runs;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final scheme = context.colors;
+    final danger = context.tokens.danger;
+    final key = outcome.seriesKey;
+    final entry = key == null ? null : ref.watch(seriesEntryProvider(key));
+    final when = archiveWhen(outcome.finishedAt);
+    final line = runs > 1
+        ? l10n.archiveRecentLineRuns(when, runs, outcome.message)
+        : l10n.archiveHistoryLine(when, outcome.message);
+    return KPress(
+      onTap: entry != null ? () => openSeries(context, entry.key) : onRetry,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: SizedBox(
+                width: 36,
+                height: 52,
+                child: entry != null
+                    ? CoverImage(entry: entry, width: 36)
+                    : ColoredBox(
+                        color: (outcome.ok ? scheme.onSurface : danger).withValues(alpha: .10),
+                        child: Icon(
+                          outcome.ok ? LucideIcons.circleCheck : LucideIcons.triangleAlert,
+                          size: 18,
+                          color: outcome.ok ? scheme.onSurface : danger,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (!outcome.ok) ...[
+                        Icon(LucideIcons.triangleAlert, size: 14, color: danger),
+                        const SizedBox(width: 5),
+                      ],
+                      Expanded(
+                        child: Text(
+                          outcome.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KagamiType.title(14.5, color: outcome.ok ? scheme.onSurface : danger),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    line,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: KagamiType.body(12.5, height: 1.35, color: context.tokens.muted),
+                  ),
+                ],
+              ),
+            ),
+            if (onRetry != null)
+              IconButton(
+                tooltip: l10n.archiveRetry,
+                icon: const Icon(LucideIcons.rotateCcw, size: 18),
+                onPressed: onRetry,
+              )
+            else if (entry != null) ...[
+              const SizedBox(width: 8),
+              Icon(LucideIcons.chevronRight, size: 18, color: context.tokens.muted),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Collega questo account al server a [url]: il server dice se lo conosce,
 /// e se non ha ancora il suo Drive glielo si dà. Si salva solo se tutto è
 /// andato; `null` se l'utente ha rinunciato a un passo.
@@ -134,7 +241,10 @@ Future<bool> _giveDrive(BuildContext context, WidgetRef ref, ServerClient client
 /// La sezione «Server»: accesso, inviti, com'è collegato, cosa sta facendo,
 /// cosa segue.
 class ServerSection extends ConsumerWidget {
-  const ServerSection({super.key});
+  const ServerSection({this.onRetry, super.key});
+
+  /// Riprova un download fallito dal suo link.
+  final void Function(String url)? onRetry;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -312,21 +422,28 @@ class ServerSection extends ConsumerWidget {
           ),
         for (final job in waiting)
           KTile(
-            icon: job.automatic ? LucideIcons.refreshCw : LucideIcons.clock,
+            icon: job.ahead != null
+                ? LucideIcons.sparkles
+                : job.automatic
+                    ? LucideIcons.refreshCw
+                    : LucideIcons.clock,
             title: job.title.isEmpty ? job.url : job.title,
-            subtitle: job.automatic ? l10n.serverJobAutomatic : l10n.serverJobQueued,
+            subtitle: job.ahead != null
+                ? l10n.serverJobAhead(job.ids?.length ?? 0)
+                : job.automatic
+                    ? l10n.serverJobAutomatic
+                    : l10n.serverJobQueued,
             trailing: IconButton(
               tooltip: l10n.serverRemoveFromQueue,
               icon: const Icon(LucideIcons.x, size: 18),
               onPressed: () => _guard(context, () => notifier.cancel(job)),
             ),
           ),
-        for (final outcome in queue.history.take(8))
-          KTile(
-            icon: outcome.ok ? LucideIcons.circleCheck : LucideIcons.triangleAlert,
-            tint: outcome.ok ? null : context.tokens.danger,
-            title: outcome.title,
-            subtitle: '${archiveWhen(outcome.finishedAt)} · ${outcome.message}',
+        for (final (:outcome, :runs) in recentOutcomes(queue.history).take(8))
+          ArchiveRecentTile(
+            outcome: outcome,
+            runs: runs,
+            onRetry: outcome.ok || outcome.url == null || onRetry == null ? null : () => onRetry!(outcome.url!),
           ),
       ],
     ));
@@ -375,11 +492,17 @@ class ServerSection extends ConsumerWidget {
               ),
             for (final series in view.ongoing)
               KTile(
-                icon: series.problem == null ? LucideIcons.bookOpen : LucideIcons.triangleAlert,
+                icon: series.problem != null
+                    ? LucideIcons.triangleAlert
+                    : series.ahead != null
+                        ? LucideIcons.sparkles
+                        : LucideIcons.bookOpen,
                 tint: series.problem == null ? null : context.tokens.danger,
                 title: series.title,
                 subtitle: series.problem ??
-                    (series.checkedAt == null
+                    (series.ahead != null
+                        ? l10n.serverSeriesAhead(series.ahead!)
+                        : series.checkedAt == null
                         ? l10n.serverSeriesKnown(series.chapters)
                         : l10n.serverSeriesKnownChecked(series.chapters, archiveWhen(series.checkedAt!))),
                 trailing: IconButton(

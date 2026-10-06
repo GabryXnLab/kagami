@@ -1875,6 +1875,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsAbout => 'Información';
 
   @override
+  String get settingsTheme => 'Tema';
+
+  @override
+  String get settingsLibraryNote => 'Carpeta, índices y Google Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => 'Carpeta e índices';
+
+  @override
+  String get settingsReadingNote =>
+      'Modo predeterminado y mediciones del lector';
+
+  @override
+  String get settingsAccountNote =>
+      'Inicio de sesión con Google y sincronización';
+
+  @override
+  String get settingsDataNote => 'Copias, restauración y borrado';
+
+  @override
   String get settingsAutoBackup => 'Copia automática en la biblioteca';
 
   @override

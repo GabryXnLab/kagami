@@ -1871,6 +1871,24 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsAbout => 'जानकारी';
 
   @override
+  String get settingsTheme => 'थीम';
+
+  @override
+  String get settingsLibraryNote => 'फ़ोल्डर, इंडेक्स और Google Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => 'फ़ोल्डर और इंडेक्स';
+
+  @override
+  String get settingsReadingNote => 'डिफ़ॉल्ट मोड और रीडर की माप';
+
+  @override
+  String get settingsAccountNote => 'Google साइन-इन और सिंक';
+
+  @override
+  String get settingsDataNote => 'बैकअप, पुनर्स्थापना और मिटाना';
+
+  @override
   String get settingsAutoBackup => 'लाइब्रेरी में अपने आप कॉपी';
 
   @override

@@ -2932,6 +2932,42 @@ abstract class AppLocalizations {
   /// **'Informazioni'**
   String get settingsAbout;
 
+  /// Riga delle impostazioni che sceglie tema chiaro, scuro o del sistema; accanto c'è la scelta attuale
+  ///
+  /// In it, this message translates to:
+  /// **'Tema'**
+  String get settingsTheme;
+
+  /// Sottotitolo della voce «Libreria» nella pagina principale delle impostazioni, quando Google Drive è disponibile
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella, indici e Google Drive'**
+  String get settingsLibraryNote;
+
+  /// Sottotitolo della voce «Libreria» nella pagina principale delle impostazioni, senza Google Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella e indici'**
+  String get settingsLibraryNoteLocal;
+
+  /// Sottotitolo della voce «Lettura» nella pagina principale delle impostazioni
+  ///
+  /// In it, this message translates to:
+  /// **'Modalità predefinita e misure del lettore'**
+  String get settingsReadingNote;
+
+  /// Sottotitolo della voce «Account» nella pagina principale delle impostazioni
+  ///
+  /// In it, this message translates to:
+  /// **'Accesso con Google e sincronizzazione'**
+  String get settingsAccountNote;
+
+  /// Sottotitolo della voce «Dati» nella pagina principale delle impostazioni
+  ///
+  /// In it, this message translates to:
+  /// **'Backup, ripristino e cancellazione'**
+  String get settingsDataNote;
+
   /// Interruttore della copia di backup giornaliera
   ///
   /// In it, this message translates to:

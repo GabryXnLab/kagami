@@ -1927,6 +1927,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsAbout => 'حول';
 
   @override
+  String get settingsTheme => 'السمة';
+
+  @override
+  String get settingsLibraryNote => 'المجلد والفهارس وGoogle Drive';
+
+  @override
+  String get settingsLibraryNoteLocal => 'المجلد والفهارس';
+
+  @override
+  String get settingsReadingNote => 'الوضع الافتراضي وقياسات القارئ';
+
+  @override
+  String get settingsAccountNote => 'تسجيل الدخول بحساب Google والمزامنة';
+
+  @override
+  String get settingsDataNote => 'النسخ الاحتياطي والاستعادة والحذف';
+
+  @override
   String get settingsAutoBackup => 'نسخ تلقائي في المكتبة';
 
   @override

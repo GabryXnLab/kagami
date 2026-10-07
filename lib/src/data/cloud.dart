@@ -16,6 +16,7 @@
 library;
 
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -149,28 +150,44 @@ class CloudSync {
   DocumentReference<Map<String, Object?>> get _document =>
       FirebaseFirestore.instance.collection(collection).doc(_requireUser());
 
+  /// La `revision` del documento com'era l'ultima volta che lo si è letto o
+  /// scritto da qui, in memoria: `null` finché in questo processo non lo si è
+  /// mai fuso, cioè sempre all'avvio.
+  String? _seen;
+
   /// Prende quello che c'è in rete, lo fonde con quello che c'è qui, e
-  /// rimanda su il risultato.
+  /// rimanda su il risultato. Dice anche se ha fuso: solo allora il database
+  /// è cambiato sotto l'app.
   ///
   /// Fondere in tutt'e due le direzioni invece di scegliere un vincitore è ciò
   /// che rende innocuo leggere due capitoli su un telefono e tre sull'altro
   /// senza aver aperto l'app nel mezzo.
-  Future<DateTime> sync() async {
+  ///
+  /// Non c'è un invio senza fusione, nemmeno uscendo dall'app: il documento
+  /// remoto si sostituisce per intero, e un telefono che lo scrive senza averlo
+  /// letto cancella ciò che c'era. Succedeva reinstallando: Android rimetteva
+  /// il database com'era al suo ultimo backup, e la prima uscita dall'app —
+  /// per concedere l'accesso ai file, prima ancora della sincronizzazione
+  /// d'avvio — mandava su quella copia vecchia al posto di quella giusta.
+  /// La lettura costa un documento; la fusione si salta se la `revision` è
+  /// quella che questo processo ha già visto, cioè nessun altro ha scritto.
+  Future<({DateTime at, bool merged})> sync() async {
     final snapshot = await _document.get();
-    final payload = snapshot.data()?['payload'];
-    if (payload is Blob) {
-      await backup.import(payload.bytes, ImportMode.merge);
-    }
-    return push();
+    final data = snapshot.data();
+    final payload = data?['payload'];
+    final revision = data?['revision'];
+    final merged = payload is Blob && (_seen == null || revision != _seen);
+    if (merged) await backup.import(payload.bytes, ImportMode.merge);
+    return (at: await _upload(), merged: merged);
   }
 
-  /// Manda su quello che c'è qui, senza guardare cosa c'era.
-  ///
-  /// È il gesto di chi chiude l'app: quello che sta sul telefono ha appena
-  /// fuso quello che stava in rete, quindi sovrascriverlo è giusto.
-  Future<DateTime> push() async {
+  Future<DateTime> _upload() async {
+    final revision = _newRevision();
     await _document.set({
       'payload': Blob(await backup.export()),
+      // Chi ha scritto per ultimo: un altro telefono che trova una revisione
+      // diversa da quella che ricorda sa di dover fondere prima di scrivere.
+      'revision': revision,
       // Da quale dispositivo è arrivata l'ultima scrittura: l'unica cosa che
       // permetta di capire, guardando i dati, chi ha sovrascritto cosa.
       'device': Platform.operatingSystem,
@@ -178,15 +195,25 @@ class CloudSync {
       // deve poter dichiarare di essere il più recente.
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _seen = revision;
     final now = DateTime.now().toUtc();
     await user.writeSetting(lastSyncKey, now.toIso8601String());
     return now;
+  }
+
+  static String _newRevision() {
+    final random = Random.secure();
+    return [
+      for (var i = 0; i < 16; i++)
+        random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ].join();
   }
 
   /// Toglie i propri dati dalla rete. Quelli sul telefono restano: è uno
   /// «smetti di tenerne copia», non un «cancella tutto».
   Future<void> forget() async {
     await _document.delete();
+    _seen = null;
     await user.writeSetting(lastSyncKey, '');
   }
 

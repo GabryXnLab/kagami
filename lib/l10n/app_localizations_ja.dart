@@ -641,10 +641,32 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveIntro =>
-      '対応サイトでタイトルを検索するか、作品のリンクを貼り付けてください。Kagamiがサイトから、メタデータ、表紙、全話の一覧とあわせてライブラリにダウンロードします。';
+      '対応サイトでタイトルを検索するか、作品またはその話のリンクを貼り付けてください。Kagamiがサイトから、メタデータ、表紙、全話の一覧とあわせてライブラリにダウンロードします。話をダウンロードせず、カードだけを保存することもできます。';
 
   @override
   String get archiveSearchHint => 'タイトルでマンガを検索';
+
+  @override
+  String get archiveFilterOngoing => '連載中';
+
+  @override
+  String get archiveFilterCompleted => '完結';
+
+  @override
+  String get archiveFilterNotInLibrary => 'ライブラリにない';
+
+  @override
+  String get archiveInLibrary => 'ライブラリにあり';
+
+  @override
+  String archiveResultsFiltered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件の結果がフィルターで非表示',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get archiveClear => 'クリア';
@@ -967,6 +989,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get archiveRecent => '最近ダウンロードしたシリーズ';
 
   @override
+  String archiveRecentAll(int count) {
+    return 'すべて（$count）';
+  }
+
+  @override
+  String get archiveRecentFailed => '失敗';
+
+  @override
+  String get archiveFollowedTitle => 'フォロー中の作品';
+
+  @override
+  String archiveFollowedProblems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '要対応: $count件',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String archiveRecentLineRuns(String when, int runs, String message) {
     return '$when · $runs回 · $message';
   }
@@ -1154,7 +1197,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get serverTitle => 'サーバー';
 
   @override
-  String get serverClear => '消去';
+  String get serverRecent => 'サーバーでダウンロード済み';
 
   @override
   String get serverUnavailableNoSecret =>
@@ -1325,33 +1368,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String serverSeriesAhead(int count) {
     return '読みながら、$count話を用意: 読んでいる間にアプリが話を頼みます';
-  }
-
-  @override
-  String get serverOngoingTitle => 'サーバー上の連載中の作品';
-
-  @override
-  String serverOngoingCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '追跡中: $count件',
-      zero: 'まだありません',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get serverOngoingCheckOff => '確認はオフ';
-
-  @override
-  String serverOngoingCheckAt(String clock) {
-    return '$clockに確認';
-  }
-
-  @override
-  String serverOngoingSubtitle(String count, String check) {
-    return '$count · $check。タップで今すぐ確認';
   }
 
   @override
@@ -2504,6 +2520,17 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String homeSiteChapters(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$siteで新着$count話',
+      one: '$siteで新着1話',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get homeAgoToday => '今日';
 
   @override
@@ -3231,6 +3258,17 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String dataNewSiteChaptersNotification(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$siteで新しい話が$count話公開されました',
+      one: '$siteで新しい話が1話公開されました',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get dataArchivePhoneFolderMissing => '端末のフォルダが未設定です。';
 
   @override
@@ -3389,4 +3427,420 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get serverCheckTimeHelp => 'チェックの時刻';
+
+  @override
+  String get seriesRatingInviteTitle => '何点をつけますか？';
+
+  @override
+  String get seriesRatingInviteBody => '評価はライブラリの絞り込みと並べ替えに使われ、統計にも反映されます。';
+
+  @override
+  String get seriesRatingInviteRate => '評価する';
+
+  @override
+  String get seriesRatingInviteIgnore => '今回は無視';
+
+  @override
+  String get seriesRatingInviteNever => '今後は表示しない';
+
+  @override
+  String get settingsRatingInvite => 'シリーズを開いたときに評価をうながす';
+
+  @override
+  String get settingsRatingInviteNote => '評価のないシリーズのページに、評価をうながすカードを表示します';
+
+  @override
+  String get archiveModeCard => 'カードのみ';
+
+  @override
+  String get archiveModeCardLine => '話はなし：状態、評価、どこまで読んだか';
+
+  @override
+  String get archiveModeCardHint =>
+      '話をダウンロードせずに作品をライブラリに保存します：表紙、メタデータ、話の一覧、サイトへのリンク。どこまで読んだかを選ぶと、その話と前の話が既読になります。話はあとからダウンロードできます。';
+
+  @override
+  String get archiveReachedSection => 'ここまで読んだ…';
+
+  @override
+  String get archiveReachedHint => '最後に読んだ話をタップしてください。';
+
+  @override
+  String get archiveReachedNone => 'まだ読んでいない';
+
+  @override
+  String get archiveChapterReached => 'ここまで読んだ';
+
+  @override
+  String get archiveCardServer => 'カードはスマートフォンが保存します。接続したサーバーは話のダウンロードだけを行います。';
+
+  @override
+  String get archiveCardNotesHint => '自分用のメモ（任意）';
+
+  @override
+  String archiveSummaryCard(String where) {
+    return 'カードを保存、話はダウンロードしません · $where';
+  }
+
+  @override
+  String archiveSummaryCardReached(String number, String where) {
+    return '$number話まで既読のカードを保存、話はダウンロードしません · $where';
+  }
+
+  @override
+  String get archiveSaveCard => 'カードを保存';
+
+  @override
+  String archiveCardQueuedSnack(String title) {
+    return '「$title」のカードを保存しました。表紙と話の一覧はまもなく届きます。';
+  }
+
+  @override
+  String archiveCardProgress(String message) {
+    return 'カード · $message';
+  }
+
+  @override
+  String archiveJobCard(String destination) {
+    return 'カード · $destination';
+  }
+
+  @override
+  String archiveJobCardUpdate(String destination) {
+    return 'カードの更新 · $destination';
+  }
+
+  @override
+  String archiveRecentCard(String when) {
+    return 'カード · $when';
+  }
+
+  @override
+  String archiveCheckCards(String names) {
+    return '$names のカードに新しい話を一覧へ追加（ダウンロードなし）';
+  }
+
+  @override
+  String get seriesOpenSite => 'サイトで開く';
+
+  @override
+  String get seriesRefreshCard => 'カードを更新';
+
+  @override
+  String get seriesDownloadMore => 'ほかの章をダウンロード';
+
+  @override
+  String get seriesStartDownload => 'ダウンロードを始める';
+
+  @override
+  String get seriesStartDownloadMessage =>
+      'このシリーズはカードだけで、章はサイトにあります。最後に読んだ章の次からダウンロードして、ここで読めます。';
+
+  @override
+  String get seriesDownloadFromSite => 'サイトからダウンロード';
+
+  @override
+  String get seriesDownloadFromSiteQueued => 'サイトから待機中';
+
+  @override
+  String get coverCardBadge => 'カード';
+
+  @override
+  String coverReached(String number) {
+    return '第$number話まで読了';
+  }
+
+  @override
+  String get libraryOnlyCards => 'カードのみ';
+
+  @override
+  String get seriesReachedTitle => '読んだところ';
+
+  @override
+  String get seriesReachedNone => '未読';
+
+  @override
+  String seriesReachedChapter(String number) {
+    return '第$number話';
+  }
+
+  @override
+  String get seriesReachedSearch => '話を検索';
+
+  @override
+  String get seriesReachedNumberHint => '話数';
+
+  @override
+  String get seriesReachedNumberHelp => 'サイトでの表記どおりに入力します（例: 52）。空欄で解除します。';
+
+  @override
+  String get seriesReachedBackTitle => '戻しますか？';
+
+  @override
+  String seriesReachedBackMessage(String chapter) {
+    return '「$chapter」より後の話は既読のままです。未読に戻すには、話の一覧で既読を外してください。';
+  }
+
+  @override
+  String get seriesReachedBackConfirm => '移動';
+
+  @override
+  String get seriesCardEmptyTitle => '話のないカード';
+
+  @override
+  String get seriesCardEmptyMessage =>
+      'Kagami はこのサイトからはダウンロードしませんが、カードにはステータス、評価、メモ、読んだ位置が残ります。';
+
+  @override
+  String get seriesLinkSite => 'サイトにリンク';
+
+  @override
+  String get seriesLinkTitle => 'サイトにリンク';
+
+  @override
+  String get seriesLinkMessage =>
+      'Kagami がダウンロードできるサイトのシリーズのリンクを貼り付けてください。ステータス、評価、メモ、コレクション、読書位置は本物のシリーズに引き継がれ、このカードは削除されます。';
+
+  @override
+  String get seriesLinkHint => 'シリーズのリンク';
+
+  @override
+  String get seriesLinkContinue => '続ける';
+
+  @override
+  String seriesLinkDone(String title) {
+    return '「$title」をリンクしました。ジョブが終わるとライブラリに表示されます。';
+  }
+
+  @override
+  String get archiveManualAction => 'リンクなしで追加';
+
+  @override
+  String get archiveManualUnsupported =>
+      'Kagamiはこのサイトからダウンロードできません。タイトルとリンクを付けたカードとして保存できますが、チャプターはダウンロードできません。';
+
+  @override
+  String get archiveManualUnsupportedAction => 'カードとして保存';
+
+  @override
+  String get archiveManualTitle => '手動カード';
+
+  @override
+  String get archiveManualTitleHint => 'タイトル';
+
+  @override
+  String get archiveManualTitleRequired => 'タイトルを入力してください。';
+
+  @override
+  String get archiveManualLinkHint => '作品ページへのリンク(任意)';
+
+  @override
+  String get archiveManualSupported =>
+      'Kagamiはこのサイトを読み取れます。通常の方法ならチャプター一覧が得られ、ダウンロードもできます。';
+
+  @override
+  String get archiveManualSupportedAction => '通常の方法を使う';
+
+  @override
+  String get archiveManualNoDownload =>
+      'このサイトのチャプターはダウンロードできません。リンクのほか、ページが示していればタイトルと表紙が残ります。';
+
+  @override
+  String get archiveManualReachedHint => '読んだところまで(例: 52)';
+
+  @override
+  String get archiveManualWhereDrive => 'カードはDriveのライブラリフォルダに保存されます。';
+
+  @override
+  String get archiveManualWherePhone => 'カードは端末に保存されます。';
+
+  @override
+  String get archiveManualSave => 'カードを保存';
+
+  @override
+  String archiveManualSaved(String title) {
+    return '「$title」のカードを保存しました。';
+  }
+
+  @override
+  String archiveManualExists(String title) {
+    return 'このリンクはすでにライブラリにあります:「$title」。';
+  }
+
+  @override
+  String get archiveManualNeedsDrive => 'Driveにカードを保存するには書き込み権限が必要です。';
+
+  @override
+  String archiveManualFailed(String error) {
+    return 'カードを保存できませんでした: $error';
+  }
+
+  @override
+  String get archiveImportAction => '複数のリンクを取り込む';
+
+  @override
+  String get archiveImportTitle => '複数のリンクを取り込む';
+
+  @override
+  String get archiveImportIntro =>
+      'リンクを貼り付けてください。ブラウザのタブ、一覧、JSON のどれでも構いません。各マンガは章をダウンロードせずにライブラリのカードになります。章のリンクなら、その章まで読んだことになります。';
+
+  @override
+  String get archiveImportHint => 'リンクを含むテキストをここに貼り付け…';
+
+  @override
+  String archiveImportFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のリンクが見つかりました',
+      zero: 'リンクが見つかりません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportWhereDrive => 'カードは Drive のライブラリフォルダに保存されます。';
+
+  @override
+  String get archiveImportWherePhone => 'カードは端末に保存されます。';
+
+  @override
+  String get archiveImportCollection => 'コレクションに追加';
+
+  @override
+  String get archiveImportCollectionNone => 'コレクションなし';
+
+  @override
+  String get archiveImportPause => 'リンク間の待ち時間';
+
+  @override
+  String get archiveImportPauseHint =>
+      'シリーズはサイトから 1 件ずつ読み込みます。待ち時間を長くするとサイトへの負担が減ります。';
+
+  @override
+  String archiveImportSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String archiveImportStart(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のリンクを取り込む',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportStop => '停止';
+
+  @override
+  String get archiveImportResume => '続ける';
+
+  @override
+  String get archiveImportWaiting => '待機中';
+
+  @override
+  String get archiveImportRunning => '処理中…';
+
+  @override
+  String get archiveImportSaved => 'カードとして保存しました';
+
+  @override
+  String archiveImportSavedReached(String chapter) {
+    return 'カードとして保存 · $chapter 話まで読了';
+  }
+
+  @override
+  String get archiveImportManual => '手動カード：Kagami はこの章をダウンロードできません';
+
+  @override
+  String archiveImportKnown(String title) {
+    return 'ライブラリに登録済み：「$title」';
+  }
+
+  @override
+  String get archiveImportQueued => 'キューに登録済み';
+
+  @override
+  String get archiveImportNeedsCheck => 'サイトが確認を求めています';
+
+  @override
+  String get archiveImportVerify => '確認';
+
+  @override
+  String get archiveImportRetry => '再試行';
+
+  @override
+  String get archiveImportCheckHint =>
+      'ブラウザでの確認を求めるサイトがあります。1 件をタップして確認を済ませると、同じサイトの他のリンクは自動で再開します。';
+
+  @override
+  String archiveImportProgress(int done, int total) {
+    return '$total 件中 $done 件';
+  }
+
+  @override
+  String archiveImportCountSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'カード $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountManual(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '手動 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountKnown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '登録済み $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'エラー $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountCheck(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '要確認 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportLeaveTitle => '取り込みを停止しますか？';
+
+  @override
+  String get archiveImportLeaveBody => '保存済みのカードは残ります。残りのリンクは取り込まれません。';
+
+  @override
+  String get archiveImportLeaveConfirm => '停止して戻る';
+
+  @override
+  String get shareNoLinks => '共有されたテキストにリンクがありません。';
 }

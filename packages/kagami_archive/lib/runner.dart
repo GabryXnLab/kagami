@@ -158,6 +158,7 @@ class ArchiveRunner {
         settled: result.settled,
         metadata: result.metadata,
         ahead: job.ahead,
+        card: job.cardOnly,
       );
       await _finish(job, ArchiveOutcome(
         title: series.title,
@@ -166,6 +167,7 @@ class ArchiveRunner {
         finishedAt: DateTime.now(),
         seriesKey: series.key,
         url: job.url,
+        card: job.cardOnly,
       ));
       return null;
     } on ArchiveCancelled {
@@ -209,6 +211,7 @@ class ArchiveRunner {
         message: message,
         finishedAt: DateTime.now(),
         url: job.url,
+        card: job.cardOnly,
       );
 
   Future<void> _finish(ArchiveJob job, ArchiveOutcome outcome) async {
@@ -222,6 +225,12 @@ class ArchiveRunner {
       final failure = result.failed.first;
       final more = result.failed.length > 1 ? ' (e altri ${result.failed.length - 1})' : '';
       return '${failure.chapter}: ${failure.error}$more. Ripeti il download per ritentare.';
+    }
+    if (job.cardOnly) {
+      final count = result.series.chapters.length;
+      return count == 1
+          ? 'Scheda salvata: 1 capitolo in elenco, non scaricato.'
+          : 'Scheda salvata: $count capitoli in elenco, nessuno scaricato.';
     }
     if (job.start != null) {
       return 'Archiviati ${result.completed} capitoli dal capitolo scelto in poi; '

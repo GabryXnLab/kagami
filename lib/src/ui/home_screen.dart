@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../data/arrivals.dart' show siteName;
 import '../data/library_view.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
@@ -42,8 +43,12 @@ class HomeScreen extends ConsumerWidget {
     final resume = all.where((s) => s.isStarted && s.hasUnread).sorted(
           (a, b) => _lastTouched(b).compareTo(_lastTouched(a)),
         );
+    // Una scheda non ha niente da riprendere qui, ma i capitoli usciti sul
+    // sito sono un aggiornamento come gli altri.
     final updates = all
-        .where((s) => s.hasUnread && s.entry.latestChapterArchivedAt != null)
+        .where((s) =>
+            (s.hasUnread && s.entry.latestChapterArchivedAt != null) ||
+            (s.isCard && s.isNew))
         .sorted((a, b) => b.freshness.compareTo(a.freshness))
         .take(20)
         .toList(growable: false);
@@ -465,7 +470,12 @@ class _UpdatesSection extends StatelessWidget {
                                 const SizedBox(height: 3),
                                 Text(
                                   [
-                                    if (signals.entry.latestChapterNumber !=
+                                    if (signals.isCard)
+                                      context.l10n.homeSiteChapters(
+                                        signals.newChapters,
+                                        siteName(signals.entry),
+                                      )
+                                    else if (signals.entry.latestChapterNumber !=
                                         null)
                                       context.l10n.homeLatestChapter(
                                         signals.entry.latestChapterNumber!,
@@ -496,7 +506,7 @@ class _UpdatesSection extends StatelessWidget {
                               borderRadius: BorderRadius.circular(9),
                             ),
                             child: Text(
-                              '${signals.unreadCount}',
+                              '${signals.isCard ? signals.newChapters : signals.unreadCount}',
                               style: KagamiType.figure(
                                 12,
                                 color: signals.isNew

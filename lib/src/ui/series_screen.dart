@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:kagami_archive/model.dart' show ProviderError;
+import 'package:kagami_archive/manual.dart' show manualProvider, normalizeLink;
+import 'package:kagami_archive/providers.dart' as site;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../data/cleanup.dart';
@@ -22,6 +25,8 @@ import '../format/malf.dart';
 import '../format/reading.dart';
 import '../l10n.dart';
 import '../providers.dart';
+import 'archive_flow.dart';
+import 'archive_series.dart' show ArchiveChoice, ArchiveMode, ArchiveWhere, reachedChapterIndex;
 import 'drive_ui.dart';
 import 'library_screen.dart' show seriesRoute;
 import 'reader_screen.dart';
@@ -30,6 +35,7 @@ import 'widgets/cleanup_sheet.dart';
 import 'widgets/collection_sheet.dart';
 import 'widgets/kit.dart';
 import 'widgets/origin.dart';
+import 'widgets/reached_sheet.dart';
 import 'widgets/remove_sheet.dart';
 import 'widgets/series_cover.dart';
 
@@ -95,6 +101,17 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
   final Set<String> _selected = {};
 
   bool _touched = false;
+
+  /// «Ignora» sull'invito a votare: vale finché questa scheda resta aperta.
+  bool _ratingInviteDismissed = false;
+
+  /// La serie letta dal sito, una volta per apertura della scheda: ogni
+  /// capitolo da scaricare passa da qui, e rileggere la pagina a ogni tocco
+  /// sarebbe una richiesta (e, su certi siti, una verifica) per capitolo.
+  Future<InspectedSeries>? _inspected;
+
+  /// Una lettura dal sito è in corso: gli altri gesti verso il sito aspettano.
+  bool _siteBusy = false;
 
   @override
   void didChangeDependencies() {
@@ -166,6 +183,25 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     final visible = _visible(ordered, signals.state, onDrive.toSet());
     final next = _resumeTarget(chapters, signals.state);
     final blocks = _blocks(chapters.length);
+    final siteSource = _downloadableSource(signals.entry);
+    // Dal sito si scarica ciò che non c'è né sul telefono né su Drive.
+    final missing = siteSource == null
+        ? const <String>{}
+        : {
+            for (final chapter in chapters)
+              if (!chapter.isReadable && sources?.originOf(chapter.id) == null) chapter.id,
+          };
+    final queued = siteSource == null
+        ? const <String>{}
+        : ref
+            .watch(_siteQueuedProvider(siteSource))
+            .split('\u0000')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+    final offerStart = siteSource != null &&
+        index.hasValue &&
+        chapters.isNotEmpty &&
+        !chapters.any((c) => c.isReadable);
 
     return Scaffold(
       body: CustomScrollView(
@@ -181,18 +217,60 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                   const SizedBox(height: 18),
                   Entrance(
                     index: 1,
-                    child: _Resume(
-                      signals: signals,
-                      next: next,
-                      onOpen: _open,
-                    ),
+                    child: offerStart
+                        ? _StartDownload(
+                            busy: _siteBusy,
+                            onStart: () => _startDownload(siteSource),
+                          )
+                        : _Resume(
+                            signals: signals,
+                            next: next,
+                            onOpen: _open,
+                          ),
                   ),
+                  if (signals.entry.source != null || signals.entry.provider == manualProvider) ...[
+                    const SizedBox(height: 12),
+                    Entrance(
+                      index: 1,
+                      child: _SiteActions(
+                        busy: _siteBusy,
+                        onOpen: signals.entry.source == null
+                            ? null
+                            : () => openInBrowser(context, signals.entry.source!),
+                        onLink: signals.entry.provider == manualProvider
+                            ? () => _linkToSite(signals.entry)
+                            : null,
+                        onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
+                        onMore: siteSource == null || offerStart || missing.isEmpty
+                            ? null
+                            : () => _startDownload(siteSource),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   Entrance(index: 2, child: _Numbers(signals: signals)),
                   const SizedBox(height: 22),
                   Entrance(
                     index: 3,
-                    child: _Shelf(signals: signals),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _Shelf(signals: signals),
+                        _RatingInvite(
+                          visible: signals.state.rating == null &&
+                              _selected.isEmpty &&
+                              !_ratingInviteDismissed,
+                          onRate: () => _Shelf._rate(
+                            context,
+                            ref,
+                            widget.seriesKey,
+                            null,
+                          ),
+                          onIgnore: () =>
+                              setState(() => _ratingInviteDismissed = true),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 22),
                   Entrance(
@@ -253,6 +331,14 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                 message: context.l10n.seriesOfflineMessage,
               ),
             )
+          else if (chapters.isEmpty && signals.entry.provider == manualProvider)
+            SliverToBoxAdapter(
+              child: KEmpty(
+                icon: LucideIcons.stickyNote,
+                title: context.l10n.seriesCardEmptyTitle,
+                message: context.l10n.seriesCardEmptyMessage,
+              ),
+            )
           else if (chapters.isEmpty)
             SliverToBoxAdapter(
               child: KEmpty(
@@ -287,6 +373,10 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                     onDownload: origin == LibraryOrigin.drive
                         ? () => _download([chapter.id])
                         : null,
+                    onDownloadFromSite: missing.contains(chapter.id)
+                        ? () => _downloadFromSite(siteSource!, [chapter.id])
+                        : null,
+                    siteQueued: queued.contains(chapter.id),
                     onCancelDownload: download == null
                         ? null
                         : () => ref
@@ -328,6 +418,12 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
               onDownload: _selected.any(onDrive.contains)
                   ? () {
                       _download(_selected.where(onDrive.contains));
+                      setState(_selected.clear);
+                    }
+                  : null,
+              onDownloadFromSite: _selected.any(missing.contains)
+                  ? () {
+                      _downloadFromSite(siteSource!, _selected.where(missing.contains));
                       setState(_selected.clear);
                     }
                   : null,
@@ -391,6 +487,214 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       if (needle.isEmpty) return true;
       return chapter.label().toLowerCase().contains(needle);
     }).toList(growable: false);
+  }
+
+  /// Il link della serie sul sito, solo se Kagami sa scaricarne i capitoli:
+  /// una scheda manuale o un sito non supportato hanno il link ma non il
+  /// download.
+  String? _downloadableSource(SeriesEntry entry) {
+    final source = entry.source;
+    if (source == null || entry.provider == manualProvider) return null;
+    return _knownSite(source) ? source : null;
+  }
+
+  bool _knownSite(String link) =>
+      site.providers.any((provider) => provider.accepts(link)) ||
+      site.providers.any((provider) => provider.seriesOfChapter(link) != null);
+
+  /// «Collega a un sito»: una scheda manuale diventa la serie vera di un
+  /// sito che Kagami sa scaricare. Si chiede il link (già scritto, se la
+  /// scheda ne ha uno di un sito ora supportato), si apre la scelta con ciò
+  /// che la scheda sa, si mette in coda il lavoro e solo allora i dati
+  /// personali passano alla chiave vera e la scheda manuale si toglie.
+  Future<void> _linkToSite(SeriesEntry entry) async {
+    if (_siteBusy) return;
+    final source = entry.source;
+    final link = await _askLink(source != null && _knownSite(source) ? source : '');
+    if (link == null || !mounted) return;
+    setState(() => _siteBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final l10n = context.l10n;
+    try {
+      final InspectedSeries inspected;
+      try {
+        inspected = await inspectArchiveLink(context, link);
+      } on ProviderError catch (error) {
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        return;
+      }
+      if (!mounted) return;
+      final choice = await chooseArchive(
+        context,
+        ref,
+        inspected,
+        where: _where(card: true),
+        mode: ArchiveMode.card,
+        stateKey: entry.key,
+      );
+      if (choice == null || !mounted) return;
+      final manual = ref.read(seriesStateProvider(entry.key));
+      if (!await enqueueArchive(context, ref, inspected, choice) || !mounted) return;
+      final reading = ref.read(readingProvider.notifier);
+      final key = inspected.series.key;
+      await reading.moveSeries(entry.key, key);
+      // Il silenzio è del lettore, non della scelta appena fatta: lo scrive
+      // chi ha salvato la scheda, che non lo conosce.
+      if (manual.muted && !ref.read(seriesStateProvider(key)).muted) {
+        await reading.toggleMuted(key);
+      }
+      // Scaricando senza passare dalla scheda i letti stimati non sono stati
+      // scritti: il punto di lettura dichiarato vale anche per la serie vera.
+      final reached = reachedChapterIndex(
+        inspected.series.chapters,
+        reachedNumber: manual.reachedChapter,
+      );
+      if (choice.card == null && reached >= 0) {
+        await reading.setReachedThrough(
+          key,
+          chapterEntriesOf(inspected.series),
+          inspected.series.chapters[reached].id,
+        );
+      }
+      if (!mounted) return;
+      final removed = await removeSeriesNow(
+        context,
+        ref,
+        [entry],
+        keepUrls: {normalizeLink(inspected.series.url)},
+        announce: false,
+      );
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.seriesLinkDone(inspected.series.title)),
+      ));
+      if (removed) navigator.maybePop();
+    } finally {
+      if (mounted) setState(() => _siteBusy = false);
+    }
+  }
+
+  Future<String?> _askLink(String initial) async {
+    final controller = TextEditingController(text: initial);
+    final link = await showKagamiSheet<String>(
+      context,
+      title: context.l10n.seriesLinkTitle,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              context.l10n.seriesLinkMessage,
+              style: KagamiType.body(13.5, height: 1.5, color: context.tokens.muted),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (text) => Navigator.of(context).pop(text.trim()),
+              decoration: InputDecoration(hintText: context.l10n.seriesLinkHint),
+            ),
+            const SizedBox(height: 16),
+            KButton(
+              label: context.l10n.seriesLinkContinue,
+              icon: LucideIcons.link,
+              expand: true,
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return link == null || link.isEmpty ? null : link;
+  }
+
+  /// Dove va ciò che si scarica da qui: dove la serie già sta. Sul telefono
+  /// se è tutta lì; altrimenti il server, se c'è (una scheda no: la scrive
+  /// il telefono), o Drive.
+  ArchiveWhere _where({bool card = false}) {
+    if (ref.read(seriesPlaceProvider(widget.seriesKey)) == SeriesPlace.local) {
+      return ArchiveWhere.phone;
+    }
+    final destinations = archiveDestinations(ref);
+    if (!card && destinations.contains(ArchiveWhere.server)) return ArchiveWhere.server;
+    return destinations.contains(ArchiveWhere.drive) ? ArchiveWhere.drive : ArchiveWhere.phone;
+  }
+
+  /// Legge la serie dal sito, o dà quella già letta; con [fresh] la rilegge.
+  /// Un errore si dice con uno snackbar e dà `null`.
+  Future<InspectedSeries?> _inspect(String source, {bool fresh = false}) async {
+    if (fresh) _inspected = null;
+    final pending = _inspected ??= inspectArchiveLink(context, source);
+    try {
+      return await pending;
+    } on ProviderError catch (error) {
+      if (identical(_inspected, pending)) _inspected = null;
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+      }
+      return null;
+    }
+  }
+
+  /// «Inizia a scaricare» e «Scarica altri capitoli»: la pagina in cui si
+  /// sceglie, aperta su «Dal capitolo».
+  Future<void> _startDownload(String source) async {
+    if (_siteBusy) return;
+    setState(() => _siteBusy = true);
+    try {
+      final inspected = await _inspect(source);
+      if (inspected == null || !mounted) return;
+      final choice = await chooseArchive(
+        context,
+        ref,
+        inspected,
+        where: _where(),
+        mode: ArchiveMode.from,
+      );
+      if (choice == null || !mounted) return;
+      await enqueueArchive(context, ref, inspected, choice);
+    } finally {
+      if (mounted) setState(() => _siteBusy = false);
+    }
+  }
+
+  /// «Aggiorna scheda»: rilegge la pagina e mette in coda un lavoro senza
+  /// capitoli, che riscrive metadati, copertina e indice. Lo stato, il voto e
+  /// la nota dell'utente non si toccano.
+  Future<void> _refreshCard(String source) async {
+    if (_siteBusy) return;
+    setState(() => _siteBusy = true);
+    try {
+      final inspected = await _inspect(source, fresh: true);
+      if (inspected == null || !mounted) return;
+      await enqueueArchive(
+        context,
+        ref,
+        inspected,
+        ArchiveChoice(where: _where(card: true), delayMs: 200, ids: const {}),
+      );
+    } finally {
+      if (mounted) setState(() => _siteBusy = false);
+    }
+  }
+
+  /// Archivia dal sito i capitoli indicati, senza aprire la scelta.
+  Future<void> _downloadFromSite(String source, Iterable<String> chapterIds) async {
+    final ids = chapterIds.toSet();
+    final inspected = await _inspect(source);
+    if (inspected == null || !mounted) return;
+    await enqueueArchive(
+      context,
+      ref,
+      inspected,
+      ArchiveChoice(where: _where(), delayMs: 200, ids: ids),
+    );
   }
 
   void _toggleSelected(String chapterId) => setState(() {
@@ -959,6 +1263,111 @@ class _Resume extends ConsumerWidget {
   }
 }
 
+/// Una serie che è solo una scheda, sul sito e da scaricare: al posto di
+/// «Riprendi», che non ha niente da riprendere, il gesto è scaricare.
+class _StartDownload extends StatelessWidget {
+  const _StartDownload({required this.busy, required this.onStart});
+
+  final bool busy;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) => KCard(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              context.l10n.seriesStartDownloadMessage,
+              style: KagamiType.body(13.5, height: 1.5, color: context.tokens.muted),
+            ),
+            const SizedBox(height: 14),
+            KButton(
+              label: context.l10n.seriesStartDownload,
+              icon: LucideIcons.download,
+              expand: true,
+              onPressed: busy ? null : onStart,
+            ),
+          ],
+        ),
+      );
+}
+
+/// I gesti verso il sito della serie. Senza rete o col sito che non
+/// risponde, chi li chiama lo dice con uno snackbar.
+class _SiteActions extends StatelessWidget {
+  const _SiteActions({
+    required this.busy,
+    required this.onOpen,
+    required this.onRefresh,
+    required this.onMore,
+    this.onLink,
+  });
+
+  final bool busy;
+
+  /// `null` se la serie non ha un link.
+  final VoidCallback? onOpen;
+
+  /// Solo per una scheda manuale: legarla a un sito che Kagami sa scaricare.
+  final VoidCallback? onLink;
+
+  /// `null` se Kagami non sa leggere quel sito.
+  final VoidCallback? onRefresh;
+  final VoidCallback? onMore;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (onOpen != null)
+            KChip(
+              label: context.l10n.seriesOpenSite,
+              icon: LucideIcons.externalLink,
+              onTap: onOpen,
+            ),
+          if (onLink != null)
+            KChip(
+              label: context.l10n.seriesLinkSite,
+              icon: LucideIcons.link,
+              onTap: busy ? null : onLink,
+            ),
+          if (onMore != null)
+            KChip(
+              label: context.l10n.seriesDownloadMore,
+              icon: LucideIcons.download,
+              onTap: busy ? null : onMore,
+            ),
+          if (onRefresh != null)
+            KChip(
+              label: context.l10n.seriesRefreshCard,
+              icon: LucideIcons.refreshCw,
+              onTap: busy ? null : onRefresh,
+            ),
+        ],
+      );
+}
+
+/// I capitoli di [source] in coda o in corso, sul telefono e sul server,
+/// separati da `\u0000`: una stringa e non un insieme, perché `select` rifaccia
+/// la scheda solo quando cambiano davvero — la coda si rilegge ogni secondo.
+final _siteQueuedProvider = Provider.autoDispose.family<String, String>((ref, source) {
+  final wanted = normalizeLink(source);
+  final phone = ref.watch(archiveProvider.select((view) => _queuedIds([
+        for (final job in view.jobs) (job.url, job.ids),
+      ], wanted)));
+  final server = ref.watch(remoteArchiveProvider.select((view) => _queuedIds([
+        for (final job in view.queue.jobs) (job.url, job.ids),
+      ], wanted)));
+  return '$phone\u0000$server';
+});
+
+String _queuedIds(Iterable<(String, Set<String>?)> jobs, String wanted) => [
+      for (final (url, ids) in jobs)
+        if (ids != null && normalizeLink(url) == wanted) ...ids,
+    ].join('\u0000');
+
 /// I numeri della serie: quanti capitoli, quanti letti, quanto manca, che
 /// voto le è stato dato.
 class _Numbers extends StatelessWidget {
@@ -1015,6 +1424,8 @@ class _Shelf extends ConsumerWidget {
     final key = signals.entry.key;
     final reading = ref.read(readingProvider.notifier);
     final notes = state.notes ?? '';
+    final chapters = ref.watch(seriesChaptersProvider(key)).value?.index.chapters ??
+        const <ChapterEntry>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1029,6 +1440,22 @@ class _Shelf extends ConsumerWidget {
                 onTap: () => reading.setStatus(key, entry.key),
               ),
           ],
+        ),
+        const SizedBox(height: 12),
+        KCard(
+          padding: EdgeInsets.zero,
+          child: KTile(
+            icon: LucideIcons.bookMarked,
+            title: context.l10n.seriesReachedTitle,
+            subtitle:
+                reachedLabel(chapters, state) ?? context.l10n.seriesReachedNone,
+            trailing: Icon(
+              LucideIcons.pencil,
+              size: 18,
+              color: context.tokens.muted,
+            ),
+            onTap: () => editReached(context, ref, key, chapters, state),
+          ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -1086,17 +1513,13 @@ class _Shelf extends ConsumerWidget {
     );
   }
 
-  Future<void> _rate(
+  static Future<void> _rate(
     BuildContext context,
     WidgetRef ref,
     String key,
     int? current,
   ) async {
-    final chosen = await showKagamiSheet<int>(
-      context,
-      title: context.l10n.seriesRatingSheetTitle,
-      builder: (context) => _RatingSheet(current: current),
-    );
+    final chosen = await showRatingSheet(context, current);
     if (chosen == null) return;
     await ref
         .read(readingProvider.notifier)
@@ -1141,6 +1564,102 @@ class _Shelf extends ConsumerWidget {
     await ref.read(readingProvider.notifier).setNotes(key, saved);
   }
 }
+
+/// L'invito a votare, in linea sotto il ripiano: una card e non un foglio,
+/// perché aprendo la scheda può già comparire quello di «Libera spazio».
+class _RatingInvite extends ConsumerWidget {
+  const _RatingInvite({
+    required this.visible,
+    required this.onRate,
+    required this.onIgnore,
+  });
+
+  final bool visible;
+  final VoidCallback onRate;
+  final VoidCallback onIgnore;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final show = visible && (ref.watch(ratingInviteProvider).value ?? false);
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: !show
+          ? const SizedBox(width: double.infinity)
+          : Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: KCard(
+                color: context.colors.surfaceContainerHigh,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.star,
+                          size: 18,
+                          color: context.colors.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.seriesRatingInviteTitle,
+                            style: KagamiType.body(14),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.seriesRatingInviteBody,
+                      style: KagamiType.body(13).copyWith(
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        KButton(
+                          label: l10n.seriesRatingInviteRate,
+                          height: 42,
+                          onPressed: onRate,
+                        ),
+                        const SizedBox(width: 8),
+                        KGhostButton(
+                          label: l10n.seriesRatingInviteIgnore,
+                          height: 42,
+                          onPressed: onIgnore,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () =>
+                            ref.read(ratingInviteProvider.notifier).set(false),
+                        child: Text(l10n.seriesRatingInviteNever),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+/// Il foglio del voto, anche per chi non è sulla scheda: il voto scelto, -1
+/// per toglierlo, `null` se lo si chiude senza scegliere.
+Future<int?> showRatingSheet(BuildContext context, int? current) =>
+    showKagamiSheet<int>(
+      context,
+      title: context.l10n.seriesRatingSheetTitle,
+      builder: (context) => _RatingSheet(current: current),
+    );
 
 /// Il voto da 1 a 10: una fila di dieci celle che si riempie fino al valore,
 /// da toccare o da percorrere col dito. Il numero grande e la parola sopra
@@ -1818,6 +2337,7 @@ class _ChapterSelectionBar extends StatelessWidget {
     required this.onUnread,
     required this.onReadThrough,
     required this.onDownload,
+    required this.onDownloadFromSite,
     required this.onClear,
   });
 
@@ -1826,6 +2346,10 @@ class _ChapterSelectionBar extends StatelessWidget {
   final VoidCallback onUnread;
   final VoidCallback onReadThrough;
   final VoidCallback? onDownload;
+
+  /// Scarica dal sito i selezionati che non sono da nessuna parte; `null` se
+  /// non ce n'è nessuno.
+  final VoidCallback? onDownloadFromSite;
   final VoidCallback onClear;
 
   @override
@@ -1867,6 +2391,12 @@ class _ChapterSelectionBar extends StatelessWidget {
                     tooltip: context.l10n.seriesDownloadFromDrive,
                     onPressed: onDownload,
                     icon: const Icon(LucideIcons.cloudDownload),
+                  ),
+                if (onDownloadFromSite != null)
+                  IconButton(
+                    tooltip: context.l10n.seriesDownloadFromSite,
+                    onPressed: onDownloadFromSite,
+                    icon: const Icon(LucideIcons.download),
                   ),
               ],
             ),
@@ -1946,6 +2476,8 @@ class _ChapterTile extends StatelessWidget {
     this.download,
     this.onDownload,
     this.onCancelDownload,
+    this.onDownloadFromSite,
+    this.siteQueued = false,
   });
 
   final ChapterEntry chapter;
@@ -1956,6 +2488,13 @@ class _ChapterTile extends StatelessWidget {
   final DownloadProgress? download;
   final VoidCallback? onDownload;
   final VoidCallback? onCancelDownload;
+
+  /// Archivia il capitolo dal sito; `null` se è già da qualche parte o la
+  /// serie non si scarica.
+  final VoidCallback? onDownloadFromSite;
+
+  /// Il download dal sito di questo capitolo è in coda o in corso.
+  final bool siteQueued;
   final bool read;
   final bool selected;
   final bool selecting;
@@ -2060,6 +2599,21 @@ class _ChapterTile extends StatelessWidget {
                 _TileAction(
                   label: context.l10n.seriesDownloadToPhone,
                   onTap: onDownload,
+                  child: Icon(LucideIcons.download, size: 18, color: muted),
+                ),
+              if (!selecting && siteQueued)
+                _TileAction(
+                  label: context.l10n.seriesDownloadFromSiteQueued,
+                  onTap: null,
+                  child: const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                )
+              else if (!selecting && onDownloadFromSite != null)
+                _TileAction(
+                  label: context.l10n.seriesDownloadFromSite,
+                  onTap: onDownloadFromSite,
                   child: Icon(LucideIcons.download, size: 18, color: muted),
                 ),
               if (available && !selecting)

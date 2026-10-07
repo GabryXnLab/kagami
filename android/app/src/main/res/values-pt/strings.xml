@@ -15,4 +15,8 @@
         <item quantity="one">Chegou um novo capítulo</item>
         <item quantity="other">Chegaram %d novos capítulos</item>
     </plurals>
+    <plurals name="arrivals_new_site">
+        <item quantity="one">Saiu um capítulo novo em %2$s</item>
+        <item quantity="other">Saíram %1$d capítulos novos em %2$s</item>
+    </plurals>
 </resources>

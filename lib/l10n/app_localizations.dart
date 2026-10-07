@@ -1129,7 +1129,7 @@ abstract class AppLocalizations {
   /// Testo introduttivo in cima alla schermata di download
   ///
   /// In it, this message translates to:
-  /// **'Cerca un titolo sui siti supportati, o incolla il link di una serie: Kagami la scarica dal sito, con metadati, copertina e l\'elenco completo dei capitoli, nella libreria.'**
+  /// **'Cerca un titolo sui siti supportati, o incolla il link di una serie o di un suo capitolo: Kagami la scarica dal sito, con metadati, copertina e l\'elenco completo dei capitoli, nella libreria. O ne salva solo la scheda, senza capitoli.'**
   String get archiveIntro;
 
   /// Suggerimento nel campo di ricerca per titolo
@@ -1137,6 +1137,36 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Cerca un manga per titolo'**
   String get archiveSearchHint;
+
+  /// Filtro sotto la ricerca di «Scarica un manga»: mostra solo le serie in corso o in pausa
+  ///
+  /// In it, this message translates to:
+  /// **'In corso'**
+  String get archiveFilterOngoing;
+
+  /// Filtro sotto la ricerca di «Scarica un manga»: mostra solo le serie concluse
+  ///
+  /// In it, this message translates to:
+  /// **'Concluse'**
+  String get archiveFilterCompleted;
+
+  /// Filtro sotto la ricerca di «Scarica un manga»: nasconde le serie che sono già in libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Non in libreria'**
+  String get archiveFilterNotInLibrary;
+
+  /// Nella riga di un risultato della ricerca, quando la serie è già in libreria
+  ///
+  /// In it, this message translates to:
+  /// **'In libreria'**
+  String get archiveInLibrary;
+
+  /// Sotto il nome di un sito quando tutti i suoi risultati sono nascosti dai filtri; {count} è quanti
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 risultato, nascosto dai filtri} other{{count} risultati, nascosti dai filtri}}'**
+  String archiveResultsFiltered(int count);
 
   /// Tooltip del pulsante che svuota il campo di ricerca
   ///
@@ -1606,11 +1636,35 @@ abstract class AppLocalizations {
   /// **'{when} · {message}'**
   String archiveHistoryLine(String when, String message);
 
-  /// Titolo della sezione con le serie scaricate da poco, una per riga
+  /// Titolo della fila di copertine delle serie scaricate da poco dal telefono, e del foglio con l'elenco completo
   ///
   /// In it, this message translates to:
   /// **'Scaricate di recente'**
   String get archiveRecent;
+
+  /// Pulsante accanto al titolo delle serie scaricate di recente: apre l'elenco completo; {count} è quante sono
+  ///
+  /// In it, this message translates to:
+  /// **'Tutte ({count})'**
+  String archiveRecentAll(int count);
+
+  /// Sotto la copertina di una serie nella fila delle scaricate di recente, quando l'ultimo download è fallito (testo brevissimo, la copertina è stretta)
+  ///
+  /// In it, this message translates to:
+  /// **'Non riuscito'**
+  String get archiveRecentFailed;
+
+  /// Voce che apre l'elenco delle serie in corso seguite (dal telefono o dal server), e titolo del foglio con l'elenco
+  ///
+  /// In it, this message translates to:
+  /// **'Serie seguite'**
+  String get archiveFollowedTitle;
+
+  /// Accanto al numero di serie seguite: quante hanno un problema da sistemare
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 da sistemare} other{{count} da sistemare}}'**
+  String archiveFollowedProblems(int count);
 
   /// Sotto una serie scaricata di recente con più download: quando l'ultimo, quanti, e com'è andato l'ultimo
   ///
@@ -1714,7 +1768,7 @@ abstract class AppLocalizations {
   /// **'Controlla adesso'**
   String get archiveCheckNow;
 
-  /// Sottotitolo di «Controlla adesso» quando non ci sono serie seguite
+  /// Sotto «Serie seguite» quando non ce n'è nessuna
   ///
   /// In it, this message translates to:
   /// **'Nessuna serie da seguire, per ora'**
@@ -1870,11 +1924,11 @@ abstract class AppLocalizations {
   /// **'Server'**
   String get serverTitle;
 
-  /// Pulsante che svuota lo storico dei lavori del server
+  /// Titolo della fila di copertine delle serie scaricate dal server
   ///
   /// In it, this message translates to:
-  /// **'Pulisci'**
-  String get serverClear;
+  /// **'Scaricate dal server'**
+  String get serverRecent;
 
   /// Errore: la build non ha il segreto del client Web, quindi non si può dare a un server il permesso su Drive
   ///
@@ -2139,36 +2193,6 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Man mano, {count} da leggere pronti: i capitoli li chiede l\'app mentre leggi'**
   String serverSeriesAhead(int count);
-
-  /// Titolo della voce sulle serie in corso che il server segue
-  ///
-  /// In it, this message translates to:
-  /// **'Serie in corso sul server'**
-  String get serverOngoingTitle;
-
-  /// Quante serie in corso il server segue
-  ///
-  /// In it, this message translates to:
-  /// **'{count, plural, =0{Nessuna, per ora} other{{count} da seguire}}'**
-  String serverOngoingCount(int count);
-
-  /// Il controllo quotidiano dei capitoli nuovi è spento
-  ///
-  /// In it, this message translates to:
-  /// **'controllo spento'**
-  String get serverOngoingCheckOff;
-
-  /// Ora del controllo quotidiano dei capitoli nuovi
-  ///
-  /// In it, this message translates to:
-  /// **'controllo alle {clock}'**
-  String serverOngoingCheckAt(String clock);
-
-  /// Sottotitolo della voce sulle serie in corso: {count} è il numero di serie, {check} dice quando controlla
-  ///
-  /// In it, this message translates to:
-  /// **'{count} · {check}. Tocca per controllare adesso'**
-  String serverOngoingSubtitle(String count, String check);
 
   /// Di una serie seguita dal server: quanti capitoli conosce
   ///
@@ -4090,6 +4114,12 @@ abstract class AppLocalizations {
   /// **'cap. {number}'**
   String homeLatestChapter(String number);
 
+  /// Home, «Aggiornamenti»: riga sotto il titolo di una scheda (serie salvata senza capitoli scaricati) con capitoli nuovi usciti sul sito; {site} è il nome del sito, es. MangaK
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 nuovo su {site}} other{{count} nuovi su {site}}}'**
+  String homeSiteChapters(int count, String site);
+
   /// Quanto tempo fa è arrivato l'ultimo capitolo: oggi
   ///
   /// In it, this message translates to:
@@ -5104,6 +5134,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{È arrivato un capitolo nuovo} other{Sono arrivati {count} capitoli nuovi}}'**
   String dataNewChaptersNotification(int count);
 
+  /// Testo della notifica Android che avvisa di capitoli nuovi usciti sul sito di una scheda (serie salvata senza capitoli scaricati; il titolo della notifica è il nome della serie); {site} è il nome del sito, es. MangaK
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{È uscito un capitolo nuovo su {site}} other{Sono usciti {count} capitoli nuovi su {site}}}'**
+  String dataNewSiteChaptersNotification(int count, String site);
+
   /// Errore di «Scarica un manga»: la destinazione è il telefono ma non c'è una cartella scelta.
   ///
   /// In it, this message translates to:
@@ -5334,6 +5370,642 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Ora del controllo'**
   String get serverCheckTimeHelp;
+
+  /// Titolo della card in linea nella scheda di una serie senza voto, che invita a votarla
+  ///
+  /// In it, this message translates to:
+  /// **'Che voto gli dai?'**
+  String get seriesRatingInviteTitle;
+
+  /// Riga della card d'invito a votare: dice a cosa serve il voto
+  ///
+  /// In it, this message translates to:
+  /// **'Il voto serve a filtrare e ordinare la libreria e conta nelle statistiche.'**
+  String get seriesRatingInviteBody;
+
+  /// Pulsante della card d'invito: apre la scelta del voto
+  ///
+  /// In it, this message translates to:
+  /// **'Vota'**
+  String get seriesRatingInviteRate;
+
+  /// Pulsante della card d'invito: la nasconde solo finché la scheda resta aperta
+  ///
+  /// In it, this message translates to:
+  /// **'Ignora'**
+  String get seriesRatingInviteIgnore;
+
+  /// Pulsante della card d'invito: spegne l'invito su tutte le serie
+  ///
+  /// In it, this message translates to:
+  /// **'Non chiedere più'**
+  String get seriesRatingInviteNever;
+
+  /// Interruttore nelle impostazioni della lettura che accende o spegne l'invito a votare nella scheda di una serie
+  ///
+  /// In it, this message translates to:
+  /// **'Chiedi un voto aprendo una serie'**
+  String get settingsRatingInvite;
+
+  /// Sottotitolo dell'interruttore dell'invito a votare
+  ///
+  /// In it, this message translates to:
+  /// **'Nella scheda delle serie senza voto compare un invito a votare'**
+  String get settingsRatingInviteNote;
+
+  /// Nome della quinta modalità nella pagina della serie: salva la serie in libreria senza scaricare capitoli
+  ///
+  /// In it, this message translates to:
+  /// **'Solo la scheda'**
+  String get archiveModeCard;
+
+  /// Riga sotto il nome della modalità «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun capitolo: stato, voto e a che punto sei'**
+  String get archiveModeCardLine;
+
+  /// Spiegazione sotto le modalità quando è scelta «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la serie nella libreria senza scaricare capitoli: copertina, metadati, l\'elenco dei capitoli e il link al sito. Indica fin dove sei arrivato: quel capitolo e i precedenti risultano letti. I capitoli si possono scaricare più avanti.'**
+  String get archiveModeCardHint;
+
+  /// Titolo della lista dei capitoli in modalità «Solo la scheda»: si sceglie l'ultimo capitolo letto
+  ///
+  /// In it, this message translates to:
+  /// **'Arrivato fino al…'**
+  String get archiveReachedSection;
+
+  /// Indicazione sopra la lista dei capitoli in modalità «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca l\'ultimo capitolo che hai letto.'**
+  String get archiveReachedHint;
+
+  /// Pastiglia in modalità «Solo la scheda»: nessun capitolo letto
+  ///
+  /// In it, this message translates to:
+  /// **'Non ho iniziato'**
+  String get archiveReachedNone;
+
+  /// Accanto all'ultimo capitolo letto, in modalità «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'arrivato qui'**
+  String get archiveChapterReached;
+
+  /// Nota sotto le destinazioni in modalità «Solo la scheda» quando c'è un server collegato, che lì non compare
+  ///
+  /// In it, this message translates to:
+  /// **'Le schede le salva il telefono: il server collegato scarica solo capitoli.'**
+  String get archiveCardServer;
+
+  /// Suggerimento nel campo della nota, in modalità «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'Una nota per te (facoltativa)'**
+  String get archiveCardNotesHint;
+
+  /// Riepilogo in fondo alla pagina in modalità «Solo la scheda», senza capitolo letto; where è la destinazione
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la scheda, nessun capitolo scaricato · {where}'**
+  String archiveSummaryCard(String where);
+
+  /// Riepilogo in fondo alla pagina in modalità «Solo la scheda» con l'ultimo capitolo letto; number è il numero del capitolo, where la destinazione
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la scheda letta fino al {number}, nessun capitolo scaricato · {where}'**
+  String archiveSummaryCardReached(String number, String where);
+
+  /// Pulsante in fondo alla pagina in modalità «Solo la scheda»
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la scheda'**
+  String get archiveSaveCard;
+
+  /// Avviso dopo aver salvato la scheda di una serie: lo stato è già scritto, copertina ed elenco arrivano col lavoro in coda
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda di «{title}» salvata: copertina ed elenco dei capitoli arrivano fra poco.'**
+  String archiveCardQueuedSnack(String title);
+
+  /// Riga sotto il titolo del lavoro in corso quando è solo la scheda (nessun capitolo da contare); message è il messaggio del motore
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda · {message}'**
+  String archiveCardProgress(String message);
+
+  /// Riga di un lavoro in coda che salva solo la scheda della serie, chiesto dall'utente; destinazione
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda · {destination}'**
+  String archiveJobCard(String destination);
+
+  /// Riga di un lavoro in coda messo dal controllo delle serie in corso, che aggiorna solo l'elenco dei capitoli di una scheda; destinazione
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiornamento della scheda · {destination}'**
+  String archiveJobCardUpdate(String destination);
+
+  /// Sotto la copertina di una serie scaricata di recente, quando era solo la scheda; when è quando è finito
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda · {when}'**
+  String archiveRecentCard(String when);
+
+  /// Esito del controllo: schede (serie salvate senza capitoli) di cui si aggiorna solo l'elenco dei capitoli, nessuno scaricato (names è un elenco di titoli); è un pezzo di frase dopo cui viene il punto
+  ///
+  /// In it, this message translates to:
+  /// **'capitoli nuovi in elenco, non scaricati, per le schede di {names}'**
+  String archiveCheckCards(String names);
+
+  /// Etichetta dell'azione nella scheda della serie che apre la pagina della serie sul sito
+  ///
+  /// In it, this message translates to:
+  /// **'Apri sul sito'**
+  String get seriesOpenSite;
+
+  /// Azione nella scheda della serie che rilegge dal sito i dati e l'elenco dei capitoli, senza scaricare capitoli
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiorna scheda'**
+  String get seriesRefreshCard;
+
+  /// Azione nella scheda della serie che apre la scelta dei capitoli da scaricare dal sito, per una serie che ne ha già alcuni
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica altri capitoli'**
+  String get seriesDownloadMore;
+
+  /// Pulsante principale della scheda di una serie senza capitoli scaricati: apre la scelta dei capitoli da scaricare dal sito
+  ///
+  /// In it, this message translates to:
+  /// **'Inizia a scaricare'**
+  String get seriesStartDownload;
+
+  /// Testo sopra il pulsante «Inizia a scaricare» nella scheda di una serie senza capitoli scaricati
+  ///
+  /// In it, this message translates to:
+  /// **'Questa serie è solo una scheda: i capitoli sono sul sito. Scaricali per leggerli qui, a partire da quello dopo l\'ultimo letto.'**
+  String get seriesStartDownloadMessage;
+
+  /// Etichetta del pulsante accanto a un capitolo non presente sul telefono né su Drive, che lo scarica dal sito della serie
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica dal sito'**
+  String get seriesDownloadFromSite;
+
+  /// Etichetta dell'indicatore accanto a un capitolo il cui download dal sito è in coda o in corso
+  ///
+  /// In it, this message translates to:
+  /// **'In coda dal sito'**
+  String get seriesDownloadFromSiteQueued;
+
+  /// Pastiglia sulla copertina di una serie senza capitoli: una scheda salvata senza scaricare
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda'**
+  String get coverCardBadge;
+
+  /// Sottotitolo in griglia di una scheda senza capitoli: il capitolo a cui l'utente è arrivato
+  ///
+  /// In it, this message translates to:
+  /// **'Arrivato al cap. {number}'**
+  String coverReached(String number);
+
+  /// Interruttore nei filtri della libreria che lascia solo le schede, cioè le serie senza capitoli scaricati
+  ///
+  /// In it, this message translates to:
+  /// **'Solo schede'**
+  String get libraryOnlyCards;
+
+  /// Titolo della voce del ripiano nella scheda della serie e del foglio che ne cambia il valore: il punto di lettura
+  ///
+  /// In it, this message translates to:
+  /// **'Arrivato a'**
+  String get seriesReachedTitle;
+
+  /// Valore della voce «Arrivato a» quando non si sa a che punto si è
+  ///
+  /// In it, this message translates to:
+  /// **'Non iniziato'**
+  String get seriesReachedNone;
+
+  /// Valore della voce «Arrivato a» quando si conosce solo il numero del capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Cap. {number}'**
+  String seriesReachedChapter(String number);
+
+  /// Segnaposto della ricerca nel foglio che sceglie il capitolo a cui si è arrivati
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca un capitolo'**
+  String get seriesReachedSearch;
+
+  /// Segnaposto del campo del numero di capitolo per una scheda senza elenco di capitoli
+  ///
+  /// In it, this message translates to:
+  /// **'Numero del capitolo'**
+  String get seriesReachedNumberHint;
+
+  /// Nota sotto il campo del numero di capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Come lo scrive il sito, per esempio 52. Vuoto per toglierlo.'**
+  String get seriesReachedNumberHelp;
+
+  /// Titolo della conferma quando si sposta «Arrivato a» su un capitolo precedente
+  ///
+  /// In it, this message translates to:
+  /// **'Tornare indietro?'**
+  String get seriesReachedBackTitle;
+
+  /// Messaggio di quella conferma: i capitoli successivi restano letti
+  ///
+  /// In it, this message translates to:
+  /// **'I capitoli dopo «{chapter}» restano segnati come letti: per rimetterli da leggere toglili dall\'elenco dei capitoli.'**
+  String seriesReachedBackMessage(String chapter);
+
+  /// Pulsante di conferma dello spostamento del punto di lettura all'indietro
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta'**
+  String get seriesReachedBackConfirm;
+
+  /// Titolo del vuoto nella scheda di una serie manuale, senza capitoli
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda senza capitoli'**
+  String get seriesCardEmptyTitle;
+
+  /// Messaggio del vuoto di una scheda manuale: il sito non è supportato per il download
+  ///
+  /// In it, this message translates to:
+  /// **'Kagami non scarica da questo sito, ma la scheda tiene stato, voto, nota e punto di lettura.'**
+  String get seriesCardEmptyMessage;
+
+  /// Azione nella scheda di una serie manuale: la lega a un sito da cui Kagami sa scaricare
+  ///
+  /// In it, this message translates to:
+  /// **'Collega a un sito'**
+  String get seriesLinkSite;
+
+  /// Titolo del foglio in cui si incolla il link per collegare una scheda manuale a un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Collega a un sito'**
+  String get seriesLinkTitle;
+
+  /// Spiegazione nel foglio «Collega a un sito»: cosa passa alla serie vera e che la scheda manuale si toglie
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla il link della serie su un sito da cui Kagami sa scaricare. Stato, voto, nota, raccolte e punto di lettura passano alla serie vera, e questa scheda si toglie.'**
+  String get seriesLinkMessage;
+
+  /// Suggerimento del campo del link nel foglio «Collega a un sito»
+  ///
+  /// In it, this message translates to:
+  /// **'Link della serie'**
+  String get seriesLinkHint;
+
+  /// Pulsante del foglio «Collega a un sito» che legge la serie dal sito
+  ///
+  /// In it, this message translates to:
+  /// **'Continua'**
+  String get seriesLinkContinue;
+
+  /// Conferma dopo aver collegato una scheda manuale a un sito: il lavoro è in coda; {title} è il titolo della serie
+  ///
+  /// In it, this message translates to:
+  /// **'«{title}» collegata: la serie comparirà in libreria quando il lavoro sarà finito.'**
+  String seriesLinkDone(String title);
+
+  /// Pulsante in «Scarica un manga»: apre il modulo per salvare una scheda senza link, senza scaricare niente
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi senza link'**
+  String get archiveManualAction;
+
+  /// Avviso quando il link incollato in «Scarica un manga» è di un sito non supportato
+  ///
+  /// In it, this message translates to:
+  /// **'Kagami non sa scaricare da questo sito: puoi salvarlo come scheda con titolo e link, ma i capitoli non si potranno scaricare.'**
+  String get archiveManualUnsupported;
+
+  /// Pulsante sotto l'avviso del sito non supportato: apre la scheda manuale col link già compilato
+  ///
+  /// In it, this message translates to:
+  /// **'Salva come scheda'**
+  String get archiveManualUnsupportedAction;
+
+  /// Titolo della pagina del modulo della scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda manuale'**
+  String get archiveManualTitle;
+
+  /// Suggerimento del campo del titolo nella scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Titolo'**
+  String get archiveManualTitleHint;
+
+  /// Errore nel campo del titolo della scheda manuale lasciato vuoto
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi un titolo.'**
+  String get archiveManualTitleRequired;
+
+  /// Suggerimento del campo del link nella scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Link alla pagina della serie (facoltativo)'**
+  String get archiveManualLinkHint;
+
+  /// Avviso nella scheda manuale quando il link è di un sito supportato
+  ///
+  /// In it, this message translates to:
+  /// **'Questo sito Kagami lo sa leggere: col percorso normale hai l\'elenco dei capitoli e puoi scaricarli.'**
+  String get archiveManualSupported;
+
+  /// Pulsante nell'avviso del sito supportato nella scheda manuale: torna a «Scarica un manga» e legge il link
+  ///
+  /// In it, this message translates to:
+  /// **'Usa il percorso normale'**
+  String get archiveManualSupportedAction;
+
+  /// Nota sotto il link, nella scheda manuale, per un sito non supportato
+  ///
+  /// In it, this message translates to:
+  /// **'Di questo sito i capitoli non si potranno scaricare: resta il link, e titolo e copertina se la pagina li dichiara.'**
+  String get archiveManualNoDownload;
+
+  /// Suggerimento del campo del capitolo a cui si è arrivati nella scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Arrivato al capitolo (es. 52)'**
+  String get archiveManualReachedHint;
+
+  /// Dove va la scheda manuale quando la libreria ha una cartella di Drive
+  ///
+  /// In it, this message translates to:
+  /// **'La scheda si salva su Drive, nella cartella della libreria.'**
+  String get archiveManualWhereDrive;
+
+  /// Dove va la scheda manuale quando non c'è Drive
+  ///
+  /// In it, this message translates to:
+  /// **'La scheda si salva sul telefono.'**
+  String get archiveManualWherePhone;
+
+  /// Pulsante di salvataggio della scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Salva la scheda'**
+  String get archiveManualSave;
+
+  /// Avviso dopo aver salvato una scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda di «{title}» salvata.'**
+  String archiveManualSaved(String title);
+
+  /// Avviso quando il link della scheda manuale è già di una serie in libreria, che viene aperta
+  ///
+  /// In it, this message translates to:
+  /// **'Questo link è già in libreria: «{title}».'**
+  String archiveManualExists(String title);
+
+  /// Errore se l'utente non concede il permesso di scrittura su Drive salvando una scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Per salvare la scheda su Drive serve il permesso di scrivere.'**
+  String get archiveManualNeedsDrive;
+
+  /// Errore generico nel salvare una scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Non sono riuscito a salvare la scheda: {error}'**
+  String archiveManualFailed(String error);
+
+  /// Pulsante in «Scarica un manga» che apre l'import di tanti link
+  ///
+  /// In it, this message translates to:
+  /// **'Importa più link'**
+  String get archiveImportAction;
+
+  /// Titolo della pagina dell'import di tanti link
+  ///
+  /// In it, this message translates to:
+  /// **'Importa più link'**
+  String get archiveImportTitle;
+
+  /// Spiegazione in cima alla pagina dell'import di tanti link
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla dei link: le schede del browser, un elenco, un JSON. Ogni manga diventa una scheda in libreria, senza scaricare capitoli; dal link di un capitolo, arrivato a quel capitolo.'**
+  String get archiveImportIntro;
+
+  /// Testo segnaposto del campo in cui si incollano i link da importare
+  ///
+  /// In it, this message translates to:
+  /// **'Incolla qui il testo con i link…'**
+  String get archiveImportHint;
+
+  /// Quanti link diversi sono stati trovati nel testo incollato
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessun link trovato} =1{Un link trovato} other{{count} link trovati}}'**
+  String archiveImportFound(int count);
+
+  /// Dove si salvano le schede dell'import, se la libreria ha una cartella di Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Le schede si salvano su Drive, nella cartella della libreria.'**
+  String get archiveImportWhereDrive;
+
+  /// Dove si salvano le schede dell'import, senza cartella di Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Le schede si salvano sul telefono.'**
+  String get archiveImportWherePhone;
+
+  /// Opzione dell'import: la raccolta in cui mettere tutte le serie importate
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi a una raccolta'**
+  String get archiveImportCollection;
+
+  /// L'import non mette le serie in nessuna raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna raccolta'**
+  String get archiveImportCollectionNone;
+
+  /// Opzione dell'import: quanto aspettare fra la lettura di una serie e la seguente
+  ///
+  /// In it, this message translates to:
+  /// **'Pausa fra un link e l\'altro'**
+  String get archiveImportPause;
+
+  /// Spiegazione sotto la pausa dell'import
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie si leggono dal sito una alla volta: una pausa più lunga pesa meno sui siti.'**
+  String get archiveImportPauseHint;
+
+  /// Una durata in secondi fra le scelte della pausa dell'import
+  ///
+  /// In it, this message translates to:
+  /// **'{seconds} s'**
+  String archiveImportSeconds(int seconds);
+
+  /// Pulsante che avvia l'import dei link trovati
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Importa un link} other{Importa {count} link}}'**
+  String archiveImportStart(int count);
+
+  /// Pulsante che ferma l'import dopo il link in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Ferma'**
+  String get archiveImportStop;
+
+  /// Pulsante che riprende l'import fermato
+  ///
+  /// In it, this message translates to:
+  /// **'Continua'**
+  String get archiveImportResume;
+
+  /// Stato di un link dell'import non ancora letto
+  ///
+  /// In it, this message translates to:
+  /// **'In attesa'**
+  String get archiveImportWaiting;
+
+  /// Stato del link dell'import che si sta leggendo
+  ///
+  /// In it, this message translates to:
+  /// **'In corso…'**
+  String get archiveImportRunning;
+
+  /// Stato di un link dell'import salvato come scheda di una serie di un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Salvata come scheda'**
+  String get archiveImportSaved;
+
+  /// Stato di un link dell'import salvato come scheda, col capitolo a cui si è arrivati
+  ///
+  /// In it, this message translates to:
+  /// **'Salvata come scheda · arrivato al {chapter}'**
+  String archiveImportSavedReached(String chapter);
+
+  /// Stato di un link dell'import di un sito non supportato, salvato come scheda manuale
+  ///
+  /// In it, this message translates to:
+  /// **'Scheda manuale: Kagami non potrà scaricarne i capitoli'**
+  String get archiveImportManual;
+
+  /// Stato di un link dell'import la cui serie è già in libreria, saltato
+  ///
+  /// In it, this message translates to:
+  /// **'Già in libreria: «{title}»'**
+  String archiveImportKnown(String title);
+
+  /// Stato di un link dell'import la cui serie è già nella coda dei download, saltato
+  ///
+  /// In it, this message translates to:
+  /// **'Già in coda'**
+  String get archiveImportQueued;
+
+  /// Stato di un link dell'import il cui sito chiede la verifica del browser
+  ///
+  /// In it, this message translates to:
+  /// **'Il sito chiede una verifica'**
+  String get archiveImportNeedsCheck;
+
+  /// Pulsante su un link dell'import che apre la verifica del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica'**
+  String get archiveImportVerify;
+
+  /// Pulsante su un link dell'import andato male, per riprovarlo
+  ///
+  /// In it, this message translates to:
+  /// **'Riprova'**
+  String get archiveImportRetry;
+
+  /// Avviso nell'import quando dei link aspettano la verifica del browser
+  ///
+  /// In it, this message translates to:
+  /// **'Alcuni siti chiedono una verifica del browser: toccane uno e superala, gli altri link dello stesso sito ripartono da soli.'**
+  String get archiveImportCheckHint;
+
+  /// Quanti link dell'import sono finiti, su tutti
+  ///
+  /// In it, this message translates to:
+  /// **'{done} di {total}'**
+  String archiveImportProgress(int done, int total);
+
+  /// Contatore dell'import: schede di serie dei siti salvate
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 scheda} other{{count} schede}}'**
+  String archiveImportCountSaved(int count);
+
+  /// Contatore dell'import: schede manuali salvate
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 manuale} other{{count} manuali}}'**
+  String archiveImportCountManual(int count);
+
+  /// Contatore dell'import: link saltati perché già in libreria o in coda
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 già presente} other{{count} già presenti}}'**
+  String archiveImportCountKnown(int count);
+
+  /// Contatore dell'import: link andati male
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 errore} other{{count} errori}}'**
+  String archiveImportCountFailed(int count);
+
+  /// Contatore dell'import: link che aspettano la verifica del browser
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 da verificare} other{{count} da verificare}}'**
+  String archiveImportCountCheck(int count);
+
+  /// Titolo della domanda quando si esce dall'import mentre è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Fermare l\'import?'**
+  String get archiveImportLeaveTitle;
+
+  /// Testo della domanda quando si esce dall'import mentre è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Le schede già salvate restano; i link che mancano non si importano.'**
+  String get archiveImportLeaveBody;
+
+  /// Conferma per uscire dall'import fermandolo
+  ///
+  /// In it, this message translates to:
+  /// **'Ferma ed esci'**
+  String get archiveImportLeaveConfirm;
+
+  /// Avviso quando si condivide con Kagami un testo senza link
+  ///
+  /// In it, this message translates to:
+  /// **'Nel testo condiviso non c\'è nessun link.'**
+  String get shareNoLinks;
 }
 
 class _AppLocalizationsDelegate

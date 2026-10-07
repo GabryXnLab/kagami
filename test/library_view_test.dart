@@ -5,6 +5,7 @@ import 'package:kagami/src/format/reading.dart';
 
 SeriesEntry entry({
   required String key,
+  String provider = 'mangak',
   String title = 'Serie',
   int chapters = 10,
   int archived = 10,
@@ -18,7 +19,7 @@ SeriesEntry entry({
       key: key,
       path: key,
       title: title,
-      provider: 'mangak',
+      provider: provider,
       releaseStatus: release,
       chapterCount: chapters,
       archivedChapterCount: archived,
@@ -44,6 +45,86 @@ ChapterEntry chapter(String id, int order) => ChapterEntry(
 void main() {
   final gennaio = DateTime.utc(2026, 1, 1);
   final giugno = DateTime.utc(2026, 6, 1);
+
+  group('le schede', () {
+    final manual = entry(key: 'manual:a1', provider: 'manual', chapters: 0, archived: 0);
+    final site = entry(key: 'mangak:b', chapters: 40, archived: 0);
+    final full = entry(key: 'mangak:c');
+
+    test('una serie senza capitoli archiviati, o manuale, è una scheda', () {
+      expect(SeriesSignals.of(manual, const SeriesState()).isCard, isTrue);
+      expect(SeriesSignals.of(site, const SeriesState()).isCard, isTrue);
+      expect(SeriesSignals.of(full, const SeriesState()).isCard, isFalse);
+    });
+
+    test('il filtro «solo schede» le isola e conta come filtro attivo', () {
+      final all = [
+        for (final e in [manual, site, full]) SeriesSignals.of(e, const SeriesState()),
+      ];
+      const filter = LibraryFilter(onlyCards: true);
+      expect(filter.activeCount, 1);
+      expect(applyFilter(all, filter).map((s) => s.entry.key), ['manual:a1', 'mangak:b']);
+    });
+
+    test('una scheda coi letti stimati non ha niente da riprendere', () {
+      final chapters = [
+        for (var order = 0; order < 3; order++)
+          ChapterEntry(
+            id: 'C$order',
+            order: order,
+            archived: false,
+            complete: false,
+            pageCount: 0,
+            bytes: 0,
+          ),
+      ];
+      final signals = SeriesSignals.of(
+        entry(key: 'mangak:b', chapters: 3, archived: 0),
+        const SeriesState(readChapters: {'C0', 'C1'}, reachedChapter: '2'),
+        chapters: chapters,
+      );
+      expect(signals.isStarted, isTrue);
+      expect(signals.hasUnread, isFalse);
+      expect(signals.unreadCount, 0);
+    });
+
+    test('il solo punto dichiarato di una scheda manuale la dà per iniziata', () {
+      final signals = SeriesSignals.of(manual, const SeriesState(reachedChapter: '52'));
+      expect(signals.isStarted, isTrue);
+      expect(signals.hasUnread, isFalse);
+      expect(const SeriesState(reachedChapter: '52').isEmpty, isFalse);
+    });
+
+    test('i capitoli nuovi di una scheda si contano sul sito', () {
+      expect(SeriesSignals.arrivalCount(site), 40);
+      expect(SeriesSignals.arrivalCount(full), 10);
+      expect(SeriesSignals.arrivalCount(manual), 0);
+      final signals = SeriesSignals.of(
+        entry(key: 'mangak:b', chapters: 44, archived: 0, added: giugno),
+        SeriesState(
+          status: ShelfStatus.reading,
+          readChapters: {for (var i = 1; i <= 40; i++) '$i'},
+          updatedAt: gennaio,
+          lastOpenedAt: gennaio,
+        ),
+        seenChapters: 40,
+      );
+      expect(signals.newChapters, 4);
+      expect(AutoCollection.fresh.matches(signals), isTrue);
+      expect(applyFilter([signals], const LibraryFilter(onlyNew: true)), [signals]);
+      // In «Riprendi» no: in Kagami non c'è niente da leggere.
+      expect(signals.hasUnread, isFalse);
+    });
+
+    test('una scheda non seguita non ha capitoli nuovi', () {
+      final signals = SeriesSignals.of(
+        entry(key: 'mangak:b', chapters: 44, archived: 0, added: giugno),
+        const SeriesState(),
+        seenChapters: 40,
+      );
+      expect(signals.newChapters, 0);
+    });
+  });
 
   test('i capitoli letti si contano sull\'archiviato, non sull\'annunciato', () {
     final signals = SeriesSignals.of(

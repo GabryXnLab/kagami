@@ -25,6 +25,7 @@ void main() {
       test('la pagina principale è sua e il link di una serie lo riconosce solo lui', () {
         expect(() => provider.validateUrl(provider.home), returnsNormally);
         expect(provider.accepts(provider.home), isFalse);
+        expect(provider.seriesOfChapter(provider.home), isNull);
         expect(providerById(provider.id), same(provider));
       });
 

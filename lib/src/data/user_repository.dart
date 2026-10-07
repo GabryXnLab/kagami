@@ -88,6 +88,7 @@ class UserRepository {
           updatedAt: row.updatedAt,
           lastOpenedAt: row.lastOpenedAt,
           muted: row.muted,
+          reachedChapter: row.reachedChapter,
         ),
     };
     // Una serie può avere capitoli letti senza riga di stato solo se qualcosa
@@ -155,6 +156,7 @@ class UserRepository {
             ),
             lastOpenedAt: Value(state.lastOpenedAt ?? existing?.lastOpenedAt),
             muted: Value(state.muted),
+            reachedChapter: Value(state.reachedChapter),
             updatedAt: state.updatedAt ?? now,
           ),
         );
@@ -274,6 +276,84 @@ class UserRepository {
           ]);
         });
       });
+
+  /// Porta ciò che l'utente ha della serie [from] su [to]: stato, voto, nota,
+  /// date, silenzio, punto di lettura, capitoli letti, posizioni, cronologia,
+  /// segnalibri, raccolte (nella stessa posizione) e impostazioni di lettura.
+  ///
+  /// Ciò che [to] ha già non si sovrascrive: lo stato si fonde come in un
+  /// backup — vince il record con `updatedAt` più recente, le date si tengono
+  /// la più vecchia di inizio e la più recente di apertura — e per tutto il
+  /// resto resta la riga di [to]. Alla fine di [from] non resta niente.
+  Future<void> moveSeries(String from, String to) async {
+    if (from == to) return;
+    await db.transaction(() async {
+      final source = await _row(from);
+      final target = await _row(to);
+      if (source != null && target == null) {
+        await (db.update(db.seriesStates)
+              ..where((row) =>
+                  row.profileId.equals(profileId) & row.seriesKey.equals(from)))
+            .write(SeriesStatesCompanion(seriesKey: Value(to)));
+      } else if (source != null && target != null) {
+        final newer = source.updatedAt.isAfter(target.updatedAt) ? source : target;
+        DateTime? earliest(DateTime? a, DateTime? b) =>
+            a == null || b == null ? a ?? b : (a.isBefore(b) ? a : b);
+        DateTime? latest(DateTime? a, DateTime? b) =>
+            a == null || b == null ? a ?? b : (a.isAfter(b) ? a : b);
+        await (db.update(db.seriesStates)
+              ..where((row) =>
+                  row.profileId.equals(profileId) & row.seriesKey.equals(to)))
+            .write(SeriesStatesCompanion(
+          status: Value(newer.status),
+          rating: Value(newer.rating),
+          favorite: Value(newer.favorite),
+          notes: Value(newer.notes),
+          muted: Value(newer.muted),
+          reachedChapter: Value(newer.reachedChapter),
+          finishedAt: Value(newer.finishedAt),
+          startedAt: Value(earliest(source.startedAt, target.startedAt)),
+          lastOpenedAt: Value(latest(source.lastOpenedAt, target.lastOpenedAt)),
+          updatedAt: Value(newer.updatedAt),
+        ));
+        await (db.delete(db.seriesStates)
+              ..where((row) =>
+                  row.profileId.equals(profileId) & row.seriesKey.equals(from)))
+            .go();
+      }
+      // `OR IGNORE` lascia sul posto le righe che [to] ha già, e il `delete`
+      // che segue le toglie: la chiave di destinazione vince sempre.
+      for (final table in <TableInfo<Table, dynamic>>[
+        db.chapterReads,
+        db.progresses,
+        db.readingSessions,
+        db.bookmarks,
+        db.readerSettingsRows,
+      ]) {
+        await db.customUpdate(
+          'UPDATE OR IGNORE ${table.actualTableName} SET series_key = ? '
+          'WHERE profile_id = ? AND series_key = ?',
+          variables: [Variable(to), Variable(profileId), Variable(from)],
+          updates: {table},
+        );
+        await db.customUpdate(
+          'DELETE FROM ${table.actualTableName} WHERE profile_id = ? AND series_key = ?',
+          variables: [Variable(profileId), Variable(from)],
+          updates: {table},
+        );
+      }
+      await db.customUpdate(
+        'UPDATE OR IGNORE collection_items SET series_key = ? WHERE series_key = ?',
+        variables: [Variable(to), Variable(from)],
+        updates: {db.collectionItems},
+      );
+      await (db.delete(db.collectionItems)..where((row) => row.seriesKey.equals(from))).go();
+      await (db.delete(db.seriesArrivals)
+            ..where((row) =>
+                row.profileId.equals(profileId) & row.seriesKey.equals(from)))
+          .go();
+    });
+  }
 
   Future<SeriesStateRow?> _row(String key) => (db.select(db.seriesStates)
         ..where((row) =>
@@ -535,6 +615,7 @@ class UserRepository {
         row.seriesKey: ArrivalMark(
           seen: row.seenChapters,
           notified: row.notifiedChapters,
+          onSite: row.onSite,
         ),
     };
   }
@@ -549,6 +630,7 @@ class UserRepository {
             seriesKey: key,
             seenChapters: value.seen,
             notifiedChapters: value.notified,
+            onSite: Value(value.onSite),
           ),
       ]);
     });

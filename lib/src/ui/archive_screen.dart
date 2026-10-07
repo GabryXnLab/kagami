@@ -6,14 +6,13 @@
 /// in corso — e due in più: scaricare «man mano», pochi capitoli davanti a
 /// quello che si legge, e la destinazione, che qui può essere la cartella di
 /// Drive della libreria, o un Kagami Server collegato. La scelta per una
-/// serie sta nella sua pagina (`archive_series.dart`). Il lavoro vero lo fa
+/// serie sta nella sua pagina (`archive_series.dart`), il percorso dal link
+/// alla coda in `archive_flow.dart`, che usano anche altri. Il lavoro vero lo fa
 /// `packages/kagami_archive/`, in un lavoro in primo piano che continua a
 /// schermo spento, o sul server.
 library;
 
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,33 +21,21 @@ import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers.dart';
-import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:path/path.dart' as p;
 
-import '../data/cloud.dart';
-import '../data/drive.dart';
+import '../format/malf.dart';
 import '../providers.dart';
+import 'archive_flow.dart';
+import 'archive_import.dart';
+import 'archive_manual.dart';
 import 'archive_series.dart';
 import 'archive_server.dart';
 import 'browser_check_page.dart';
 import '../l10n.dart';
-import 'drive_ui.dart';
 import 'sync_screen.dart' show clockOf;
 import 'theme.dart';
 import 'widgets/kit.dart';
-
-/// La serie letta dal sito, con ciò che serve a scaricarla uguale dopo.
-class _Inspected {
-  const _Inspected(this.series, this.metadata, {this.pass});
-
-  final Series series;
-  final Map<String, Object?> metadata;
-
-  /// La verifica di Cloudflare superata nella WebView, se è servita.
-  final BrowserPass? pass;
-}
 
 /// Cosa ha risposto un sito all'ultima ricerca.
 class _Found {
@@ -62,6 +49,52 @@ class _Found {
   final bool challenged;
 }
 
+/// Quale stato della serie si vuole vedere fra i risultati.
+enum _StatusFilter {
+  /// In corso o in pausa: chi cerca qualcosa da seguire non vuole le concluse.
+  ongoing,
+  completed,
+}
+
+/// I filtri della ricerca. Si ricordano fra le impostazioni, che vanno in
+/// backup e account: chi non usa un sito non vuole rispegnerlo a ogni
+/// apertura.
+class _SearchFilters {
+  const _SearchFilters({this.off = const {}, this.status, this.notInLibrary = false});
+
+  static const String offKey = 'archive.searchOff';
+  static const String statusKey = 'archive.searchStatus';
+  static const String notInLibraryKey = 'archive.searchNotInLibrary';
+
+  /// I siti spenti, non quelli accesi: un sito nuovo nasce acceso.
+  final Set<String> off;
+  final _StatusFilter? status;
+  final bool notInLibrary;
+
+  bool searches(Provider provider) => !off.contains(provider.id);
+
+  bool passes(SearchResult result, {required bool owned}) {
+    final ok = switch (status) {
+      null => true,
+      _StatusFilter.ongoing => result.releaseStatus == 'ongoing' || result.releaseStatus == 'hiatus',
+      _StatusFilter.completed => result.releaseStatus == 'completed',
+    };
+    return ok && !(notInLibrary && owned);
+  }
+
+  _SearchFilters copyWith({Set<String>? off, _StatusFilter? Function()? status, bool? notInLibrary}) => _SearchFilters(
+        off: off ?? this.off,
+        status: status == null ? this.status : status(),
+        notInLibrary: notInLibrary ?? this.notInLibrary,
+      );
+}
+
+/// Il titolo come lo si confronta: i risultati non portano l'id della serie
+/// (MangaK lo dà solo nella pagina), quindi «già in libreria» è lo stesso
+/// sito e lo stesso titolo, a meno di maiuscole e punteggiatura.
+String _titleKey(String title) =>
+    title.toLowerCase().replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), '');
+
 String _destinationName(AppLocalizations l10n, ArchiveDestination destination) => switch (destination) {
       ArchiveDestination.drive => l10n.archiveWhereDrive,
       ArchiveDestination.driveAndPhone => l10n.archiveWhereDriveAndPhone,
@@ -69,7 +102,13 @@ String _destinationName(AppLocalizations l10n, ArchiveDestination destination) =
     };
 
 class ArchiveScreen extends ConsumerStatefulWidget {
-  const ArchiveScreen({super.key});
+  const ArchiveScreen({this.link, this.importText, super.key});
+
+  /// Un link condiviso con l'app: si apre già incollato e verificato.
+  final String? link;
+
+  /// Il testo condiviso con più link: si apre l'import, già compilato.
+  final String? importText;
 
   @override
   ConsumerState<ArchiveScreen> createState() => _ArchiveScreenState();
@@ -88,12 +127,88 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   /// dopo la verifica.
   final Map<String, BrowserFetcher> _fetchers = {};
 
-  _Inspected? _inspected;
+  InspectedSeries? _inspected;
   bool _busy = false;
   String? _error;
 
+  /// Il link che nessun sito riconosce: si offre la scheda manuale.
+  String? _unsupported;
+
   ArchiveWhere? _destination;
   int _delayMs = 200;
+
+  _SearchFilters _filters = const _SearchFilters();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadFilters());
+    final link = widget.link;
+    final importText = widget.importText;
+    if (link != null || importText != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (importText != null) {
+          unawaited(ArchiveImportPage.open(context, text: importText));
+        } else {
+          _link.text = link!;
+          unawaited(_verify());
+        }
+      });
+    }
+  }
+
+  Future<void> _loadFilters() async {
+    final user = ref.read(userRepositoryProvider);
+    final off = await user.readSetting(_SearchFilters.offKey) ?? '';
+    final status = await user.readSetting(_SearchFilters.statusKey) ?? '';
+    final notInLibrary = await user.readSetting(_SearchFilters.notInLibraryKey);
+    if (!mounted) return;
+    final known = {for (final provider in providers) provider.id};
+    final stored = off.split(',').where(known.contains).toSet();
+    setState(() => _filters = _SearchFilters(
+          // Spenti tutti, per un sito che nel frattempo ha cambiato id, non
+          // si cercherebbe più niente.
+          off: stored.length == known.length ? const {} : stored,
+          status: _StatusFilter.values.where((value) => value.name == status).firstOrNull,
+          notInLibrary: notInLibrary == 'true',
+        ));
+  }
+
+  Future<void> _saveFilters() async {
+    final user = ref.read(userRepositoryProvider);
+    await user.writeSetting(_SearchFilters.offKey, (_filters.off.toList()..sort()).join(','));
+    await user.writeSetting(_SearchFilters.statusKey, _filters.status?.name ?? '');
+    await user.writeSetting(_SearchFilters.notInLibraryKey, '${_filters.notInLibrary}');
+  }
+
+  /// Un sito spento non si interroga affatto: oltre al rumore, sono le sue
+  /// richieste (e per ManhwaRead la WebView) che si risparmiano.
+  void _toggleSite(Provider provider) {
+    final off = {..._filters.off};
+    final enabling = off.remove(provider.id);
+    if (!enabling) {
+      // Almeno un sito resta acceso, o la ricerca non cercherebbe niente.
+      if (off.length == providers.length - 1) return;
+      off.add(provider.id);
+    }
+    final query = _query.text.trim();
+    setState(() {
+      _filters = _filters.copyWith(off: off);
+      if (enabling && query.length >= 2) {
+        _found[provider.id] = const _Found.loading();
+      } else {
+        _found.remove(provider.id);
+      }
+    });
+    if (enabling && query.length >= 2) unawaited(_searchOn(provider, query, _searchRun));
+    unawaited(_saveFilters());
+  }
+
+  void _setFilters(_SearchFilters filters) {
+    setState(() => _filters = filters);
+    unawaited(_saveFilters());
+  }
 
   @override
   void dispose() {
@@ -120,12 +235,13 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
 
   void _search(String query) {
     final run = ++_searchRun;
+    final searched = providers.where(_filters.searches).toList();
     setState(() {
-      for (final provider in providers) {
+      for (final provider in searched) {
         _found[provider.id] = const _Found.loading();
       }
     });
-    for (final provider in providers) {
+    for (final provider in searched) {
       unawaited(_searchOn(provider, query, run));
     }
   }
@@ -208,173 +324,45 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _unsupported = null;
       _inspected = null;
     });
-    SiteHttp? http;
     try {
-      final provider = selectProvider(url);
-      http = SiteHttp(provider.allowedHost);
-      Series series;
-      BrowserPass? pass;
-      try {
-        series = await provider.fetchSeries(url, http);
-      } on CloudflareChallenge {
-        final gate = provider.browser;
-        if (gate == null || !mounted) rethrow;
-        final canonical = provider.canonical(url);
-        pass = await BrowserCheckPage.open(
-          context,
-          canonical,
-          gate.hosts,
-          ready: gate.seriesReady,
-        );
-        if (pass == null) {
-          setState(() => _error = currentL10n().archiveErrVerifyIncomplete);
-          return;
-        }
-        final cookies = pass.cookies;
-        http.close();
-        http = SiteHttp(
-          provider.allowedHost,
-          userAgent: pass.userAgent,
-          cookies: (uri) => cookies[uri.host],
-        );
-        series = await provider.fetchSeries(url, SnapshotHttp(http, canonical, pass.html));
-      }
+      final inspected = await inspectArchiveLink(context, url);
       if (!mounted) return;
-      final inspected = _Inspected(series, normalizeMetadata(series.metadata), pass: pass);
       setState(() => _inspected = inspected);
       unawaited(_choose(inspected));
-    } on ProviderOffline {
-      setState(() => _error = currentL10n().archiveErrOffline);
+    } on UnsupportedLink {
+      if (mounted) setState(() => _unsupported = url);
     } on ProviderError catch (error) {
-      setState(() => _error = error.message);
+      if (mounted) setState(() => _error = archiveErrorText(error));
     } finally {
-      http?.close();
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  /// Il modulo della scheda manuale; se dentro si incolla un link di un
+  /// sito supportato e si sceglie il percorso normale, lo si legge da qui.
+  Future<void> _manual({String? link}) async {
+    final normal = await ManualCardPage.open(context, link: link);
+    if (!mounted) return;
+    setState(() => _unsupported = null);
+    if (normal == null) return;
+    _link.text = normal;
+    await _verify();
+  }
+
   /// Dopo il link, la pagina in cui si sceglie cosa scaricare e dove.
   /// Chiudendola senza scegliere la serie resta qui sotto, da riaprire.
-  Future<void> _choose(_Inspected inspected) async {
-    final destinations = _destinations();
-    final choice = await ArchiveSeriesPage.open(
-      context,
-      series: inspected.series,
-      metadata: inspected.metadata,
-      destinations: destinations,
-      destination: destinations.contains(_destination) ? _destination! : destinations.first,
-      delayMs: _delayMs,
-      serverHint: _serverWhere(),
-      serverAhead: ref.read(remoteArchiveProvider).info?.ahead ?? false,
-    );
+  Future<void> _choose(InspectedSeries inspected) async {
+    final choice = await chooseArchive(context, ref, inspected, where: _destination, delayMs: _delayMs);
     if (choice == null || !mounted || _inspected != inspected) return;
     setState(() {
       _destination = choice.where;
       _delayMs = choice.delayMs;
     });
-    await _download(inspected, choice);
-  }
-
-  /// Il server per primo, se c'è ed è pronto: chi l'ha collegato vuole che
-  /// scarichi lui.
-  List<ArchiveWhere> _destinations() {
-    // La cartella può arrivare da un backup anche in una build senza
-    // Firebase, dove Drive non si può aprire.
-    final drive =
-        cloudAvailable && ref.read(driveFolderProvider).value != null;
-    return [
-      if (ref.read(remoteArchiveProvider).ready) ArchiveWhere.server,
-      ...drive ? const [ArchiveWhere.drive, ArchiveWhere.driveAndPhone] : const [ArchiveWhere.phone],
-    ];
-  }
-
-  Future<void> _download(_Inspected inspected, ArchiveChoice choice) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final destination = choice.where.local;
-    if (destination == null) return _sendToServer(inspected, choice);
-    final folder = ref.read(driveFolderProvider).value;
-    String? root;
-    var private = false;
-    if (destination.keepsOnPhone) {
-      root = await downloadDestination(context, ref);
-      if (root == null) return;
-      private = root == ref.read(appDirectoriesProvider).privateLibrary;
-    }
-    if (destination.usesDrive) {
-      // Caricare vuole il permesso di scrivere su Drive, che l'app chiede
-      // solo quando serve.
-      try {
-        await ref.read(driveAuthProvider).authorize(write: true);
-      } on DriveAuthRequired {
-        return;
-      } on DriveException catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(error.message)));
-        return;
-      }
-    }
-    final files = ref.read(archiveFilesProvider);
-    final id = '${DateTime.now().microsecondsSinceEpoch}';
-    String? snapshot;
-    final pass = inspected.pass;
-    if (pass != null) {
-      final file = File(p.join(files.snapshots.path, '$id.html'));
-      await file.parent.create(recursive: true);
-      await file.writeAsBytes(pass.html);
-      snapshot = file.path;
-    }
-    await ref.read(archiveProvider.notifier).enqueue(ArchiveJob(
-          id: id,
-          url: inspected.series.url,
-          title: inspected.series.title,
-          target: ArchiveTarget(
-            destination: destination,
-            folderId: destination.usesDrive ? folder?.id : null,
-            root: root,
-            private: private,
-          ),
-          start: choice.start,
-          ids: choice.ids,
-          delayMs: choice.delayMs,
-          snapshot: snapshot,
-          userAgent: pass?.userAgent,
-          cookies: pass?.cookies ?? const {},
-          ahead: choice.ahead,
-        ));
-    if (!mounted) return;
-    messenger.showSnackBar(SnackBar(
-      content: Text(currentL10n().archiveQueuedSnack(inspected.series.title)),
-    ));
-    setState(() {
-      _inspected = null;
-      _link.clear();
-    });
-  }
-
-  /// Al server va il link con le stesse scelte; la pagina della serie solo se
-  /// è servita la verifica del browser, perché il server non ne ha uno.
-  Future<void> _sendToServer(_Inspected inspected, ArchiveChoice choice) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final name = ref.read(remoteArchiveProvider).info?.name ?? currentL10n().archiveServerFallbackName;
-    try {
-      await ref.read(remoteArchiveProvider.notifier).enqueue(
-            url: inspected.series.url,
-            title: inspected.series.title,
-            start: choice.start,
-            ids: choice.ids,
-            delayMs: choice.delayMs,
-            ahead: choice.ahead,
-            snapshot: inspected.pass == null ? null : utf8.decode(inspected.pass!.html, allowMalformed: true),
-          );
-    } on ServerException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-      return;
-    }
-    if (!mounted) return;
-    messenger.showSnackBar(SnackBar(
-      content: Text(currentL10n().archiveQueuedServerSnack(inspected.series.title, name)),
-    ));
+    final queued = await enqueueArchive(context, ref, inspected, choice);
+    if (!queued || !mounted) return;
     setState(() {
       _inspected = null;
       _link.clear();
@@ -429,6 +417,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                           ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                _filterBar(),
                 ..._results(),
                 const SizedBox(height: 16),
                 TextField(
@@ -454,14 +444,58 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                   expand: true,
                   onPressed: _busy ? null : _verify,
                 ),
+                const SizedBox(height: 8),
+                KGhostButton(
+                  label: l10n.archiveManualAction,
+                  icon: LucideIcons.bookmarkPlus,
+                  expand: true,
+                  onPressed: _busy ? null : _manual,
+                ),
+                const SizedBox(height: 8),
+                KGhostButton(
+                  label: l10n.archiveImportAction,
+                  icon: LucideIcons.listPlus,
+                  expand: true,
+                  onPressed: _busy ? null : () => ArchiveImportPage.open(context),
+                ),
+                if (_unsupported != null) ...[
+                  const SizedBox(height: 12),
+                  KCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.archiveManualUnsupported,
+                          style: KagamiType.body(13, height: 1.45, color: context.tokens.warning),
+                        ),
+                        const SizedBox(height: 10),
+                        KButton(
+                          label: l10n.archiveManualUnsupportedAction,
+                          icon: LucideIcons.bookmarkPlus,
+                          expand: true,
+                          onPressed: () => _manual(link: _unsupported),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(_error!, style: KagamiType.body(13, height: 1.45, color: context.tokens.danger)),
                 ],
                 if (inspected != null) ..._pending(inspected),
+                // Prima ciò che si comanda — la coda, il controllo delle serie,
+                // il server —, poi ciò che è già successo, poi i siti.
                 ..._queue(view),
-                ServerSection(onRetry: _busy ? null : _retry),
                 ..._tracked(view),
+                ServerSection(onRetry: _busy ? null : _retry),
+                ArchiveRecentStrip(
+                  title: l10n.archiveRecent,
+                  history: view.history,
+                  onClear: ref.read(archiveProvider.notifier).clearHistory,
+                  onRetry: _busy ? null : _retry,
+                ),
                 ..._sites(),
               ],
             ),
@@ -473,7 +507,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
 
   /// La serie letta e non ancora scaricata: la pagina della scelta si
   /// riapre da qui.
-  List<Widget> _pending(_Inspected inspected) {
+  List<Widget> _pending(InspectedSeries inspected) {
     final series = inspected.series;
     final l10n = context.l10n;
     final placeholder = ColoredBox(color: context.tokens.muted.withValues(alpha: .15));
@@ -538,61 +572,107 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     ];
   }
 
-  String _serverWhere() {
-    final info = ref.read(remoteArchiveProvider).info;
-    final folder = ref.read(driveFolderProvider).value;
-    final other = folder != null && info?.folderId != folder.id;
-    return context.l10n.archiveServerHint(
-      info?.name ?? '',
-      info?.folderName ?? info?.folderId ?? '',
-      other ? 'other' : 'same',
+  /// Siti, stato e libreria in una fila sola sotto il campo: si cambiano
+  /// mentre si guarda il risultato, senza aprire niente.
+  Widget _filterBar() {
+    final l10n = context.l10n;
+    final filters = _filters;
+    _StatusFilter? Function() toggle(_StatusFilter value) => () => filters.status == value ? null : value;
+    return KChipBar(
+      children: [
+        for (final provider in providers)
+          KChip(
+            label: provider.name,
+            active: filters.searches(provider),
+            onTap: () => _toggleSite(provider),
+          ),
+        Center(child: Container(width: 1, height: 20, color: context.tokens.line)),
+        KChip(
+          label: l10n.archiveFilterOngoing,
+          active: filters.status == _StatusFilter.ongoing,
+          onTap: () => _setFilters(filters.copyWith(status: toggle(_StatusFilter.ongoing))),
+        ),
+        KChip(
+          label: l10n.archiveFilterCompleted,
+          active: filters.status == _StatusFilter.completed,
+          onTap: () => _setFilters(filters.copyWith(status: toggle(_StatusFilter.completed))),
+        ),
+        KChip(
+          label: l10n.archiveFilterNotInLibrary,
+          icon: LucideIcons.bookX,
+          active: filters.notInLibrary,
+          onTap: () => _setFilters(filters.copyWith(notInLibrary: !filters.notInLibrary)),
+        ),
+      ],
     );
   }
 
   List<Widget> _results() {
-    final muted = context.tokens.muted;
-    final l10n = context.l10n;
+    final owned = <String, Set<String>>{};
+    for (final entry in ref.watch(libraryIndexProvider).value?.series ?? const <SeriesEntry>[]) {
+      owned.putIfAbsent(entry.provider, () => {}).add(_titleKey(entry.title));
+    }
+    bool inLibrary(SearchResult result) => owned[result.provider]?.contains(_titleKey(result.title)) ?? false;
     return [
       for (final provider in providers)
-        if (_found[provider.id] case final found?) ...[
+        if (_found[provider.id] case final found? when _filters.searches(provider)) ...[
           const SizedBox(height: 18),
           KSection(provider.name),
-          if (found.results case final results?)
-            results.isEmpty
-                ? Text(l10n.archiveNoResults(provider.name),
-                    style: KagamiType.body(12.5, color: muted))
-                : KGroup(
-                    children: [
-                      for (final result in results)
-                        _ResultTile(
-                          result: result,
-                          referer: provider.home,
-                          details: [
-                            if (result.chapters case final count?) l10n.archiveChaptersCount(count),
-                            if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
-                          ].join(' · '),
-                          onTap: _busy ? null : () => _pick(result),
-                        ),
-                    ],
-                  )
-          else if (found.challenged)
-            KGroup(
-              children: [
-                KTile(
-                  icon: LucideIcons.shieldCheck,
-                  title: l10n.archiveVerifySite(provider.name),
-                  subtitle: l10n.archiveVerifySiteHint,
-                  trailing: const Icon(LucideIcons.chevronRight, size: 18),
-                  onTap: () => _verifySearch(provider),
-                ),
-              ],
-            )
-          else if (found.error case final error?)
-            Text(error, style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger))
-          else
-            const LinearProgressIndicator(minHeight: 3),
+          _siteResults(provider, found, inLibrary),
         ],
     ];
+  }
+
+  /// Cosa ha dato un sito, filtrato. Se i filtri nascondono tutto lo si
+  /// dice, altrimenti sembrerebbe che il sito non abbia la serie.
+  Widget _siteResults(Provider provider, _Found found, bool Function(SearchResult) inLibrary) {
+    final muted = context.tokens.muted;
+    final l10n = context.l10n;
+    if (found.results case final results?) {
+      if (results.isEmpty) {
+        return Text(l10n.archiveNoResults(provider.name), style: KagamiType.body(12.5, color: muted));
+      }
+      final shown = [
+        for (final result in results)
+          if (_filters.passes(result, owned: inLibrary(result))) result,
+      ];
+      if (shown.isEmpty) {
+        return Text(l10n.archiveResultsFiltered(results.length), style: KagamiType.body(12.5, color: muted));
+      }
+      return KGroup(
+        children: [
+          for (final result in shown)
+            _ResultTile(
+              result: result,
+              referer: provider.home,
+              inLibrary: inLibrary(result),
+              details: [
+                if (inLibrary(result)) l10n.archiveInLibrary,
+                if (result.chapters case final count?) l10n.archiveChaptersCount(count),
+                if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
+              ].join(' · '),
+              onTap: _busy ? null : () => _pick(result),
+            ),
+        ],
+      );
+    }
+    if (found.challenged) {
+      return KGroup(
+        children: [
+          KTile(
+            icon: LucideIcons.shieldCheck,
+            title: l10n.archiveVerifySite(provider.name),
+            subtitle: l10n.archiveVerifySiteHint,
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => _verifySearch(provider),
+          ),
+        ],
+      );
+    }
+    if (found.error case final error?) {
+      return Text(error, style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger));
+    }
+    return const LinearProgressIndicator(minHeight: 3);
   }
 
   List<Widget> _queue(ArchiveView view) {
@@ -601,7 +681,6 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final status = view.status;
     final current = view.current;
     final waiting = [for (final job in view.jobs) if (job.id != current?.id) job];
-    final recent = recentOutcomes(view.history);
     return [
       if (view.jobs.isNotEmpty) ...[
         const SizedBox(height: 30),
@@ -612,6 +691,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               ArchiveProgressRow(
                 title: current.title,
                 status: status,
+                card: current.cardOnly,
                 onCancel: () => notifier.remove(current),
               ),
             if (current == null)
@@ -625,39 +705,28 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               ),
             for (final job in waiting)
               KTile(
-                icon: job.ahead != null
-                    ? LucideIcons.sparkles
-                    : job.automatic
-                        ? LucideIcons.refreshCw
-                        : LucideIcons.clock,
+                icon: job.cardOnly
+                    ? LucideIcons.bookmark
+                    : job.ahead != null
+                        ? LucideIcons.sparkles
+                        : job.automatic
+                            ? LucideIcons.refreshCw
+                            : LucideIcons.clock,
                 title: job.title,
-                subtitle: job.ahead != null
-                    ? l10n.archiveJobAhead(job.ids?.length ?? 0, _destinationName(l10n, job.target.destination))
-                    : job.automatic
-                        ? l10n.archiveJobAutomatic(_destinationName(l10n, job.target.destination))
-                        : l10n.archiveJobQueued(_destinationName(l10n, job.target.destination)),
+                subtitle: job.cardOnly
+                    ? job.automatic
+                        ? l10n.archiveJobCardUpdate(_destinationName(l10n, job.target.destination))
+                        : l10n.archiveJobCard(_destinationName(l10n, job.target.destination))
+                    : job.ahead != null
+                        ? l10n.archiveJobAhead(job.ids?.length ?? 0, _destinationName(l10n, job.target.destination))
+                        : job.automatic
+                            ? l10n.archiveJobAutomatic(_destinationName(l10n, job.target.destination))
+                            : l10n.archiveJobQueued(_destinationName(l10n, job.target.destination)),
                 trailing: IconButton(
                   tooltip: l10n.archiveRemoveFromQueue,
                   icon: const Icon(LucideIcons.x, size: 18),
                   onPressed: () => notifier.remove(job),
                 ),
-              ),
-          ],
-        ),
-      ],
-      if (recent.isNotEmpty) ...[
-        const SizedBox(height: 30),
-        KSection(
-          l10n.archiveRecent,
-          trailing: TextButton(onPressed: notifier.clearHistory, child: Text(l10n.archiveClearHistory)),
-        ),
-        KGroup(
-          children: [
-            for (final (:outcome, :runs) in recent.take(10))
-              ArchiveRecentTile(
-                outcome: outcome,
-                runs: runs,
-                onRetry: outcome.ok || outcome.url == null || _busy ? null : () => _retry(outcome.url!),
               ),
           ],
         ),
@@ -692,7 +761,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               title: provider.name,
               subtitle: Uri.parse(provider.home).host,
               trailing: const Icon(LucideIcons.externalLink, size: 18),
-              onTap: () => _openLink(provider.home),
+              onTap: () => openInBrowser(context, provider.home),
             ),
         ],
       ),
@@ -714,21 +783,6 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         ),
       ),
     ];
-  }
-
-  static const MethodChannel _links = MethodChannel('kagami/links');
-
-  /// Nel browser; dove non c'è modo di aprirlo (la build Linux), il link
-  /// finisce negli appunti.
-  Future<void> _openLink(String url) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      if (await _links.invokeMethod<bool>('open', url) ?? false) return;
-    } on MissingPluginException {
-      // Si ripiega sugli appunti.
-    }
-    await Clipboard.setData(ClipboardData(text: url));
-    messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveLinkCopied(url))));
   }
 
   List<Widget> _tracked(ArchiveView view) {
@@ -777,41 +831,51 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           KTile(
             icon: LucideIcons.refreshCw,
             title: l10n.archiveCheckNow,
-            subtitle: view.tracked.isEmpty
-                ? l10n.archiveNoTracked
-                : l10n.archiveTrackedCount(view.tracked.length),
             onTap: view.tracked.isEmpty ? null : _checkNow,
           ),
-          for (final series in view.tracked)
-            KTile(
-              icon: series.problem != null
-                  ? LucideIcons.triangleAlert
-                  : series.ahead != null
-                      ? LucideIcons.sparkles
-                      : LucideIcons.bookOpen,
-              tint: series.problem == null ? null : context.tokens.danger,
-              title: series.title,
-              subtitle: series.problem ??
-                  (series.ahead != null
-                      ? l10n.archiveTrackedAhead(series.ahead!, _destinationName(l10n, series.target.destination))
-                      : series.checkedAt == null
-                      ? l10n.archiveTrackedLine(
-                          series.chapters.length,
-                          _destinationName(l10n, series.target.destination),
-                        )
-                      : l10n.archiveTrackedLineChecked(
-                          series.chapters.length,
-                          _destinationName(l10n, series.target.destination),
-                          archiveWhen(series.checkedAt!),
-                        )),
-              trailing: IconButton(
-                tooltip: l10n.archiveStopFollowing,
-                icon: const Icon(LucideIcons.bellOff, size: 18),
-                onPressed: () => _forget(series),
-              ),
-            ),
         ],
       ),
+      const SizedBox(height: 12),
+      ArchiveFollowedTile(
+        count: view.tracked.length,
+        problems: view.tracked.where((series) => series.problem != null).length,
+        tiles: _followedTiles,
+      ),
+    ];
+  }
+
+  /// Le serie seguite dal telefono, per il foglio.
+  List<Widget> _followedTiles(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return [
+      for (final series in ref.watch(archiveProvider).tracked)
+        KTile(
+          icon: series.problem != null
+              ? LucideIcons.triangleAlert
+              : series.ahead != null
+                  ? LucideIcons.sparkles
+                  : LucideIcons.bookOpen,
+          tint: series.problem == null ? null : context.tokens.danger,
+          title: series.title,
+          subtitle: series.problem ??
+              (series.ahead != null
+                  ? l10n.archiveTrackedAhead(series.ahead!, _destinationName(l10n, series.target.destination))
+                  : series.checkedAt == null
+                  ? l10n.archiveTrackedLine(
+                      series.chapters.length,
+                      _destinationName(l10n, series.target.destination),
+                    )
+                  : l10n.archiveTrackedLineChecked(
+                      series.chapters.length,
+                      _destinationName(l10n, series.target.destination),
+                      archiveWhen(series.checkedAt!),
+                    )),
+          trailing: IconButton(
+            tooltip: l10n.archiveStopFollowing,
+            icon: const Icon(LucideIcons.bellOff, size: 18),
+            onPressed: () => _forget(series),
+          ),
+        ),
     ];
   }
 
@@ -839,8 +903,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     try {
       final report = await ref.read(archiveProvider.notifier).checkNow();
       final l10n = currentL10n();
+      // Le schede stanno anche fra le serie in coda, ma per loro scende solo
+      // l'elenco dei capitoli: dirle «capitoli nuovi» prometterebbe tavole.
+      final chapters = [for (final title in report.queued) if (!report.cards.contains(title)) title];
       final parts = [
-        if (report.queued.isNotEmpty) l10n.archiveCheckQueued(report.queued.join(', ')),
+        if (chapters.isNotEmpty) l10n.archiveCheckQueued(chapters.join(', ')),
+        if (report.cards.isNotEmpty) l10n.archiveCheckCards(report.cards.join(', ')),
         if (report.removed.isNotEmpty) l10n.archiveCheckRemoved(report.removed.join(', ')),
         if (report.failed.isNotEmpty) l10n.archiveCheckFailed(report.failed.length),
       ];
@@ -879,11 +947,16 @@ class _ResultTile extends StatelessWidget {
     required this.result,
     required this.referer,
     required this.details,
+    this.inLibrary = false,
     this.onTap,
   });
 
   final SearchResult result;
   final String referer;
+
+  /// Si può riscaricare lo stesso — porta solo ciò che manca —, ma deve
+  /// vedersi che c'è già.
+  final bool inLibrary;
   final String details;
   final VoidCallback? onTap;
 
@@ -931,7 +1004,7 @@ class _ResultTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            const Icon(LucideIcons.download, size: 18),
+            Icon(inLibrary ? LucideIcons.bookCheck : LucideIcons.download, size: 18),
           ],
         ),
       ),

@@ -99,6 +99,8 @@ lib/
     archive/device.dart        il motore sul telefono: immagini dal Kotlin (+ ArchiveImages.kt),
                                destinazioni, avvio del lavoro (+ ArchiveWorker.kt)
     archive/background.dart    il giro nel motore senza schermo
+    archive/manual_card.dart   salvare una scheda manuale senza interfaccia: store, dati personali, link già presenti
+    archive/bulk_import.dart   tanti link in una volta: testo o JSON, righe senza doppioni, strada di ognuna
     format/reading.dart        stato di lettura, raccolte, merge dei conflitti
     data/library.dart          sorgenti unite per serie e per capitolo
     data/library_repository.dart  la sorgente locale: indici, download, capitoli presenti
@@ -120,6 +122,7 @@ lib/
     data/library_view.dart     segnali per serie, ricerca, filtri, ordinamenti
     data/arrivals.dart         capitoli nuovi: conteggio e di quali dare notizia
     data/notifications.dart    notifiche dei capitoli nuovi (+ ArrivalNotifier.kt, LibraryWatchWorker.kt)
+    data/share_intake.dart     Condividi → Kagami: il testo condiviso, all'avvio e ad app aperta (+ SharedText.kt)
     data/reader_settings.dart  modalità di lettura per serie (non è MALF)
     data/page_decoder.dart     file interi col codec di Flutter, fasce e tessere dal Kotlin
     data/phone_tiles.dart      tessere fatte dal telefono per le tavole alte non tagliate
@@ -137,6 +140,9 @@ lib/
                                incognito, aspetto; pagine di libreria, lettura, account, dati
     ui/archive_screen.dart     Scarica un manga: ricerca, link, coda, scaricate di recente, serie seguite
     ui/archive_series.dart     la pagina di una serie letta dal sito: modalità, capitoli, destinazione
+    ui/archive_flow.dart       il percorso riusabile: link → verifica → pagina della serie → coda, browser
+    ui/archive_manual.dart     la scheda manuale: senza link o con un sito non supportato, titolo e copertina dalla pagina
+    ui/archive_import.dart     Importa più link: opzioni, il giro una serie alla volta, stato di ogni riga, verifiche
     ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
     data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
     ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare sui siti protetti
@@ -147,7 +153,7 @@ lib/
     ui/sync_screen.dart        direzione, cancellazioni, ora della sincronizzazione
     ui/theme.dart              superfici, tipografia e colori di significato
     ui/widgets/kit.dart        schede, pastiglie, segmentati, fogli, vuoti
-    ui/widgets/                copertina, origine, fogli raccolte e pulizia, grafici
+    ui/widgets/                copertina, origine, fogli raccolte, pulizia e punto di lettura, grafici
 packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il server
   lib/model.dart, names.dart, images.dart   metadati, nomi di cartella, header
   lib/http.dart                client limitato ai domini, pagina presa dalla WebView
@@ -163,6 +169,7 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/image_tools.dart         miniature e tessere: l'interfaccia, chi le fa è fuori
   lib/jobs.dart, runner.dart   coda, avanzamento, storico, il giro
   lib/tracking.dart            serie in corso e controllo dei capitoli nuovi
+  lib/manual.dart              schede manuali: pseudo-sito `manual`, chiave dal link, scrittura senza capitoli
   test/                        provider con fixture copiate, contratto di ogni sito,
                                motore su cartella e Drive finto, coda, serie in corso (`dart test`)
 server/                        Kagami Server, Dart puro (`dart compile exe`)
@@ -195,6 +202,8 @@ test/network_test.dart         monitor della rete e fasce che tornano da sole
 test/arrivals_test.dart        pallino dei capitoli nuovi, notifiche, silenzio nel backup
 test/folder_sync_test.dart     piano della sincronizzazione e giri contro un Drive finto
 test/tag_tint_test.dart        il colore di un'etichetta dipende solo dal suo testo
+test/bulk_import_test.dart     link dal testo e dal JSON, doppioni, già presente, sito o scheda manuale
+test/archive_choice_test.dart  il punto di lettura che precompila la pagina della serie letta dal sito
 firestore.rules                il proprio documento solo a sé; gli inviti ai server a mittente e destinatario
 docs/design.md                 funzionalità, interfaccia e scelte tecniche
 docs/malf.md                   il formato della libreria: l'originale della specifica
@@ -524,6 +533,21 @@ nel proprio progetto Firebase.
   elenca, non quelli non archiviati, che possono esserlo per scelta. Il
   telefono gli lascia allora le sue serie di quella cartella
   (`archive/server-check.json`), per non scaricarle due volte.
+- **Una scheda è una serie MALF senza capitoli, non un dato dell'app.**
+  Salvare un manga letto altrove (Scarica un manga → «Solo la scheda»,
+  scheda manuale, Importa più link, Condividi) scrive `series.json`,
+  copertina, indici e riga di libreria come un download con `ids` vuoto
+  (`ArchiveJob.cardOnly`): così sopravvive a una reinstallazione e compare
+  ovunque compaia la libreria. Il link generale è `source`. Le schede le
+  scrive il telefono e mai il server; quelle in corso si seguono
+  (`TrackedSeries.card`) riscrivendo solo l'indice. Un sito che Kagami non
+  conosce è lo pseudo-provider `manual` (`packages/kagami_archive/lib/manual.dart`),
+  chiave dal link normalizzato: nessun capitolo, solo il numero a cui si è
+  arrivati (`seriesStates.reachedChapter`), e «Collega a un sito» porta poi
+  i dati personali sulla serie vera (`moveSeries`). Lo stato dell'utente
+  si scrive subito, prima che il lavoro finisca: è indicizzato per chiave e
+  non aspetta che la serie esista. «Arrivato al 52» vuol dire 52 letto
+  (stimato) e si scarica dal 53.
 - **Su Drive una voce d'indice si riusa solo se è intera.** Ricostruendo
   `index.json` e `pages.json`, `DriveStore` riprende dall'indice di prima i
   capitoli completi e con le tavole; gli altri li rilegge dal loro
@@ -565,7 +589,14 @@ nel proprio progetto Firebase.
   backup; il silenzio per serie (`seriesStates.muted`) invece ci entra.
   Si guarda solo un catalogo senza avvisi e con la cartella di Drive già
   nota, e i conteggi non scendono mai: una libreria letta a metà farebbe
-  sembrare nuovi, dopo, i capitoli che c'erano già. Le notifiche sono Kotlin
+  sembrare nuovi, dopo, i capitoli che c'erano già — salvo quando cambia la
+  base: una scheda (`SeriesSignals.isCard`) conta i capitoli del sito
+  (`SeriesSignals.arrivalCount`), le altre gli archiviati, e il riferimento
+  ricorda su quale dei due è stato preso (`SeriesArrivals.onSite`); al primo
+  download, o tornando scheda, riparte da ciò che c'è senza annunciare.
+  Ad app chiusa i conteggi del sito stanno sotto `<chiave>@site` in
+  `record.json`, perché un numero del sito riletto come di archiviati
+  fermerebbe le notizie. Le notifiche sono Kotlin
   puro (`ArrivalNotifier.kt`), nessun pacchetto. Ad app chiusa
   `LibraryWatchWorker.kt` (WorkManager, ogni ora) guarda solo la cartella
   locale: le serie da guardare gliele lascia Dart uscendo
@@ -588,7 +619,9 @@ nel proprio progetto Firebase.
   `import(remoto, merge)` seguito dal rinvio del risultato, e avviene in tre
   momenti soltanto — all'avvio, uscendo dall'app e a richiesta — perché
   mandare su i dati a ogni pagina girata terrebbe accesa la radio per tutta
-  la lettura.
+  la lettura. Non si manda mai su senza aver fuso (la `revision` del documento
+  dice se un altro ha scritto), e il backup di Android è spento: rimetteva
+  un database vecchio che la prima uscita dall'app scriveva sopra l'account.
 - **L'accesso passa dal token d'identità, non dal browser.** `google_sign_in`
   chiede al sistema chi è l'utente e Firebase verifica la firma: per conto di
   quale client OAuth chiederlo lo dice `google-services.json`, quindi nel

@@ -7,6 +7,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:kagami_archive/manual.dart' show manualProvider;
+
 import '../format/malf.dart';
 import '../l10n.dart';
 import '../format/reading.dart';
@@ -77,9 +79,10 @@ class SeriesSignals {
   /// I capitoli che si possono leggere e non sono ancora letti.
   final int unreadCount;
 
-  /// I capitoli archiviati che questo telefono aveva già all'ultima apertura
-  /// della scheda (`SeriesArrivals`). `null` finché la serie non è stata
-  /// vista una prima volta: senza riferimento non c'è niente di nuovo.
+  /// I capitoli ([arrivalCount]) che questo telefono aveva già all'ultima
+  /// apertura della scheda (`SeriesArrivals`). `null` finché la serie non è
+  /// stata vista una prima volta, o se il riferimento è stato preso sull'altra
+  /// base: senza riferimento non c'è niente di nuovo.
   final int? seenChapters;
 
   /// Serve l'indice per contare [readCount] e [unreadCount]: l'archivio
@@ -90,7 +93,25 @@ class SeriesSignals {
 
   bool get hasUnread => unreadCount > 0;
 
-  bool get isStarted => readCount > 0 || state.progress != null;
+  /// Una scheda: la serie è in libreria ma di capitoli da leggere qui non ne
+  /// ha, o perché è manuale o perché non ne è stato scaricato nessuno.
+  bool get isCard => isCardEntry(entry);
+
+  static bool isCardEntry(SeriesEntry entry) =>
+      entry.provider == manualProvider || entry.archivedChapterCount == 0;
+
+  /// I capitoli su cui si contano gli arrivi: per una scheda quelli che il
+  /// sito pubblica, perché di archiviati non ne ha e il controllo quotidiano
+  /// ne allunga solo l'elenco; per le altre gli archiviati, perché un
+  /// capitolo annunciato e non scaricato qui non si legge.
+  static int arrivalCount(SeriesEntry entry) =>
+      isCardEntry(entry) ? entry.chapterCount : entry.archivedChapterCount;
+
+  /// Il punto dichiarato conta come cominciata anche se non c'è un capitolo
+  /// letto da contare (scheda manuale): il pallino di «da iniziare» non deve
+  /// più proporla.
+  bool get isStarted =>
+      readCount > 0 || state.progress != null || state.reachedChapter != null;
 
   bool get isFinished =>
       state.status == ShelfStatus.completed ||
@@ -112,12 +133,20 @@ class SeriesSignals {
   /// Il conteggio viene da [seenChapters], che è di questo telefono; se la
   /// scheda è stata aperta altrove dopo l'ultimo arrivo — `lastOpenedAt`
   /// viaggia con l'account — quei capitoli li si è già visti.
+  ///
+  /// Una scheda conta i capitoli usciti sul sito e non ancora letti
+  /// altrove; l'arrivo è l'ultima lettura del sito (`archivedAt`), perché un
+  /// capitolo archiviato non ce l'ha.
   int get newChapters {
     final seen = seenChapters;
     if (seen == null || !isFollowed) return 0;
     final opened = state.lastOpenedAt;
-    final arrived = entry.latestChapterArchivedAt;
+    final arrived = isCard ? entry.archivedAt : entry.latestChapterArchivedAt;
     if (opened != null && arrived != null && !arrived.isAfter(opened)) return 0;
+    if (isCard) {
+      return (entry.chapterCount - seen)
+          .clamp(0, math.max(0, entry.chapterCount - readCount));
+    }
     return (entry.archivedChapterCount - seen).clamp(0, unreadCount);
   }
 
@@ -374,6 +403,7 @@ class LibraryFilter {
     this.onlyStarted = false,
     this.onlyFavorite = false,
     this.onlyNew = false,
+    this.onlyCards = false,
     this.minRating,
     this.auto,
     this.collectionId,
@@ -392,6 +422,7 @@ class LibraryFilter {
   final bool onlyStarted;
   final bool onlyFavorite;
   final bool onlyNew;
+  final bool onlyCards;
 
   /// Voto minimo: chiedere anche il massimo servirebbe a cercare i brutti,
   /// che nessuno cerca.
@@ -415,6 +446,7 @@ class LibraryFilter {
       (onlyStarted ? 1 : 0) +
       (onlyFavorite ? 1 : 0) +
       (onlyNew ? 1 : 0) +
+      (onlyCards ? 1 : 0) +
       (minRating == null ? 0 : 1);
 
   LibraryFilter copyWith({
@@ -430,6 +462,7 @@ class LibraryFilter {
     bool? onlyStarted,
     bool? onlyFavorite,
     bool? onlyNew,
+    bool? onlyCards,
     int? minRating,
     bool clearRating = false,
     AutoCollection? auto,
@@ -451,6 +484,7 @@ class LibraryFilter {
         onlyStarted: onlyStarted ?? this.onlyStarted,
         onlyFavorite: onlyFavorite ?? this.onlyFavorite,
         onlyNew: onlyNew ?? this.onlyNew,
+        onlyCards: onlyCards ?? this.onlyCards,
         minRating: clearRating ? null : (minRating ?? this.minRating),
         auto: clearAuto ? null : (auto ?? this.auto),
         collectionId:
@@ -494,6 +528,7 @@ List<SeriesSignals> applyFilter(
     if (filter.onlyStarted && !signals.isStarted) return false;
     if (filter.onlyFavorite && !signals.state.favorite) return false;
     if (filter.onlyNew && !signals.isNew) return false;
+    if (filter.onlyCards && !signals.isCard) return false;
     final rating = signals.state.rating;
     if (filter.minRating != null &&
         (rating == null || rating < filter.minRating!)) {

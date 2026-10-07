@@ -111,6 +111,8 @@ class BackupService {
             if (row.lastOpenedAt != null)
               'lastOpenedAt': row.lastOpenedAt!.toIso8601String(),
             if (row.muted) 'muted': true,
+            if (row.reachedChapter != null)
+              'reachedChapter': row.reachedChapter,
             'updatedAt': row.updatedAt.toIso8601String(),
           },
       ],
@@ -230,6 +232,7 @@ class BackupService {
           updatedAt: _time(row['updatedAt']),
           lastOpenedAt: _time(row['lastOpenedAt']),
           muted: row['muted'] == true,
+          reachedChapter: row['reachedChapter'] as String?,
         );
         // In fusione vince il record più recente, campo per campo: è la stessa
         // regola con cui si fondevano due dispositivi che scrivevano in

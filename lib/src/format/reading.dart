@@ -97,6 +97,7 @@ class SeriesState {
     this.updatedAt,
     this.lastOpenedAt,
     this.muted = false,
+    this.reachedChapter,
   });
 
   factory SeriesState.fromJson(Map<String, Object?> json) {
@@ -119,6 +120,7 @@ class SeriesState {
       lastOpenedAt: json['lastOpenedAt'] is String
           ? DateTime.tryParse(json['lastOpenedAt'] as String)?.toUtc()
           : null,
+      reachedChapter: json['reachedChapter'] as String?,
     );
   }
 
@@ -141,6 +143,10 @@ class SeriesState {
   /// quindi non entra in [isEmpty]: è una preferenza, non una lettura.
   final bool muted;
 
+  /// Il numero dell'ultimo capitolo letto altrove. Non entra in [isEmpty]:
+  /// da solo non rende la serie letta, la rende solo una scheda compilata.
+  final String? reachedChapter;
+
   /// L'ultima posizione scritta: è il capitolo da cui la serie riprende.
   ReadingProgress? get progress => _latest(positions.values);
 
@@ -150,6 +156,7 @@ class SeriesState {
       !favorite &&
       readChapters.isEmpty &&
       positions.isEmpty &&
+      reachedChapter == null &&
       (notes == null || notes!.isEmpty);
 
   SeriesState copyWith({
@@ -162,6 +169,8 @@ class SeriesState {
     String? notes,
     DateTime? lastOpenedAt,
     bool? muted,
+    String? reachedChapter,
+    bool clearReachedChapter = false,
   }) =>
       SeriesState(
         status: status ?? this.status,
@@ -175,6 +184,9 @@ class SeriesState {
         updatedAt: DateTime.now().toUtc(),
         lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
         muted: muted ?? this.muted,
+        reachedChapter: clearReachedChapter
+            ? null
+            : (reachedChapter ?? this.reachedChapter),
       );
 
   /// Fonde due versioni dello stesso record dopo una sincronizzazione.
@@ -205,6 +217,7 @@ class SeriesState {
             latest == null || value.isAfter(latest) ? value : latest,
       ),
       muted: newer.muted,
+      reachedChapter: newer.reachedChapter,
     );
   }
 
@@ -215,6 +228,7 @@ class SeriesState {
         if (readChapters.isNotEmpty) 'readChapters': readChapters.toList()..sort(),
         if (progress != null) 'progress': progress!.toJson(),
         if (notes != null && notes!.isNotEmpty) 'notes': notes,
+        if (reachedChapter != null) 'reachedChapter': reachedChapter,
         if (lastOpenedAt != null)
           'lastOpenedAt': lastOpenedAt!.toIso8601String(),
         'updatedAt': (updatedAt ?? DateTime.now().toUtc()).toIso8601String(),

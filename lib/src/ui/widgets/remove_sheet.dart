@@ -26,7 +26,6 @@ Future<bool> confirmRemoveSeries(
   List<SeriesEntry> entries,
 ) async {
   if (entries.isEmpty) return false;
-  final messenger = ScaffoldMessenger.of(context);
   final l10n = context.l10n;
   final onDrive = entries.any(
     (entry) => ref.read(seriesHoldersProvider(entry.key)).any((shelf) => shelf is DriveRepository),
@@ -72,7 +71,26 @@ Future<bool> confirmRemoveSeries(
       ),
     ),
   );
-  if (sure != true) return false;
+  if (sure != true || !context.mounted) return false;
+  return removeSeriesNow(context, ref, entries);
+}
+
+/// Toglie [entries] senza chiedere: lo fa chi ha già avuto il consenso per
+/// un altro verso, come il collegamento di una scheda manuale a un sito.
+/// [keepUrls] sono i link i cui lavori in coda non si toccano. Con
+/// [announce] falso non dà la conferma finale.
+Future<bool> removeSeriesNow(
+  BuildContext context,
+  WidgetRef ref,
+  List<SeriesEntry> entries, {
+  Set<String> keepUrls = const {},
+  bool announce = true,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = context.l10n;
+  final onDrive = entries.any(
+    (entry) => ref.read(seriesHoldersProvider(entry.key)).any((shelf) => shelf is DriveRepository),
+  );
   final sync = ref.read(syncFilesProvider);
   // Un giro in corso potrebbe riportare proprio le cartelle che si tolgono.
   if (await sync.busy()) {
@@ -98,6 +116,7 @@ Future<bool> confirmRemoveSeries(
         drive: ref.read(driveFilesProvider),
         writer: writer,
         folderId: folderId,
+        keepUrls: keepUrls,
       );
       removed.add(entry);
       if (link != null) await _leaveServer(ServerClient(link, ref.read(serverAccessProvider).idToken), entry.key);
@@ -112,7 +131,9 @@ Future<bool> confirmRemoveSeries(
   ref.read(driveRepositoryProvider)?.refresh();
   await ref.read(removedSeriesProvider.notifier).hide(removed);
   ref.read(selectionProvider.notifier).clear();
-  messenger.showSnackBar(SnackBar(content: Text(l10n.removeSeriesDone(removed.length))));
+  if (announce) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.removeSeriesDone(removed.length))));
+  }
   return removed.length == entries.length;
 }
 

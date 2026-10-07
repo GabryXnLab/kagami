@@ -111,6 +111,20 @@ void main() {
     expect(entry.gridImagePath(root.path), endsWith('cover.thumb.webp'));
   });
 
+  test('il link della serie sul sito va e torna dalla riga di libreria', () {
+    final row = {
+      'key': 'manual:abc',
+      'title': 'Scheda',
+      'source': 'https://example.com/serie/1',
+    };
+    final entry = SeriesEntry.fromJson(row);
+    expect(entry.source, 'https://example.com/serie/1');
+    expect(entry.copyWith(archivedChapterCount: 1).source, entry.source);
+    expect(SeriesEntry.fromJson(entry.toJson()).source, entry.source);
+    expect(SeriesEntry.fromJson({'key': 'k'}).toJson().containsKey('source'),
+        isFalse);
+  });
+
   test('un capitolo annunciato ma non scaricato non è leggibile', () async {
     final repository = LibraryRepository(root.path);
     final entry = (await repository.loadLibrary()).series.single;

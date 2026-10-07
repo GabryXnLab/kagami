@@ -72,6 +72,7 @@ class SeriesEntry {
     this.latestChapterTitle,
     this.latestChapterArchivedAt,
     this.archivedAt,
+    this.source,
   });
 
   factory SeriesEntry.fromJson(Map<String, Object?> json) => SeriesEntry(
@@ -99,6 +100,7 @@ class SeriesEntry {
         latestChapterTitle: json['latestChapterTitle'] as String?,
         latestChapterArchivedAt: _time(json['latestChapterArchivedAt']),
         archivedAt: _time(json['archivedAt']),
+        source: json['source'] as String?,
       );
 
   /// La riga com'è in `library.json`. Serve a chi scarica una serie da Drive
@@ -129,6 +131,7 @@ class SeriesEntry {
         'latestChapterTitle': ?latestChapterTitle,
         'latestChapterArchivedAt': ?latestChapterArchivedAt?.toIso8601String(),
         'archivedAt': ?archivedAt?.toIso8601String(),
+        'source': ?source,
       };
 
   SeriesEntry copyWith({int? archivedChapterCount}) => SeriesEntry(
@@ -156,6 +159,7 @@ class SeriesEntry {
         latestChapterTitle: latestChapterTitle,
         latestChapterArchivedAt: latestChapterArchivedAt,
         archivedAt: archivedAt,
+        source: source,
       );
 
   final String key;
@@ -182,6 +186,10 @@ class SeriesEntry {
   final String? latestChapterTitle;
   final DateTime? latestChapterArchivedAt;
   final DateTime? archivedAt;
+
+  /// Il link della serie sul sito: è ciò che permette di scaricarne altri
+  /// capitoli, o di aprirla, senza ricordarsi da dove veniva.
+  final String? source;
 
   /// Capitoli pubblicati dal provider e non ancora presenti in locale.
   int get missingChapterCount =>

@@ -56,6 +56,10 @@ class SeriesStates extends Table {
   /// copertina resta: silenziare è non essere disturbati, non smettere di
   /// sapere.
   BoolColumn get muted => boolean().withDefault(const Constant(false))();
+
+  /// Il numero dell'ultimo capitolo letto altrove, come lo scrive l'autore
+  /// (`52`). Per le schede senza elenco di capitoli è l'unico dato di lettura.
+  TextColumn get reachedChapter => text().nullable()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
@@ -83,6 +87,11 @@ class SeriesArrivals extends Table {
   /// Capitoli archiviati all'ultima notifica: una notifica per arrivo, non
   /// una a ogni rilettura della libreria.
   IntColumn get notifiedChapters => integer()();
+
+  /// I due conteggi sono dei capitoli del sito, presi su una scheda (serie
+  /// senza capitoli archiviati); altrimenti degli archiviati. Quando la base
+  /// cambia il riferimento si riprende da capo.
+  BoolColumn get onSite => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => {profileId, seriesKey};
@@ -265,7 +274,7 @@ class KagamiDatabase extends _$KagamiDatabase {
   KagamiDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -313,6 +322,12 @@ class KagamiDatabase extends _$KagamiDatabase {
             );
             await migrator.createIndex(readingSessionsUnique);
             await migrator.createIndex(bookmarksUnique);
+          }
+          if (from < 8) {
+            await migrator.addColumn(seriesStates, seriesStates.reachedChapter);
+          }
+          if (from < 9) {
+            await migrator.addColumn(seriesArrivals, seriesArrivals.onSite);
           }
         },
         beforeOpen: (details) async {

@@ -600,6 +600,24 @@ class CleanupQuiet extends AsyncNotifier<Set<String>> {
 final cleanupQuietProvider =
     AsyncNotifierProvider<CleanupQuiet, Set<String>>(CleanupQuiet.new);
 
+/// Se aprendo una serie senza voto l'app lo chiede. Fra le impostazioni del
+/// database, quindi nel backup: spenta una volta, vale su ogni telefono.
+class RatingInvite extends AsyncNotifier<bool> {
+  static const String _key = 'rating.quiet';
+
+  @override
+  Future<bool> build() async =>
+      await ref.watch(userRepositoryProvider).readSetting(_key) != 'true';
+
+  Future<void> set(bool value) async {
+    state = AsyncData(value);
+    await ref.read(userRepositoryProvider).writeSetting(_key, '${!value}');
+  }
+}
+
+final ratingInviteProvider =
+    AsyncNotifierProvider<RatingInvite, bool>(RatingInvite.new);
+
 /// Il database dei dati personali: uno solo per tutta la vita dell'app.
 final databaseProvider = Provider<KagamiDatabase>((ref) {
   final database = KagamiDatabase();
@@ -697,6 +715,87 @@ class Reading extends AsyncNotifier<ReadingData> {
 
   Future<void> toggleMuted(String key) =>
       _mutate(key, (state) => state.copyWith(muted: !state.muted));
+
+  /// Porta i dati personali di [from] su [to] (`UserRepository.moveSeries`):
+  /// serve a collegare una scheda manuale alla serie vera, che ha un'altra
+  /// chiave.
+  Future<void> moveSeries(String from, String to) async {
+    await _repository.moveSeries(from, to);
+    _publish(
+      await _repository.loadStates(),
+      await _repository.loadCollections(),
+    );
+  }
+
+  /// «Arrivato a»: [chapterId] è l'ultimo capitolo letto altrove (null, non
+  /// iniziata). Segna letti, come stimati, i capitoli con `order` fino a
+  /// quello incluso che non lo sono già, scrive il suo numero e porta a «in
+  /// lettura» una serie ancora da iniziare o in programma. Con null azzera il
+  /// numero e lascia i letti com'erano: toglierli non è questo gesto.
+  Future<void> setReachedThrough(
+    String key,
+    Iterable<ChapterEntry> chapters,
+    String? chapterId,
+  ) async {
+    if (chapterId == null) {
+      await _mutate(key, (state) => state.copyWith(clearReachedChapter: true));
+      return;
+    }
+    final reached = chapters.firstWhere((chapter) => chapter.id == chapterId);
+    await _marks(
+      key,
+      [
+        for (final chapter in chapters)
+          if (chapter.order <= reached.order) chapter.id,
+      ],
+      true,
+      estimated: true,
+    );
+    final number = reached.number ?? '${reached.order + 1}';
+    await _mutate(
+      key,
+      (state) => state.copyWith(
+        reachedChapter: number,
+        status: state.status == ShelfStatus.none ||
+                state.status == ShelfStatus.planned
+            ? ShelfStatus.reading
+            : state.status,
+      ),
+    );
+  }
+
+  /// Per le schede senza elenco di capitoli: solo il numero dichiarato.
+  Future<void> setReachedChapter(String key, String? number) {
+    final value = number?.trim();
+    return _mutate(
+      key,
+      (state) => value == null || value.isEmpty
+          ? state.copyWith(clearReachedChapter: true)
+          : state.copyWith(reachedChapter: value),
+    );
+  }
+
+  /// Scrive in un colpo la scheda di una serie, anche non ancora in libreria:
+  /// lo stato è per chiave e non chiede che la serie esista. I campi null
+  /// restano come sono; per i letti stimati si chiama poi [setReachedThrough].
+  Future<void> saveCard(
+    String key, {
+    ShelfStatus? status,
+    int? rating,
+    String? notes,
+    bool? favorite,
+    String? reachedChapter,
+  }) =>
+      _mutate(
+        key,
+        (state) => state.copyWith(
+          status: status,
+          rating: rating,
+          notes: notes,
+          favorite: favorite,
+          reachedChapter: reachedChapter,
+        ),
+      );
 
   /// Segna l'apertura della scheda: è il riferimento con cui si decide se un
   /// capitolo arrivato dopo è una novità.
@@ -1016,9 +1115,10 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
         final entry = ref.read(seriesEntryProvider(key));
         if (entry == null) return;
         final marks = await future;
-        final count = entry.archivedChapterCount;
-        final mark = marks[key]?.acknowledged(count) ??
-            ArrivalMark(seen: count, notified: count);
+        final stored = marks[key];
+        final mark = stored != null && stored.fits(entry)
+            ? stored.acknowledged(SeriesSignals.arrivalCount(entry))
+            : ArrivalMark.of(entry);
         if (mark == marks[key]) return;
         state = AsyncData({...marks, key: mark});
         await _repository.saveArrivals({key: mark});
@@ -1041,7 +1141,7 @@ final librarySignalsProvider = Provider<List<SeriesSignals>>((ref) {
         ref,
         entry,
         reading?.of(entry.key) ?? const SeriesState(),
-        arrivals[entry.key]?.seen,
+        arrivals[entry.key]?.seenFor(entry),
       ),
   ];
 });
@@ -1054,7 +1154,9 @@ final seriesSignalsProvider =
     ref,
     entry,
     ref.watch(seriesStateProvider(key)),
-    ref.watch(arrivalsProvider.select((marks) => marks.value?[key]?.seen)),
+    ref
+        .watch(arrivalsProvider.select((marks) => marks.value?[key]))
+        ?.seenFor(entry),
   );
 });
 
@@ -1108,6 +1210,8 @@ class LibraryFilterNotifier extends Notifier<LibraryFilter> {
       state = state.copyWith(onlyFavorite: value);
 
   void setOnlyNew(bool value) => state = state.copyWith(onlyNew: value);
+
+  void setOnlyCards(bool value) => state = state.copyWith(onlyCards: value);
 
   void setMinRating(int? value) => value == null
       ? state = state.copyWith(clearRating: true)
@@ -1290,7 +1394,7 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
         return;
       }
       state = state.copyWith(account: account);
-      await _run(ref.read(cloudSyncProvider).sync, merged: true);
+      await _run();
     } on Exception catch (error) {
       state = state.copyWith(busy: false, error: cloudMessage(error));
     }
@@ -1301,7 +1405,7 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
   Future<void> signOut() async {
     state = state.copyWith(busy: true, clearError: true);
     try {
-      await ref.read(cloudSyncProvider).push();
+      await ref.read(cloudSyncProvider).sync();
     } on Exception catch (_) {
       // Uscire deve riuscire anche senza rete: i dati restano qui, e la
       // prossima sincronizzazione li ritroverà.
@@ -1311,13 +1415,13 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
     state = const CloudStatus();
   }
 
-  Future<void> syncNow() =>
-      _run(ref.read(cloudSyncProvider).sync, merged: true);
+  Future<void> syncNow() => _run();
 
-  /// Solo andata, per quando l'app passa in secondo piano.
+  /// Per quando l'app passa in secondo piano: se ne sta già facendo una, è
+  /// quella a mandare su i dati.
   Future<void> pushNow() async {
     if (!state.signedIn || state.busy) return;
-    await _run(ref.read(cloudSyncProvider).push, merged: false);
+    await _run();
   }
 
   /// Smette di tenerne copia: la riga in rete sparisce e l'accesso si chiude.
@@ -1335,12 +1439,12 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
     state = const CloudStatus();
   }
 
-  Future<void> _run(Future<DateTime> Function() work, {required bool merged}) async {
+  Future<void> _run() async {
     if (!state.signedIn) return;
     state = state.copyWith(busy: true, clearError: true);
     try {
-      final when = await work();
-      state = state.copyWith(busy: false, lastSyncAt: when);
+      final (:at, :merged) = await ref.read(cloudSyncProvider).sync();
+      state = state.copyWith(busy: false, lastSyncAt: at);
       // Fondere ha riscritto il database sotto l'app: la fotografia in memoria
       // va rifatta, altrimenti la libreria mostra ancora quella di prima.
       if (merged) {

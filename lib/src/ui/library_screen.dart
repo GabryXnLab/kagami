@@ -865,6 +865,15 @@ class _FilterSheet extends ConsumerWidget {
                 ),
               ),
               KTile(
+                icon: LucideIcons.stickyNote,
+                title: l10n.libraryOnlyCards,
+                onTap: () => notifier.setOnlyCards(!filter.onlyCards),
+                trailing: Switch(
+                  value: filter.onlyCards,
+                  onChanged: notifier.setOnlyCards,
+                ),
+              ),
+              KTile(
                 icon: LucideIcons.heart,
                 title: l10n.libraryOnlyFavorite,
                 onTap: () => notifier.setOnlyFavorite(!filter.onlyFavorite),

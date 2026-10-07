@@ -659,10 +659,33 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get archiveIntro =>
-      'Busca un título en los sitios compatibles o pega el enlace de una serie: Kagami la descarga del sitio, con metadatos, portada y la lista completa de capítulos, en la biblioteca.';
+      'Busca un título en los sitios compatibles o pega el enlace de una serie o de uno de sus capítulos: Kagami la descarga del sitio, con metadatos, portada y la lista completa de capítulos, en la biblioteca. O guarda solo su ficha, sin capítulos.';
 
   @override
   String get archiveSearchHint => 'Buscar un manga por título';
+
+  @override
+  String get archiveFilterOngoing => 'En curso';
+
+  @override
+  String get archiveFilterCompleted => 'Finalizadas';
+
+  @override
+  String get archiveFilterNotInLibrary => 'No en la biblioteca';
+
+  @override
+  String get archiveInLibrary => 'En la biblioteca';
+
+  @override
+  String archiveResultsFiltered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count resultados, ocultos por los filtros',
+      one: '1 resultado, oculto por los filtros',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get archiveClear => 'Borrar';
@@ -994,6 +1017,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get archiveRecent => 'Descargadas recientemente';
 
   @override
+  String archiveRecentAll(int count) {
+    return 'Todas ($count)';
+  }
+
+  @override
+  String get archiveRecentFailed => 'Falló';
+
+  @override
+  String get archiveFollowedTitle => 'Series seguidas';
+
+  @override
+  String archiveFollowedProblems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count por revisar',
+      one: '1 por revisar',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String archiveRecentLineRuns(String when, int runs, String message) {
     return '$when · $runs descargas · $message';
   }
@@ -1186,7 +1231,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get serverTitle => 'Servidor';
 
   @override
-  String get serverClear => 'Limpiar';
+  String get serverRecent => 'Descargadas por el servidor';
 
   @override
   String get serverUnavailableNoSecret =>
@@ -1368,33 +1413,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String serverSeriesAhead(int count) {
     return 'Sobre la marcha, $count listos para leer: la app pide los capítulos mientras lees';
-  }
-
-  @override
-  String get serverOngoingTitle => 'Series en curso en el servidor';
-
-  @override
-  String serverOngoingCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count que seguir',
-      zero: 'Ninguna por ahora',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get serverOngoingCheckOff => 'revisión desactivada';
-
-  @override
-  String serverOngoingCheckAt(String clock) {
-    return 'revisión a las $clock';
-  }
-
-  @override
-  String serverOngoingSubtitle(String count, String check) {
-    return '$count · $check. Toca para revisar ahora';
   }
 
   @override
@@ -2586,6 +2604,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String homeSiteChapters(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nuevos en $site',
+      one: '1 nuevo en $site',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get homeAgoToday => 'hoy';
 
   @override
@@ -3336,6 +3365,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String dataNewSiteChaptersNotification(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Han salido $count capítulos nuevos en $site',
+      one: 'Ha salido un capítulo nuevo en $site',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get dataArchivePhoneFolderMissing => 'Falta la carpeta del teléfono.';
 
   @override
@@ -3499,4 +3539,438 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get serverCheckTimeHelp => 'Hora de la comprobación';
+
+  @override
+  String get seriesRatingInviteTitle => '¿Qué nota le pones?';
+
+  @override
+  String get seriesRatingInviteBody =>
+      'La nota sirve para filtrar y ordenar la biblioteca y cuenta en las estadísticas.';
+
+  @override
+  String get seriesRatingInviteRate => 'Puntuar';
+
+  @override
+  String get seriesRatingInviteIgnore => 'Ignorar';
+
+  @override
+  String get seriesRatingInviteNever => 'No volver a preguntar';
+
+  @override
+  String get settingsRatingInvite => 'Pedir una nota al abrir una serie';
+
+  @override
+  String get settingsRatingInviteNote =>
+      'Las series sin nota muestran una invitación a puntuarlas';
+
+  @override
+  String get archiveModeCard => 'Solo la ficha';
+
+  @override
+  String get archiveModeCardLine =>
+      'Sin capítulos: estado, nota y por dónde vas';
+
+  @override
+  String get archiveModeCardHint =>
+      'Guarda la serie en la biblioteca sin descargar capítulos: portada, metadatos, la lista de capítulos y el enlace al sitio. Indica hasta dónde has llegado: ese capítulo y los anteriores quedan como leídos. Los capítulos se pueden descargar más adelante.';
+
+  @override
+  String get archiveReachedSection => 'He llegado hasta…';
+
+  @override
+  String get archiveReachedHint => 'Toca el último capítulo que leíste.';
+
+  @override
+  String get archiveReachedNone => 'No he empezado';
+
+  @override
+  String get archiveChapterReached => 'llegué aquí';
+
+  @override
+  String get archiveCardServer =>
+      'Las fichas las guarda el teléfono: el servidor vinculado solo descarga capítulos.';
+
+  @override
+  String get archiveCardNotesHint => 'Una nota para ti (opcional)';
+
+  @override
+  String archiveSummaryCard(String where) {
+    return 'Guarda la ficha, ningún capítulo descargado · $where';
+  }
+
+  @override
+  String archiveSummaryCardReached(String number, String where) {
+    return 'Guarda la ficha leída hasta el $number, ningún capítulo descargado · $where';
+  }
+
+  @override
+  String get archiveSaveCard => 'Guardar ficha';
+
+  @override
+  String archiveCardQueuedSnack(String title) {
+    return 'Ficha de «$title» guardada: la portada y la lista de capítulos llegarán en breve.';
+  }
+
+  @override
+  String archiveCardProgress(String message) {
+    return 'Ficha · $message';
+  }
+
+  @override
+  String archiveJobCard(String destination) {
+    return 'Ficha · $destination';
+  }
+
+  @override
+  String archiveJobCardUpdate(String destination) {
+    return 'Actualización de la ficha · $destination';
+  }
+
+  @override
+  String archiveRecentCard(String when) {
+    return 'Ficha · $when';
+  }
+
+  @override
+  String archiveCheckCards(String names) {
+    return 'capítulos nuevos en la lista, sin descargar, para las fichas de $names';
+  }
+
+  @override
+  String get seriesOpenSite => 'Abrir en el sitio';
+
+  @override
+  String get seriesRefreshCard => 'Actualizar ficha';
+
+  @override
+  String get seriesDownloadMore => 'Descargar más capítulos';
+
+  @override
+  String get seriesStartDownload => 'Empezar a descargar';
+
+  @override
+  String get seriesStartDownloadMessage =>
+      'Esta serie es solo una ficha: los capítulos están en el sitio. Descárgalos para leerlos aquí, a partir del siguiente al último leído.';
+
+  @override
+  String get seriesDownloadFromSite => 'Descargar del sitio';
+
+  @override
+  String get seriesDownloadFromSiteQueued => 'En cola desde el sitio';
+
+  @override
+  String get coverCardBadge => 'Ficha';
+
+  @override
+  String coverReached(String number) {
+    return 'Llegado al cap. $number';
+  }
+
+  @override
+  String get libraryOnlyCards => 'Solo fichas';
+
+  @override
+  String get seriesReachedTitle => 'Llegado a';
+
+  @override
+  String get seriesReachedNone => 'Sin empezar';
+
+  @override
+  String seriesReachedChapter(String number) {
+    return 'Cap. $number';
+  }
+
+  @override
+  String get seriesReachedSearch => 'Buscar un capítulo';
+
+  @override
+  String get seriesReachedNumberHint => 'Número del capítulo';
+
+  @override
+  String get seriesReachedNumberHelp =>
+      'Como lo escribe el sitio, por ejemplo 52. Vacío para quitarlo.';
+
+  @override
+  String get seriesReachedBackTitle => '¿Volver atrás?';
+
+  @override
+  String seriesReachedBackMessage(String chapter) {
+    return 'Los capítulos posteriores a «$chapter» siguen marcados como leídos: para volver a dejarlos sin leer, desmárcalos en la lista de capítulos.';
+  }
+
+  @override
+  String get seriesReachedBackConfirm => 'Mover';
+
+  @override
+  String get seriesCardEmptyTitle => 'Ficha sin capítulos';
+
+  @override
+  String get seriesCardEmptyMessage =>
+      'Kagami no descarga de este sitio, pero la ficha guarda estado, nota, valoración y punto de lectura.';
+
+  @override
+  String get seriesLinkSite => 'Vincular a un sitio';
+
+  @override
+  String get seriesLinkTitle => 'Vincular a un sitio';
+
+  @override
+  String get seriesLinkMessage =>
+      'Pega el enlace de la serie en un sitio del que Kagami pueda descargar. El estado, la nota, las colecciones y el punto de lectura pasan a la serie real, y esta ficha se elimina.';
+
+  @override
+  String get seriesLinkHint => 'Enlace de la serie';
+
+  @override
+  String get seriesLinkContinue => 'Continuar';
+
+  @override
+  String seriesLinkDone(String title) {
+    return '«$title» vinculada: la serie aparecerá en la biblioteca cuando termine el trabajo.';
+  }
+
+  @override
+  String get archiveManualAction => 'Añadir sin enlace';
+
+  @override
+  String get archiveManualUnsupported =>
+      'Kagami no sabe descargar de este sitio: puedes guardarlo como ficha con título y enlace, pero sus capítulos no se podrán descargar.';
+
+  @override
+  String get archiveManualUnsupportedAction => 'Guardar como ficha';
+
+  @override
+  String get archiveManualTitle => 'Ficha manual';
+
+  @override
+  String get archiveManualTitleHint => 'Título';
+
+  @override
+  String get archiveManualTitleRequired => 'Escribe un título.';
+
+  @override
+  String get archiveManualLinkHint =>
+      'Enlace a la página de la serie (opcional)';
+
+  @override
+  String get archiveManualSupported =>
+      'Kagami sabe leer este sitio: con el camino normal tienes la lista de capítulos y puedes descargarlos.';
+
+  @override
+  String get archiveManualSupportedAction => 'Usar el camino normal';
+
+  @override
+  String get archiveManualNoDownload =>
+      'Los capítulos de este sitio no se podrán descargar: solo queda el enlace, además del título y la portada si la página los declara.';
+
+  @override
+  String get archiveManualReachedHint => 'Llegué al capítulo (p. ej. 52)';
+
+  @override
+  String get archiveManualWhereDrive =>
+      'La ficha se guarda en Drive, en la carpeta de la biblioteca.';
+
+  @override
+  String get archiveManualWherePhone => 'La ficha se guarda en el teléfono.';
+
+  @override
+  String get archiveManualSave => 'Guardar la ficha';
+
+  @override
+  String archiveManualSaved(String title) {
+    return 'Ficha de «$title» guardada.';
+  }
+
+  @override
+  String archiveManualExists(String title) {
+    return 'Este enlace ya está en la biblioteca: «$title».';
+  }
+
+  @override
+  String get archiveManualNeedsDrive =>
+      'Guardar la ficha en Drive requiere permiso de escritura.';
+
+  @override
+  String archiveManualFailed(String error) {
+    return 'No se pudo guardar la ficha: $error';
+  }
+
+  @override
+  String get archiveImportAction => 'Importar varios enlaces';
+
+  @override
+  String get archiveImportTitle => 'Importar varios enlaces';
+
+  @override
+  String get archiveImportIntro =>
+      'Pega enlaces: las pestañas del navegador, una lista, un JSON. Cada manga se convierte en una ficha en la biblioteca, sin descargar capítulos; desde el enlace de un capítulo, leído hasta ese capítulo.';
+
+  @override
+  String get archiveImportHint => 'Pega aquí el texto con los enlaces…';
+
+  @override
+  String archiveImportFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count enlaces encontrados',
+      one: 'Un enlace encontrado',
+      zero: 'No se encontró ningún enlace',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportWhereDrive =>
+      'Las fichas se guardan en Drive, en la carpeta de la biblioteca.';
+
+  @override
+  String get archiveImportWherePhone => 'Las fichas se guardan en el teléfono.';
+
+  @override
+  String get archiveImportCollection => 'Añadir a una colección';
+
+  @override
+  String get archiveImportCollectionNone => 'Ninguna colección';
+
+  @override
+  String get archiveImportPause => 'Pausa entre enlaces';
+
+  @override
+  String get archiveImportPauseHint =>
+      'Las series se leen del sitio una a una: una pausa más larga pesa menos sobre los sitios.';
+
+  @override
+  String archiveImportSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String archiveImportStart(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Importar $count enlaces',
+      one: 'Importar un enlace',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportStop => 'Detener';
+
+  @override
+  String get archiveImportResume => 'Continuar';
+
+  @override
+  String get archiveImportWaiting => 'En espera';
+
+  @override
+  String get archiveImportRunning => 'En curso…';
+
+  @override
+  String get archiveImportSaved => 'Guardada como ficha';
+
+  @override
+  String archiveImportSavedReached(String chapter) {
+    return 'Guardada como ficha · leído hasta el $chapter';
+  }
+
+  @override
+  String get archiveImportManual =>
+      'Ficha manual: Kagami no podrá descargar sus capítulos';
+
+  @override
+  String archiveImportKnown(String title) {
+    return 'Ya en la biblioteca: «$title»';
+  }
+
+  @override
+  String get archiveImportQueued => 'Ya en la cola';
+
+  @override
+  String get archiveImportNeedsCheck => 'El sitio pide una verificación';
+
+  @override
+  String get archiveImportVerify => 'Verificar';
+
+  @override
+  String get archiveImportRetry => 'Reintentar';
+
+  @override
+  String get archiveImportCheckHint =>
+      'Algunos sitios piden una verificación del navegador: toca uno y supérala; los demás enlaces del mismo sitio se reanudan solos.';
+
+  @override
+  String archiveImportProgress(int done, int total) {
+    return '$done de $total';
+  }
+
+  @override
+  String archiveImportCountSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichas',
+      one: '1 ficha',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountManual(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count manuales',
+      one: '1 manual',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountKnown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ya presentes',
+      one: '1 ya presente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count errores',
+      one: '1 error',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountCheck(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count por verificar',
+      one: '1 por verificar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportLeaveTitle => '¿Detener la importación?';
+
+  @override
+  String get archiveImportLeaveBody =>
+      'Las fichas ya guardadas se quedan; los enlaces que faltan no se importan.';
+
+  @override
+  String get archiveImportLeaveConfirm => 'Detener y salir';
+
+  @override
+  String get shareNoLinks => 'El texto compartido no contiene enlaces.';
 }

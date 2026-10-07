@@ -44,11 +44,20 @@ String archiveWhen(DateTime at) {
 /// La serie che si sta scaricando, dal telefono o dal server: stessi campi,
 /// stessa riga.
 class ArchiveProgressRow extends StatelessWidget {
-  const ArchiveProgressRow({required this.title, required this.status, required this.onCancel, super.key});
+  const ArchiveProgressRow({
+    required this.title,
+    required this.status,
+    required this.onCancel,
+    this.card = false,
+    super.key,
+  });
 
   final String title;
   final ArchiveStatus status;
   final VoidCallback onCancel;
+
+  /// Solo la scheda: niente pagine né capitoli da contare.
+  final bool card;
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +74,10 @@ class ArchiveProgressRow extends StatelessWidget {
                 Text(status.title.isEmpty ? title : status.title, style: KagamiType.body(14, weight: 600)),
                 const SizedBox(height: 3),
                 Text(
-                  '${status.message}\n'
-                  '${l10n.serverProgressStats(status.pagesDownloaded, archiveSize(status.bytes), status.pagesSkipped)}',
+                  card
+                      ? l10n.archiveCardProgress(status.message)
+                      : '${status.message}\n'
+                          '${l10n.serverProgressStats(status.pagesDownloaded, archiveSize(status.bytes), status.pagesSkipped)}',
                   style: KagamiType.body(12.5, height: 1.4, color: muted),
                 ),
                 const SizedBox(height: 8),
@@ -190,6 +201,262 @@ class ArchiveRecentTile extends ConsumerWidget {
   }
 }
 
+/// Le serie scaricate, come copertine in fila: sono cronologia, non comandi,
+/// e devono sembrarlo accanto alle righe di [KTile], che sono i comandi. In
+/// colonna, una per riga, spingevano il controllo delle serie sotto lo
+/// schermo; la fila tiene le ultime, e il foglio tutte, col dettaglio.
+class ArchiveRecentStrip extends StatelessWidget {
+  const ArchiveRecentStrip({
+    required this.title,
+    required this.history,
+    required this.onClear,
+    this.onRetry,
+    super.key,
+  });
+
+  final String title;
+  final List<ArchiveOutcome> history;
+  final Future<void> Function() onClear;
+
+  /// Riprova un download fallito dal suo link.
+  final void Function(String url)? onRetry;
+
+  static const double _width = 96;
+
+  VoidCallback? _retryOf(ArchiveOutcome outcome) =>
+      outcome.ok || outcome.url == null || onRetry == null ? null : () => onRetry!(outcome.url!);
+
+  @override
+  Widget build(BuildContext context) {
+    final recent = recentOutcomes(history);
+    if (recent.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 30),
+        KSection(
+          title,
+          trailing: TextButton(
+            onPressed: () => _openAll(context, recent),
+            child: Text(context.l10n.archiveRecentAll(recent.length)),
+          ),
+        ),
+        SizedBox(
+          height: 200,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: recent.length.clamp(0, 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final outcome = recent[index].outcome;
+              return _RecentCover(outcome: outcome, width: _width, onRetry: _retryOf(outcome));
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openAll(BuildContext context, List<({ArchiveOutcome outcome, int runs})> recent) =>
+      showKagamiSheet<void>(
+        context,
+        title: title,
+        scrollable: true,
+        action: TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            onClear();
+          },
+          child: Text(context.l10n.archiveClearHistory),
+        ),
+        builder: (sheet) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+          child: KGroup(
+            children: [
+              for (final (:outcome, :runs) in recent)
+                ArchiveRecentTile(
+                  outcome: outcome,
+                  runs: runs,
+                  onRetry: switch (_retryOf(outcome)) {
+                    final retry? => () {
+                        Navigator.of(sheet).pop();
+                        retry();
+                      },
+                    null => null,
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+}
+
+/// Una serie della fila: la copertina se è in libreria, e sotto quando è
+/// scesa. Una fallita lo dice col colore e si riprova toccandola.
+class _RecentCover extends ConsumerWidget {
+  const _RecentCover({required this.outcome, required this.width, this.onRetry});
+
+  final ArchiveOutcome outcome;
+  final double width;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final scheme = context.colors;
+    final danger = context.tokens.danger;
+    final failed = !outcome.ok;
+    final key = outcome.seriesKey;
+    final entry = key == null ? null : ref.watch(seriesEntryProvider(key));
+    final tint = failed ? danger : scheme.onSurface;
+    final line = failed
+        ? l10n.archiveRecentFailed
+        : outcome.card
+            ? l10n.archiveRecentCard(archiveWhen(outcome.finishedAt))
+            : archiveWhen(outcome.finishedAt);
+    return Semantics(
+      button: true,
+      label: '${outcome.title}, $line',
+      excludeSemantics: true,
+      child: KPress(
+        onTap: failed && onRetry != null
+            ? onRetry
+            : entry != null
+                ? () => openSeries(context, entry.key)
+                : null,
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: width,
+                  height: width * 1.42,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (entry != null)
+                        CoverImage(entry: entry, width: width)
+                      else
+                        ColoredBox(
+                          color: tint.withValues(alpha: .10),
+                          child: Icon(
+                            failed
+                                ? LucideIcons.triangleAlert
+                                : outcome.card
+                                    ? LucideIcons.bookmark
+                                    : LucideIcons.bookCheck,
+                            size: 24,
+                            color: tint,
+                          ),
+                        ),
+                      if (failed) ...[
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: danger, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        if (onRetry != null)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(color: danger, shape: BoxShape.circle),
+                              child: const Icon(LucideIcons.rotateCcw, size: 13, color: Colors.white),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                outcome.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: KagamiType.title(12.5, color: scheme.onSurface),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                line,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KagamiType.body(11.5, color: failed ? danger : context.tokens.muted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La voce che apre le serie seguite: quante sono, e quante hanno un
+/// problema, che deve vedersi anche col foglio chiuso.
+class ArchiveFollowedTile extends StatelessWidget {
+  const ArchiveFollowedTile({
+    required this.count,
+    required this.problems,
+    required this.tiles,
+    super.key,
+  });
+
+  final int count;
+  final int problems;
+
+  /// Le righe del foglio, rilette mentre è aperto: smettere di seguire una
+  /// serie la toglie subito.
+  final List<Widget> Function(BuildContext context, WidgetRef ref) tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return KGroup(
+      children: [
+        KTile(
+          icon: problems > 0 ? LucideIcons.triangleAlert : LucideIcons.bookMarked,
+          tint: problems > 0 ? context.tokens.danger : null,
+          title: l10n.archiveFollowedTitle,
+          subtitle: count == 0
+              ? l10n.archiveNoTracked
+              : [
+                  l10n.archiveTrackedCount(count),
+                  if (problems > 0) l10n.archiveFollowedProblems(problems),
+                ].join(' · '),
+          trailing: count == 0 ? null : const Icon(LucideIcons.chevronRight, size: 18),
+          onTap: count == 0 ? null : () => _open(context),
+        ),
+      ],
+    );
+  }
+
+  void _open(BuildContext context) => showKagamiSheet<void>(
+        context,
+        title: context.l10n.archiveFollowedTitle,
+        scrollable: true,
+        builder: (_) => Consumer(
+          builder: (context, ref, _) {
+            final children = tiles(context, ref);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: children.isEmpty
+                  ? Text(
+                      context.l10n.archiveNoTracked,
+                      style: KagamiType.body(13, color: context.tokens.muted),
+                    )
+                  : KGroup(children: children),
+            );
+          },
+        ),
+      );
+}
+
 /// Collega questo account al server a [url]: il server dice se lo conosce,
 /// e se non ha ancora il suo Drive glielo si dà. Si salva solo se tutto è
 /// andato; `null` se l'utente ha rinunciato a un passo.
@@ -259,15 +526,7 @@ class ServerSection extends ConsumerWidget {
     ];
     final children = <Widget>[
       const SizedBox(height: 30),
-      KSection(
-        l10n.serverTitle,
-        trailing: view.queue.history.isEmpty
-            ? null
-            : TextButton(
-                onPressed: () => _guard(context, ref.read(remoteArchiveProvider.notifier).clearHistory),
-                child: Text(l10n.serverClear),
-              ),
-      ),
+      KSection(l10n.serverTitle),
     ];
     if (!cloudAvailable) {
       children.add(Text(
@@ -439,30 +698,14 @@ class ServerSection extends ConsumerWidget {
               onPressed: () => _guard(context, () => notifier.cancel(job)),
             ),
           ),
-        for (final (:outcome, :runs) in recentOutcomes(queue.history).take(8))
-          ArchiveRecentTile(
-            outcome: outcome,
-            runs: runs,
-            onRetry: outcome.ok || outcome.url == null || onRetry == null ? null : () => onRetry!(outcome.url!),
-          ),
       ],
     ));
     if (info != null) {
-      final minutes = info.checkMinutes;
       final check = info.check;
       children.addAll([
         const SizedBox(height: 12),
         KGroup(
           children: [
-            KTile(
-              icon: LucideIcons.refreshCw,
-              title: l10n.serverOngoingTitle,
-              subtitle: l10n.serverOngoingSubtitle(
-                l10n.serverOngoingCount(view.ongoing.length),
-                minutes == null ? l10n.serverOngoingCheckOff : l10n.serverOngoingCheckAt(clockOf(minutes)),
-              ),
-              onTap: view.error != null ? null : () => _checkNow(context, notifier),
-            ),
             KTile(
               icon: LucideIcons.calendarClock,
               title: l10n.serverCheckDaily,
@@ -490,32 +733,58 @@ class ServerSection extends ConsumerWidget {
                       : (value) => _guard(context, () => notifier.configureCheck(library: value)),
                 ),
               ),
-            for (final series in view.ongoing)
-              KTile(
-                icon: series.problem != null
-                    ? LucideIcons.triangleAlert
-                    : series.ahead != null
-                        ? LucideIcons.sparkles
-                        : LucideIcons.bookOpen,
-                tint: series.problem == null ? null : context.tokens.danger,
-                title: series.title,
-                subtitle: series.problem ??
-                    (series.ahead != null
-                        ? l10n.serverSeriesAhead(series.ahead!)
-                        : series.checkedAt == null
-                        ? l10n.serverSeriesKnown(series.chapters)
-                        : l10n.serverSeriesKnownChecked(series.chapters, archiveWhen(series.checkedAt!))),
-                trailing: IconButton(
-                  tooltip: l10n.serverStopFollowing,
-                  icon: const Icon(LucideIcons.bellOff, size: 18),
-                  onPressed: () => _guard(context, () => notifier.forget(series)),
-                ),
-              ),
+            KTile(
+              icon: LucideIcons.refreshCw,
+              title: l10n.archiveCheckNow,
+              onTap: view.error != null ? null : () => _checkNow(context, notifier),
+            ),
           ],
+        ),
+        const SizedBox(height: 12),
+        ArchiveFollowedTile(
+          count: view.ongoing.length,
+          problems: view.ongoing.where((series) => series.problem != null).length,
+          tiles: _ongoingTiles,
         ),
       ]);
     }
+    children.add(ArchiveRecentStrip(
+      title: l10n.serverRecent,
+      history: queue.history,
+      onClear: () => _guard(context, notifier.clearHistory),
+      onRetry: onRetry,
+    ));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+  }
+
+  /// Le serie che segue il server, per il foglio.
+  static List<Widget> _ongoingTiles(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final view = ref.watch(remoteArchiveProvider);
+    final notifier = ref.read(remoteArchiveProvider.notifier);
+    return [
+      for (final series in view.ongoing)
+        KTile(
+          icon: series.problem != null
+              ? LucideIcons.triangleAlert
+              : series.ahead != null
+                  ? LucideIcons.sparkles
+                  : LucideIcons.bookOpen,
+          tint: series.problem == null ? null : context.tokens.danger,
+          title: series.title,
+          subtitle: series.problem ??
+              (series.ahead != null
+                  ? l10n.serverSeriesAhead(series.ahead!)
+                  : series.checkedAt == null
+                  ? l10n.serverSeriesKnown(series.chapters)
+                  : l10n.serverSeriesKnownChecked(series.chapters, archiveWhen(series.checkedAt!))),
+          trailing: IconButton(
+            tooltip: l10n.serverStopFollowing,
+            icon: const Icon(LucideIcons.bellOff, size: 18),
+            onPressed: () => _guard(context, () => notifier.forget(series)),
+          ),
+        ),
+    ];
   }
 
   static Future<void> _ignore(BuildContext context, WidgetRef ref, ServerInvite invite) async {

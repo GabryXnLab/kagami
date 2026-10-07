@@ -202,7 +202,9 @@ class Archiver {
   late final _Pacer _pacer = _Pacer(delay);
 
   /// Archivia [series]: tutta, i capitoli con gli id in [ids] o quelli dal
-  /// capitolo [start] in poi.
+  /// capitolo [start] in poi. Con [ids] vuoto è una scheda: metadati,
+  /// copertina e indici con tutti i capitoli del sito, nessuna tavola, e i
+  /// capitoli già archiviati restano dove sono.
   Future<ArchiveResult> download(Series series, {Set<String>? ids, String? start}) async {
     final List<Chapter> selected;
     if (start != null) {
@@ -213,7 +215,8 @@ class Archiver {
           if (ids == null || ids.contains(chapter.id) || ids.contains(chapter.number)) chapter,
       ];
     }
-    if (selected.isEmpty) throw const ProviderError('Nessun capitolo corrisponde alla selezione.');
+    final card = ids != null && ids.isEmpty && start == null;
+    if (selected.isEmpty && !card) throw const ProviderError('Nessun capitolo corrisponde alla selezione.');
     final folder = await store.existingFolder(series) ?? seriesFolderName(series);
     final result = ArchiveResult(series, folder, selected.length);
     final metadata = normalizeMetadata(series.metadata);

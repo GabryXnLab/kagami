@@ -11,8 +11,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../archive/bulk_import.dart';
 import '../archive/device.dart';
 import '../data/notifications.dart';
+import '../data/share_intake.dart';
 import '../l10n.dart';
 import '../providers.dart';
 import 'archive_screen.dart';
@@ -39,6 +41,7 @@ class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
   DateTime? _indexSeenAt;
   StreamSubscription<String>? _notificationTaps;
+  StreamSubscription<String>? _shares;
 
   @override
   void initState() {
@@ -48,6 +51,10 @@ class _AppShellState extends ConsumerState<AppShell>
     _notificationTaps = notifications.opened.listen(_openFromNotification);
     notifications.launched().then((key) {
       if (key != null) _openFromNotification(key);
+    });
+    _shares = SharedText.instance.shared.listen(_openShared);
+    SharedText.instance.launched().then((text) {
+      if (text != null && mounted) _openShared(text);
     });
     // Il controllo delle serie seguite si accoda da solo giorno dopo giorno;
     // se un giro è morto prima di farlo, la catena si rimette qui.
@@ -61,6 +68,7 @@ class _AppShellState extends ConsumerState<AppShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notificationTaps?.cancel();
+    _shares?.cancel();
     super.dispose();
   }
 
@@ -76,6 +84,21 @@ class _AppShellState extends ConsumerState<AppShell>
     await ref.read(libraryIndexProvider.future);
     if (!mounted || ref.read(seriesEntryProvider(key)) == null) return;
     openSeries(context, key);
+  }
+
+  /// Un testo condiviso con l'app porta a «Scarica un manga»: un link solo
+  /// lo si verifica come incollato lì, che propone scheda o download; più
+  /// link, o un JSON con i campi per riga, vanno all'import in blocco.
+  void _openShared(String text) {
+    final items = parseImportText(text);
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.shareNoLinks)));
+      return;
+    }
+    final single = items.length == 1 && !text.trimLeft().startsWith('[');
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => single ? ArchiveScreen(link: items.single.url) : ArchiveScreen(importText: text),
+    ));
   }
 
   /// Tornando in primo piano la cartella può essere cambiata sotto i piedi:

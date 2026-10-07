@@ -21,6 +21,9 @@ const String _api = 'https://api.asurascans.com/api';
 final RegExp _seriesPath = RegExp(r'^/comics/([a-z0-9]+(?:-[a-z0-9]+)*)/?$');
 
 /// Il suffisso che il sito appende allo slug nei suoi link.
+final RegExp _chapterPath =
+    RegExp(r'^/comics/([a-z0-9]+(?:-[a-z0-9]+)*)/chapter/([0-9]+(?:\.[0-9]+)?)/?$');
+
 final RegExp _suffix = RegExp(r'-[0-9a-f]{8}$');
 
 final RegExp _slugPattern = RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$');
@@ -42,6 +45,20 @@ class AsuraScans extends Provider {
   bool allowedHost(Uri uri) =>
       _siteHosts.contains(uri.host) ||
       const {'api.asurascans.com', 'cdn.asurascans.com'}.contains(uri.host);
+
+  @override
+  String? seriesOfChapter(String url) {
+    final found = siteMatch(url, hosts: _siteHosts, path: _chapterPath);
+    return found == null ? null : '$home/comics/${found[1]!.replaceFirst(_suffix, '')}';
+  }
+
+  /// Il capitolo sta sotto lo slug senza suffisso, come lo elenca l'API.
+  @override
+  String chapterKeyOf(String url) {
+    final key = chapterKey(url);
+    final found = _chapterPath.firstMatch(Uri.parse(key).path);
+    return found == null ? key : chapterKey('$home/comics/${found[1]!.replaceFirst(_suffix, '')}/chapter/${found[2]}');
+  }
 
   String _segment(String url) => _seriesPath.firstMatch(Uri.parse(url).path)![1]!;
 

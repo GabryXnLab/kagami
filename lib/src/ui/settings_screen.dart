@@ -443,9 +443,35 @@ class _ReadingPage extends StatelessWidget {
         children: const [
           _ReaderDefaults(),
           SizedBox(height: 12),
+          _RatingInviteSwitch(),
+          SizedBox(height: 12),
           _ProbeSwitch(),
         ],
       );
+}
+
+class _RatingInviteSwitch extends ConsumerWidget {
+  const _RatingInviteSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final on = ref.watch(ratingInviteProvider).value ?? true;
+    return KGroup(
+      children: [
+        KTile(
+          icon: LucideIcons.star,
+          title: l10n.settingsRatingInvite,
+          subtitle: l10n.settingsRatingInviteNote,
+          onTap: () => ref.read(ratingInviteProvider.notifier).set(!on),
+          trailing: Switch(
+            value: on,
+            onChanged: ref.read(ratingInviteProvider.notifier).set,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// L'account, cioè dove vivono i dati personali oltre a questo telefono.

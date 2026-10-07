@@ -257,6 +257,21 @@ class BrowserFetcher implements ProviderHttp {
     throw const ProviderOffline();
   }
 
+  /// Ciò che darebbe [BrowserCheckPage] per [url], senza mostrare niente:
+  /// la pagina, lo user agent della WebView e i cookie di [hosts]. Passa solo
+  /// se la verifica è già stata superata o si risolve da sola; altrimenti
+  /// [get] lancia [CloudflareChallenge].
+  Future<BrowserPass> pass(String url, List<String> hosts) async {
+    final page = await get(url, limit: _maxHtml);
+    final agent = await _run('navigator.userAgent');
+    final cookies = <String, String>{};
+    for (final host in hosts) {
+      final cookie = await _BrowserCheckPageState._cookies.invokeMethod<String>('cookies', {'url': 'https://$host/'});
+      if (cookie != null && cookie.isNotEmpty) cookies[host] = cookie;
+    }
+    return BrowserPass(html: page.body, userAgent: agent is String ? agent : defaultUserAgent, cookies: cookies);
+  }
+
   @override
   Future<bool> imageExists(String url, {required String referer}) => throw UnimplementedError();
 

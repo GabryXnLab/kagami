@@ -19,15 +19,36 @@ bool siteLink(
   required Set<String> hosts,
   required RegExp path,
   bool plain = false,
+}) =>
+    siteMatch(url, hosts: hosts, path: path, plain: plain) != null;
+
+/// Come [siteLink], ma dà il risultato di [path] sul percorso, per chi ne
+/// vuole i gruppi (lo slug della serie nel link di un capitolo).
+RegExpMatch? siteMatch(
+  String url, {
+  required Set<String> hosts,
+  required RegExp path,
+  bool plain = false,
 }) {
   final uri = Uri.tryParse(url);
-  return uri != null &&
-      uri.scheme == 'https' &&
-      hosts.contains(uri.host) &&
-      uri.userInfo.isEmpty &&
-      !uri.hasPort &&
-      (!plain || (!uri.hasQuery && !uri.hasFragment)) &&
-      path.hasMatch(uri.path);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !hosts.contains(uri.host) ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasPort ||
+      (plain && (uri.hasQuery || uri.hasFragment))) {
+    return null;
+  }
+  return path.firstMatch(uri.path);
+}
+
+/// Il link di un capitolo in una forma confrontabile: https, host senza
+/// `www.`, percorso senza `/` finale, né query né frammento (nessun sito li
+/// usa per distinguere un capitolo da un altro).
+String chapterKey(String url) {
+  final uri = Uri.parse(url);
+  final host = uri.host.startsWith('www.') ? uri.host.substring(4) : uri.host;
+  return 'https://$host${trimSlashes(uri.path)}';
 }
 
 /// Un testo che c'è davvero: i JSON dei siti mettono `""` e `null` dove

@@ -105,6 +105,45 @@ void main() {
     await target.close();
   });
 
+  test('«arrivato a» va e torna dal backup, e un backup vecchio resta leggibile',
+      () async {
+    await repository.saveSeriesState(
+      'manual:abc',
+      SeriesState(
+        status: ShelfStatus.reading,
+        reachedChapter: '52',
+        updatedAt: DateTime.utc(2026, 5, 4),
+      ),
+    );
+    final bytes = await BackupService(source).export();
+
+    final target = KagamiDatabase.forTesting(NativeDatabase.memory());
+    final other = UserRepository(target);
+    await BackupService(target).import(bytes, ImportMode.merge);
+    final states = await other.loadStates();
+    expect(states['manual:abc']!.reachedChapter, '52');
+    expect(states['mangak:S1']!.reachedChapter, isNull);
+    await target.close();
+  });
+
+  test('fondendo, «arrivato a» segue il record più recente', () async {
+    await repository.saveSeriesState(
+      'manual:abc',
+      SeriesState(reachedChapter: '10', updatedAt: DateTime.utc(2026, 5, 4)),
+    );
+    final bytes = await BackupService(source).export();
+
+    final target = KagamiDatabase.forTesting(NativeDatabase.memory());
+    final other = UserRepository(target);
+    await other.saveSeriesState(
+      'manual:abc',
+      SeriesState(reachedChapter: '20', updatedAt: DateTime.utc(2026, 6, 1)),
+    );
+    await BackupService(target).import(bytes, ImportMode.merge);
+    expect((await other.loadStates())['manual:abc']!.reachedChapter, '20');
+    await target.close();
+  });
+
   test('sostituire lascia solo quello che c\'era nel file', () async {
     final bytes = await BackupService(source).export();
 

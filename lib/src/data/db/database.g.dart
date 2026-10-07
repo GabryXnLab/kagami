@@ -379,6 +379,17 @@ class $SeriesStatesTable extends SeriesStates
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _reachedChapterMeta = const VerificationMeta(
+    'reachedChapter',
+  );
+  @override
+  late final GeneratedColumn<String> reachedChapter = GeneratedColumn<String>(
+    'reached_chapter',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -402,6 +413,7 @@ class $SeriesStatesTable extends SeriesStates
     finishedAt,
     lastOpenedAt,
     muted,
+    reachedChapter,
     updatedAt,
   ];
   @override
@@ -483,6 +495,15 @@ class $SeriesStatesTable extends SeriesStates
         muted.isAcceptableOrUnknown(data['muted']!, _mutedMeta),
       );
     }
+    if (data.containsKey('reached_chapter')) {
+      context.handle(
+        _reachedChapterMeta,
+        reachedChapter.isAcceptableOrUnknown(
+          data['reached_chapter']!,
+          _reachedChapterMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -540,6 +561,10 @@ class $SeriesStatesTable extends SeriesStates
         DriftSqlType.bool,
         data['${effectivePrefix}muted'],
       )!,
+      reachedChapter: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reached_chapter'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -568,6 +593,10 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
   /// copertina resta: silenziare è non essere disturbati, non smettere di
   /// sapere.
   final bool muted;
+
+  /// Il numero dell'ultimo capitolo letto altrove, come lo scrive l'autore
+  /// (`52`). Per le schede senza elenco di capitoli è l'unico dato di lettura.
+  final String? reachedChapter;
   final DateTime updatedAt;
   const SeriesStateRow({
     required this.profileId,
@@ -580,6 +609,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
     this.finishedAt,
     this.lastOpenedAt,
     required this.muted,
+    this.reachedChapter,
     required this.updatedAt,
   });
   @override
@@ -605,6 +635,9 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
       map['last_opened_at'] = Variable<DateTime>(lastOpenedAt);
     }
     map['muted'] = Variable<bool>(muted);
+    if (!nullToAbsent || reachedChapter != null) {
+      map['reached_chapter'] = Variable<String>(reachedChapter);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
@@ -631,6 +664,9 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
           ? const Value.absent()
           : Value(lastOpenedAt),
       muted: Value(muted),
+      reachedChapter: reachedChapter == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reachedChapter),
       updatedAt: Value(updatedAt),
     );
   }
@@ -651,6 +687,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
       finishedAt: serializer.fromJson<DateTime?>(json['finishedAt']),
       lastOpenedAt: serializer.fromJson<DateTime?>(json['lastOpenedAt']),
       muted: serializer.fromJson<bool>(json['muted']),
+      reachedChapter: serializer.fromJson<String?>(json['reachedChapter']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
@@ -668,6 +705,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
       'finishedAt': serializer.toJson<DateTime?>(finishedAt),
       'lastOpenedAt': serializer.toJson<DateTime?>(lastOpenedAt),
       'muted': serializer.toJson<bool>(muted),
+      'reachedChapter': serializer.toJson<String?>(reachedChapter),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
@@ -683,6 +721,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
     Value<DateTime?> finishedAt = const Value.absent(),
     Value<DateTime?> lastOpenedAt = const Value.absent(),
     bool? muted,
+    Value<String?> reachedChapter = const Value.absent(),
     DateTime? updatedAt,
   }) => SeriesStateRow(
     profileId: profileId ?? this.profileId,
@@ -695,6 +734,9 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
     finishedAt: finishedAt.present ? finishedAt.value : this.finishedAt,
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     muted: muted ?? this.muted,
+    reachedChapter: reachedChapter.present
+        ? reachedChapter.value
+        : this.reachedChapter,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   SeriesStateRow copyWithCompanion(SeriesStatesCompanion data) {
@@ -713,6 +755,9 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
           ? data.lastOpenedAt.value
           : this.lastOpenedAt,
       muted: data.muted.present ? data.muted.value : this.muted,
+      reachedChapter: data.reachedChapter.present
+          ? data.reachedChapter.value
+          : this.reachedChapter,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -730,6 +775,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
           ..write('finishedAt: $finishedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('muted: $muted, ')
+          ..write('reachedChapter: $reachedChapter, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -747,6 +793,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
     finishedAt,
     lastOpenedAt,
     muted,
+    reachedChapter,
     updatedAt,
   );
   @override
@@ -763,6 +810,7 @@ class SeriesStateRow extends DataClass implements Insertable<SeriesStateRow> {
           other.finishedAt == this.finishedAt &&
           other.lastOpenedAt == this.lastOpenedAt &&
           other.muted == this.muted &&
+          other.reachedChapter == this.reachedChapter &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -777,6 +825,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
   final Value<DateTime?> finishedAt;
   final Value<DateTime?> lastOpenedAt;
   final Value<bool> muted;
+  final Value<String?> reachedChapter;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
   const SeriesStatesCompanion({
@@ -790,6 +839,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
     this.finishedAt = const Value.absent(),
     this.lastOpenedAt = const Value.absent(),
     this.muted = const Value.absent(),
+    this.reachedChapter = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -804,6 +854,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
     this.finishedAt = const Value.absent(),
     this.lastOpenedAt = const Value.absent(),
     this.muted = const Value.absent(),
+    this.reachedChapter = const Value.absent(),
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
   }) : profileId = Value(profileId),
@@ -820,6 +871,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
     Expression<DateTime>? finishedAt,
     Expression<DateTime>? lastOpenedAt,
     Expression<bool>? muted,
+    Expression<String>? reachedChapter,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
   }) {
@@ -834,6 +886,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
       if (finishedAt != null) 'finished_at': finishedAt,
       if (lastOpenedAt != null) 'last_opened_at': lastOpenedAt,
       if (muted != null) 'muted': muted,
+      if (reachedChapter != null) 'reached_chapter': reachedChapter,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -850,6 +903,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
     Value<DateTime?>? finishedAt,
     Value<DateTime?>? lastOpenedAt,
     Value<bool>? muted,
+    Value<String?>? reachedChapter,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
   }) {
@@ -864,6 +918,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
       finishedAt: finishedAt ?? this.finishedAt,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       muted: muted ?? this.muted,
+      reachedChapter: reachedChapter ?? this.reachedChapter,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -902,6 +957,9 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
     if (muted.present) {
       map['muted'] = Variable<bool>(muted.value);
     }
+    if (reachedChapter.present) {
+      map['reached_chapter'] = Variable<String>(reachedChapter.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -924,6 +982,7 @@ class SeriesStatesCompanion extends UpdateCompanion<SeriesStateRow> {
           ..write('finishedAt: $finishedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('muted: $muted, ')
+          ..write('reachedChapter: $reachedChapter, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4440,12 +4499,26 @@ class $SeriesArrivalsTable extends SeriesArrivals
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _onSiteMeta = const VerificationMeta('onSite');
+  @override
+  late final GeneratedColumn<bool> onSite = GeneratedColumn<bool>(
+    'on_site',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("on_site" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     profileId,
     seriesKey,
     seenChapters,
     notifiedChapters,
+    onSite,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4497,6 +4570,12 @@ class $SeriesArrivalsTable extends SeriesArrivals
     } else if (isInserting) {
       context.missing(_notifiedChaptersMeta);
     }
+    if (data.containsKey('on_site')) {
+      context.handle(
+        _onSiteMeta,
+        onSite.isAcceptableOrUnknown(data['on_site']!, _onSiteMeta),
+      );
+    }
     return context;
   }
 
@@ -4522,6 +4601,10 @@ class $SeriesArrivalsTable extends SeriesArrivals
         DriftSqlType.int,
         data['${effectivePrefix}notified_chapters'],
       )!,
+      onSite: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}on_site'],
+      )!,
     );
   }
 
@@ -4543,11 +4626,17 @@ class SeriesArrivalRow extends DataClass
   /// Capitoli archiviati all'ultima notifica: una notifica per arrivo, non
   /// una a ogni rilettura della libreria.
   final int notifiedChapters;
+
+  /// I due conteggi sono dei capitoli del sito, presi su una scheda (serie
+  /// senza capitoli archiviati); altrimenti degli archiviati. Quando la base
+  /// cambia il riferimento si riprende da capo.
+  final bool onSite;
   const SeriesArrivalRow({
     required this.profileId,
     required this.seriesKey,
     required this.seenChapters,
     required this.notifiedChapters,
+    required this.onSite,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4556,6 +4645,7 @@ class SeriesArrivalRow extends DataClass
     map['series_key'] = Variable<String>(seriesKey);
     map['seen_chapters'] = Variable<int>(seenChapters);
     map['notified_chapters'] = Variable<int>(notifiedChapters);
+    map['on_site'] = Variable<bool>(onSite);
     return map;
   }
 
@@ -4565,6 +4655,7 @@ class SeriesArrivalRow extends DataClass
       seriesKey: Value(seriesKey),
       seenChapters: Value(seenChapters),
       notifiedChapters: Value(notifiedChapters),
+      onSite: Value(onSite),
     );
   }
 
@@ -4578,6 +4669,7 @@ class SeriesArrivalRow extends DataClass
       seriesKey: serializer.fromJson<String>(json['seriesKey']),
       seenChapters: serializer.fromJson<int>(json['seenChapters']),
       notifiedChapters: serializer.fromJson<int>(json['notifiedChapters']),
+      onSite: serializer.fromJson<bool>(json['onSite']),
     );
   }
   @override
@@ -4588,6 +4680,7 @@ class SeriesArrivalRow extends DataClass
       'seriesKey': serializer.toJson<String>(seriesKey),
       'seenChapters': serializer.toJson<int>(seenChapters),
       'notifiedChapters': serializer.toJson<int>(notifiedChapters),
+      'onSite': serializer.toJson<bool>(onSite),
     };
   }
 
@@ -4596,11 +4689,13 @@ class SeriesArrivalRow extends DataClass
     String? seriesKey,
     int? seenChapters,
     int? notifiedChapters,
+    bool? onSite,
   }) => SeriesArrivalRow(
     profileId: profileId ?? this.profileId,
     seriesKey: seriesKey ?? this.seriesKey,
     seenChapters: seenChapters ?? this.seenChapters,
     notifiedChapters: notifiedChapters ?? this.notifiedChapters,
+    onSite: onSite ?? this.onSite,
   );
   SeriesArrivalRow copyWithCompanion(SeriesArrivalsCompanion data) {
     return SeriesArrivalRow(
@@ -4612,6 +4707,7 @@ class SeriesArrivalRow extends DataClass
       notifiedChapters: data.notifiedChapters.present
           ? data.notifiedChapters.value
           : this.notifiedChapters,
+      onSite: data.onSite.present ? data.onSite.value : this.onSite,
     );
   }
 
@@ -4621,14 +4717,15 @@ class SeriesArrivalRow extends DataClass
           ..write('profileId: $profileId, ')
           ..write('seriesKey: $seriesKey, ')
           ..write('seenChapters: $seenChapters, ')
-          ..write('notifiedChapters: $notifiedChapters')
+          ..write('notifiedChapters: $notifiedChapters, ')
+          ..write('onSite: $onSite')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(profileId, seriesKey, seenChapters, notifiedChapters);
+      Object.hash(profileId, seriesKey, seenChapters, notifiedChapters, onSite);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4636,7 +4733,8 @@ class SeriesArrivalRow extends DataClass
           other.profileId == this.profileId &&
           other.seriesKey == this.seriesKey &&
           other.seenChapters == this.seenChapters &&
-          other.notifiedChapters == this.notifiedChapters);
+          other.notifiedChapters == this.notifiedChapters &&
+          other.onSite == this.onSite);
 }
 
 class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
@@ -4644,12 +4742,14 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
   final Value<String> seriesKey;
   final Value<int> seenChapters;
   final Value<int> notifiedChapters;
+  final Value<bool> onSite;
   final Value<int> rowid;
   const SeriesArrivalsCompanion({
     this.profileId = const Value.absent(),
     this.seriesKey = const Value.absent(),
     this.seenChapters = const Value.absent(),
     this.notifiedChapters = const Value.absent(),
+    this.onSite = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SeriesArrivalsCompanion.insert({
@@ -4657,6 +4757,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
     required String seriesKey,
     required int seenChapters,
     required int notifiedChapters,
+    this.onSite = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : profileId = Value(profileId),
        seriesKey = Value(seriesKey),
@@ -4667,6 +4768,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
     Expression<String>? seriesKey,
     Expression<int>? seenChapters,
     Expression<int>? notifiedChapters,
+    Expression<bool>? onSite,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4674,6 +4776,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
       if (seriesKey != null) 'series_key': seriesKey,
       if (seenChapters != null) 'seen_chapters': seenChapters,
       if (notifiedChapters != null) 'notified_chapters': notifiedChapters,
+      if (onSite != null) 'on_site': onSite,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4683,6 +4786,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
     Value<String>? seriesKey,
     Value<int>? seenChapters,
     Value<int>? notifiedChapters,
+    Value<bool>? onSite,
     Value<int>? rowid,
   }) {
     return SeriesArrivalsCompanion(
@@ -4690,6 +4794,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
       seriesKey: seriesKey ?? this.seriesKey,
       seenChapters: seenChapters ?? this.seenChapters,
       notifiedChapters: notifiedChapters ?? this.notifiedChapters,
+      onSite: onSite ?? this.onSite,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4709,6 +4814,9 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
     if (notifiedChapters.present) {
       map['notified_chapters'] = Variable<int>(notifiedChapters.value);
     }
+    if (onSite.present) {
+      map['on_site'] = Variable<bool>(onSite.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4722,6 +4830,7 @@ class SeriesArrivalsCompanion extends UpdateCompanion<SeriesArrivalRow> {
           ..write('seriesKey: $seriesKey, ')
           ..write('seenChapters: $seenChapters, ')
           ..write('notifiedChapters: $notifiedChapters, ')
+          ..write('onSite: $onSite, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4985,6 +5094,7 @@ typedef $$SeriesStatesTableCreateCompanionBuilder =
       Value<DateTime?> finishedAt,
       Value<DateTime?> lastOpenedAt,
       Value<bool> muted,
+      Value<String?> reachedChapter,
       required DateTime updatedAt,
       Value<int> rowid,
     });
@@ -5000,6 +5110,7 @@ typedef $$SeriesStatesTableUpdateCompanionBuilder =
       Value<DateTime?> finishedAt,
       Value<DateTime?> lastOpenedAt,
       Value<bool> muted,
+      Value<String?> reachedChapter,
       Value<DateTime> updatedAt,
       Value<int> rowid,
     });
@@ -5060,6 +5171,11 @@ class $$SeriesStatesTableFilterComposer
 
   ColumnFilters<bool> get muted => $composableBuilder(
     column: $table.muted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reachedChapter => $composableBuilder(
+    column: $table.reachedChapter,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5128,6 +5244,11 @@ class $$SeriesStatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get reachedChapter => $composableBuilder(
+    column: $table.reachedChapter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -5176,6 +5297,11 @@ class $$SeriesStatesTableAnnotationComposer
 
   GeneratedColumn<bool> get muted =>
       $composableBuilder(column: $table.muted, builder: (column) => column);
+
+  GeneratedColumn<String> get reachedChapter => $composableBuilder(
+    column: $table.reachedChapter,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -5226,6 +5352,7 @@ class $$SeriesStatesTableTableManager
                 Value<DateTime?> finishedAt = const Value.absent(),
                 Value<DateTime?> lastOpenedAt = const Value.absent(),
                 Value<bool> muted = const Value.absent(),
+                Value<String?> reachedChapter = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SeriesStatesCompanion(
@@ -5239,6 +5366,7 @@ class $$SeriesStatesTableTableManager
                 finishedAt: finishedAt,
                 lastOpenedAt: lastOpenedAt,
                 muted: muted,
+                reachedChapter: reachedChapter,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -5254,6 +5382,7 @@ class $$SeriesStatesTableTableManager
                 Value<DateTime?> finishedAt = const Value.absent(),
                 Value<DateTime?> lastOpenedAt = const Value.absent(),
                 Value<bool> muted = const Value.absent(),
+                Value<String?> reachedChapter = const Value.absent(),
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
               }) => SeriesStatesCompanion.insert(
@@ -5267,6 +5396,7 @@ class $$SeriesStatesTableTableManager
                 finishedAt: finishedAt,
                 lastOpenedAt: lastOpenedAt,
                 muted: muted,
+                reachedChapter: reachedChapter,
                 updatedAt: updatedAt,
                 rowid: rowid,
               ),
@@ -7442,6 +7572,7 @@ typedef $$SeriesArrivalsTableCreateCompanionBuilder =
       required String seriesKey,
       required int seenChapters,
       required int notifiedChapters,
+      Value<bool> onSite,
       Value<int> rowid,
     });
 typedef $$SeriesArrivalsTableUpdateCompanionBuilder =
@@ -7450,6 +7581,7 @@ typedef $$SeriesArrivalsTableUpdateCompanionBuilder =
       Value<String> seriesKey,
       Value<int> seenChapters,
       Value<int> notifiedChapters,
+      Value<bool> onSite,
       Value<int> rowid,
     });
 
@@ -7479,6 +7611,11 @@ class $$SeriesArrivalsTableFilterComposer
 
   ColumnFilters<int> get notifiedChapters => $composableBuilder(
     column: $table.notifiedChapters,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onSite => $composableBuilder(
+    column: $table.onSite,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7511,6 +7648,11 @@ class $$SeriesArrivalsTableOrderingComposer
     column: $table.notifiedChapters,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get onSite => $composableBuilder(
+    column: $table.onSite,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SeriesArrivalsTableAnnotationComposer
@@ -7537,6 +7679,9 @@ class $$SeriesArrivalsTableAnnotationComposer
     column: $table.notifiedChapters,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get onSite =>
+      $composableBuilder(column: $table.onSite, builder: (column) => column);
 }
 
 class $$SeriesArrivalsTableTableManager
@@ -7580,12 +7725,14 @@ class $$SeriesArrivalsTableTableManager
                 Value<String> seriesKey = const Value.absent(),
                 Value<int> seenChapters = const Value.absent(),
                 Value<int> notifiedChapters = const Value.absent(),
+                Value<bool> onSite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SeriesArrivalsCompanion(
                 profileId: profileId,
                 seriesKey: seriesKey,
                 seenChapters: seenChapters,
                 notifiedChapters: notifiedChapters,
+                onSite: onSite,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7594,12 +7741,14 @@ class $$SeriesArrivalsTableTableManager
                 required String seriesKey,
                 required int seenChapters,
                 required int notifiedChapters,
+                Value<bool> onSite = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SeriesArrivalsCompanion.insert(
                 profileId: profileId,
                 seriesKey: seriesKey,
                 seenChapters: seenChapters,
                 notifiedChapters: notifiedChapters,
+                onSite: onSite,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

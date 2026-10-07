@@ -52,13 +52,15 @@ class CoverImage extends ConsumerWidget {
     final entry = this.entry;
     final library = ref.watch(libraryProvider);
     if (entry == null || library == null) return const _CoverPlaceholder();
+    final placeholder = _CoverPlaceholder(title: entry.title);
     final holders = ref.watch(seriesHoldersProvider(entry.key));
     final image = full
         ? library.coverImage(entry, holders)
         : library.gridImage(entry, holders);
-    if (image == null) return const _CoverPlaceholder();
+    if (image == null) return placeholder;
     return _AddressImage(
       address: image.primary,
+      placeholder: placeholder,
       fallback: image.fallback,
       width: width,
       fit: fit,
@@ -96,16 +98,26 @@ Widget coverFlight(
 }
 
 class _CoverPlaceholder extends StatelessWidget {
-  const _CoverPlaceholder();
+  const _CoverPlaceholder({this.title});
+
+  /// Una scheda manuale può non avere copertina: l'iniziale del titolo
+  /// distingue una cella dall'altra in una griglia di segnaposto.
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurfaceVariant.withValues(alpha: 0.5);
+    final text = title?.trim() ?? '';
     return ColoredBox(
       color: scheme.surfaceContainerHighest,
-      child: Icon(
-        LucideIcons.bookImage,
-        color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+      child: Center(
+        child: text.isEmpty
+            ? Icon(LucideIcons.bookImage, color: muted)
+            : Text(
+                String.fromCharCode(text.runes.first).toUpperCase(),
+                style: KagamiType.title(40, weight: 700, color: muted),
+              ),
       ),
     );
   }
@@ -118,8 +130,12 @@ class _AddressImage extends StatefulWidget {
     required this.fit,
     this.fallback,
     this.loading,
+    this.placeholder = const _CoverPlaceholder(),
     this.natural = false,
   });
+
+  /// Cosa mostrare se né il file né la copia hanno un'immagine.
+  final Widget placeholder;
 
   final String address;
   final String? fallback;
@@ -221,9 +237,10 @@ class _AddressImageState extends State<_AddressImage> {
 
   Widget _fallbackOr(BuildContext context) {
     final fallback = widget.fallback;
-    if (fallback == null) return const _CoverPlaceholder();
+    if (fallback == null) return widget.placeholder;
     return _AddressImage(
       address: fallback,
+      placeholder: widget.placeholder,
       width: widget.width,
       fit: widget.fit,
     );
@@ -296,6 +313,24 @@ class SeriesCover extends StatelessWidget {
                         top: 6,
                         right: 6,
                         child: _UnreadBadge(signals: signals),
+                      )
+                    // Una scheda non ha arretrato: il segno è solo dei
+                    // capitoli usciti sul sito.
+                    else if (signals.isNew)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: NewChaptersDot(count: signals.newChapters),
+                      ),
+                    if (signals.isCard)
+                      Positioned(
+                        right: 6,
+                        bottom: 8,
+                        child: _Pill(
+                          background: Colors.black.withValues(alpha: 0.65),
+                          foreground: Colors.white70,
+                          label: context.l10n.coverCardBadge,
+                        ),
                       ),
                     if (signals.entry.isOngoing &&
                         signals.entry.missingChapterCount > 0)
@@ -353,7 +388,10 @@ class SeriesCover extends StatelessWidget {
 
   String _subtitle(AppLocalizations l10n) {
     final entry = signals.entry;
-    if (entry.archivedChapterCount == 0) return l10n.coverNoChapters;
+    final reached = signals.state.reachedChapter;
+    if (entry.archivedChapterCount == 0) {
+      return reached == null ? l10n.coverNoChapters : l10n.coverReached(reached);
+    }
     return signals.hasUnread
         ? l10n.coverChaptersUnread(
             entry.archivedChapterCount,

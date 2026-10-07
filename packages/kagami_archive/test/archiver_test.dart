@@ -10,6 +10,7 @@ import 'package:test/test.dart';
 import 'package:kagami_archive/archiver.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/indexes.dart';
+import 'package:kagami_archive/manual.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers/asurascans.dart';
 import 'package:kagami_archive/providers/mangak.dart';
@@ -290,6 +291,45 @@ void main() {
       expect((completing.chapters, completing.pagesSkipped), (2, 1));
     });
 
+    test('una scheda: metadati, copertina e indici, nessuna tavola', () async {
+      final result = await local().download(series, ids: {});
+      expect((result.chapters, result.completed, result.failed.length), (0, 0, 0));
+      expect(result.settled, ['C1', 'C2']);
+      expect(http.imageRequests, [series.coverUrl]);
+      final folder = p.join(libraryPath(), result.folder);
+      expect(Directory(folder).listSync().map((e) => p.basename(e.path)).toSet(),
+          {'series.json', 'cover.webp', 'cover.thumb.webp', 'index.json', 'pages.json'});
+      final index = readJson(File(p.join(folder, 'index.json')));
+      expect((index['chapterCount'], index['archivedChapterCount'], index['source']),
+          (2, 0, 'https://mangak.io/test-series'));
+      expect((index['chapters'] as List).map((c) => (c as Map)['archived']), [false, false]);
+      expect((readJson(File(p.join(folder, 'pages.json')))['pages'] as Map), isEmpty);
+      final row = (readJson(File(p.join(libraryPath(), 'reading', 'downloads.json')))['series'] as List).single as Map;
+      expect((row['key'], row['source'], row['archivedChapterCount'], row['coverThumbnail']),
+          ('mangak:S1', 'https://mangak.io/test-series', 0, 'cover.thumb.webp'));
+    });
+
+    test('la scheda di una serie già scaricata non toglie capitoli', () async {
+      final archiver = local();
+      final first = await archiver.download(series, ids: {'1'});
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      series = await provider.fetchSeries('https://mangak.io/test-series', http);
+      final requests = http.imageRequests.length;
+      final card = await archiver.download(series, ids: {});
+      expect(card.folder, first.folder);
+      expect(http.imageRequests.skip(requests).where((url) => !url.contains('covers')), isEmpty);
+      final folder = p.join(libraryPath(), card.folder);
+      expect(Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)), ['0001 - Chapter 1 [C1]']);
+      final index = readJson(File(p.join(folder, 'index.json')));
+      expect((index['chapters'] as List).map((c) => ((c as Map)['id'], c['complete'])),
+          [('C1', true), ('C2', false), ('C3', false)]);
+      expect(((readJson(File(p.join(folder, 'pages.json')))['pages'] as Map)['C1'] as List), hasLength(2));
+    });
+
+    test('una selezione che non trova niente resta un errore', () async {
+      await expectLater(local().download(series, ids: {'99'}), throwsA(isA<ProviderError>()));
+    });
+
     test('le tavole alte hanno le tessere, e una ripresa non le rifà', () async {
       http = FakeMangaK(tallPages: true);
       series = await provider.fetchSeries('https://mangak.io/test-series', http);
@@ -309,6 +349,72 @@ void main() {
       File(p.join(chapter, '0001-03.webp')).writeAsStringSync('rotta');
       await archiver.download(series, ids: {'1'});
       expect(images.tilesMade, made + 1);
+    });
+  });
+
+  group('schede manuali', () {
+    Directory scratch() => Directory(p.join(temporary.path, 'scratch'));
+
+    test('il link si normalizza e dà sempre la stessa chiave', () {
+      expect(normalizeLink(' HTTPS://Example.COM/Manga/X/#capitolo-3 '), 'https://example.com/Manga/X');
+      expect(normalizeLink('https://example.com/manga?id=4/'), 'https://example.com/manga?id=4');
+      expect(manualSeriesKey('https://example.com/Manga/X/'), manualSeriesKey('https://EXAMPLE.com/Manga/X#top'));
+      expect(manualSeriesKey('https://example.com/Manga/X'), matches(RegExp(r'^manual:[0-9a-f]{12}$')));
+      expect(manualSeriesKey('https://example.com/Manga/X'), isNot(manualSeriesKey('https://example.com/Manga/Y')));
+      expect(manualSeriesId(), matches(RegExp(r'^[0-9a-f]{12}$')));
+      expect(manualSeriesId(), isNot(manualSeriesId()));
+    });
+
+    test('sul telefono: serie senza capitoli, copertina e riga in downloads.json', () async {
+      final written = await writeManualSeries(
+        LocalStore(libraryPath()),
+        title: 'Un manga / qualsiasi',
+        link: 'https://Example.com/manga/qualsiasi/',
+        cover: png(60, 90),
+        metadata: const {'description': 'Trama', 'status': 'Ongoing', 'authors': ['Autore']},
+        images: images,
+        scratch: scratch(),
+      );
+      final id = manualSeriesId('https://example.com/manga/qualsiasi');
+      expect(written.key, 'manual:$id');
+      expect(written.folder, 'Un manga qualsiasi [manual-$id]');
+      final folder = p.join(libraryPath(), written.folder);
+      expect(Directory(folder).listSync().map((e) => p.basename(e.path)).toSet(),
+          {'series.json', 'cover.png', 'cover.thumb.webp', 'index.json', 'pages.json'});
+      final manifest = readJson(File(p.join(folder, 'series.json')));
+      expect((manifest['provider'], manifest['source'], (manifest['chapters'] as List).length),
+          ('manual', 'https://Example.com/manga/qualsiasi/', 0));
+      expect(((manifest['metadata'] as Map)['releaseStatus'], (manifest['cover'] as Map)['width']), ('ongoing', 60));
+      final index = readJson(File(p.join(folder, 'index.json')));
+      expect((index['key'], index['chapterCount'], index['archivedChapterCount']), ('manual:$id', 0, 0));
+      final row = (readJson(File(p.join(libraryPath(), 'reading', 'downloads.json')))['series'] as List).single as Map;
+      expect((row['key'], row['path'], row['provider'], row['cover'], row['coverThumbnail']),
+          ('manual:$id', written.folder, 'manual', 'cover.png', 'cover.thumb.webp'));
+      expect(row['authors'], ['Autore']);
+    });
+
+    test('senza link: source null, id a caso; riscriverla tiene la copertina', () async {
+      final store = LocalStore(libraryPath());
+      final first = await writeManualSeries(store, title: 'Senza link', cover: png(10, 10), scratch: scratch());
+      final id = first.key.split(':').last;
+      final again = await writeManualSeries(store, title: 'Senza link, rinominata', id: id, scratch: scratch());
+      expect(again.folder, first.folder);
+      final manifest = readJson(File(p.join(libraryPath(), first.folder, 'series.json')));
+      expect((manifest['source'], manifest['title'], (manifest['cover'] as Map)['file']),
+          (null, 'Senza link, rinominata', 'cover.png'));
+      final rows = readJson(File(p.join(libraryPath(), 'reading', 'downloads.json')))['series'] as List;
+      expect(rows.map((row) => (row as Map)['title']), ['Senza link, rinominata']);
+    });
+
+    test('una copertina da un indirizzo arriva se può, altrimenti la scheda nasce senza', () async {
+      final cover = series.coverUrl!;
+      final made = await writeManualSeries(LocalStore(libraryPath()),
+          title: 'Con copertina', link: 'https://mangak.io/altro', coverUrl: cover, http: http, scratch: scratch());
+      expect(File(p.join(libraryPath(), made.folder, 'cover.webp')).existsSync(), isTrue);
+      final missing = await writeManualSeries(LocalStore(libraryPath()),
+          title: 'Senza copertina', coverUrl: 'http://example.org/a.png', scratch: scratch());
+      final manifest = readJson(File(p.join(libraryPath(), missing.folder, 'series.json')));
+      expect(manifest['cover'], isNull);
     });
   });
 
@@ -463,6 +569,44 @@ void main() {
       final fixed = driveJson(drive, '$folder/index.json');
       expect((fixed['chapters'] as List).map((c) => ((c as Map)['complete'], c['pageCount'])), [(true, 2), (true, 1)]);
       expect(((driveJson(drive, '$folder/pages.json')['pages'] as Map)['C1'] as List), hasLength(2));
+    });
+
+    test('una scheda su Drive: una riga di library.json, quelle degli altri restano', () async {
+      final other = {'key': 'mangak:ALTRO', 'path': 'Altro [mangak-ALTRO]', 'title': 'Altro'};
+      drive.place('library.json', utf8.encode(jsonEncode({'format': 'malf', 'formatVersion': 1, 'series': [other]})));
+      final result = await local(store: store()).download(series, ids: {});
+      expect(result.failed, isEmpty);
+      expect(drive.namesIn(result.folder),
+          ['cover.thumb.webp', 'cover.webp', 'index.json', 'pages.json', 'series.json']);
+      final index = driveJson(drive, '${result.folder}/index.json');
+      expect((index['chapterCount'], index['archivedChapterCount']), (2, 0));
+      final library = driveJson(drive, 'library.json');
+      final rows = (library['series'] as List).cast<Map>();
+      expect(rows.map((row) => row['key']), ['mangak:ALTRO', 'mangak:S1']);
+      expect((rows.last['source'], rows.last['chapterCount']), ('https://mangak.io/test-series', 2));
+      expect(Directory(p.join(temporary.path, 'staging')).listSync(recursive: true).whereType<File>(), isEmpty);
+      // Poi i capitoli: la scheda diventa una serie scaricata, nella stessa cartella.
+      final chapters = await local(store: store()).download(series, ids: {'1'});
+      expect(chapters.folder, result.folder);
+      final again = await local(store: store()).download(series, ids: {});
+      expect(again.pagesDownloaded, 0);
+      final fixed = driveJson(drive, '${result.folder}/index.json');
+      expect((fixed['chapters'] as List).map((c) => (c as Map)['complete']), [true, false]);
+    });
+
+    test('una scheda manuale su Drive: una riga di library.json, le altre restano', () async {
+      final other = {'key': 'mangak:ALTRO', 'path': 'Altro [mangak-ALTRO]', 'title': 'Altro'};
+      drive.place('library.json', utf8.encode(jsonEncode({'format': 'malf', 'formatVersion': 1, 'series': [other]})));
+      final mirror = LocalStore(libraryPath());
+      final made = await writeManualSeries(store(mirror: mirror),
+          title: 'Manuale', link: 'https://example.org/m', cover: png(10, 10),
+          scratch: Directory(p.join(temporary.path, 'scratch')));
+      expect(drive.namesIn(made.folder), ['cover.png', 'index.json', 'pages.json', 'series.json']);
+      final rows = (driveJson(drive, 'library.json')['series'] as List).cast<Map>();
+      expect(rows.map((row) => row['key']), ['mangak:ALTRO', made.key]);
+      expect((rows.last['provider'], rows.last['source'], rows.last['chapterCount']), ('manual', 'https://example.org/m', 0));
+      expect(drive.namesIn(''), ['.nomedia', made.folder, 'library.json']);
+      expect(File(p.join(libraryPath(), 'reading', 'downloads.json')).existsSync(), isTrue);
     });
 
     test('Drive e telefono: il capitolo resta anche in una cartella locale', () async {

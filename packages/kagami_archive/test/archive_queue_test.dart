@@ -75,6 +75,35 @@ void main() {
     expect((await files.jobs()).map((job) => (job.id, job.start)), [('j2', null)]);
   });
 
+  test('un lavoro scheda: nessuna tavola, un esito chiaro e lo stato a posto', () async {
+    final card = job(ids: {});
+    expect(card.cardOnly, isTrue);
+    expect(ArchiveJob.fromJson(card.toJson()).cardOnly, isTrue);
+    expect(job(ids: {'C1'}).cardOnly, isFalse);
+    await files.enqueue(card);
+    expect(await ArchiveRunner(files, environment()).run(), RunEnd.done);
+    expect(http.imageRequests.where((url) => !url.contains('covers')), isEmpty);
+    final outcome = (await files.history()).single;
+    expect((outcome.ok, outcome.seriesKey), (true, 'mangak:S1'));
+    expect(outcome.message, 'Scheda salvata: 2 capitoli in elenco, nessuno scaricato.');
+    final status = await files.status();
+    expect((status.state, status.done, status.failed, status.total), (ArchiveState.idle, 0, 0, 0));
+    expect((await tracked()).single.card, isTrue);
+  });
+
+  test('una scheda non prende il posto di un download della stessa serie', () async {
+    await files.enqueue(job(start: '2'));
+    await files.enqueue(job(id: 'scheda', ids: {}));
+    expect((await files.jobs()).map((job) => job.id), ['j1']);
+    await files.enqueue(job(id: 'tutta'));
+    await files.enqueue(job(id: 'scheda', ids: {}));
+    expect((await files.jobs()).map((job) => job.id), ['tutta']);
+    await files.remove('tutta');
+    await files.enqueue(job(id: 'scheda', ids: {}));
+    await files.enqueue(job(id: 'capitoli', ids: {'C1'}));
+    expect((await files.jobs()).map((job) => job.id), ['capitoli']);
+  });
+
   test('senza rete il lavoro resta in coda e il giro si riprende', () async {
     await files.enqueue(job());
     override = OfflineHttp();
@@ -136,6 +165,36 @@ void main() {
       http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
       expect((await check(skip: {'mangak:S1'})).checked, 0);
       expect(await files.jobs(), isEmpty);
+    });
+
+    test('una scheda elenca i capitoli nuovi, non li scarica', () async {
+      await files.enqueue(job(ids: {}));
+      await ArchiveRunner(files, environment()).run();
+      await Tracking(files.ongoing).forget('mangak:S1');
+      final rows = jsonDecode(File(p.join(root(), 'reading', 'downloads.json')).readAsStringSync())['series'];
+      File(p.join(root(), 'library.json')).writeAsStringSync(jsonEncode({'series': rows}));
+      http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+      final report = await check();
+      expect(report.queued, ['Test / Series']);
+        expect(report.cards, ['Test / Series']);
+      expect((await files.jobs()).single.cardOnly, isTrue);
+      await ArchiveRunner(files, environment()).run();
+      expect(http.imageRequests.where((url) => !url.contains('covers')), isEmpty);
+      final index = jsonDecode(File(p.join(root(), (rows as List).single['path'] as String, 'index.json')).readAsStringSync());
+      expect((index['chapterCount'], index['archivedChapterCount']), (3, 0));
+    });
+
+    test('le schede manuali non hanno un sito da rileggere', () async {
+      File(p.join(root(), 'library.json'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync(jsonEncode({'series': [
+          {'key': 'manual:abc', 'provider': 'manual', 'path': 'X [manual-abc]', 'source': 'https://mangak.io/test-series'},
+          {'key': 'manual:def', 'provider': 'manual', 'path': 'Y [manual-def]', 'source': null},
+        ]}));
+      final report = await check();
+      expect(report.checked, 0);
+      expect(report.queued, isEmpty);
+      expect(report.failed, isEmpty);
     });
 
     test('un capitolo che l\'indice dà a metà si rimette in coda, e il giro ripara l\'indice', () async {
@@ -276,6 +335,100 @@ void main() {
         await ArchiveRunner(files, environment()).run();
         await check();
         expect((await tracked()).single.ahead, 5);
+      });
+    });
+
+    group('schede', () {
+      test('i capitoli nuovi si elencano nell\'indice, senza scaricarli', () async {
+        await files.enqueue(job(ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        final entry = (await tracked()).single;
+        expect((entry.card, entry.ahead), (true, null));
+        expect(entry.chapters, ['C1', 'C2']);
+        expect((await check()).queued, isEmpty);
+        http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+        final report = await check();
+        expect(report.queued, ['Test / Series']);
+        expect(report.cards, ['Test / Series']);
+        final queued = (await files.jobs()).single;
+        expect((queued.cardOnly, queued.automatic), (true, true));
+        await ArchiveRunner(files, environment()).run();
+        expect(http.imageRequests.where((url) => !url.contains('covers')), isEmpty);
+        expect((await tracked()).single.chapters, ['C1', 'C2', 'C3']);
+        final folder = jsonDecode(File(p.join(root(), 'reading', 'downloads.json')).readAsStringSync())['series'][0]['path'];
+        final index = jsonDecode(File(p.join(root(), folder as String, 'index.json')).readAsStringSync());
+        expect((index['chapterCount'], index['archivedChapterCount']), (3, 0));
+        expect((await check()).queued, isEmpty);
+      });
+
+      test('una scheda di una serie conclusa non si segue', () async {
+        http.series['status'] = 'Completed';
+        await files.enqueue(job(ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        expect(await tracked(), isEmpty);
+      });
+
+      test('una scheda che il sito chiude esce, dopo aver elencato gli ultimi capitoli', () async {
+        await files.enqueue(job(ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        http.series['status'] = 'Completed';
+        http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+        final report = await check();
+        expect(report.cards, ['Test / Series']);
+        expect(report.removed, ['Test / Series']);
+        expect((await files.jobs()).single.cardOnly, isTrue);
+      });
+
+      test('il primo download vero la fa seguire come le altre, senza doppioni', () async {
+        await files.enqueue(job(ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        http.broken.add(http.urls[2]!.single);
+        await files.enqueue(job(id: 'dal-2', start: '2'));
+        await ArchiveRunner(files, environment()).run();
+        var entry = (await tracked()).single;
+        // Il capitolo 2 è fallito: il controllo lo ritenta, il primo no.
+        expect(entry.card, isFalse);
+        expect(entry.chapters, ['C1']);
+        http.broken.clear();
+        http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+        await check();
+        final queued = (await files.jobs()).single;
+        expect(queued.cardOnly, isFalse);
+        expect(queued.ids, {'C2', 'C3'});
+        await ArchiveRunner(files, environment()).run();
+        entry = (await tracked()).single;
+        expect(entry.card, isFalse);
+        expect(entry.chapters.toSet(), {'C1', 'C2', 'C3'});
+      });
+
+      test('aggiornare la scheda di una serie scaricata non la fa tornare scheda', () async {
+        await files.enqueue(job(ids: {'C1'}));
+        await ArchiveRunner(files, environment()).run();
+        http.addChapter(3, 'Chapter 3', 'C3', ['https://rx.qvzre.org/d.webp']);
+        await files.enqueue(job(id: 'scheda', ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        final entry = (await tracked()).single;
+        expect(entry.card, isFalse);
+        expect(entry.chapters.toSet(), {'C1', 'C2'});
+        await check();
+        expect((await files.jobs()).single.ids, {'C3'});
+      });
+
+      test('una scheda diventa man mano', () async {
+        await files.enqueue(job(ids: {}));
+        await ArchiveRunner(files, environment()).run();
+        await files.enqueue(ArchiveJob(
+          id: 'm',
+          url: 'https://mangak.io/test-series',
+          title: 'Test',
+          target: ArchiveTarget(destination: ArchiveDestination.phone, root: root()),
+          ids: {'C1'},
+          delayMs: 0,
+          ahead: 5,
+        ));
+        await ArchiveRunner(files, environment()).run();
+        final entry = (await tracked()).single;
+        expect((entry.card, entry.ahead), (false, 5));
       });
     });
 

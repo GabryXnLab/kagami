@@ -48,6 +48,16 @@ essere leggibili senza aprire nulla:
 - **in corso**: la serie riceve ancora capitoli — e, se il provider ne annuncia
   più di quanti ce ne siano in locale, quanti ne mancano.
 
+Una serie senza capitoli archiviati, o manuale, è una **scheda**: sulla
+copertina ha una pastiglia «Scheda» in basso a destra, e sotto il titolo il
+punto dichiarato («Arrivato al cap. 52») invece di «Nessun capitolo scaricato».
+Senza copertina la cella mostra l'iniziale del titolo. Un filtro «Solo schede»
+le isola; non c'è anche una raccolta automatica, perché con il filtro basta, e
+con lo stato «da leggere» le schede da iniziare si trovano già. Una scheda non
+sballa i segnali: senza capitoli leggibili non ha «da leggere», quindi non
+compare in «Riprendi» né negli aggiornamenti, e i letti stimati non entrano in
+cronologia e statistiche. Il punto dichiarato la dà per iniziata.
+
 Filtri per stato utente, stato di pubblicazione, genere, tag, autore, voto
 minimo, presenza di capitoli non letti e di capitoli nuovi. Generi, tag e autori hanno **tre
 stati** — indifferente, richiesto, escluso — perché "shonen ma non horror" è
@@ -91,7 +101,20 @@ già stati visti. Le regole:
 - i conteggi non scendono mai, e si guarda solo una libreria letta per intero:
   con Drive scollegato, o prima che la sua cartella sia nota, la libreria ha
   meno capitoli di quella vera, e rileggendola intera quelli di Drive
-  sembrerebbero arrivati adesso.
+  sembrerebbero arrivati adesso;
+- una **scheda** (serie senza capitoli archiviati, che si legge sul sito)
+  conta i capitoli che il sito pubblica, che il controllo quotidiano allunga
+  nel suo indice, e non gli archiviati, che restano zero. La notifica dice
+  dove sono usciti («Sono usciti 3 capitoli nuovi su MangaK»), il pallino
+  compare sulla copertina anche senza capitoli da leggere, e in home la
+  scheda va fra gli «Aggiornamenti» ma non in «Riprendi»: in Kagami non c'è
+  niente da leggere. L'arrivo, per il confronto con l'apertura altrove, è
+  l'ultima lettura del sito (`archivedAt`);
+- il riferimento ricorda su quale base è stato preso (`onSite`): al primo
+  download una scheda passa da tutti i capitoli del sito ai pochi
+  scaricati, e un conteggio che non scende mai resterebbe «sopra» per mesi.
+  Quando la base cambia il riferimento si riprende da ciò che c'è, senza
+  annunciare niente.
 
 Il permesso di notificare (Android 13 in su) si chiede la prima volta che c'è
 qualcosa da annunciare.
@@ -103,7 +126,10 @@ stessi conti. Lo stato utente non lo conosce: uscendo dall'app Dart gli lascia
 in `arrivals/watch.json` le serie seguite e non silenziate, con riferimenti,
 capitoli letti e ultima apertura, e lui scrive in `arrivals/record.json` ciò
 che ha annunciato, che Dart rilegge prima di confrontare. Un file per verso,
-così nessuno dei due scrive sopra l'altro. Drive ad app chiusa resta fuori:
+così nessuno dei due scrive sopra l'altro. Le schede arrivano col nome del
+sito: il lavoro conta i capitoli del sito, annota sotto `<chiave>@site` e
+salta una serie la cui base è cambiata dopo l'uscita dall'app, che la
+riprende lei. Drive ad app chiusa resta fuori:
 servirebbe il token dell'account senza l'app, e i capitoli di Drive li
 annuncia l'app alla prossima apertura.
 
@@ -126,6 +152,61 @@ non sono un difetto, sono la normalità di una serie in corso.
 Da qui: voto (0–10), stato (*da leggere*, *in lettura*, *in pausa*, *finito*,
 *abbandonato*), preferito, raccolte, segna tutti come letti, note, e togli
 dal telefono i capitoli già letti.
+
+Il ripiano ha anche «Arrivato a», il punto di lettura: l'ultimo capitolo letto
+dell'indice, altrimenti il numero dichiarato («Cap. 52»), altrimenti «Non
+iniziato». Toccarlo lo cambia. Con l'elenco dei capitoli apre un foglio (con
+ricerca oltre trenta capitoli, dal più recente) e segna letti, come stimati,
+i capitoli fino a quello scelto; tornando indietro chiede conferma, perché i
+capitoli dopo restano segnati letti — il gesto non toglie letti, per
+rimetterli da leggere si tolgono dall'elenco. Una scheda manuale non ha
+capitoli: chiede solo il numero, e vuoto lo toglie. Una scheda manuale senza
+capitoli mostra un vuoto suo («Scheda senza capitoli») invece di «Nessun
+indice», che è l'avviso di una serie la cui libreria non ha scritto gli indici.
+
+Una serie senza voto, aprendo la scheda, mostra sotto il ripiano una card in
+linea che invita a votare: «Vota» apre il foglio del voto, «Ignora» la nasconde
+finché la scheda resta aperta, «Non chiedere più» spegne l'invito ovunque
+(`rating.quiet` fra le impostazioni del database, quindi nel backup; si
+riaccende da Impostazioni → Lettura). È una card e non un foglio perché
+aprendo la scheda può già comparire quello di «Libera spazio». Non compare
+mentre si selezionano capitoli.
+
+Una serie che ha un link al sito (`source`) mostra sotto «Riprendi» le azioni
+verso di esso. «Apri sul sito» c'è sempre, anche per una scheda manuale col
+suo link. Se il sito è uno di quelli che Kagami sa leggere: «Aggiorna scheda»
+rilegge la pagina e mette in coda un lavoro senza capitoli (metadati,
+copertina, elenco), che non tocca stato, voto e nota; «Inizia a scaricare», al
+posto di «Riprendi» quando non c'è niente da leggere, e «Scarica altri
+capitoli», quando ne mancano, aprono la pagina di «Scarica un manga» su «Dal
+capitolo». Il lavoro va dove la serie già sta: sul telefono se è tutta lì;
+altrimenti al server, se c'è, o su Drive. Una scheda (nessun capitolo) non va
+mai al server, la scrive il telefono.
+
+Una scheda manuale ha in più «Collega a un sito», per quando il sito è stato
+aggiunto o la serie si trova su uno supportato. Chiede il link (già scritto se
+la scheda ne ha uno di un sito che ora Kagami sa leggere; non c'è una ricerca
+per titolo, che sta in `archive_screen.dart` e non è riusabile da qui), legge
+la serie e apre la pagina di scelta in modalità scheda, con «Arrivato a»,
+stato, voto, nota e preferito della manuale; si può passare a scaricare. A
+lavoro in coda i dati personali passano alla chiave vera
+(`UserRepository.moveSeries`: stato, date, silenzio, punto di lettura, capitoli
+letti, posizioni, cronologia, segnalibri, raccolte nella stessa posizione e
+impostazioni di lettura; ciò che la serie vera aveva già si fonde come in un
+backup, vince il record più recente e i letti si uniscono) e la scheda manuale
+si toglie dalla libreria con le regole di «Togli la serie», senza chiedere e
+senza toccare il lavoro appena accodato anche se ha lo stesso link. La serie
+vera compare in libreria quando il lavoro finisce; fino ad allora la scheda
+chiude e un avviso lo dice.
+
+Ogni capitolo che non è né sul telefono né su Drive ha l'icona «Scarica dal
+sito», anche se letto o saltato, e la barra di selezione offre lo stesso per i
+selezionati: archivia solo quei capitoli, senza la pagina di scelta. La pagina
+della serie si legge dal sito una volta sola per apertura della scheda, e finché
+il lavoro è in coda o in corso (sul telefono o sul server) l'icona è un
+indicatore. Senza rete o con il sito che non risponde si vede il messaggio
+dell'errore, e non succede altro. I capitoli non scaricati non si aprono nel
+lettore.
 
 I capitoli si cercano, si filtrano (solo da leggere, solo scaricati) e si
 selezionano in blocco. Generi e tag sono toccabili e aprono la libreria già
@@ -497,6 +578,15 @@ rimanda su il risultato. Succede all'avvio, uscendo dall'app e quando lo si
 chiede, e non a ogni pagina girata: la radio accesa per tutta una lettura è un
 prezzo che si paga in batteria e che non compra niente.
 
+Non esiste un invio senza fusione, nemmeno uscendo dall'app: il documento si
+sostituisce per intero, e chi lo scrive senza averlo letto cancella ciò che
+c'era. Ogni scrittura porta una `revision` casuale; un telefono che ne trova
+una diversa da quella che ricorda — o che non ne ricorda nessuna, appena
+avviato — fonde prima di scrivere. Per lo stesso motivo il backup automatico
+di Android è spento (`allowBackup="false"`): reinstallando rimetteva il
+database del giorno prima, e la prima uscita dall'app, per concedere
+l'accesso ai file, lo mandava su sopra quello giusto.
+
 L'accesso passa dal token d'identità di Google, non dal browser: il sistema
 dice chi è l'utente, Firebase verifica la firma e apre la sessione. Per conto
 di quale client OAuth chiedere il token lo dice `google-services.json`, che il
@@ -669,7 +759,9 @@ migliaia di letture.
 Impostazioni → Scarica un manga fa dal telefono quello che il pannello MangaArchive
 di Cobalt fa dal server: si cerca un titolo o si incolla il link di una
 serie (MangaK, ManhwaRead, Asura Scans), la si verifica — titolo,
-copertina, autori, generi, capitoli — e la si scarica.
+copertina, autori, generi, capitoli — e la si scarica, o se ne salva solo la
+scheda. Va bene anche il link di un capitolo: si legge la serie a cui
+appartiene, e quel capitolo è il punto a cui si è arrivati.
 
 La ricerca dà, mentre si scrive, quello che darebbe la barra di ricerca di
 ogni sito: MangaK con la sua API (`titles/search`), Asura Scans con la sua
@@ -677,12 +769,21 @@ ogni sito: MangaK con la sua API (`titles/search`), Asura Scans con la sua
 (`/?s=…`), letta da una WebView invisibile perché Cloudflare
 non risponde al client HTTP dell'app nemmeno dopo la verifica, e blocca a
 parte la ricerca rapida di `admin-ajax.php`. Se la verifica chiede un tocco,
-al posto dei risultati compare la riga che la apre. Scegliere un risultato
-è incollarne il link. Letta la serie si apre una pagina sua, con la
+al posto dei risultati compare la riga che la apre. Sotto il campo, una fila
+di filtri: i siti da interrogare (uno spento non si cerca affatto, e almeno
+uno resta acceso), solo in corso o solo concluse, e solo quelle non ancora in
+libreria; si ricordano fra le impostazioni. Un risultato già in libreria lo
+dice anche senza filtro: lo si riconosce per sito e titolo, perché la ricerca
+non dà l'id della serie (MangaK lo scrive solo nella sua pagina). Scegliere
+un risultato è incollarne il link. Letta la serie si apre una pagina sua, con la
 copertina e quello che il sito ne dice, in cui si sceglie:
 
-- **tutta**, **man mano**, **dal capitolo scelto in poi** o **solo i
-  capitoli toccati**, quattro schede con quello che fanno scritto sotto.
+- **tutta**, **man mano**, **dal capitolo scelto in poi**, **solo i
+  capitoli toccati** o **solo la scheda**, cinque riquadri con quello che
+  fanno scritto sotto. «Dal capitolo» parte, se non lo si sceglie, dal primo
+  dopo l'ultimo letto: quello del link incollato, se era di un capitolo,
+  poi l'ultimo segnato letto, poi «arrivato a» confrontato per numero
+  (`reachedChapterIndex`); senza niente di questo, dal primo che manca.
   L'elenco dei capitoli scorre con la pagina, si filtra per numero o titolo
   (Invio sceglie il capitolo con quel numero), si gira dal più recente,
   segna quelli già in libreria e, scegliendoli uno per uno, prende un
@@ -698,6 +799,86 @@ copertina e quello che il sito ne dice, in cui si sceglie:
 In fondo alla pagina resta il riepilogo — quanti capitoli, dove — con il
 pulsante. Chiudendola senza scegliere, la serie resta sotto la ricerca e la
 pagina si riapre da lì.
+
+**Solo la scheda** mette la serie in libreria senza nessun capitolo:
+`series.json`, copertina, `index.json` con tutti i capitoli del sito e
+nessuno archiviato, e la riga di libreria col link generale (`source`). È
+il ripiano della scheda di una serie (stato, voto, nota, preferito) per un
+manga che si legge altrove. L'elenco dei capitoli serve a dire **fin dove
+si è arrivati** — un capitolo, o «Non ho iniziato» —, precompilato come la
+partenza di «Dal capitolo»; sotto, i campi del ripiano, partendo da ciò che
+i dati personali sanno già di quella chiave. Confermando, il lavoro
+(`ids` vuoto) va in coda e lo stato si scrive subito: la serie esiste nei
+dati prima che il lavoro finisca, e i capitoli fino a quello indicato
+risultano letti come stimati. Le schede le scrive sempre il telefono, mai
+il server: fra le destinazioni non compare. Una scheda di una serie in corso
+resta seguita, e il controllo ne aggiorna solo l'elenco.
+
+**Aggiungi senza link** (`ui/archive_manual.dart`) salva una **scheda manuale**:
+un manga che nessun sito di Kagami sa leggere, o di cui non si ha il link.
+Si apre dal pulsante sotto il campo del link, e da lì stesso quando il link
+incollato è di un sito non supportato: l'avviso dice che i capitoli non si
+potranno scaricare e offre la scheda col link già compilato. Il modulo
+chiede titolo (obbligatorio), link (facoltativo), «Arrivato al capitolo»
+(un numero libero, che resta com'è: `reachedChapter`), e i campi del
+ripiano, gli stessi di «Solo la scheda» (`ArchiveShelfFields`). Con un link
+non supportato prova, con un tempo breve e senza mai mostrare un errore, a
+leggere `og:title` (o `<title>`) e `og:image` della pagina
+(`fetchPageMeta` in `kagami_archive/lib/manual.dart`) per titolo e
+copertina, che resta modificabile. Con il link di un sito supportato
+propone invece il percorso normale, perché lì i capitoli si scaricano. La
+scheda non passa dalla coda e non va mai al server: la scrive subito il
+telefono (`saveManualCard` in `archive/manual_card.dart`, che serve anche
+all'import in blocco) su Drive, se la libreria ne ha la cartella — chiedendo
+il permesso di scrivere —, altrimenti sul telefono. Lo stesso link riscrive
+la stessa scheda (la chiave nasce dal link); un link già in libreria apre
+quella serie (`entryForLink`).
+
+Il percorso — link, verifica, pagina, coda — sta in `ui/archive_flow.dart`,
+in pezzi che si usano anche fuori da questa schermata: leggere una serie da
+un link (`inspectArchiveLink`), aprire la pagina con una scelta già fatta
+(`chooseArchive`), mettere in coda una scelta (`enqueueArchive`, o in
+silenzio `archiveTargetFor` una volta e `queueArchiveJob` per ogni serie),
+con le destinazioni di adesso (`archiveDestinations`).
+
+#### Importare tanti link
+
+**Importa più link** (`ui/archive_import.dart`) è la porta per le centinaia
+di schede del browser: si incolla del testo, se ne prendono i link http/https
+senza doppioni (`normalizeLink`), e per ognuno si fa una scheda senza
+aprire la pagina della serie. Prima di partire si sceglie una raccolta
+(facoltativa, anche nuova) e la pausa fra un link e l'altro; la
+destinazione è quella delle schede, Drive se c'è, altrimenti il telefono, e
+permessi e cartella si chiedono una volta sola. Le serie si leggono dal
+sito una alla volta. Per ogni link (`archive/bulk_import.dart`): già in
+libreria o in coda, si salta; un sito supportato dà una scheda in coda
+(`ids` vuoto), con «arrivato a» se il link era di un capitolo; un sito
+sconosciuto dà una scheda manuale con titolo e copertina della pagina, o
+host e percorso. Ogni riga dice com'è andata, con «Riprova» sugli errori, e
+l'import si ferma e riprende.
+
+I siti dietro Cloudflare non aprono una verifica per link: la pagina della
+serie la apre una WebView invisibile (`BrowserFetcher.pass`), che passa con
+i cookie di una verifica già superata — quelli delle WebView sono di tutta
+l'app — o se la verifica si risolve da sola. Se chiede un tocco la riga
+resta «da verificare»; superata la verifica su una, le altre dello stesso
+sito ripartono da sole.
+
+Lo stesso import si apre condividendo del testo con Kagami (Condividi →
+Kagami, `SharedText.kt` e `data/share_intake.dart`): un link solo si
+verifica come incollato in «Scarica un manga», più link o un JSON vanno
+all'import già compilato. Per un'automazione il testo può essere un JSON,
+una lista di oggetti in cui solo `url` è obbligatorio (anche solo la
+stringa del link): `title` per una scheda manuale, `chapter` il numero
+dell'ultimo letto come lo scrive l'autore, `status` uno fra `planned`,
+`reading`, `paused`, `completed`, `dropped`, `rating` da 1 a 10, `notes`.
+
+```json
+[
+  {"url": "https://mangak.io/solo-leveling/chapter-52", "rating": 9},
+  {"url": "https://example.org/manga/x", "title": "X", "chapter": "12", "status": "paused"}
+]
+```
 
 **Man mano** scarica cinque capitoli dal capitolo scelto (di partenza il
 primo non letto) e poi tiene sempre cinque capitoli da leggere davanti
@@ -723,12 +904,21 @@ il capitolo finito sale mentre il seguente scende, i file piccoli in una
 richiesta sola (multipart), perché Drive conta le richieste e non i byte.
 
 Il download finisce in una coda che continua a schermo spento, con la
-notifica che dice a che punto è; la schermata mostra la serie in corso e le
-altre in attesa, e sotto le **serie scaricate di recente**, una per riga
-con l'esito più recente e quante volte è scesa (man mano ogni capitolo è un
-lavoro): la riga apre la serie se è in libreria, e un download fallito si
-riprova dal suo link. Rifare lo stesso download porta solo ciò che manca o
-è rovinato.
+notifica che dice a che punto è. La schermata tiene separato ciò che si
+comanda da ciò che è già successo: in alto la coda, poi il controllo delle
+serie in corso e il server, righe con icona come nel resto delle
+impostazioni; le serie seguite stanno dietro una voce sola, che dice quante
+sono e quante hanno un problema, e si aprono in un foglio. Sotto, le **serie
+scaricate di recente** sono una fila di copertine che scorre di lato — una
+cronologia non deve sembrare un comando né spingere i comandi fuori dallo
+schermo —, quelle fallite bordate di rosso, e si riprovano toccandole.
+«Tutte» apre il foglio con l'elenco completo, l'esito più recente e quante
+volte ognuna è scesa (man mano ogni capitolo è un lavoro), e lì si pulisce.
+Lo stesso vale per la coda, le serie seguite e la cronologia del server.
+Rifare lo stesso download porta solo ciò che manca o è rovinato. Una scheda,
+in coda e fra le scaricate, dice «Scheda» invece di contare capitoli e
+pagine che non ci sono; il controllo delle serie separa le schede, di cui
+arriva solo l'elenco, dai capitoli nuovi messi in coda.
 
 Le **serie in corso** scaricate da qui si ricontrollano, a mano o ogni
 giorno a un'ora (solo col Wi-Fi, se si vuole), e arrivano solo i capitoli

@@ -698,10 +698,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get archiveIntro =>
-      'ابحث عن عنوان في المواقع المدعومة، أو الصق رابط سلسلة: ينزّلها Kagami من الموقع إلى المكتبة مع بياناتها الوصفية وغلافها وقائمة فصولها الكاملة.';
+      'ابحث عن عنوان في المواقع المدعومة، أو الصق رابط سلسلة أو أحد فصولها: ينزّلها Kagami من الموقع إلى المكتبة مع بياناتها الوصفية وغلافها وقائمة فصولها الكاملة. أو يحفظ بطاقتها فقط، بلا فصول.';
 
   @override
   String get archiveSearchHint => 'ابحث عن مانغا بالعنوان';
+
+  @override
+  String get archiveFilterOngoing => 'مستمرة';
+
+  @override
+  String get archiveFilterCompleted => 'مكتملة';
+
+  @override
+  String get archiveFilterNotInLibrary => 'ليست في المكتبة';
+
+  @override
+  String get archiveInLibrary => 'في المكتبة';
+
+  @override
+  String archiveResultsFiltered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نتائج مخفية بالمرشحات',
+      one: 'نتيجة واحدة مخفية بالمرشحات',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get archiveClear => 'مسح';
@@ -1039,6 +1062,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get archiveRecent => 'نُزِّلت مؤخرًا';
 
   @override
+  String archiveRecentAll(int count) {
+    return 'الكل ($count)';
+  }
+
+  @override
+  String get archiveRecentFailed => 'فشل';
+
+  @override
+  String get archiveFollowedTitle => 'السلاسل المتابَعة';
+
+  @override
+  String archiveFollowedProblems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تحتاج إلى معالجة',
+      one: '1 يحتاج إلى معالجة',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String archiveRecentLineRuns(String when, int runs, String message) {
     return '$when · $runs تنزيلات · $message';
   }
@@ -1241,7 +1286,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get serverTitle => 'الخادم';
 
   @override
-  String get serverClear => 'تنظيف';
+  String get serverRecent => 'نزّلها الخادم';
 
   @override
   String get serverUnavailableNoSecret =>
@@ -1420,33 +1465,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String serverSeriesAhead(int count) {
     return 'أثناء القراءة، $count جاهزة للقراءة: يطلب التطبيق الفصول وأنت تقرأ';
-  }
-
-  @override
-  String get serverOngoingTitle => 'سلاسل مستمرة على الخادم';
-
-  @override
-  String serverOngoingCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count للمتابعة',
-      zero: 'لا شيء حاليًا',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get serverOngoingCheckOff => 'الفحص متوقف';
-
-  @override
-  String serverOngoingCheckAt(String clock) {
-    return 'الفحص عند $clock';
-  }
-
-  @override
-  String serverOngoingSubtitle(String count, String check) {
-    return '$count · $check. المس للفحص الآن';
   }
 
   @override
@@ -2640,6 +2658,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String homeSiteChapters(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count جديد على $site',
+      many: '$count جديدًا على $site',
+      few: '$count جديدة على $site',
+      two: '2 جديدان على $site',
+      one: '1 جديد على $site',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get homeAgoToday => 'اليوم';
 
   @override
@@ -3436,6 +3468,20 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String dataNewSiteChaptersNotification(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'صدر $count فصل جديد على $site',
+      many: 'صدر $count فصلًا جديدًا على $site',
+      few: 'صدرت $count فصول جديدة على $site',
+      two: 'صدر فصلان جديدان على $site',
+      one: 'صدر فصل جديد على $site',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get dataArchivePhoneFolderMissing => 'مجلد الهاتف مفقود.';
 
   @override
@@ -3598,4 +3644,450 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get serverCheckTimeHelp => 'وقت الفحص';
+
+  @override
+  String get seriesRatingInviteTitle => 'ما تقييمك لها؟';
+
+  @override
+  String get seriesRatingInviteBody =>
+      'يُستخدم التقييم لتصفية المكتبة وترتيبها، ويُحتسب في الإحصاءات.';
+
+  @override
+  String get seriesRatingInviteRate => 'قيّم';
+
+  @override
+  String get seriesRatingInviteIgnore => 'تجاهل';
+
+  @override
+  String get seriesRatingInviteNever => 'لا تسأل مجددًا';
+
+  @override
+  String get settingsRatingInvite => 'طلب تقييم عند فتح سلسلة';
+
+  @override
+  String get settingsRatingInviteNote =>
+      'تعرض صفحة السلسلة غير المقيّمة دعوة إلى تقييمها';
+
+  @override
+  String get archiveModeCard => 'البطاقة فقط';
+
+  @override
+  String get archiveModeCardLine => 'بلا فصول: الحالة والتقييم وأين وصلت';
+
+  @override
+  String get archiveModeCardHint =>
+      'يحفظ السلسلة في المكتبة دون تنزيل فصول: الغلاف والبيانات الوصفية وقائمة الفصول ورابط الموقع. حدّد إلى أين وصلت: يُعدّ ذلك الفصل وما قبله مقروءًا. يمكن تنزيل الفصول لاحقًا.';
+
+  @override
+  String get archiveReachedSection => 'وصلت حتى…';
+
+  @override
+  String get archiveReachedHint => 'المس آخر فصل قرأته.';
+
+  @override
+  String get archiveReachedNone => 'لم أبدأ';
+
+  @override
+  String get archiveChapterReached => 'وصلت إلى هنا';
+
+  @override
+  String get archiveCardServer =>
+      'البطاقات يحفظها الهاتف: الخادم المرتبط ينزّل الفصول فقط.';
+
+  @override
+  String get archiveCardNotesHint => 'ملاحظة لنفسك (اختيارية)';
+
+  @override
+  String archiveSummaryCard(String where) {
+    return 'يحفظ البطاقة، دون تنزيل أي فصل · $where';
+  }
+
+  @override
+  String archiveSummaryCardReached(String number, String where) {
+    return 'يحفظ البطاقة مقروءة حتى $number، دون تنزيل أي فصل · $where';
+  }
+
+  @override
+  String get archiveSaveCard => 'احفظ البطاقة';
+
+  @override
+  String archiveCardQueuedSnack(String title) {
+    return 'حُفظت بطاقة «$title»: سيصل الغلاف وقائمة الفصول بعد قليل.';
+  }
+
+  @override
+  String archiveCardProgress(String message) {
+    return 'بطاقة · $message';
+  }
+
+  @override
+  String archiveJobCard(String destination) {
+    return 'بطاقة · $destination';
+  }
+
+  @override
+  String archiveJobCardUpdate(String destination) {
+    return 'تحديث البطاقة · $destination';
+  }
+
+  @override
+  String archiveRecentCard(String when) {
+    return 'بطاقة · $when';
+  }
+
+  @override
+  String archiveCheckCards(String names) {
+    return 'فصول جديدة في القائمة، دون تنزيل، لبطاقات $names';
+  }
+
+  @override
+  String get seriesOpenSite => 'فتح في الموقع';
+
+  @override
+  String get seriesRefreshCard => 'تحديث البطاقة';
+
+  @override
+  String get seriesDownloadMore => 'تنزيل فصول أخرى';
+
+  @override
+  String get seriesStartDownload => 'ابدأ التنزيل';
+
+  @override
+  String get seriesStartDownloadMessage =>
+      'هذه السلسلة مجرد بطاقة: الفصول على الموقع. نزّلها لتقرأها هنا بدءًا من الفصل التالي لآخر فصل قرأته.';
+
+  @override
+  String get seriesDownloadFromSite => 'تنزيل من الموقع';
+
+  @override
+  String get seriesDownloadFromSiteQueued => 'في قائمة الانتظار من الموقع';
+
+  @override
+  String get coverCardBadge => 'بطاقة';
+
+  @override
+  String coverReached(String number) {
+    return 'وصلت إلى الفصل $number';
+  }
+
+  @override
+  String get libraryOnlyCards => 'البطاقات فقط';
+
+  @override
+  String get seriesReachedTitle => 'وصلت إلى';
+
+  @override
+  String get seriesReachedNone => 'لم تبدأ';
+
+  @override
+  String seriesReachedChapter(String number) {
+    return 'الفصل $number';
+  }
+
+  @override
+  String get seriesReachedSearch => 'ابحث عن فصل';
+
+  @override
+  String get seriesReachedNumberHint => 'رقم الفصل';
+
+  @override
+  String get seriesReachedNumberHelp =>
+      'كما يكتبه الموقع، مثل 52. اتركه فارغًا لإزالته.';
+
+  @override
+  String get seriesReachedBackTitle => 'هل تريد الرجوع؟';
+
+  @override
+  String seriesReachedBackMessage(String chapter) {
+    return 'تبقى الفصول بعد «$chapter» معلّمة كمقروءة: لإعادتها غير مقروءة ألغِ تعليمها في قائمة الفصول.';
+  }
+
+  @override
+  String get seriesReachedBackConfirm => 'نقل';
+
+  @override
+  String get seriesCardEmptyTitle => 'بطاقة بلا فصول';
+
+  @override
+  String get seriesCardEmptyMessage =>
+      'لا يحمّل Kagami من هذا الموقع، لكن البطاقة تحتفظ بالحالة والتقييم والملاحظة ونقطة القراءة.';
+
+  @override
+  String get seriesLinkSite => 'ربط بموقع';
+
+  @override
+  String get seriesLinkTitle => 'ربط بموقع';
+
+  @override
+  String get seriesLinkMessage =>
+      'الصق رابط السلسلة على موقع يستطيع Kagami التنزيل منه. تنتقل الحالة والتقييم والملاحظة والمجموعات ونقطة القراءة إلى السلسلة الفعلية، وتُحذف هذه البطاقة.';
+
+  @override
+  String get seriesLinkHint => 'رابط السلسلة';
+
+  @override
+  String get seriesLinkContinue => 'متابعة';
+
+  @override
+  String seriesLinkDone(String title) {
+    return 'تم ربط «$title»: ستظهر السلسلة في المكتبة عند انتهاء المهمة.';
+  }
+
+  @override
+  String get archiveManualAction => 'إضافة بدون رابط';
+
+  @override
+  String get archiveManualUnsupported =>
+      'لا يستطيع Kagami التنزيل من هذا الموقع: يمكنك حفظه كبطاقة بعنوان ورابط، لكن لا يمكن تنزيل فصوله.';
+
+  @override
+  String get archiveManualUnsupportedAction => 'حفظ كبطاقة';
+
+  @override
+  String get archiveManualTitle => 'بطاقة يدوية';
+
+  @override
+  String get archiveManualTitleHint => 'العنوان';
+
+  @override
+  String get archiveManualTitleRequired => 'اكتب عنوانًا.';
+
+  @override
+  String get archiveManualLinkHint => 'رابط صفحة السلسلة (اختياري)';
+
+  @override
+  String get archiveManualSupported =>
+      'يستطيع Kagami قراءة هذا الموقع: بالطريقة المعتادة تحصل على قائمة الفصول ويمكنك تنزيلها.';
+
+  @override
+  String get archiveManualSupportedAction => 'استخدام الطريقة المعتادة';
+
+  @override
+  String get archiveManualNoDownload =>
+      'لا يمكن تنزيل فصول هذا الموقع: يبقى الرابط فقط، مع العنوان والغلاف إن أعلنت عنهما الصفحة.';
+
+  @override
+  String get archiveManualReachedHint => 'وصلت إلى الفصل (مثلًا 52)';
+
+  @override
+  String get archiveManualWhereDrive =>
+      'تُحفظ البطاقة في Drive داخل مجلد المكتبة.';
+
+  @override
+  String get archiveManualWherePhone => 'تُحفظ البطاقة على الهاتف.';
+
+  @override
+  String get archiveManualSave => 'حفظ البطاقة';
+
+  @override
+  String archiveManualSaved(String title) {
+    return 'تم حفظ بطاقة «$title».';
+  }
+
+  @override
+  String archiveManualExists(String title) {
+    return 'هذا الرابط موجود في المكتبة: «$title».';
+  }
+
+  @override
+  String get archiveManualNeedsDrive =>
+      'حفظ البطاقة في Drive يتطلب إذن الكتابة.';
+
+  @override
+  String archiveManualFailed(String error) {
+    return 'تعذّر حفظ البطاقة: $error';
+  }
+
+  @override
+  String get archiveImportAction => 'استيراد عدة روابط';
+
+  @override
+  String get archiveImportTitle => 'استيراد عدة روابط';
+
+  @override
+  String get archiveImportIntro =>
+      'الصق روابط: علامات تبويب المتصفح أو قائمة أو JSON. تصبح كل مانغا بطاقة في المكتبة دون تنزيل فصول؛ ومن رابط فصل تُعدّ مقروءة حتى ذلك الفصل.';
+
+  @override
+  String get archiveImportHint => 'الصق هنا النص الذي يحتوي على الروابط…';
+
+  @override
+  String archiveImportFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'عُثر على $count رابطًا',
+      few: 'عُثر على $count روابط',
+      two: 'عُثر على رابطين',
+      one: 'عُثر على رابط واحد',
+      zero: 'لم يُعثر على روابط',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportWhereDrive =>
+      'تُحفظ البطاقات على Drive، في مجلد المكتبة.';
+
+  @override
+  String get archiveImportWherePhone => 'تُحفظ البطاقات على الهاتف.';
+
+  @override
+  String get archiveImportCollection => 'إضافة إلى مجموعة';
+
+  @override
+  String get archiveImportCollectionNone => 'بلا مجموعة';
+
+  @override
+  String get archiveImportPause => 'مهلة بين الروابط';
+
+  @override
+  String get archiveImportPauseHint =>
+      'تُقرأ السلاسل من الموقع واحدة تلو الأخرى: المهلة الأطول أخف على المواقع.';
+
+  @override
+  String archiveImportSeconds(int seconds) {
+    return '$seconds ث';
+  }
+
+  @override
+  String archiveImportStart(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'استيراد $count رابطًا',
+      few: 'استيراد $count روابط',
+      two: 'استيراد رابطين',
+      one: 'استيراد رابط واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportStop => 'إيقاف';
+
+  @override
+  String get archiveImportResume => 'متابعة';
+
+  @override
+  String get archiveImportWaiting => 'في الانتظار';
+
+  @override
+  String get archiveImportRunning => 'جارٍ…';
+
+  @override
+  String get archiveImportSaved => 'حُفظت كبطاقة';
+
+  @override
+  String archiveImportSavedReached(String chapter) {
+    return 'حُفظت كبطاقة · مقروءة حتى الفصل $chapter';
+  }
+
+  @override
+  String get archiveImportManual =>
+      'بطاقة يدوية: لن يتمكن Kagami من تنزيل فصولها';
+
+  @override
+  String archiveImportKnown(String title) {
+    return 'موجودة في المكتبة: «$title»';
+  }
+
+  @override
+  String get archiveImportQueued => 'موجودة في قائمة الانتظار';
+
+  @override
+  String get archiveImportNeedsCheck => 'يطلب الموقع تحققًا';
+
+  @override
+  String get archiveImportVerify => 'تحقق';
+
+  @override
+  String get archiveImportRetry => 'إعادة المحاولة';
+
+  @override
+  String get archiveImportCheckHint =>
+      'تطلب بعض المواقع تحققًا من المتصفح: اضغط على أحدها وأكمل التحقق، وستُستأنف روابط الموقع نفسه الأخرى تلقائيًا.';
+
+  @override
+  String archiveImportProgress(int done, int total) {
+    return '$done من $total';
+  }
+
+  @override
+  String archiveImportCountSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count بطاقة',
+      few: '$count بطاقات',
+      two: 'بطاقتان',
+      one: 'بطاقة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountManual(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يدوية',
+      few: '$count يدوية',
+      two: 'يدويتان',
+      one: 'يدوية واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountKnown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count موجودًا',
+      few: '$count موجودة',
+      two: 'اثنان موجودان',
+      one: 'واحد موجود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count خطأً',
+      few: '$count أخطاء',
+      two: 'خطآن',
+      one: 'خطأ واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountCheck(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count للتحقق',
+      few: '$count للتحقق',
+      two: 'اثنان للتحقق',
+      one: 'واحد للتحقق',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportLeaveTitle => 'إيقاف الاستيراد؟';
+
+  @override
+  String get archiveImportLeaveBody =>
+      'تبقى البطاقات المحفوظة؛ ولن تُستورد الروابط المتبقية.';
+
+  @override
+  String get archiveImportLeaveConfirm => 'إيقاف والخروج';
+
+  @override
+  String get shareNoLinks => 'لا يحتوي النص المُشارَك على أي رابط.';
 }

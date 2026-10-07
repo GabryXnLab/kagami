@@ -645,10 +645,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get archiveIntro =>
-      '在支持的网站上按标题搜索，或粘贴作品链接：Kagami 会从网站把这部作品连同元数据、封面和完整的章节列表下载到书库中。';
+      '在支持的网站上按标题搜索，或粘贴作品或其某一章的链接：Kagami 会从网站把这部作品连同元数据、封面和完整的章节列表下载到书库中。也可以只保存它的卡片，不下载章节。';
 
   @override
   String get archiveSearchHint => '按标题搜索漫画';
+
+  @override
+  String get archiveFilterOngoing => '连载中';
+
+  @override
+  String get archiveFilterCompleted => '已完结';
+
+  @override
+  String get archiveFilterNotInLibrary => '不在书库中';
+
+  @override
+  String get archiveInLibrary => '已在书库中';
+
+  @override
+  String archiveResultsFiltered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个结果被筛选隐藏',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get archiveClear => '清除';
@@ -967,6 +989,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveRecent => '最近下载';
 
   @override
+  String archiveRecentAll(int count) {
+    return '全部（$count）';
+  }
+
+  @override
+  String get archiveRecentFailed => '失败';
+
+  @override
+  String get archiveFollowedTitle => '关注的作品';
+
+  @override
+  String archiveFollowedProblems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个需处理',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String archiveRecentLineRuns(String when, int runs, String message) {
     return '$when · $runs 次下载 · $message';
   }
@@ -1154,7 +1197,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverTitle => '服务器';
 
   @override
-  String get serverClear => '清空';
+  String get serverRecent => '服务器已下载';
 
   @override
   String get serverUnavailableNoSecret =>
@@ -1324,33 +1367,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String serverSeriesAhead(int count) {
     return '边读边下，备好 $count 话：你阅读时由应用请求章节';
-  }
-
-  @override
-  String get serverOngoingTitle => '服务器上连载中的作品';
-
-  @override
-  String serverOngoingCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '跟进 $count 部',
-      zero: '暂时没有',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get serverOngoingCheckOff => '检查已关闭';
-
-  @override
-  String serverOngoingCheckAt(String clock) {
-    return '$clock 检查';
-  }
-
-  @override
-  String serverOngoingSubtitle(String count, String check) {
-    return '$count · $check。点按立即检查';
   }
 
   @override
@@ -2498,6 +2514,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String homeSiteChapters(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$site 上新增 $count 章',
+      one: '$site 上新增 1 章',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get homeAgoToday => '今天';
 
   @override
@@ -3222,6 +3249,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String dataNewSiteChaptersNotification(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$site 上更新了 $count 个新章节',
+      one: '$site 上更新了 1 个新章节',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get dataArchivePhoneFolderMissing => '缺少手机上的文件夹。';
 
   @override
@@ -3379,4 +3417,416 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serverCheckTimeHelp => '检查时间';
+
+  @override
+  String get seriesRatingInviteTitle => '你给它打几分？';
+
+  @override
+  String get seriesRatingInviteBody => '评分用于筛选和排序书库，也会计入统计。';
+
+  @override
+  String get seriesRatingInviteRate => '评分';
+
+  @override
+  String get seriesRatingInviteIgnore => '忽略';
+
+  @override
+  String get seriesRatingInviteNever => '不再询问';
+
+  @override
+  String get settingsRatingInvite => '打开作品时提示评分';
+
+  @override
+  String get settingsRatingInviteNote => '没有评分的作品页面会显示评分提示';
+
+  @override
+  String get archiveModeCard => '仅卡片';
+
+  @override
+  String get archiveModeCardLine => '不下载章节：状态、评分和读到哪里';
+
+  @override
+  String get archiveModeCardHint =>
+      '把作品保存到书库而不下载章节：封面、元数据、章节列表和网站链接。标出你读到哪里：那一章及之前的章节会记为已读。章节可以以后再下载。';
+
+  @override
+  String get archiveReachedSection => '读到了…';
+
+  @override
+  String get archiveReachedHint => '点按你读过的最后一章。';
+
+  @override
+  String get archiveReachedNone => '还没开始';
+
+  @override
+  String get archiveChapterReached => '读到这里';
+
+  @override
+  String get archiveCardServer => '卡片由手机保存：已连接的服务器只下载章节。';
+
+  @override
+  String get archiveCardNotesHint => '给自己的备注（可选）';
+
+  @override
+  String archiveSummaryCard(String where) {
+    return '保存卡片，不下载章节 · $where';
+  }
+
+  @override
+  String archiveSummaryCardReached(String number, String where) {
+    return '保存已读到第 $number 章的卡片，不下载章节 · $where';
+  }
+
+  @override
+  String get archiveSaveCard => '保存卡片';
+
+  @override
+  String archiveCardQueuedSnack(String title) {
+    return '已保存《$title》的卡片：封面和章节列表稍后就到。';
+  }
+
+  @override
+  String archiveCardProgress(String message) {
+    return '卡片 · $message';
+  }
+
+  @override
+  String archiveJobCard(String destination) {
+    return '卡片 · $destination';
+  }
+
+  @override
+  String archiveJobCardUpdate(String destination) {
+    return '更新卡片 · $destination';
+  }
+
+  @override
+  String archiveRecentCard(String when) {
+    return '卡片 · $when';
+  }
+
+  @override
+  String archiveCheckCards(String names) {
+    return '$names 的卡片列出了新章节（未下载）';
+  }
+
+  @override
+  String get seriesOpenSite => '在网站上打开';
+
+  @override
+  String get seriesRefreshCard => '更新卡片';
+
+  @override
+  String get seriesDownloadMore => '下载更多章节';
+
+  @override
+  String get seriesStartDownload => '开始下载';
+
+  @override
+  String get seriesStartDownloadMessage =>
+      '这个系列只是一张卡片，章节在网站上。从上次读到的下一章开始下载，就能在这里阅读。';
+
+  @override
+  String get seriesDownloadFromSite => '从网站下载';
+
+  @override
+  String get seriesDownloadFromSiteQueued => '已排队（来自网站）';
+
+  @override
+  String get coverCardBadge => '卡片';
+
+  @override
+  String coverReached(String number) {
+    return '读到第$number话';
+  }
+
+  @override
+  String get libraryOnlyCards => '仅卡片';
+
+  @override
+  String get seriesReachedTitle => '读到';
+
+  @override
+  String get seriesReachedNone => '未开始';
+
+  @override
+  String seriesReachedChapter(String number) {
+    return '第$number话';
+  }
+
+  @override
+  String get seriesReachedSearch => '搜索章节';
+
+  @override
+  String get seriesReachedNumberHint => '章节号';
+
+  @override
+  String get seriesReachedNumberHelp => '按网站上的写法填写，例如 52。留空即清除。';
+
+  @override
+  String get seriesReachedBackTitle => '要往回退吗？';
+
+  @override
+  String seriesReachedBackMessage(String chapter) {
+    return '“$chapter”之后的章节仍标记为已读：如需恢复为未读，请在章节列表中取消标记。';
+  }
+
+  @override
+  String get seriesReachedBackConfirm => '移动';
+
+  @override
+  String get seriesCardEmptyTitle => '没有章节的卡片';
+
+  @override
+  String get seriesCardEmptyMessage => 'Kagami 不会从该网站下载，但卡片会保留状态、评分、备注和阅读进度。';
+
+  @override
+  String get seriesLinkSite => '关联到网站';
+
+  @override
+  String get seriesLinkTitle => '关联到网站';
+
+  @override
+  String get seriesLinkMessage =>
+      '粘贴 Kagami 可以下载的网站上该系列的链接。状态、评分、笔记、收藏集和阅读进度会转到真正的系列，此卡片将被移除。';
+
+  @override
+  String get seriesLinkHint => '系列链接';
+
+  @override
+  String get seriesLinkContinue => '继续';
+
+  @override
+  String seriesLinkDone(String title) {
+    return '「$title」已关联：任务完成后，该系列会出现在书库中。';
+  }
+
+  @override
+  String get archiveManualAction => '无链接添加';
+
+  @override
+  String get archiveManualUnsupported =>
+      'Kagami 无法从该网站下载:可以将其保存为带标题和链接的卡片,但无法下载章节。';
+
+  @override
+  String get archiveManualUnsupportedAction => '保存为卡片';
+
+  @override
+  String get archiveManualTitle => '手动卡片';
+
+  @override
+  String get archiveManualTitleHint => '标题';
+
+  @override
+  String get archiveManualTitleRequired => '请输入标题。';
+
+  @override
+  String get archiveManualLinkHint => '作品页面链接(可选)';
+
+  @override
+  String get archiveManualSupported => 'Kagami 可以读取该网站:走常规流程即可获得章节列表并下载。';
+
+  @override
+  String get archiveManualSupportedAction => '使用常规流程';
+
+  @override
+  String get archiveManualNoDownload => '该网站的章节无法下载:只保留链接,以及页面声明的标题和封面。';
+
+  @override
+  String get archiveManualReachedHint => '读到第几章(例如 52)';
+
+  @override
+  String get archiveManualWhereDrive => '卡片将保存到 Drive 的书库文件夹。';
+
+  @override
+  String get archiveManualWherePhone => '卡片将保存到手机。';
+
+  @override
+  String get archiveManualSave => '保存卡片';
+
+  @override
+  String archiveManualSaved(String title) {
+    return '已保存「$title」的卡片。';
+  }
+
+  @override
+  String archiveManualExists(String title) {
+    return '该链接已在书库中:「$title」。';
+  }
+
+  @override
+  String get archiveManualNeedsDrive => '将卡片保存到 Drive 需要写入权限。';
+
+  @override
+  String archiveManualFailed(String error) {
+    return '无法保存卡片:$error';
+  }
+
+  @override
+  String get archiveImportAction => '导入多个链接';
+
+  @override
+  String get archiveImportTitle => '导入多个链接';
+
+  @override
+  String get archiveImportIntro =>
+      '粘贴链接：浏览器标签页、列表或 JSON 都可以。每部漫画都会成为书库中的卡片，不下载章节；如果是章节链接，则记为读到该章节。';
+
+  @override
+  String get archiveImportHint => '在此粘贴包含链接的文本…';
+
+  @override
+  String archiveImportFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '找到 $count 个链接',
+      zero: '未找到链接',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportWhereDrive => '卡片会保存到 Drive 的书库文件夹中。';
+
+  @override
+  String get archiveImportWherePhone => '卡片会保存在手机上。';
+
+  @override
+  String get archiveImportCollection => '添加到收藏集';
+
+  @override
+  String get archiveImportCollectionNone => '不加入收藏集';
+
+  @override
+  String get archiveImportPause => '链接之间的间隔';
+
+  @override
+  String get archiveImportPauseHint => '系列会逐个从网站读取：间隔越长，对网站的负担越小。';
+
+  @override
+  String archiveImportSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String archiveImportStart(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '导入 $count 个链接',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportStop => '停止';
+
+  @override
+  String get archiveImportResume => '继续';
+
+  @override
+  String get archiveImportWaiting => '等待中';
+
+  @override
+  String get archiveImportRunning => '进行中…';
+
+  @override
+  String get archiveImportSaved => '已保存为卡片';
+
+  @override
+  String archiveImportSavedReached(String chapter) {
+    return '已保存为卡片 · 读到第 $chapter 话';
+  }
+
+  @override
+  String get archiveImportManual => '手动卡片：Kagami 无法下载其章节';
+
+  @override
+  String archiveImportKnown(String title) {
+    return '已在书库中：“$title”';
+  }
+
+  @override
+  String get archiveImportQueued => '已在队列中';
+
+  @override
+  String get archiveImportNeedsCheck => '网站要求验证';
+
+  @override
+  String get archiveImportVerify => '验证';
+
+  @override
+  String get archiveImportRetry => '重试';
+
+  @override
+  String get archiveImportCheckHint =>
+      '有些网站要求浏览器验证：点按其中一个并通过验证，同一网站的其他链接会自动重新开始。';
+
+  @override
+  String archiveImportProgress(int done, int total) {
+    return '$done / $total';
+  }
+
+  @override
+  String archiveImportCountSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张卡片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountManual(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张手动卡片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountKnown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个已存在',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个错误',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountCheck(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个待验证',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportLeaveTitle => '停止导入？';
+
+  @override
+  String get archiveImportLeaveBody => '已保存的卡片会保留；剩余的链接不会导入。';
+
+  @override
+  String get archiveImportLeaveConfirm => '停止并退出';
+
+  @override
+  String get shareNoLinks => '分享的文本中没有链接。';
 }

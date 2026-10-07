@@ -14,4 +14,7 @@
     <plurals name="arrivals_new">
         <item quantity="other">有 %d 个新章节</item>
     </plurals>
+    <plurals name="arrivals_new_site">
+        <item quantity="other">%2$s 上更新了 %1$d 个新章节</item>
+    </plurals>
 </resources>

@@ -811,13 +811,38 @@
   "@archiveTitle": {
     "description": "Titolo della schermata per archiviare una serie dal sito (Impostazioni → Scarica un manga)"
   },
-  "archiveIntro": "Cerca un titolo sui siti supportati, o incolla il link di una serie: Kagami la scarica dal sito, con metadati, copertina e l'elenco completo dei capitoli, nella libreria.",
+  "archiveIntro": "Cerca un titolo sui siti supportati, o incolla il link di una serie o di un suo capitolo: Kagami la scarica dal sito, con metadati, copertina e l'elenco completo dei capitoli, nella libreria. O ne salva solo la scheda, senza capitoli.",
   "@archiveIntro": {
     "description": "Testo introduttivo in cima alla schermata di download"
   },
   "archiveSearchHint": "Cerca un manga per titolo",
   "@archiveSearchHint": {
     "description": "Suggerimento nel campo di ricerca per titolo"
+  },
+  "archiveFilterOngoing": "In corso",
+  "@archiveFilterOngoing": {
+    "description": "Filtro sotto la ricerca di «Scarica un manga»: mostra solo le serie in corso o in pausa"
+  },
+  "archiveFilterCompleted": "Concluse",
+  "@archiveFilterCompleted": {
+    "description": "Filtro sotto la ricerca di «Scarica un manga»: mostra solo le serie concluse"
+  },
+  "archiveFilterNotInLibrary": "Non in libreria",
+  "@archiveFilterNotInLibrary": {
+    "description": "Filtro sotto la ricerca di «Scarica un manga»: nasconde le serie che sono già in libreria"
+  },
+  "archiveInLibrary": "In libreria",
+  "@archiveInLibrary": {
+    "description": "Nella riga di un risultato della ricerca, quando la serie è già in libreria"
+  },
+  "archiveResultsFiltered": "{count, plural, =1{1 risultato, nascosto dai filtri} other{{count} risultati, nascosti dai filtri}}",
+  "@archiveResultsFiltered": {
+    "description": "Sotto il nome di un sito quando tutti i suoi risultati sono nascosti dai filtri; {count} è quanti",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "archiveClear": "Cancella",
   "@archiveClear": {
@@ -1255,7 +1280,33 @@
   },
   "archiveRecent": "Scaricate di recente",
   "@archiveRecent": {
-    "description": "Titolo della sezione con le serie scaricate da poco, una per riga"
+    "description": "Titolo della fila di copertine delle serie scaricate da poco dal telefono, e del foglio con l'elenco completo"
+  },
+  "archiveRecentAll": "Tutte ({count})",
+  "@archiveRecentAll": {
+    "description": "Pulsante accanto al titolo delle serie scaricate di recente: apre l'elenco completo; {count} è quante sono",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRecentFailed": "Non riuscito",
+  "@archiveRecentFailed": {
+    "description": "Sotto la copertina di una serie nella fila delle scaricate di recente, quando l'ultimo download è fallito (testo brevissimo, la copertina è stretta)"
+  },
+  "archiveFollowedTitle": "Serie seguite",
+  "@archiveFollowedTitle": {
+    "description": "Voce che apre l'elenco delle serie in corso seguite (dal telefono o dal server), e titolo del foglio con l'elenco"
+  },
+  "archiveFollowedProblems": "{count, plural, =1{1 da sistemare} other{{count} da sistemare}}",
+  "@archiveFollowedProblems": {
+    "description": "Accanto al numero di serie seguite: quante hanno un problema da sistemare",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "archiveRecentLineRuns": "{when} · {runs} download · {message}",
   "@archiveRecentLineRuns": {
@@ -1356,7 +1407,7 @@
   },
   "archiveNoTracked": "Nessuna serie da seguire, per ora",
   "@archiveNoTracked": {
-    "description": "Sottotitolo di «Controlla adesso» quando non ci sono serie seguite"
+    "description": "Sotto «Serie seguite» quando non ce n'è nessuna"
   },
   "archiveTrackedCount": "{count, plural, =1{1 serie da seguire} other{{count} serie da seguire}}",
   "@archiveTrackedCount": {
@@ -1515,9 +1566,9 @@
   "@serverTitle": {
     "description": "Titolo della sezione «Server» in «Scarica un manga» e del foglio del server collegato"
   },
-  "serverClear": "Pulisci",
-  "@serverClear": {
-    "description": "Pulsante che svuota lo storico dei lavori del server"
+  "serverRecent": "Scaricate dal server",
+  "@serverRecent": {
+    "description": "Titolo della fila di copertine delle serie scaricate dal server"
   },
   "serverUnavailableNoSecret": "Questa build dell'app non può collegare server: chi l'ha compilata non ha indicato il segreto del client Web (GOOGLE_SERVER_CLIENT_SECRET).",
   "@serverUnavailableNoSecret": {
@@ -1771,44 +1822,6 @@
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "serverOngoingTitle": "Serie in corso sul server",
-  "@serverOngoingTitle": {
-    "description": "Titolo della voce sulle serie in corso che il server segue"
-  },
-  "serverOngoingCount": "{count, plural, =0{Nessuna, per ora} other{{count} da seguire}}",
-  "@serverOngoingCount": {
-    "description": "Quante serie in corso il server segue",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "serverOngoingCheckOff": "controllo spento",
-  "@serverOngoingCheckOff": {
-    "description": "Il controllo quotidiano dei capitoli nuovi è spento"
-  },
-  "serverOngoingCheckAt": "controllo alle {clock}",
-  "@serverOngoingCheckAt": {
-    "description": "Ora del controllo quotidiano dei capitoli nuovi",
-    "placeholders": {
-      "clock": {
-        "type": "String"
-      }
-    }
-  },
-  "serverOngoingSubtitle": "{count} · {check}. Tocca per controllare adesso",
-  "@serverOngoingSubtitle": {
-    "description": "Sottotitolo della voce sulle serie in corso: {count} è il numero di serie, {check} dice quando controlla",
-    "placeholders": {
-      "count": {
-        "type": "String"
-      },
-      "check": {
-        "type": "String"
       }
     }
   },
@@ -3336,6 +3349,18 @@
       }
     }
   },
+  "homeSiteChapters": "{count, plural, =1{1 nuovo su {site}} other{{count} nuovi su {site}}}",
+  "@homeSiteChapters": {
+    "description": "Home, «Aggiornamenti»: riga sotto il titolo di una scheda (serie salvata senza capitoli scaricati) con capitoli nuovi usciti sul sito; {site} è il nome del sito, es. MangaK",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
   "homeAgoToday": "oggi",
   "@homeAgoToday": {
     "description": "Quanto tempo fa è arrivato l'ultimo capitolo: oggi"
@@ -4216,6 +4241,18 @@
       }
     }
   },
+  "dataNewSiteChaptersNotification": "{count, plural, =1{È uscito un capitolo nuovo su {site}} other{Sono usciti {count} capitoli nuovi su {site}}}",
+  "@dataNewSiteChaptersNotification": {
+    "description": "Testo della notifica Android che avvisa di capitoli nuovi usciti sul sito di una scheda (serie salvata senza capitoli scaricati; il titolo della notifica è il nome della serie); {site} è il nome del sito, es. MangaK",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
   "dataArchivePhoneFolderMissing": "Manca la cartella del telefono.",
   "@dataArchivePhoneFolderMissing": {
     "description": "Errore di «Scarica un manga»: la destinazione è il telefono ma non c'è una cartella scelta."
@@ -4489,5 +4526,565 @@
   "serverCheckTimeHelp": "Ora del controllo",
   "@serverCheckTimeHelp": {
     "description": "Titolo del selettore dell'ora del controllo quotidiano del server"
+  },
+  "seriesRatingInviteTitle": "Che voto gli dai?",
+  "@seriesRatingInviteTitle": {
+    "description": "Titolo della card in linea nella scheda di una serie senza voto, che invita a votarla"
+  },
+  "seriesRatingInviteBody": "Il voto serve a filtrare e ordinare la libreria e conta nelle statistiche.",
+  "@seriesRatingInviteBody": {
+    "description": "Riga della card d'invito a votare: dice a cosa serve il voto"
+  },
+  "seriesRatingInviteRate": "Vota",
+  "@seriesRatingInviteRate": {
+    "description": "Pulsante della card d'invito: apre la scelta del voto"
+  },
+  "seriesRatingInviteIgnore": "Ignora",
+  "@seriesRatingInviteIgnore": {
+    "description": "Pulsante della card d'invito: la nasconde solo finché la scheda resta aperta"
+  },
+  "seriesRatingInviteNever": "Non chiedere più",
+  "@seriesRatingInviteNever": {
+    "description": "Pulsante della card d'invito: spegne l'invito su tutte le serie"
+  },
+  "settingsRatingInvite": "Chiedi un voto aprendo una serie",
+  "@settingsRatingInvite": {
+    "description": "Interruttore nelle impostazioni della lettura che accende o spegne l'invito a votare nella scheda di una serie"
+  },
+  "settingsRatingInviteNote": "Nella scheda delle serie senza voto compare un invito a votare",
+  "@settingsRatingInviteNote": {
+    "description": "Sottotitolo dell'interruttore dell'invito a votare"
+  },
+  "archiveModeCard": "Solo la scheda",
+  "@archiveModeCard": {
+    "description": "Nome della quinta modalità nella pagina della serie: salva la serie in libreria senza scaricare capitoli"
+  },
+  "archiveModeCardLine": "Nessun capitolo: stato, voto e a che punto sei",
+  "@archiveModeCardLine": {
+    "description": "Riga sotto il nome della modalità «Solo la scheda»"
+  },
+  "archiveModeCardHint": "Salva la serie nella libreria senza scaricare capitoli: copertina, metadati, l'elenco dei capitoli e il link al sito. Indica fin dove sei arrivato: quel capitolo e i precedenti risultano letti. I capitoli si possono scaricare più avanti.",
+  "@archiveModeCardHint": {
+    "description": "Spiegazione sotto le modalità quando è scelta «Solo la scheda»"
+  },
+  "archiveReachedSection": "Arrivato fino al…",
+  "@archiveReachedSection": {
+    "description": "Titolo della lista dei capitoli in modalità «Solo la scheda»: si sceglie l'ultimo capitolo letto"
+  },
+  "archiveReachedHint": "Tocca l'ultimo capitolo che hai letto.",
+  "@archiveReachedHint": {
+    "description": "Indicazione sopra la lista dei capitoli in modalità «Solo la scheda»"
+  },
+  "archiveReachedNone": "Non ho iniziato",
+  "@archiveReachedNone": {
+    "description": "Pastiglia in modalità «Solo la scheda»: nessun capitolo letto"
+  },
+  "archiveChapterReached": "arrivato qui",
+  "@archiveChapterReached": {
+    "description": "Accanto all'ultimo capitolo letto, in modalità «Solo la scheda»"
+  },
+  "archiveCardServer": "Le schede le salva il telefono: il server collegato scarica solo capitoli.",
+  "@archiveCardServer": {
+    "description": "Nota sotto le destinazioni in modalità «Solo la scheda» quando c'è un server collegato, che lì non compare"
+  },
+  "archiveCardNotesHint": "Una nota per te (facoltativa)",
+  "@archiveCardNotesHint": {
+    "description": "Suggerimento nel campo della nota, in modalità «Solo la scheda»"
+  },
+  "archiveSummaryCard": "Salva la scheda, nessun capitolo scaricato · {where}",
+  "@archiveSummaryCard": {
+    "description": "Riepilogo in fondo alla pagina in modalità «Solo la scheda», senza capitolo letto; where è la destinazione",
+    "placeholders": {
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveSummaryCardReached": "Salva la scheda letta fino al {number}, nessun capitolo scaricato · {where}",
+  "@archiveSummaryCardReached": {
+    "description": "Riepilogo in fondo alla pagina in modalità «Solo la scheda» con l'ultimo capitolo letto; number è il numero del capitolo, where la destinazione",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "where": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveSaveCard": "Salva la scheda",
+  "@archiveSaveCard": {
+    "description": "Pulsante in fondo alla pagina in modalità «Solo la scheda»"
+  },
+  "archiveCardQueuedSnack": "Scheda di «{title}» salvata: copertina ed elenco dei capitoli arrivano fra poco.",
+  "@archiveCardQueuedSnack": {
+    "description": "Avviso dopo aver salvato la scheda di una serie: lo stato è già scritto, copertina ed elenco arrivano col lavoro in coda",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCardProgress": "Scheda · {message}",
+  "@archiveCardProgress": {
+    "description": "Riga sotto il titolo del lavoro in corso quando è solo la scheda (nessun capitolo da contare); message è il messaggio del motore",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveJobCard": "Scheda · {destination}",
+  "@archiveJobCard": {
+    "description": "Riga di un lavoro in coda che salva solo la scheda della serie, chiesto dall'utente; destinazione",
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveJobCardUpdate": "Aggiornamento della scheda · {destination}",
+  "@archiveJobCardUpdate": {
+    "description": "Riga di un lavoro in coda messo dal controllo delle serie in corso, che aggiorna solo l'elenco dei capitoli di una scheda; destinazione",
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRecentCard": "Scheda · {when}",
+  "@archiveRecentCard": {
+    "description": "Sotto la copertina di una serie scaricata di recente, quando era solo la scheda; when è quando è finito",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveCheckCards": "capitoli nuovi in elenco, non scaricati, per le schede di {names}",
+  "@archiveCheckCards": {
+    "description": "Esito del controllo: schede (serie salvate senza capitoli) di cui si aggiorna solo l'elenco dei capitoli, nessuno scaricato (names è un elenco di titoli); è un pezzo di frase dopo cui viene il punto",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesOpenSite": "Apri sul sito",
+  "@seriesOpenSite": {
+    "description": "Etichetta dell'azione nella scheda della serie che apre la pagina della serie sul sito"
+  },
+  "seriesRefreshCard": "Aggiorna scheda",
+  "@seriesRefreshCard": {
+    "description": "Azione nella scheda della serie che rilegge dal sito i dati e l'elenco dei capitoli, senza scaricare capitoli"
+  },
+  "seriesDownloadMore": "Scarica altri capitoli",
+  "@seriesDownloadMore": {
+    "description": "Azione nella scheda della serie che apre la scelta dei capitoli da scaricare dal sito, per una serie che ne ha già alcuni"
+  },
+  "seriesStartDownload": "Inizia a scaricare",
+  "@seriesStartDownload": {
+    "description": "Pulsante principale della scheda di una serie senza capitoli scaricati: apre la scelta dei capitoli da scaricare dal sito"
+  },
+  "seriesStartDownloadMessage": "Questa serie è solo una scheda: i capitoli sono sul sito. Scaricali per leggerli qui, a partire da quello dopo l'ultimo letto.",
+  "@seriesStartDownloadMessage": {
+    "description": "Testo sopra il pulsante «Inizia a scaricare» nella scheda di una serie senza capitoli scaricati"
+  },
+  "seriesDownloadFromSite": "Scarica dal sito",
+  "@seriesDownloadFromSite": {
+    "description": "Etichetta del pulsante accanto a un capitolo non presente sul telefono né su Drive, che lo scarica dal sito della serie"
+  },
+  "seriesDownloadFromSiteQueued": "In coda dal sito",
+  "@seriesDownloadFromSiteQueued": {
+    "description": "Etichetta dell'indicatore accanto a un capitolo il cui download dal sito è in coda o in corso"
+  },
+  "coverCardBadge": "Scheda",
+  "@coverCardBadge": {
+    "description": "Pastiglia sulla copertina di una serie senza capitoli: una scheda salvata senza scaricare"
+  },
+  "coverReached": "Arrivato al cap. {number}",
+  "@coverReached": {
+    "description": "Sottotitolo in griglia di una scheda senza capitoli: il capitolo a cui l'utente è arrivato",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryOnlyCards": "Solo schede",
+  "@libraryOnlyCards": {
+    "description": "Interruttore nei filtri della libreria che lascia solo le schede, cioè le serie senza capitoli scaricati"
+  },
+  "seriesReachedTitle": "Arrivato a",
+  "@seriesReachedTitle": {
+    "description": "Titolo della voce del ripiano nella scheda della serie e del foglio che ne cambia il valore: il punto di lettura"
+  },
+  "seriesReachedNone": "Non iniziato",
+  "@seriesReachedNone": {
+    "description": "Valore della voce «Arrivato a» quando non si sa a che punto si è"
+  },
+  "seriesReachedChapter": "Cap. {number}",
+  "@seriesReachedChapter": {
+    "description": "Valore della voce «Arrivato a» quando si conosce solo il numero del capitolo",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesReachedSearch": "Cerca un capitolo",
+  "@seriesReachedSearch": {
+    "description": "Segnaposto della ricerca nel foglio che sceglie il capitolo a cui si è arrivati"
+  },
+  "seriesReachedNumberHint": "Numero del capitolo",
+  "@seriesReachedNumberHint": {
+    "description": "Segnaposto del campo del numero di capitolo per una scheda senza elenco di capitoli"
+  },
+  "seriesReachedNumberHelp": "Come lo scrive il sito, per esempio 52. Vuoto per toglierlo.",
+  "@seriesReachedNumberHelp": {
+    "description": "Nota sotto il campo del numero di capitolo"
+  },
+  "seriesReachedBackTitle": "Tornare indietro?",
+  "@seriesReachedBackTitle": {
+    "description": "Titolo della conferma quando si sposta «Arrivato a» su un capitolo precedente"
+  },
+  "seriesReachedBackMessage": "I capitoli dopo «{chapter}» restano segnati come letti: per rimetterli da leggere toglili dall'elenco dei capitoli.",
+  "@seriesReachedBackMessage": {
+    "description": "Messaggio di quella conferma: i capitoli successivi restano letti",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesReachedBackConfirm": "Sposta",
+  "@seriesReachedBackConfirm": {
+    "description": "Pulsante di conferma dello spostamento del punto di lettura all'indietro"
+  },
+  "seriesCardEmptyTitle": "Scheda senza capitoli",
+  "@seriesCardEmptyTitle": {
+    "description": "Titolo del vuoto nella scheda di una serie manuale, senza capitoli"
+  },
+  "seriesCardEmptyMessage": "Kagami non scarica da questo sito, ma la scheda tiene stato, voto, nota e punto di lettura.",
+  "@seriesCardEmptyMessage": {
+    "description": "Messaggio del vuoto di una scheda manuale: il sito non è supportato per il download"
+  },
+  "seriesLinkSite": "Collega a un sito",
+  "@seriesLinkSite": {
+    "description": "Azione nella scheda di una serie manuale: la lega a un sito da cui Kagami sa scaricare"
+  },
+  "seriesLinkTitle": "Collega a un sito",
+  "@seriesLinkTitle": {
+    "description": "Titolo del foglio in cui si incolla il link per collegare una scheda manuale a un sito"
+  },
+  "seriesLinkMessage": "Incolla il link della serie su un sito da cui Kagami sa scaricare. Stato, voto, nota, raccolte e punto di lettura passano alla serie vera, e questa scheda si toglie.",
+  "@seriesLinkMessage": {
+    "description": "Spiegazione nel foglio «Collega a un sito»: cosa passa alla serie vera e che la scheda manuale si toglie"
+  },
+  "seriesLinkHint": "Link della serie",
+  "@seriesLinkHint": {
+    "description": "Suggerimento del campo del link nel foglio «Collega a un sito»"
+  },
+  "seriesLinkContinue": "Continua",
+  "@seriesLinkContinue": {
+    "description": "Pulsante del foglio «Collega a un sito» che legge la serie dal sito"
+  },
+  "seriesLinkDone": "«{title}» collegata: la serie comparirà in libreria quando il lavoro sarà finito.",
+  "@seriesLinkDone": {
+    "description": "Conferma dopo aver collegato una scheda manuale a un sito: il lavoro è in coda; {title} è il titolo della serie",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveManualAction": "Aggiungi senza link",
+  "@archiveManualAction": {
+    "description": "Pulsante in «Scarica un manga»: apre il modulo per salvare una scheda senza link, senza scaricare niente"
+  },
+  "archiveManualUnsupported": "Kagami non sa scaricare da questo sito: puoi salvarlo come scheda con titolo e link, ma i capitoli non si potranno scaricare.",
+  "@archiveManualUnsupported": {
+    "description": "Avviso quando il link incollato in «Scarica un manga» è di un sito non supportato"
+  },
+  "archiveManualUnsupportedAction": "Salva come scheda",
+  "@archiveManualUnsupportedAction": {
+    "description": "Pulsante sotto l'avviso del sito non supportato: apre la scheda manuale col link già compilato"
+  },
+  "archiveManualTitle": "Scheda manuale",
+  "@archiveManualTitle": {
+    "description": "Titolo della pagina del modulo della scheda manuale"
+  },
+  "archiveManualTitleHint": "Titolo",
+  "@archiveManualTitleHint": {
+    "description": "Suggerimento del campo del titolo nella scheda manuale"
+  },
+  "archiveManualTitleRequired": "Scrivi un titolo.",
+  "@archiveManualTitleRequired": {
+    "description": "Errore nel campo del titolo della scheda manuale lasciato vuoto"
+  },
+  "archiveManualLinkHint": "Link alla pagina della serie (facoltativo)",
+  "@archiveManualLinkHint": {
+    "description": "Suggerimento del campo del link nella scheda manuale"
+  },
+  "archiveManualSupported": "Questo sito Kagami lo sa leggere: col percorso normale hai l'elenco dei capitoli e puoi scaricarli.",
+  "@archiveManualSupported": {
+    "description": "Avviso nella scheda manuale quando il link è di un sito supportato"
+  },
+  "archiveManualSupportedAction": "Usa il percorso normale",
+  "@archiveManualSupportedAction": {
+    "description": "Pulsante nell'avviso del sito supportato nella scheda manuale: torna a «Scarica un manga» e legge il link"
+  },
+  "archiveManualNoDownload": "Di questo sito i capitoli non si potranno scaricare: resta il link, e titolo e copertina se la pagina li dichiara.",
+  "@archiveManualNoDownload": {
+    "description": "Nota sotto il link, nella scheda manuale, per un sito non supportato"
+  },
+  "archiveManualReachedHint": "Arrivato al capitolo (es. 52)",
+  "@archiveManualReachedHint": {
+    "description": "Suggerimento del campo del capitolo a cui si è arrivati nella scheda manuale"
+  },
+  "archiveManualWhereDrive": "La scheda si salva su Drive, nella cartella della libreria.",
+  "@archiveManualWhereDrive": {
+    "description": "Dove va la scheda manuale quando la libreria ha una cartella di Drive"
+  },
+  "archiveManualWherePhone": "La scheda si salva sul telefono.",
+  "@archiveManualWherePhone": {
+    "description": "Dove va la scheda manuale quando non c'è Drive"
+  },
+  "archiveManualSave": "Salva la scheda",
+  "@archiveManualSave": {
+    "description": "Pulsante di salvataggio della scheda manuale"
+  },
+  "archiveManualSaved": "Scheda di «{title}» salvata.",
+  "@archiveManualSaved": {
+    "description": "Avviso dopo aver salvato una scheda manuale",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveManualExists": "Questo link è già in libreria: «{title}».",
+  "@archiveManualExists": {
+    "description": "Avviso quando il link della scheda manuale è già di una serie in libreria, che viene aperta",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveManualNeedsDrive": "Per salvare la scheda su Drive serve il permesso di scrivere.",
+  "@archiveManualNeedsDrive": {
+    "description": "Errore se l'utente non concede il permesso di scrittura su Drive salvando una scheda manuale"
+  },
+  "archiveManualFailed": "Non sono riuscito a salvare la scheda: {error}",
+  "@archiveManualFailed": {
+    "description": "Errore generico nel salvare una scheda manuale",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveImportAction": "Importa più link",
+  "@archiveImportAction": {
+    "description": "Pulsante in «Scarica un manga» che apre l'import di tanti link"
+  },
+  "archiveImportTitle": "Importa più link",
+  "@archiveImportTitle": {
+    "description": "Titolo della pagina dell'import di tanti link"
+  },
+  "archiveImportIntro": "Incolla dei link: le schede del browser, un elenco, un JSON. Ogni manga diventa una scheda in libreria, senza scaricare capitoli; dal link di un capitolo, arrivato a quel capitolo.",
+  "@archiveImportIntro": {
+    "description": "Spiegazione in cima alla pagina dell'import di tanti link"
+  },
+  "archiveImportHint": "Incolla qui il testo con i link…",
+  "@archiveImportHint": {
+    "description": "Testo segnaposto del campo in cui si incollano i link da importare"
+  },
+  "archiveImportFound": "{count, plural, =0{Nessun link trovato} =1{Un link trovato} other{{count} link trovati}}",
+  "@archiveImportFound": {
+    "description": "Quanti link diversi sono stati trovati nel testo incollato",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportWhereDrive": "Le schede si salvano su Drive, nella cartella della libreria.",
+  "@archiveImportWhereDrive": {
+    "description": "Dove si salvano le schede dell'import, se la libreria ha una cartella di Drive"
+  },
+  "archiveImportWherePhone": "Le schede si salvano sul telefono.",
+  "@archiveImportWherePhone": {
+    "description": "Dove si salvano le schede dell'import, senza cartella di Drive"
+  },
+  "archiveImportCollection": "Aggiungi a una raccolta",
+  "@archiveImportCollection": {
+    "description": "Opzione dell'import: la raccolta in cui mettere tutte le serie importate"
+  },
+  "archiveImportCollectionNone": "Nessuna raccolta",
+  "@archiveImportCollectionNone": {
+    "description": "L'import non mette le serie in nessuna raccolta"
+  },
+  "archiveImportPause": "Pausa fra un link e l'altro",
+  "@archiveImportPause": {
+    "description": "Opzione dell'import: quanto aspettare fra la lettura di una serie e la seguente"
+  },
+  "archiveImportPauseHint": "Le serie si leggono dal sito una alla volta: una pausa più lunga pesa meno sui siti.",
+  "@archiveImportPauseHint": {
+    "description": "Spiegazione sotto la pausa dell'import"
+  },
+  "archiveImportSeconds": "{seconds} s",
+  "@archiveImportSeconds": {
+    "description": "Una durata in secondi fra le scelte della pausa dell'import",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportStart": "{count, plural, =1{Importa un link} other{Importa {count} link}}",
+  "@archiveImportStart": {
+    "description": "Pulsante che avvia l'import dei link trovati",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportStop": "Ferma",
+  "@archiveImportStop": {
+    "description": "Pulsante che ferma l'import dopo il link in corso"
+  },
+  "archiveImportResume": "Continua",
+  "@archiveImportResume": {
+    "description": "Pulsante che riprende l'import fermato"
+  },
+  "archiveImportWaiting": "In attesa",
+  "@archiveImportWaiting": {
+    "description": "Stato di un link dell'import non ancora letto"
+  },
+  "archiveImportRunning": "In corso…",
+  "@archiveImportRunning": {
+    "description": "Stato del link dell'import che si sta leggendo"
+  },
+  "archiveImportSaved": "Salvata come scheda",
+  "@archiveImportSaved": {
+    "description": "Stato di un link dell'import salvato come scheda di una serie di un sito"
+  },
+  "archiveImportSavedReached": "Salvata come scheda · arrivato al {chapter}",
+  "@archiveImportSavedReached": {
+    "description": "Stato di un link dell'import salvato come scheda, col capitolo a cui si è arrivati",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveImportManual": "Scheda manuale: Kagami non potrà scaricarne i capitoli",
+  "@archiveImportManual": {
+    "description": "Stato di un link dell'import di un sito non supportato, salvato come scheda manuale"
+  },
+  "archiveImportKnown": "Già in libreria: «{title}»",
+  "@archiveImportKnown": {
+    "description": "Stato di un link dell'import la cui serie è già in libreria, saltato",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveImportQueued": "Già in coda",
+  "@archiveImportQueued": {
+    "description": "Stato di un link dell'import la cui serie è già nella coda dei download, saltato"
+  },
+  "archiveImportNeedsCheck": "Il sito chiede una verifica",
+  "@archiveImportNeedsCheck": {
+    "description": "Stato di un link dell'import il cui sito chiede la verifica del browser"
+  },
+  "archiveImportVerify": "Verifica",
+  "@archiveImportVerify": {
+    "description": "Pulsante su un link dell'import che apre la verifica del sito"
+  },
+  "archiveImportRetry": "Riprova",
+  "@archiveImportRetry": {
+    "description": "Pulsante su un link dell'import andato male, per riprovarlo"
+  },
+  "archiveImportCheckHint": "Alcuni siti chiedono una verifica del browser: toccane uno e superala, gli altri link dello stesso sito ripartono da soli.",
+  "@archiveImportCheckHint": {
+    "description": "Avviso nell'import quando dei link aspettano la verifica del browser"
+  },
+  "archiveImportProgress": "{done} di {total}",
+  "@archiveImportProgress": {
+    "description": "Quanti link dell'import sono finiti, su tutti",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportCountSaved": "{count, plural, =1{1 scheda} other{{count} schede}}",
+  "@archiveImportCountSaved": {
+    "description": "Contatore dell'import: schede di serie dei siti salvate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportCountManual": "{count, plural, =1{1 manuale} other{{count} manuali}}",
+  "@archiveImportCountManual": {
+    "description": "Contatore dell'import: schede manuali salvate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportCountKnown": "{count, plural, =1{1 già presente} other{{count} già presenti}}",
+  "@archiveImportCountKnown": {
+    "description": "Contatore dell'import: link saltati perché già in libreria o in coda",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportCountFailed": "{count, plural, =1{1 errore} other{{count} errori}}",
+  "@archiveImportCountFailed": {
+    "description": "Contatore dell'import: link andati male",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportCountCheck": "{count, plural, =1{1 da verificare} other{{count} da verificare}}",
+  "@archiveImportCountCheck": {
+    "description": "Contatore dell'import: link che aspettano la verifica del browser",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveImportLeaveTitle": "Fermare l'import?",
+  "@archiveImportLeaveTitle": {
+    "description": "Titolo della domanda quando si esce dall'import mentre è in corso"
+  },
+  "archiveImportLeaveBody": "Le schede già salvate restano; i link che mancano non si importano.",
+  "@archiveImportLeaveBody": {
+    "description": "Testo della domanda quando si esce dall'import mentre è in corso"
+  },
+  "archiveImportLeaveConfirm": "Ferma ed esci",
+  "@archiveImportLeaveConfirm": {
+    "description": "Conferma per uscire dall'import fermandolo"
+  },
+  "shareNoLinks": "Nel testo condiviso non c'è nessun link.",
+  "@shareNoLinks": {
+    "description": "Avviso quando si condivide con Kagami un testo senza link"
   }
 }

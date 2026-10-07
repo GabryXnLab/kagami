@@ -658,10 +658,33 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get archiveIntro =>
-      'समर्थित साइटों पर शीर्षक खोजें, या किसी सीरीज़ का लिंक पेस्ट करें: Kagami उसे साइट से मेटाडेटा, कवर और अध्यायों की पूरी सूची के साथ लाइब्रेरी में डाउनलोड कर देता है।';
+      'समर्थित साइटों पर शीर्षक खोजें, या किसी सीरीज़ या उसके किसी अध्याय का लिंक पेस्ट करें: Kagami उसे साइट से मेटाडेटा, कवर और अध्यायों की पूरी सूची के साथ लाइब्रेरी में डाउनलोड कर देता है। या बिना अध्यायों के सिर्फ़ उसका कार्ड सहेज लेता है।';
 
   @override
   String get archiveSearchHint => 'शीर्षक से मांगा खोजें';
+
+  @override
+  String get archiveFilterOngoing => 'जारी';
+
+  @override
+  String get archiveFilterCompleted => 'पूर्ण';
+
+  @override
+  String get archiveFilterNotInLibrary => 'लाइब्रेरी में नहीं';
+
+  @override
+  String get archiveInLibrary => 'लाइब्रेरी में';
+
+  @override
+  String archiveResultsFiltered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count परिणाम, फ़िल्टर से छिपे',
+      one: '1 परिणाम, फ़िल्टर से छिपा',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get archiveClear => 'मिटाएँ';
@@ -992,6 +1015,28 @@ class AppLocalizationsHi extends AppLocalizations {
   String get archiveRecent => 'हाल में डाउनलोड की गईं';
 
   @override
+  String archiveRecentAll(int count) {
+    return 'सभी ($count)';
+  }
+
+  @override
+  String get archiveRecentFailed => 'विफल';
+
+  @override
+  String get archiveFollowedTitle => 'फ़ॉलो की गई सीरीज़';
+
+  @override
+  String archiveFollowedProblems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count पर ध्यान दें',
+      one: '1 पर ध्यान दें',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String archiveRecentLineRuns(String when, int runs, String message) {
     return '$when · $runs डाउनलोड · $message';
   }
@@ -1183,7 +1228,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get serverTitle => 'सर्वर';
 
   @override
-  String get serverClear => 'साफ़ करें';
+  String get serverRecent => 'सर्वर द्वारा डाउनलोड की गई';
 
   @override
   String get serverUnavailableNoSecret =>
@@ -1365,33 +1410,6 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String serverSeriesAhead(int count) {
     return 'पढ़ते-पढ़ते, $count पढ़ने को तैयार: आप पढ़ते हैं तब ऐप चैप्टर माँगता है';
-  }
-
-  @override
-  String get serverOngoingTitle => 'सर्वर पर जारी सीरीज़';
-
-  @override
-  String serverOngoingCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ट्रैक हो रही हैं',
-      zero: 'अभी कोई नहीं',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get serverOngoingCheckOff => 'जाँच बंद';
-
-  @override
-  String serverOngoingCheckAt(String clock) {
-    return 'जाँच $clock बजे';
-  }
-
-  @override
-  String serverOngoingSubtitle(String count, String check) {
-    return '$count · $check। अभी जाँचने के लिए टैप करें';
   }
 
   @override
@@ -2579,6 +2597,17 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String homeSiteChapters(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$site पर $count नए',
+      one: '$site पर 1 नया',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get homeAgoToday => 'आज';
 
   @override
@@ -3322,6 +3351,17 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String dataNewSiteChaptersNotification(int count, String site) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$site पर $count नए अध्याय आए हैं',
+      one: '$site पर एक नया अध्याय आया है',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get dataArchivePhoneFolderMissing => 'फ़ोन का फ़ोल्डर नहीं चुना गया।';
 
   @override
@@ -3486,4 +3526,437 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get serverCheckTimeHelp => 'जाँच का समय';
+
+  @override
+  String get seriesRatingInviteTitle => 'आप इसे कितने अंक देंगे?';
+
+  @override
+  String get seriesRatingInviteBody =>
+      'रेटिंग से लाइब्रेरी को फ़िल्टर और क्रमबद्ध किया जाता है, और यह आँकड़ों में गिनी जाती है।';
+
+  @override
+  String get seriesRatingInviteRate => 'रेटिंग दें';
+
+  @override
+  String get seriesRatingInviteIgnore => 'अनदेखा करें';
+
+  @override
+  String get seriesRatingInviteNever => 'दोबारा न पूछें';
+
+  @override
+  String get settingsRatingInvite => 'सीरीज़ खोलने पर रेटिंग माँगें';
+
+  @override
+  String get settingsRatingInviteNote =>
+      'बिना रेटिंग वाली सीरीज़ के पेज पर रेटिंग देने का सुझाव दिखता है';
+
+  @override
+  String get archiveModeCard => 'सिर्फ़ कार्ड';
+
+  @override
+  String get archiveModeCardLine =>
+      'कोई अध्याय नहीं: स्थिति, रेटिंग और आप कहाँ तक पहुँचे';
+
+  @override
+  String get archiveModeCardHint =>
+      'अध्याय डाउनलोड किए बिना सीरीज़ को लाइब्रेरी में सहेजता है: कवर, मेटाडेटा, अध्यायों की सूची और साइट का लिंक। बताइए आप कहाँ तक पहुँचे: वह अध्याय और उससे पहले के पढ़े हुए माने जाएँगे। अध्याय बाद में डाउनलोड किए जा सकते हैं।';
+
+  @override
+  String get archiveReachedSection => 'यहाँ तक पढ़ा…';
+
+  @override
+  String get archiveReachedHint => 'आख़िरी पढ़े हुए अध्याय पर टैप करें।';
+
+  @override
+  String get archiveReachedNone => 'शुरू नहीं किया';
+
+  @override
+  String get archiveChapterReached => 'यहाँ तक पढ़ा';
+
+  @override
+  String get archiveCardServer =>
+      'कार्ड फ़ोन सहेजता है: जुड़ा हुआ सर्वर सिर्फ़ अध्याय डाउनलोड करता है।';
+
+  @override
+  String get archiveCardNotesHint => 'अपने लिए एक नोट (वैकल्पिक)';
+
+  @override
+  String archiveSummaryCard(String where) {
+    return 'कार्ड सहेजता है, कोई अध्याय डाउनलोड नहीं · $where';
+  }
+
+  @override
+  String archiveSummaryCardReached(String number, String where) {
+    return '$number तक पढ़ा हुआ कार्ड सहेजता है, कोई अध्याय डाउनलोड नहीं · $where';
+  }
+
+  @override
+  String get archiveSaveCard => 'कार्ड सहेजें';
+
+  @override
+  String archiveCardQueuedSnack(String title) {
+    return '“$title” का कार्ड सहेजा गया: कवर और अध्यायों की सूची जल्द ही आ जाएगी।';
+  }
+
+  @override
+  String archiveCardProgress(String message) {
+    return 'कार्ड · $message';
+  }
+
+  @override
+  String archiveJobCard(String destination) {
+    return 'कार्ड · $destination';
+  }
+
+  @override
+  String archiveJobCardUpdate(String destination) {
+    return 'कार्ड का अपडेट · $destination';
+  }
+
+  @override
+  String archiveRecentCard(String when) {
+    return 'कार्ड · $when';
+  }
+
+  @override
+  String archiveCheckCards(String names) {
+    return '$names के कार्ड में नए अध्याय सूची में जुड़े, डाउनलोड नहीं हुए';
+  }
+
+  @override
+  String get seriesOpenSite => 'साइट पर खोलें';
+
+  @override
+  String get seriesRefreshCard => 'कार्ड अपडेट करें';
+
+  @override
+  String get seriesDownloadMore => 'और अध्याय डाउनलोड करें';
+
+  @override
+  String get seriesStartDownload => 'डाउनलोड शुरू करें';
+
+  @override
+  String get seriesStartDownloadMessage =>
+      'यह सीरीज़ सिर्फ़ एक कार्ड है: अध्याय साइट पर हैं। आख़िरी पढ़े अध्याय के बाद वाले से डाउनलोड करें और यहीं पढ़ें।';
+
+  @override
+  String get seriesDownloadFromSite => 'साइट से डाउनलोड करें';
+
+  @override
+  String get seriesDownloadFromSiteQueued => 'साइट से कतार में';
+
+  @override
+  String get coverCardBadge => 'कार्ड';
+
+  @override
+  String coverReached(String number) {
+    return 'अध्याय $number तक पहुँचे';
+  }
+
+  @override
+  String get libraryOnlyCards => 'केवल कार्ड';
+
+  @override
+  String get seriesReachedTitle => 'यहाँ तक पहुँचे';
+
+  @override
+  String get seriesReachedNone => 'शुरू नहीं किया';
+
+  @override
+  String seriesReachedChapter(String number) {
+    return 'अध्याय $number';
+  }
+
+  @override
+  String get seriesReachedSearch => 'अध्याय खोजें';
+
+  @override
+  String get seriesReachedNumberHint => 'अध्याय संख्या';
+
+  @override
+  String get seriesReachedNumberHelp =>
+      'जैसे साइट पर लिखा है, उदाहरण 52। हटाने के लिए खाली छोड़ें।';
+
+  @override
+  String get seriesReachedBackTitle => 'पीछे जाएँ?';
+
+  @override
+  String seriesReachedBackMessage(String chapter) {
+    return '«$chapter» के बाद के अध्याय पढ़े हुए ही चिह्नित रहेंगे: उन्हें फिर अनपढ़ा करने के लिए अध्याय सूची में निशान हटाएँ।';
+  }
+
+  @override
+  String get seriesReachedBackConfirm => 'बदलें';
+
+  @override
+  String get seriesCardEmptyTitle => 'बिना अध्यायों वाला कार्ड';
+
+  @override
+  String get seriesCardEmptyMessage =>
+      'Kagami इस साइट से डाउनलोड नहीं करता, लेकिन कार्ड में स्थिति, रेटिंग, नोट और पढ़ने का स्थान रहता है।';
+
+  @override
+  String get seriesLinkSite => 'साइट से जोड़ें';
+
+  @override
+  String get seriesLinkTitle => 'साइट से जोड़ें';
+
+  @override
+  String get seriesLinkMessage =>
+      'किसी ऐसी साइट पर श्रृंखला का लिंक चिपकाएँ जहाँ से Kagami डाउनलोड कर सकता है। स्थिति, रेटिंग, नोट, संग्रह और पढ़ने का स्थान असली श्रृंखला पर चले जाते हैं, और यह कार्ड हटा दिया जाता है।';
+
+  @override
+  String get seriesLinkHint => 'श्रृंखला का लिंक';
+
+  @override
+  String get seriesLinkContinue => 'जारी रखें';
+
+  @override
+  String seriesLinkDone(String title) {
+    return '«$title» जुड़ गई: काम पूरा होने पर श्रृंखला लाइब्रेरी में दिखेगी।';
+  }
+
+  @override
+  String get archiveManualAction => 'बिना लिंक के जोड़ें';
+
+  @override
+  String get archiveManualUnsupported =>
+      'Kagami इस साइट से डाउनलोड नहीं कर सकता: आप इसे शीर्षक और लिंक वाले कार्ड के रूप में सहेज सकते हैं, पर अध्याय डाउनलोड नहीं होंगे।';
+
+  @override
+  String get archiveManualUnsupportedAction => 'कार्ड के रूप में सहेजें';
+
+  @override
+  String get archiveManualTitle => 'मैन्युअल कार्ड';
+
+  @override
+  String get archiveManualTitleHint => 'शीर्षक';
+
+  @override
+  String get archiveManualTitleRequired => 'शीर्षक लिखें।';
+
+  @override
+  String get archiveManualLinkHint => 'सीरीज़ पेज का लिंक (वैकल्पिक)';
+
+  @override
+  String get archiveManualSupported =>
+      'Kagami इस साइट को पढ़ सकता है: सामान्य रास्ते से आपको अध्यायों की सूची मिलती है और आप उन्हें डाउनलोड कर सकते हैं।';
+
+  @override
+  String get archiveManualSupportedAction => 'सामान्य रास्ता अपनाएँ';
+
+  @override
+  String get archiveManualNoDownload =>
+      'इस साइट के अध्याय डाउनलोड नहीं हो सकते: केवल लिंक रहता है, और पेज बताए तो शीर्षक व कवर भी।';
+
+  @override
+  String get archiveManualReachedHint => 'इस अध्याय तक पहुँचा (जैसे 52)';
+
+  @override
+  String get archiveManualWhereDrive =>
+      'कार्ड Drive में, लाइब्रेरी फ़ोल्डर में सहेजा जाएगा।';
+
+  @override
+  String get archiveManualWherePhone => 'कार्ड फ़ोन में सहेजा जाएगा।';
+
+  @override
+  String get archiveManualSave => 'कार्ड सहेजें';
+
+  @override
+  String archiveManualSaved(String title) {
+    return '«$title» का कार्ड सहेज लिया गया।';
+  }
+
+  @override
+  String archiveManualExists(String title) {
+    return 'यह लिंक पहले से लाइब्रेरी में है: «$title»।';
+  }
+
+  @override
+  String get archiveManualNeedsDrive =>
+      'कार्ड को Drive में सहेजने के लिए लिखने की अनुमति चाहिए।';
+
+  @override
+  String archiveManualFailed(String error) {
+    return 'कार्ड सहेजा नहीं जा सका: $error';
+  }
+
+  @override
+  String get archiveImportAction => 'कई लिंक आयात करें';
+
+  @override
+  String get archiveImportTitle => 'कई लिंक आयात करें';
+
+  @override
+  String get archiveImportIntro =>
+      'लिंक चिपकाएँ: ब्राउज़र के टैब, एक सूची, या JSON। हर मंगा अध्याय डाउनलोड किए बिना लाइब्रेरी में एक कार्ड बन जाता है; अध्याय के लिंक से, उस अध्याय तक पढ़ा हुआ माना जाता है।';
+
+  @override
+  String get archiveImportHint => 'लिंक वाला टेक्स्ट यहाँ चिपकाएँ…';
+
+  @override
+  String archiveImportFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count लिंक मिले',
+      one: 'एक लिंक मिला',
+      zero: 'कोई लिंक नहीं मिला',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportWhereDrive =>
+      'कार्ड Drive पर, लाइब्रेरी फ़ोल्डर में सहेजे जाते हैं।';
+
+  @override
+  String get archiveImportWherePhone => 'कार्ड फ़ोन पर सहेजे जाते हैं।';
+
+  @override
+  String get archiveImportCollection => 'किसी संग्रह में जोड़ें';
+
+  @override
+  String get archiveImportCollectionNone => 'कोई संग्रह नहीं';
+
+  @override
+  String get archiveImportPause => 'लिंकों के बीच विराम';
+
+  @override
+  String get archiveImportPauseHint =>
+      'सीरीज़ साइट से एक-एक करके पढ़ी जाती हैं: लंबा विराम साइटों पर कम भार डालता है।';
+
+  @override
+  String archiveImportSeconds(int seconds) {
+    return '$seconds से';
+  }
+
+  @override
+  String archiveImportStart(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count लिंक आयात करें',
+      one: 'एक लिंक आयात करें',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportStop => 'रोकें';
+
+  @override
+  String get archiveImportResume => 'जारी रखें';
+
+  @override
+  String get archiveImportWaiting => 'प्रतीक्षा में';
+
+  @override
+  String get archiveImportRunning => 'जारी है…';
+
+  @override
+  String get archiveImportSaved => 'कार्ड के रूप में सहेजा गया';
+
+  @override
+  String archiveImportSavedReached(String chapter) {
+    return 'कार्ड के रूप में सहेजा गया · अध्याय $chapter तक पढ़ा';
+  }
+
+  @override
+  String get archiveImportManual =>
+      'मैनुअल कार्ड: Kagami इसके अध्याय डाउनलोड नहीं कर पाएगा';
+
+  @override
+  String archiveImportKnown(String title) {
+    return 'पहले से लाइब्रेरी में: “$title”';
+  }
+
+  @override
+  String get archiveImportQueued => 'पहले से कतार में';
+
+  @override
+  String get archiveImportNeedsCheck => 'साइट जाँच माँग रही है';
+
+  @override
+  String get archiveImportVerify => 'जाँचें';
+
+  @override
+  String get archiveImportRetry => 'फिर कोशिश करें';
+
+  @override
+  String get archiveImportCheckHint =>
+      'कुछ साइटें ब्राउज़र जाँच माँगती हैं: किसी एक पर टैप करके जाँच पूरी करें, उसी साइट के बाकी लिंक अपने आप फिर शुरू होंगे।';
+
+  @override
+  String archiveImportProgress(int done, int total) {
+    return '$total में से $done';
+  }
+
+  @override
+  String archiveImportCountSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count कार्ड',
+      one: '1 कार्ड',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountManual(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count मैनुअल',
+      one: '1 मैनुअल',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountKnown(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count पहले से मौजूद',
+      one: '1 पहले से मौजूद',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count त्रुटियाँ',
+      one: '1 त्रुटि',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveImportCountCheck(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count जाँचने बाकी',
+      one: '1 जाँचना बाकी',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveImportLeaveTitle => 'आयात रोकें?';
+
+  @override
+  String get archiveImportLeaveBody =>
+      'पहले से सहेजे कार्ड बने रहेंगे; बाकी लिंक आयात नहीं होंगे।';
+
+  @override
+  String get archiveImportLeaveConfirm => 'रोकें और बाहर निकलें';
+
+  @override
+  String get shareNoLinks => 'साझा किए गए टेक्स्ट में कोई लिंक नहीं है।';
 }

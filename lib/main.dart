@@ -14,6 +14,7 @@ import 'src/data/folder_sync_schedule.dart';
 import 'src/data/library_location.dart';
 import 'src/data/network.dart';
 import 'src/data/notifications.dart';
+import 'src/data/share_intake.dart';
 import 'src/l10n.dart';
 import 'src/providers.dart';
 import 'src/ui/app_shell.dart';
@@ -26,6 +27,7 @@ Future<void> main() async {
   await initCloud();
   NetworkMonitor.instance.start();
   ArrivalNotifications.instance.start();
+  SharedText.instance.start();
   final directories = await AppDirectories.resolve();
   await _withSentry(
     () => runApp(

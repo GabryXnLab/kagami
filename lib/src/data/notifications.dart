@@ -99,7 +99,12 @@ class ArrivalNotifications {
       await channel.invokeMethod<void>('show', {
         'key': alert.entry.key,
         'title': alert.entry.title,
-        'text': currentL10n().dataNewChaptersNotification(alert.count),
+        'text': alert.onSite
+            ? currentL10n().dataNewSiteChaptersNotification(
+                alert.count,
+                siteName(alert.entry),
+              )
+            : currentL10n().dataNewChaptersNotification(alert.count),
       });
     }
   }

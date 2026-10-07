@@ -21,6 +21,9 @@ import 'kit.dart';
 
 final RegExp _seriesPath = RegExp(r'^/manhwa/([a-z0-9]+(?:-[a-z0-9]+)*)/?$');
 final RegExp _chapterData = RegExp(r'\bchapterData\s*=\s*');
+const Set<String> _siteHosts = {'manhwaread.com', 'www.manhwaread.com'};
+final RegExp _chapterPath =
+    RegExp(r'^/manhwa/([a-z0-9]+(?:-[a-z0-9]+)*)/[a-z0-9]+(?:-[a-z0-9]+)*/?$');
 final RegExp _postId = RegExp(r'\bpostid-(\d+)\b');
 
 const Map<String, String> _labels = {
@@ -217,7 +220,13 @@ class ManhwaRead extends Provider {
 
   @override
   bool accepts(String url) =>
-      siteLink(url, hosts: const {'manhwaread.com', 'www.manhwaread.com'}, path: _seriesPath, plain: true);
+      siteLink(url, hosts: _siteHosts, path: _seriesPath, plain: true);
+
+  @override
+  String? seriesOfChapter(String url) {
+    final found = siteMatch(url, hosts: _siteHosts, path: _chapterPath);
+    return found == null ? null : 'https://manhwaread.com/manhwa/${found[1]}/';
+  }
 
   @override
   bool allowedHost(Uri uri) =>

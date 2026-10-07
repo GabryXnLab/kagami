@@ -138,6 +138,9 @@ class ArchiveJob {
   /// coda i seguenti a mano a mano che si leggono.
   final int? ahead;
 
+  /// Solo la scheda: metadati, copertina e indici, nessun capitolo.
+  bool get cardOnly => start == null && ids != null && ids!.isEmpty;
+
   /// Lo stesso lavoro con [more] capitoli in più.
   ArchiveJob including(Set<String> more) => ArchiveJob(
         id: id,
@@ -265,6 +268,7 @@ class ArchiveOutcome {
     required this.finishedAt,
     this.seriesKey,
     this.url,
+    this.card = false,
   });
 
   factory ArchiveOutcome.fromJson(Map<String, Object?> json) => ArchiveOutcome(
@@ -274,6 +278,7 @@ class ArchiveOutcome {
         finishedAt: DateTime.tryParse('${json['finishedAt']}') ?? DateTime.now(),
         seriesKey: json['key'] as String?,
         url: json['url'] as String?,
+        card: json['card'] == true,
       );
 
   final String title;
@@ -285,6 +290,9 @@ class ArchiveOutcome {
   /// Il link chiesto: un download fallito si riprova da lì.
   final String? url;
 
+  /// Era solo la scheda ([ArchiveJob.cardOnly]): l'app la mostra come tale.
+  final bool card;
+
   Map<String, Object?> toJson() => {
         'title': title,
         'ok': ok,
@@ -292,6 +300,7 @@ class ArchiveOutcome {
         'finishedAt': finishedAt.toIso8601String(),
         'key': ?seriesKey,
         'url': ?url,
+        if (card) 'card': true,
       };
 }
 
@@ -392,8 +401,10 @@ class ArchiveFiles {
           queue.add(job);
         } else if (!job.automatic) {
           // La stessa serie due volte in coda è un doppione: vale l'ultima
-          // richiesta, che è quella che l'utente ha in mente.
-          queue[same] = job;
+          // richiesta, che è quella che l'utente ha in mente. Una scheda
+          // però non cancella un download: anche lui riscrive metadati e
+          // indici, e in più porta i capitoli.
+          if (!job.cardOnly || queue[same].cardOnly) queue[same] = job;
         } else if (queue[same].ids != null) {
           // Un lavoro messo in coda dall'app non prende il posto di un
           // altro: gli aggiunge i suoi capitoli. Uno che prende tutta la

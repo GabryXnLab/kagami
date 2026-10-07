@@ -14,6 +14,7 @@ library;
 
 import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/manual.dart' show normalizeLink;
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
 
@@ -26,6 +27,10 @@ import 'library_repository.dart';
 
 /// Toglie [entry] da [holders]. Drive solo con [writer], che ha il permesso
 /// di scrivere, e [folderId], la cartella della libreria.
+///
+/// I lavori in coda per i link di [keepUrls] (già normalizzati) restano: chi
+/// toglie una scheda manuale per metterci al posto la serie vera li ha appena
+/// accodati, e il link della scheda può essere lo stesso.
 Future<void> removeSeries(
   SeriesEntry entry, {
   required List<LibraryShelf> holders,
@@ -34,6 +39,7 @@ Future<void> removeSeries(
   DriveFiles? drive,
   DriveClient? writer,
   String? folderId,
+  Set<String> keepUrls = const {},
 }) async {
   // Prima ciò che la riscaricherebbe: un giro che finisse dopo riscriverebbe
   // cartella e riga.
@@ -43,7 +49,7 @@ Future<void> removeSeries(
       if (series.key == entry.key) series.url,
     for (final outcome in await archive.history())
       if (outcome.seriesKey == entry.key) ?outcome.url,
-  };
+  }..removeWhere((url) => keepUrls.contains(normalizeLink(url)));
   await tracking.forget(entry.key);
   final jobs = [for (final job in await archive.jobs()) if (urls.contains(job.url)) job];
   final status = await archive.status();

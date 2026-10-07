@@ -24,7 +24,13 @@
          (http://192.168.…, http://nome-server): gli indirizzi sono dell'utente
          e non si possono elencare in una network security config. L'app
          avvisa quando un http:// è pubblico (`isPrivateAddress`). -->
+    <!-- Niente backup automatico di Android: reinstallando rimetteva il
+         database, la coda dei download e i ricordi della sincronizzazione
+         com'erano al suo ultimo backup, fino a un giorno prima. I dati
+         personali hanno già il loro backup e l'account, che fondono; una
+         copia vecchia rimessa in silenzio è solo una che può vincere. -->
     <application
+        android:allowBackup="false"
         android:label="Kagami"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
@@ -49,6 +55,14 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Condividi → Kagami: uno o più link, o il JSON di un'automazione,
+                 verso «Scarica un manga» (SharedText.kt). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
             </intent-filter>
         </activity>
         <!-- Il servizio con cui WorkManager tiene in primo piano

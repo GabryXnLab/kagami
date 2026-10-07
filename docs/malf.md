@@ -101,6 +101,9 @@ avrebbe due numerazioni. Un nome senza numero fa da numero a sé («Side Story
 stesso modo da tutti quelli che scrivono (`chapterNumber` in Kagami,
 `chapter_number` in MangaArchive).
 
+Il provider `manual` non è un sito: è quello delle schede manuali (vedi
+[Schede](#schede)), con chiave `manual:<id>`.
+
 ## `library.json`
 
 Una riga per serie, con quanto basta a disegnare la griglia e a filtrare:
@@ -108,6 +111,11 @@ titolo, percorso, copertina e miniatura con dimensioni, `releaseStatus`,
 autori, artisti, generi, tag, conteggi (`chapterCount` è quanto il provider
 pubblica, `archivedChapterCount` quanto è scaricato e completo), ultimo capitolo
 archiviato, `updatedAt` del provider, `archivedAt` locale e `signature`.
+
+`source` è il link della pagina della serie sul sito, lo stesso di
+`series.json` e di `index.json`: è da lì che un archiviatore la rilegge per i
+capitoli nuovi, e che un client la apre nel browser. Può essere `null` solo
+per una scheda manuale senza link; un client che non lo conosce lo ignora.
 
 La descrizione non c'è di proposito: moltiplicata per le serie peserebbe più di
 tutto il resto e serve solo alla scheda di dettaglio, che legge `series.json`.
@@ -118,7 +126,8 @@ quando la firma cambia, senza confrontare capitolo per capitolo.
 
 ## `index.json` e `pages.json`
 
-`index.json` elenca i capitoli con `id`, `number`, `title`, `order`, `sortKey`,
+`index.json` porta in testa chiave, provider, titolo, `source`, `releaseStatus`,
+copertina, conteggi e firma, ed elenca i capitoli con `id`, `number`, `title`, `order`, `sortKey`,
 `path` relativo, `archived`, `complete`, `pageCount`, `bytes` e le date. Non
 contiene le pagine: la lista capitoli si apre a ogni visita, le pagine no.
 
@@ -171,7 +180,8 @@ capitoli noti ma non ancora scaricati, chi archivia può aver chiesto di partire
 da un capitolo preciso (i precedenti restano qui, senza `path` e con
 `pageCount: 0`) e la sincronizzazione del telefono può essere a metà. Il client
 mostra ciò che ha, segnala gli altri come non scaricati e non considera l'indice
-un errore.
+un errore. Una serie può anche non avere **nessun** capitolo archiviato: è una
+scheda (sotto).
 
 ## `.nomedia`
 
@@ -199,6 +209,36 @@ il dato archiviato.
 
 Su una serie `ongoing` il confronto fra `chapterCount` e `archivedChapterCount`
 dice quanti capitoli esistono ma non sono ancora stati scaricati.
+
+## Schede
+
+Una scheda è una serie salvata in libreria senza scaricarne i capitoli:
+`series.json` completo, copertina e miniatura, `index.json` con tutti i
+capitoli del sito e nessuno archiviato (`archivedChapterCount: 0`,
+`pages.json` con `pages` vuoto) e la sua riga di libreria, con `source`. È uno
+stato normale, non una serie rotta: i capitoli si possono archiviare dopo,
+nella stessa cartella, e da quel momento è una serie come le altre. Kagami
+aggiorna la scheda riscrivendo `series.json`, gli indici e la sua riga, mai
+togliendo capitoli già archiviati; seguendo una scheda di una serie in corso
+elenca i capitoli nuovi nell'indice senza scaricarli. Chi controlla tutta la
+libreria per i capitoli nuovi riconosce una scheda perché nessun capitolo
+dell'indice è `archived`, e ne aggiorna l'indice invece di scaricarli.
+
+### Schede manuali
+
+Una serie di un sito che nessun archiviatore sa leggere, o senza link, è una
+scheda **manuale**: `provider` è `manual`, `id` sono i primi 12 esadecimali
+dello SHA-256 del link normalizzato (schema e host minuscoli, senza frammento
+e senza `/` finale) o, senza link, 12 esadecimali a caso; la cartella è
+`<titolo> [manual-<id>]`. `series.json` ha `chapters` vuoto, `source` è il link
+così come l'utente l'ha dato o `null`, `metadata` ha la forma consueta e la
+copertina è facoltativa. Gli indici e la riga si scrivono come per ogni
+altra serie, con zero capitoli, e con le stesse regole di «Chi scrive».
+
+`manual` non è un sito da cui scaricare: un archiviatore non rilegge mai una
+serie `manual`, né per i capitoli nuovi né per completarla, anche se il suo
+`source` è di un sito che conosce. Un client o un archiviatore che non conosce
+`manual` la tratta come una serie qualsiasi senza capitoli.
 
 ## `reading/` — spazio del client
 
@@ -234,7 +274,9 @@ non letto.
 
 `tiles` è un campo in più e facoltativo, quindi non cambia `formatVersion`:
 una libreria senza tessere è una libreria MALF 1 valida, come una con le
-tessere solo su una parte dei capitoli.
+tessere solo su una parte dei capitoli. Lo stesso vale per le schede e per il
+provider `manual`: sono serie MALF 1 con zero capitoli archiviati, o zero
+capitoli, che un lettore vecchio mostra come tali.
 
 `schemaVersion` 3 dei manifest e MALF 1 arrivano insieme. Le librerie scritte
 con lo schema 2 restano leggibili: non hanno gli indici né le miniature finché

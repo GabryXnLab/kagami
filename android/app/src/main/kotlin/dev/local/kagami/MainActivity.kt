@@ -17,6 +17,7 @@ class MainActivity : FlutterActivity() {
     private var sync: FolderSyncScheduler? = null
     private var archiveImages: ArchiveImages? = null
     private var archive: ArchiveScheduler? = null
+    private var shared: SharedText? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -27,6 +28,7 @@ class MainActivity : FlutterActivity() {
         sync = FolderSyncScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         archiveImages = ArchiveImages(flutterEngine.dartExecutor.binaryMessenger)
         archive = ArchiveScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        shared = SharedText(flutterEngine.dartExecutor.binaryMessenger).also { it.launchedBy(intent) }
         // Un link che si apre nel browser: un pacchetto intero per una riga
         // di Intent non vale la dipendenza.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "kagami/links")
@@ -67,6 +69,7 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         arrivals?.opened(intent)
+        shared?.opened(intent)
     }
 
     override fun onDestroy() {
@@ -82,6 +85,8 @@ class MainActivity : FlutterActivity() {
         archiveImages = null
         archive?.dispose()
         archive = null
+        shared?.dispose()
+        shared = null
         super.onDestroy()
     }
 }

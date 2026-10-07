@@ -23,6 +23,7 @@ library;
 import 'http.dart';
 import 'model.dart';
 import 'providers/asurascans.dart';
+import 'providers/kit.dart' show chapterKey;
 import 'providers/mangak.dart';
 import 'providers/manhwaread.dart';
 
@@ -38,6 +39,15 @@ abstract class Provider {
 
   /// Se [url] è il link di una serie di questo sito.
   bool accepts(String url);
+
+  /// Se [url] è il link di una pagina di capitolo di questo sito, il link
+  /// della sua serie, nella forma che [fetchSeries] accetta; altrimenti
+  /// `null`. Chi tiene aperto un capitolo nel browser incolla questo.
+  String? seriesOfChapter(String url);
+
+  /// [url] di un capitolo nella forma con cui [Chapter.url] lo elenca, per
+  /// confrontare il link incollato con quelli di [fetchSeries].
+  String chapterKeyOf(String url) => chapterKey(url);
 
   /// Se l'app può chiedere qualcosa a questo host per conto del sito.
   bool allowedHost(Uri uri);
@@ -138,15 +148,62 @@ String? chapterNumber(String title) {
   return '${int.parse(found[1]!)}${found[2] != null ? '.${found[2]}' : ''}';
 }
 
+/// Un link che nessun sito registrato riconosce: l'app lo distingue dagli
+/// altri errori per proporre la scheda manuale.
+class UnsupportedLink extends ProviderError {
+  UnsupportedLink()
+      : super(
+          'Link non supportato. Siti disponibili: '
+          '${providers.map((provider) => provider.name).join(', ')}.',
+        );
+}
+
+/// Un link incollato: la serie da leggere e, se era il link di un capitolo,
+/// quale.
+class SeriesLink {
+  const SeriesLink({required this.provider, required this.seriesUrl, this.chapterUrl});
+
+  final Provider provider;
+
+  /// Il link della serie: quello incollato, o quello ricavato dal capitolo.
+  final String seriesUrl;
+
+  /// Il link incollato, se era quello di un capitolo.
+  final String? chapterUrl;
+}
+
+/// Il link di una serie, e solo quello: chi scarica per lavoro ha sempre la
+/// serie. Lancia [UnsupportedLink] se nessun sito lo riconosce.
 Provider selectProvider(String url) {
   final matches = providers.where((provider) => provider.accepts(url)).toList();
-  if (matches.length != 1) {
-    throw ProviderError(
-      'Link non supportato. Siti disponibili: '
-      '${providers.map((provider) => provider.name).join(', ')}.',
-    );
-  }
+  if (matches.length != 1) throw UnsupportedLink();
   return matches.single;
+}
+
+/// Il link di una serie o di un capitolo di un sito registrato. Lancia
+/// [UnsupportedLink] se nessuno lo riconosce.
+SeriesLink resolveLink(String url) {
+  for (final provider in providers) {
+    if (provider.accepts(url)) return SeriesLink(provider: provider, seriesUrl: url);
+  }
+  for (final provider in providers) {
+    final series = provider.seriesOfChapter(url);
+    if (series != null) {
+      return SeriesLink(provider: provider, seriesUrl: series, chapterUrl: url);
+    }
+  }
+  throw UnsupportedLink();
+}
+
+/// Il capitolo di [series] che ha il link [chapterUrl], o `null` se la serie
+/// non lo elenca.
+Chapter? chapterOfLink(Series series, String chapterUrl) {
+  final provider = providerById(series.provider);
+  if (provider == null || Uri.tryParse(chapterUrl) == null) return null;
+  final wanted = provider.chapterKeyOf(chapterUrl);
+  return series.chapters
+      .where((chapter) => provider.chapterKeyOf(chapter.url) == wanted)
+      .firstOrNull;
 }
 
 Provider? providerById(String id) =>

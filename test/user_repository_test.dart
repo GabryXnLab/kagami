@@ -6,10 +6,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/user_repository.dart';
+import 'package:kagami/src/format/malf.dart';
 import 'package:kagami/src/format/reading.dart';
+import 'package:kagami/src/providers.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -226,5 +229,165 @@ void main() {
           ..where((row) => row.seriesKey.equals(key)))
         .getSingle();
     expect(row.startedAt, isNotNull);
+  });
+
+  group('«arrivato a»', () {
+    const key = 'mangak:S1';
+    final chapters = [
+      for (var i = 0; i < 5; i++)
+        ChapterEntry(
+          id: 'C$i',
+          order: i,
+          archived: false,
+          complete: false,
+          pageCount: 0,
+          bytes: 0,
+          number: '${i + 1}',
+        ),
+    ];
+    late ProviderContainer container;
+
+    setUp(() async {
+      container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)],
+      );
+      await container.read(readingProvider.future);
+    });
+
+    tearDown(() => container.dispose());
+
+    Reading notifier() => container.read(readingProvider.notifier);
+
+    test('segna letti stimati i capitoli fino a quello e porta a in lettura',
+        () async {
+      await notifier().setChapterRead(key, 'C0', true);
+      await notifier().setReachedThrough(key, chapters, 'C2');
+
+      final state = (await repository.loadStates())[key]!;
+      expect(state.readChapters, {'C0', 'C1', 'C2'});
+      expect(state.reachedChapter, '3');
+      expect(state.status, ShelfStatus.reading);
+      expect(container.read(readingProvider).value!.of(key).reachedChapter, '3');
+
+      final reads = await db.select(db.chapterReads).get();
+      expect(reads.firstWhere((r) => r.chapterId == 'C0').estimated, isFalse);
+      expect(reads.firstWhere((r) => r.chapterId == 'C2').estimated, isTrue);
+    });
+
+    test('non iniziato azzera il numero e non toglie i letti', () async {
+      await notifier().setReachedThrough(key, chapters, 'C1');
+      await notifier().setReachedThrough(key, chapters, null);
+
+      final state = (await repository.loadStates())[key]!;
+      expect(state.reachedChapter, isNull);
+      expect(state.readChapters, {'C0', 'C1'});
+    });
+
+    test('uno stato già deciso non viene toccato', () async {
+      await notifier().setStatus(key, ShelfStatus.paused);
+      await notifier().setReachedThrough(key, chapters, 'C0');
+      expect((await repository.loadStates())[key]!.status, ShelfStatus.paused);
+    });
+
+    test('senza elenco di capitoli resta solo il numero', () async {
+      await notifier().setReachedChapter('manual:x', ' 52 ');
+      var state = (await repository.loadStates())['manual:x']!;
+      expect(state.reachedChapter, '52');
+      expect(state.readChapters, isEmpty);
+
+      await notifier().setReachedChapter('manual:x', '');
+      state = (await repository.loadStates())['manual:x']!;
+      expect(state.reachedChapter, isNull);
+    });
+
+    test('la scheda di una serie non ancora in libreria si scrive in un colpo',
+        () async {
+      await notifier().saveCard(
+        'manual:y',
+        status: ShelfStatus.reading,
+        rating: 7,
+        notes: 'nota',
+        favorite: true,
+        reachedChapter: '12',
+      );
+      final state = (await repository.loadStates())['manual:y']!;
+      expect(state.status, ShelfStatus.reading);
+      expect(state.rating, 7);
+      expect(state.notes, 'nota');
+      expect(state.favorite, isTrue);
+      expect(state.reachedChapter, '12');
+    });
+  });
+
+  group('moveSeries', () {
+    const from = 'manual:abc';
+    const to = 'mangak:S1';
+
+    test('porta stato, date, raccolte e impostazioni sulla chiave vera', () async {
+      await repository.saveSeriesState(
+        from,
+        SeriesState(
+          status: ShelfStatus.reading,
+          rating: 8,
+          favorite: true,
+          notes: 'nota',
+          muted: true,
+          reachedChapter: '52',
+          updatedAt: DateTime.utc(2026, 6, 1),
+        ),
+      );
+      await repository.markChapters(from, ['C1'], true, estimated: true);
+      await repository.touchSeries(from);
+      await repository.replaceCollections([
+        Collection(id: 'a', name: 'A', seriesKeys: const ['x', from, 'y']),
+      ]);
+
+      await repository.moveSeries(from, to);
+
+      final states = await repository.loadStates();
+      expect(states.containsKey(from), isFalse);
+      final state = states[to]!;
+      expect(state.status, ShelfStatus.reading);
+      expect(state.rating, 8);
+      expect(state.favorite, isTrue);
+      expect(state.notes, 'nota');
+      expect(state.muted, isTrue);
+      expect(state.reachedChapter, '52');
+      expect(state.readChapters, {'C1'});
+      expect(state.lastOpenedAt, isNotNull);
+      final collections = await repository.loadCollections();
+      expect(collections.single.seriesKeys, ['x', to, 'y']);
+    });
+
+    test('fonde con ciò che la serie vera ha già: il più recente vince, i letti si uniscono',
+        () async {
+      await repository.saveSeriesState(
+        to,
+        SeriesState(status: ShelfStatus.paused, rating: 5, updatedAt: DateTime.utc(2026, 7, 1)),
+      );
+      await repository.markChapters(to, ['C0'], true);
+      await repository.saveSeriesState(
+        from,
+        SeriesState(status: ShelfStatus.reading, rating: 9, updatedAt: DateTime.utc(2026, 6, 1)),
+      );
+      await repository.markChapters(from, ['C1'], true, estimated: true);
+      await repository.replaceCollections([
+        Collection(id: 'a', name: 'A', seriesKeys: const [from, to]),
+      ]);
+
+      await repository.moveSeries(from, to);
+
+      final states = await repository.loadStates();
+      expect(states.containsKey(from), isFalse);
+      expect(states[to]!.status, ShelfStatus.paused);
+      expect(states[to]!.rating, 5);
+      expect(states[to]!.readChapters, {'C0', 'C1'});
+      expect((await repository.loadCollections()).single.seriesKeys, [to]);
+    });
+
+    test('una serie senza dati non lascia niente né crea righe', () async {
+      await repository.moveSeries(from, to);
+      expect(await repository.loadStates(), isEmpty);
+    });
   });
 }

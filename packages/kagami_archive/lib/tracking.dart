@@ -17,6 +17,12 @@
 /// solo i capitoli nuovi che l'app ha chiesto ([TrackedSeries.wanted]),
 /// perché gli altri li chiede lei a mano a mano che si legge.
 ///
+/// Le schede ([TrackedSeries.card], serie salvate senza scaricare capitoli)
+/// si seguono senza scaricare: il controllo mette in coda un lavoro scheda
+/// ([ArchiveJob.cardOnly]), che riscrive indici e riga di libreria con i
+/// capitoli nuovi elencati e nessuna tavola. Al primo download vero della
+/// serie la scheda diventa una serie seguita come le altre.
+///
 /// Si seguono solo le serie scaricate dall'app: quelle del server le segue
 /// il suo timer, e seguirle da tutt'e due vorrebbe dire scaricare due volte
 /// gli stessi capitoli. È stato del controllo, non un indice MALF, e resta
@@ -34,6 +40,7 @@ import 'package:path/path.dart' as p;
 
 import 'http.dart';
 import 'jobs.dart';
+import 'manual.dart';
 import 'model.dart';
 import 'providers.dart';
 import 'stores.dart';
@@ -51,6 +58,7 @@ class TrackedSeries {
     this.problem,
     this.ahead,
     this.wanted = 0,
+    this.card = false,
   });
 
   factory TrackedSeries.fromJson(Map<String, Object?> json) => TrackedSeries(
@@ -65,6 +73,7 @@ class TrackedSeries {
         problem: json['problem'] as String?,
         ahead: (json['ahead'] as num?)?.toInt(),
         wanted: (json['wanted'] as num?)?.toInt() ?? 0,
+        card: json['card'] == true,
       );
 
   final String provider;
@@ -88,6 +97,10 @@ class TrackedSeries {
   /// che conosceva sono già tutti scaricati.
   final int wanted;
 
+  /// Una scheda: i capitoli nuovi si elencano nell'indice, non si scaricano.
+  /// [chapters] sono allora quelli già elencati.
+  final bool card;
+
   String get key => '$provider:$id';
 
   TrackedSeries copyWith({DateTime? checkedAt, String? problem, bool clearProblem = false, int? wanted}) =>
@@ -103,6 +116,7 @@ class TrackedSeries {
         problem: clearProblem ? null : problem ?? this.problem,
         ahead: ahead,
         wanted: wanted ?? this.wanted,
+        card: card,
       );
 
   Map<String, Object?> toJson() => {
@@ -117,6 +131,7 @@ class TrackedSeries {
         'problem': ?problem,
         'ahead': ?ahead,
         if (wanted > 0) 'wanted': wanted,
+        if (card) 'card': true,
       };
 }
 
@@ -132,6 +147,10 @@ class CheckReport {
   final List<String> repaired = [];
   final List<String> queued = [];
   final List<String> removed = [];
+
+  /// Fra le [queued], le schede: in coda c'è solo l'aggiornamento del loro
+  /// indice, nessun capitolo da scaricare.
+  final List<String> cards = [];
   final List<({String title, String error})> failed = [];
 }
 
@@ -160,18 +179,22 @@ class Tracking {
   /// Annota la serie se non è finita, altrimenti la dimentica. [settled]
   /// sono i capitoli a posto: un capitolo tentato e fallito non ci entra,
   /// così il controllo lo ritenta. Con [ahead] la serie si scarica «man
-  /// mano», e resta seguita comunque.
+  /// mano», e resta seguita comunque. Con [card] è un lavoro scheda.
   Future<void> record(
     Series series,
     ArchiveTarget target, {
     required List<String> settled,
     required Map<String, Object?> metadata,
     int? ahead,
+    bool card = false,
   }) async {
     final entries = await load();
     final previous = entries.where((entry) => entry.key == series.key).firstOrNull;
+    // Aggiornare la scheda di una serie che si scarica non la fa tornare
+    // scheda, e non dà per scaricati i capitoli usciti nel frattempo.
+    if (card && previous != null && !previous.card) return;
     final rest = [for (final entry in entries) if (entry.key != series.key) entry];
-    final smart = ahead ?? previous?.ahead;
+    final smart = card ? null : ahead ?? previous?.ahead;
     if (smart == null && _finished(metadata['releaseStatus'])) {
       if (previous != null) await _save(rest);
       return;
@@ -184,11 +207,18 @@ class Tracking {
         title: series.title,
         url: series.url,
         target: target,
-        chapters: {...?previous?.chapters, ...settled}.toList(),
+        // Il primo download dopo la scheda riparte da ciò che ha a posto
+        // lui: i capitoli elencati dalla scheda non sono scaricati, e un
+        // capitolo scelto e fallito va ritentato.
+        chapters: {
+          if (card || previous?.card != true) ...?previous?.chapters,
+          ...settled,
+        }.toList(),
         addedAt: previous?.addedAt ?? DateTime.now(),
         checkedAt: DateTime.now(),
         ahead: smart,
         wanted: previous?.wanted ?? 0,
+        card: card,
       ),
     ]);
   }
@@ -241,6 +271,27 @@ class Tracking {
       final fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
       // L'ultimo capitolo esce spesso proprio quando il sito scrive
       // «concluso»: si mette in coda prima di smettere di seguire la serie.
+      if (entry.card) {
+        if (fresh.isNotEmpty) {
+          await files.enqueue(ArchiveJob(
+            id: 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
+            url: entry.url,
+            title: series.title,
+            target: entry.target,
+            ids: const {},
+            automatic: true,
+          ));
+          report.queued.add(series.title);
+          report.cards.add(series.title);
+        }
+        if (_finished(metadata['releaseStatus'])) {
+          await forget(entry.key);
+          report.removed.add(entry.title);
+        } else {
+          await _update(entry.copyWith(checkedAt: DateTime.now(), clearProblem: true));
+        }
+        continue;
+      }
       final queued = entry.ahead == null ? fresh : fresh.take(entry.wanted).toList();
       if (queued.isNotEmpty) {
         await files.enqueue(ArchiveJob(
@@ -285,6 +336,11 @@ class Tracking {
 /// dà a metà va in coda lo stesso, qualunque sia lo stato della serie: se su
 /// Drive è intero il giro lo salta e riscrive l'indice, se no lo completa.
 ///
+/// Una scheda (nessun capitolo archiviato) non scarica i capitoli nuovi: va
+/// in coda il suo aggiornamento ([ArchiveJob.cardOnly]), che li elenca
+/// nell'indice. Le schede manuali ([manualProvider]) non hanno un sito da
+/// rileggere e si saltano.
+///
 /// Si saltano le serie in [skip] (quelle che segue già [Tracking]), quelle
 /// già in coda — un lavoro nuovo sullo stesso link prenderebbe il posto di
 /// quello dell'utente — e quelle dei siti dietro la verifica del browser, che
@@ -308,6 +364,7 @@ Future<CheckReport> checkLibrary({
     final path = row['path'];
     final url = row['source'];
     if (key is! String || path is! String || url is! String) continue;
+    if (row['provider'] == manualProvider) continue;
     if (skip.contains(key) || queued.contains(url)) continue;
     final Provider provider;
     try {
@@ -321,6 +378,7 @@ Future<CheckReport> checkLibrary({
     final entries = (index?['chapters'] as List? ?? const []).whereType<Map<String, Object?>>().toList();
     if (entries.isEmpty) continue;
     final known = {for (final entry in entries) entry['id']};
+    final card = !entries.any((entry) => entry['archived'] == true);
     final halfway = {
       for (final entry in entries)
         if (entry['archived'] == true && (entry['complete'] != true || entry['pageCount'] == 0))
@@ -348,10 +406,11 @@ Future<CheckReport> checkLibrary({
       url: url,
       title: title,
       target: target,
-      ids: {...fresh, ...halfway},
+      ids: card ? const {} : {...fresh, ...halfway},
       automatic: true,
     ));
     if (fresh.isNotEmpty) report.queued.add(title);
+    if (card) report.cards.add(title);
     if (halfway.isNotEmpty) report.repaired.add(title);
   }
   return report;

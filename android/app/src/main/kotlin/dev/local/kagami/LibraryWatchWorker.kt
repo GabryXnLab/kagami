@@ -51,14 +51,27 @@ class LibraryWatchWorker(context: Context, parameters: WorkerParameters) :
             val entry = series.getJSONObject(position)
             val key = entry.optString("key")
             val mark = watched.optJSONObject(key) ?: continue
-            val count = entry.optInt("archivedChapterCount")
-            val notified = maxOf(mark.getInt("notified"), record.optInt(key))
+            // Una scheda (serie senza capitoli archiviati) conta i capitoli
+            // del sito, le altre gli archiviati: gli stessi conti di
+            // `planArrivals`. Se la serie è cambiata dall'uscita dall'app il
+            // riferimento non vale più, e lo riprende l'app.
+            val site = mark.optString("site").takeIf { mark.has("site") }
+            val card = entry.optString("provider") == "manual" ||
+                entry.optInt("archivedChapterCount") == 0
+            if (card != (site != null)) continue
+            val count = entry.optInt(if (card) "chapterCount" else "archivedChapterCount")
+            // Le stesse chiavi di `recordKey` in `arrivals.dart`.
+            val recordKey = if (card) "$key@site" else key
+            val notified = maxOf(mark.getInt("notified"), record.optInt(recordKey))
             if (count <= notified) continue
-            record.put(key, count)
+            record.put(recordKey, count)
             changed = true
             // Scheda aperta dopo l'ultimo arrivo, magari su un altro telefono:
-            // quei capitoli li si è già visti.
-            val arrived = arrivedAt(entry.optString("latestChapterArchivedAt"))
+            // quei capitoli li si è già visti. Per una scheda l'arrivo è
+            // l'ultima lettura del sito.
+            val arrived = arrivedAt(
+                entry.optString(if (card) "archivedAt" else "latestChapterArchivedAt"),
+            )
             val opened = mark.optLong("opened", 0)
             if (arrived != null && opened >= arrived) continue
             val fresh = minOf(count - mark.getInt("seen"), count - mark.getInt("read"))
@@ -67,7 +80,11 @@ class LibraryWatchWorker(context: Context, parameters: WorkerParameters) :
                 applicationContext,
                 key,
                 entry.optString("title", mark.optString("title")),
-                applicationContext.resources.getQuantityString(R.plurals.arrivals_new, fresh, fresh),
+                if (site != null) {
+                    applicationContext.resources.getQuantityString(R.plurals.arrivals_new_site, fresh, fresh, site)
+                } else {
+                    applicationContext.resources.getQuantityString(R.plurals.arrivals_new, fresh, fresh)
+                },
             )
         }
         if (changed) recordFile.writeText(record.toString())

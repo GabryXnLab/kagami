@@ -19,4 +19,12 @@
         <item quantity="many">وصل %d فصلًا جديدًا</item>
         <item quantity="other">وصل %d فصل جديد</item>
     </plurals>
+    <plurals name="arrivals_new_site">
+        <item quantity="zero">لا فصول جديدة على %2$s</item>
+        <item quantity="one">صدر فصل جديد على %2$s</item>
+        <item quantity="two">صدر فصلان جديدان على %2$s</item>
+        <item quantity="few">صدرت %1$d فصول جديدة على %2$s</item>
+        <item quantity="many">صدر %1$d فصلًا جديدًا على %2$s</item>
+        <item quantity="other">صدر %1$d فصل جديد على %2$s</item>
+    </plurals>
 </resources>

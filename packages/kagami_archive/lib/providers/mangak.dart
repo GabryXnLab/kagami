@@ -18,6 +18,7 @@ final RegExp _nextData = RegExp(
   dotAll: true,
 );
 final RegExp _slug = RegExp(r'^/([a-z0-9]+(?:-[a-z0-9]+)*)/?$');
+final RegExp _chapterPath = RegExp(r'^/([a-z0-9]+(?:-[a-z0-9]+)*)/[a-z0-9]+(?:-[a-z0-9]+)*/?$');
 final RegExp _chapterSlug = RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$');
 final RegExp _mediaHost = RegExp(r'^rx\.qvzr[a-z]\.org$');
 
@@ -44,6 +45,12 @@ class MangaK extends Provider {
 
   @override
   bool accepts(String url) => siteLink(url, hosts: const {'mangak.io'}, path: _slug);
+
+  @override
+  String? seriesOfChapter(String url) {
+    final found = siteMatch(url, hosts: const {'mangak.io'}, path: _chapterPath);
+    return found == null ? null : 'https://mangak.io/${found[1]}';
+  }
 
   @override
   bool allowedHost(Uri uri) =>

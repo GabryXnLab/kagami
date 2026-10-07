@@ -15,4 +15,8 @@
         <item quantity="one">एक नया अध्याय आया है</item>
         <item quantity="other">%d नए अध्याय आए हैं</item>
     </plurals>
+    <plurals name="arrivals_new_site">
+        <item quantity="one">%2$s पर एक नया अध्याय आया है</item>
+        <item quantity="other">%2$s पर %1$d नए अध्याय आए हैं</item>
+    </plurals>
 </resources>

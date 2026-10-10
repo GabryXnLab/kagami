@@ -765,7 +765,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un\'ora dall\'uscita di una versione nuova. Intanto man mano scarica dal telefono.';
+      'Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un\'ora dall\'uscita di una versione nuova.';
 
   @override
   String get archiveChapterSearch => 'Cerca per numero o titolo';
@@ -1074,13 +1074,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'Le serie in corso scaricate da qui si ricontrollano: arrivano solo i capitoli nuovi, nella stessa destinazione. Quelle del server le segue il server.';
+      'Ogni giorno si ricontrollano tutte le serie in corso della libreria, scaricate da qui o da altri, tranne quelle che hai smesso di seguire: arrivano solo i capitoli nuovi. Riscaricarne una dal sito la fa seguire di nuovo.';
+
+  @override
+  String get archiveTrackedByServer =>
+      'Le serie seguite le controlla il server, come scelto nelle Impostazioni («Chi scarica e controlla»). Quelle che seguiva il telefono restano ferme finché non torni al telefono.';
 
   @override
   String get archiveCheckDaily => 'Controllo ogni giorno';
-
-  @override
-  String get archiveCheckManual => 'Solo a mano';
 
   @override
   String archiveCheckAt(String time) {
@@ -2741,6 +2742,27 @@ class AppLocalizationsIt extends AppLocalizations {
   String get moreDownloadSubtitle => 'Cerca un titolo o incolla un link';
 
   @override
+  String get settingsEngine => 'Chi scarica e controlla';
+
+  @override
+  String get settingsEngineServer => 'Il server';
+
+  @override
+  String get settingsEnginePhone => 'Il telefono';
+
+  @override
+  String get settingsEngineServerNote =>
+      'Serie nuove, man mano e controllo delle serie seguite: tutto sul server, che guarda anche le serie scaricate dal telefono su Drive';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'Serie nuove, man mano e controllo delle serie seguite: tutto sul telefono. Il server resta collegato, ma non controlla niente';
+
+  @override
+  String get settingsEngineNoServer =>
+      'Tutto sul telefono. Per affidarlo a un server, collegalo da «Scarica un manga»';
+
+  @override
   String get moreHistory => 'Cronologia';
 
   @override
@@ -3511,15 +3533,8 @@ class AppLocalizationsIt extends AppLocalizations {
       'Spento: i capitoli nuovi si scaricano solo a mano';
 
   @override
-  String get serverCheckLibrary => 'Tutta la libreria su Drive';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'Anche le serie scaricate dal telefono o da altri, non solo dal server';
-
-  @override
-  String get serverCheckLibraryOff =>
-      'Solo le serie in corso scaricate dal server';
+  String get serverCheckByPhone =>
+      'Spento: le serie seguite le controlla il telefono, come scelto nelle Impostazioni';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3969,4 +3984,58 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'Nel testo condiviso non c\'è nessun link.';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites chiede la verifica';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Il controllo non ha potuto leggere $count serie. Tocca per passare la verifica.',
+      one: 'Il controllo non ha potuto leggere una serie. Tocca per passare la verifica.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count serie aspettano la verifica',
+      one: 'Una serie aspetta la verifica',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites chiede di spuntare «Verify you are human», e il controllo automatico non lo fa. Passala tu: il controllo riparte da queste serie.';
+  }
+
+  @override
+  String get archiveGatedAction => 'Verifica';
+
+  @override
+  String get archiveGatedNothing =>
+      'La verifica non è stata passata: le serie restano in attesa.';
+
+  @override
+  String get archiveGatedChecking => 'Verifica passata, controllo le serie…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'capitoli nuovi per $count serie',
+      one: 'capitoli nuovi per una serie',
+    );
+    return '$_temp0';
+  }
 }

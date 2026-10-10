@@ -7,10 +7,12 @@ import 'dart:io';
 import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/providers.dart' show PageBrowser;
 import 'package:kagami_archive/remote.dart' show ServerSetup;
 import 'package:path/path.dart' as p;
 
 import 'api.dart';
+import 'browser.dart';
 import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
@@ -26,6 +28,7 @@ class ServerSpace implements UserSpace {
     Directory directory,
     GoogleClient client, {
     required ImageTools images,
+    PageBrowser? browser,
     int? checkMinutes,
   }) async {
     final files = ArchiveFiles(directory.path);
@@ -37,6 +40,7 @@ class ServerSpace implements UserSpace {
       blocked: drive.blocked,
       checkMinutes: checkMinutes,
       folder: () => drive.folderId,
+      browser: browser,
     )..start();
     return ServerSpace._(directory, files, drive, worker);
   }
@@ -98,6 +102,8 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
 
   final vips = await VipsImageTools.available();
   final ImageTools images = vips ? VipsImageTools(paths.scratch) : const NoImageTools();
+  final chromium = await HeadlessBrowser.find();
+  final browser = chromium == null ? null : HeadlessBrowser(chromium, paths.browser, log: out);
   final accounts = applied == null
       ? null
       : Accounts(
@@ -107,6 +113,7 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
             paths.user(email),
             applied.client,
             images: images,
+            browser: browser,
             checkMinutes: config.checkMinutes,
           ),
         );
@@ -115,6 +122,7 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
     identity: applied == null ? null : FirebaseVerifier(applied.project),
     accounts: accounts,
     images: vips,
+    browser: browser != null,
   );
 
   final server = await HttpServer.bind(host ?? config.host, port ?? config.port);
@@ -122,6 +130,9 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   out('Kagami Server $serverVersion in ascolto su ${server.address.address}:${server.port}');
   out('Dati in ${paths.root.path}');
   out(vips ? 'Miniature e tessere: libvips.' : 'Miniature e tessere: spente (manca «vips»).');
+  out(chromium != null
+      ? 'Siti dietro la verifica del browser: $chromium.'
+      : 'Siti dietro la verifica del browser: saltati nei controlli (manca Chromium).');
   if (accounts == null) {
     out('Nessuna configurazione: avvia il server col comando che genera l\'app '
         '(Altro → Scarica un manga → Server → Crea il tuo server).');
@@ -146,4 +157,5 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   await serving.cancel();
   await server.close();
   await accounts?.close();
+  await browser?.close();
 }

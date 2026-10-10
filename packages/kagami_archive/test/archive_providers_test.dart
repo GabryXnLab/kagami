@@ -171,6 +171,30 @@ void main() {
       expect(pages.metadata['imageSource'], 'cdn-probe');
     });
 
+    test('un controllo senza nessuno davanti legge la serie bloccata col browser', () async {
+      final page = utf8.decode((await FakeManhwaRead().get(url)).body);
+      await expectLater(readSeries(provider, url, ChallengedHttp()), throwsA(isA<CloudflareChallenge>()));
+      await expectLater(readSeries(provider, url, ChallengedHttp(), browser: _Browser(null)),
+          throwsA(isA<CloudflareChallenge>()));
+      final browser = _Browser(page);
+      final read = await readSeries(provider, url, ChallengedHttp(), browser: browser);
+      expect((read.series.title, read.series.chapters.length), ('Disfarming', 3));
+      expect(utf8.decode(read.page!), page);
+      expect(browser.opened, [provider.canonical(url)]);
+      // Un sito che risponde non apre il browser.
+      final plain = await readSeries(provider, url, FakeManhwaRead(), browser: browser);
+      expect((plain.page, browser.opened.length), (null, 1));
+    });
+
+    test('le pagine aperte da una persona valgono per il loro link, anche scritto diverso', () async {
+      final page = utf8.decode((await FakeManhwaRead().get(url)).body);
+      final gate = provider.browser;
+      final supplied = SuppliedPages({url.substring(0, url.length - 1): page});
+      final read = await readSeries(provider, url, ChallengedHttp(), browser: supplied);
+      expect(read.series.title, 'Disfarming');
+      expect(await SuppliedPages({}).seriesPage(provider.canonical(url), gate), isNull);
+    });
+
     test('la serie bloccata chiede la WebView, poi si legge dalla pagina', () async {
       final page = (await FakeManhwaRead().get(url)).body;
       await expectLater(provider.fetchSeries(url, ChallengedHttp()),
@@ -403,4 +427,17 @@ void main() {
       expect(tileHeights(3000), [1000, 1000, 1000]);
     });
   });
+}
+
+class _Browser implements PageBrowser {
+  _Browser(this.html);
+
+  final String? html;
+  final List<String> opened = [];
+
+  @override
+  Future<String?> seriesPage(String url, BrowserGate gate) async {
+    opened.add(url);
+    return html;
+  }
 }

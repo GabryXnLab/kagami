@@ -269,21 +269,31 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
 
   List<Chapter> get _chapters => widget.series.chapters;
 
-  /// Man mano ripete da solo le richieste al sito, ogni volta che si legge:
-  /// non con un sito che vuole la verifica del browser.
-  bool get _aheadPossible => !(providerById(widget.series.provider)?.needsBrowser ?? false);
+  /// Scarica il server, se fra le destinazioni c'è lui: allora i capitoli
+  /// vanno solo a lui.
+  bool get _serverOnly => widget.destinations.contains(ArchiveWhere.server);
 
-  /// Un server di prima non sa scaricare man mano: con quello, man mano
-  /// scarica il telefono. Le schede le scrive sempre il telefono.
-  bool get _serverExcluded => _mode == ArchiveMode.card || (_mode == ArchiveMode.ahead && !widget.serverAhead);
+  bool get _needsBrowser => providerById(widget.series.provider)?.needsBrowser ?? false;
+
+  /// Man mano ripete da solo le richieste al sito, ogni volta che si legge:
+  /// non con un sito che vuole la verifica del browser. E non con un server
+  /// di prima, che non lo sa fare: il telefono non segue le serie mentre
+  /// scarica il server.
+  bool get _aheadPossible => !_needsBrowser && (!_serverOnly || widget.serverAhead);
+
+  /// Le schede le scrive sempre il telefono.
+  bool get _serverExcluded => _mode == ArchiveMode.card;
 
   List<ArchiveWhere> get _destinations => _serverExcluded
       ? [for (final where in widget.destinations) if (where != ArchiveWhere.server) where]
-      : widget.destinations;
+      : _serverOnly
+          ? const [ArchiveWhere.server]
+          : widget.destinations;
 
   @override
   void initState() {
     super.initState();
+    if (_mode == ArchiveMode.ahead && !_aheadPossible) _mode = ArchiveMode.all;
     final reached = _reachedIndex();
     if (reached >= 0) _reached = _chapters[reached].id;
     if ((_mode == ArchiveMode.from || _mode == ArchiveMode.ahead) && _start == null) {
@@ -345,7 +355,9 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
   void _choose(ArchiveMode mode, Set<String> have) {
     if (mode == ArchiveMode.ahead && !_aheadPossible) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.archiveModeAheadUnavailable)),
+        SnackBar(
+          content: Text(_needsBrowser ? context.l10n.archiveModeAheadUnavailable : context.l10n.archiveModeAheadServer),
+        ),
       );
       return;
     }
@@ -560,12 +572,12 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                       ),
                   ],
                 ),
-                if (_serverExcluded && widget.destinations.contains(ArchiveWhere.server)) ...[
+                if (_serverExcluded && _serverOnly) ...[
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
-                      _mode == ArchiveMode.card ? l10n.archiveCardServer : l10n.archiveModeAheadServer,
+                      l10n.archiveCardServer,
                       style: KagamiType.body(12.5, height: 1.45, color: context.tokens.muted),
                     ),
                   ),

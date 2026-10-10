@@ -765,7 +765,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'The linked server can\'t download “as you read” yet: it updates itself within an hour of a new version coming out. Until then, this mode downloads from the phone.';
+      'The linked server can\'t download “as you read” yet: it updates itself within an hour of a new version coming out.';
 
   @override
   String get archiveChapterSearch => 'Search by number or title';
@@ -1073,13 +1073,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'Ongoing series downloaded from here are checked again: only new chapters arrive, in the same destination. Those on the server are followed by the server.';
+      'Every day all ongoing series in the library are checked again, whether downloaded from here or by others, except those you stopped following: only new chapters arrive. Downloading one again from the site follows it again.';
+
+  @override
+  String get archiveTrackedByServer =>
+      'Followed series are checked by the server, as chosen in Settings (“Who downloads and checks”). Those the phone was following stay paused until you switch back to the phone.';
 
   @override
   String get archiveCheckDaily => 'Check every day';
-
-  @override
-  String get archiveCheckManual => 'Manual only';
 
   @override
   String archiveCheckAt(String time) {
@@ -2736,6 +2737,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreDownloadSubtitle => 'Search for a title or paste a link';
 
   @override
+  String get settingsEngine => 'Who downloads and checks';
+
+  @override
+  String get settingsEngineServer => 'The server';
+
+  @override
+  String get settingsEnginePhone => 'The phone';
+
+  @override
+  String get settingsEngineServerNote =>
+      'New series, “as you read” and checking followed series: all on the server, which also watches series the phone downloaded to Drive';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'New series, “as you read” and checking followed series: all on the phone. The server stays linked but checks nothing';
+
+  @override
+  String get settingsEngineNoServer =>
+      'Everything on the phone. To hand it to a server, link one from “Download a manga”';
+
+  @override
   String get moreHistory => 'History';
 
   @override
@@ -3505,15 +3527,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Off: new chapters are only downloaded by hand';
 
   @override
-  String get serverCheckLibrary => 'The whole library on Drive';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'Also series downloaded by the phone or by others, not just by the server';
-
-  @override
-  String get serverCheckLibraryOff =>
-      'Only ongoing series downloaded by the server';
+  String get serverCheckByPhone =>
+      'Off: followed series are checked by the phone, as chosen in Settings';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3962,4 +3977,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'The shared text contains no links.';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites needs verification';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'The check couldn\'t read $count series. Tap to pass the verification.',
+      one: 'The check couldn\'t read one series. Tap to pass the verification.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count series are waiting for verification',
+      one: 'One series is waiting for verification',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites asks you to tick “Verify you are human”, and the automatic check doesn\'t. Pass it yourself: the check picks up from these series.';
+  }
+
+  @override
+  String get archiveGatedAction => 'Verify';
+
+  @override
+  String get archiveGatedNothing =>
+      'The verification wasn\'t passed: the series are still waiting.';
+
+  @override
+  String get archiveGatedChecking =>
+      'Verification passed, checking the series…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'new chapters for $count series',
+      one: 'new chapters for one series',
+    );
+    return '$_temp0';
+  }
 }

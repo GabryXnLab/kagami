@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
     private var arrivals: ArrivalNotifier? = null
     private var sync: FolderSyncScheduler? = null
     private var archiveImages: ArchiveImages? = null
+    private var pageBrowser: PageBrowser? = null
     private var archive: ArchiveScheduler? = null
     private var shared: SharedText? = null
 
@@ -27,6 +28,7 @@ class MainActivity : FlutterActivity() {
             .also { it.launchedBy(intent) }
         sync = FolderSyncScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         archiveImages = ArchiveImages(flutterEngine.dartExecutor.binaryMessenger)
+        pageBrowser = PageBrowser(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         archive = ArchiveScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         shared = SharedText(flutterEngine.dartExecutor.binaryMessenger).also { it.launchedBy(intent) }
         // Un link che si apre nel browser: un pacchetto intero per una riga
@@ -83,6 +85,8 @@ class MainActivity : FlutterActivity() {
         sync = null
         archiveImages?.dispose()
         archiveImages = null
+        pageBrowser?.dispose()
+        pageBrowser = null
         archive?.dispose()
         archive = null
         shared?.dispose()

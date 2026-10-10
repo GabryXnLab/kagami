@@ -745,7 +745,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      '接続中のサーバーはまだ「読みながら」に対応していません。新しいバージョンが出ると1時間以内に自動で更新されます。それまではスマホからダウンロードします。';
+      '接続中のサーバーはまだ「読みながら」に対応していません。新しいバージョンが出ると1時間以内に自動で更新されます。';
 
   @override
   String get archiveChapterSearch => '番号やタイトルで検索';
@@ -1043,13 +1043,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'ここでダウンロードした連載中の作品は定期的に再確認され、新しい話だけが同じ保存先に追加されます。サーバーの作品はサーバーが追跡します。';
+      'ライブラリ内の連載中のシリーズは、ここからダウンロードしたものもそれ以外も、フォローをやめたものを除いて毎日チェックされ、新しい話だけが届きます。サイトからもう一度ダウンロードすると、再びフォローされます。';
+
+  @override
+  String get archiveTrackedByServer =>
+      'フォロー中のシリーズは、設定(「ダウンロードとチェックの担当」)で選んだとおりサーバーがチェックします。スマホがフォローしていたシリーズは、スマホに戻すまで止まったままです。';
 
   @override
   String get archiveCheckDaily => '毎日確認';
-
-  @override
-  String get archiveCheckManual => '手動のみ';
 
   @override
   String archiveCheckAt(String time) {
@@ -2659,6 +2660,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get moreDownloadSubtitle => 'タイトルを検索、またはリンクを貼り付け';
 
   @override
+  String get settingsEngine => 'ダウンロードとチェックの担当';
+
+  @override
+  String get settingsEngineServer => 'サーバー';
+
+  @override
+  String get settingsEnginePhone => 'スマホ';
+
+  @override
+  String get settingsEngineServerNote =>
+      '新しいシリーズ、「読みながら」、フォロー中のシリーズのチェック:すべてサーバーで。スマホが Drive にダウンロードしたシリーズもサーバーが見ます';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      '新しいシリーズ、「読みながら」、フォロー中のシリーズのチェック:すべてスマホで。サーバーは接続されたままですが、何もチェックしません';
+
+  @override
+  String get settingsEngineNoServer =>
+      'すべてスマホで。サーバーに任せるには「マンガをダウンロード」から接続してください';
+
+  @override
   String get moreHistory => '履歴';
 
   @override
@@ -3406,13 +3428,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get serverCheckDailyOff => 'オフ:新しい話は手動でのみダウンロードされます';
 
   @override
-  String get serverCheckLibrary => 'Drive のライブラリ全体';
-
-  @override
-  String get serverCheckLibraryOn => 'サーバーだけでなく、スマホや他の方法でダウンロードしたシリーズも';
-
-  @override
-  String get serverCheckLibraryOff => 'サーバーがダウンロードした連載中のシリーズのみ';
+  String get serverCheckByPhone => 'オフ:設定で選んだとおり、フォロー中のシリーズはスマホがチェックします';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3843,4 +3859,53 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get shareNoLinks => '共有されたテキストにリンクがありません。';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites が確認を求めています';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'チェックで $count 件のシリーズを読み込めませんでした。タップして確認を済ませてください。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のシリーズが確認待ちです',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites が「Verify you are human」のチェックを求めていますが、自動チェックはこれを行いません。ご自身で確認すると、これらのシリーズからチェックが再開します。';
+  }
+
+  @override
+  String get archiveGatedAction => '確認する';
+
+  @override
+  String get archiveGatedNothing => '確認が完了しませんでした。シリーズは待機中のままです。';
+
+  @override
+  String get archiveGatedChecking => '確認が完了しました。シリーズをチェックしています…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のシリーズに新しい話',
+    );
+    return '$_temp0';
+  }
 }

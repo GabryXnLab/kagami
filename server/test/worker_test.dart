@@ -31,6 +31,28 @@ class _Offline implements ProviderHttp {
   }
 }
 
+/// Un sito che risponde solo con la verifica di Cloudflare.
+class _Challenged implements ProviderHttp {
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async =>
+      throw const CloudflareChallenge();
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => throw const CloudflareChallenge();
+
+  @override
+  Future<Map<String, Object?>> json(String url) async => throw const CloudflareChallenge();
+}
+
+const _manhwa = 'https://manhwaread.com/manhwa/disfarming/';
+
+/// La pagina della serie come la vede chi ha passato la verifica.
+const _manhwaPage = '''<html><head><meta property="og:image" content="https://mancover.xyz/cover/d.webp"></head>
+<body class="postid-508"><h1 class="text-3xl text-primary">Disfarming</h1><div id="chaptersList">
+<a class="chapter-item" data-id="2" href="${_manhwa}chapter-02/"><span class="chapter-item__name">Chapter 02</span></a>
+<a class="chapter-item" data-id="1" href="${_manhwa}chapter-01/"><span class="chapter-item__name">Chapter 01</span></a>
+</div></body></html>''';
+
 void main() {
   late Directory dir;
   late ArchiveFiles files;
@@ -138,6 +160,67 @@ void main() {
     final first = offline.calls;
     expect(first, greaterThan(0));
     await until(() async => offline.calls > first);
+    await worker.close();
+  });
+
+  test('una serie che l\'utente ha smesso di seguire non si chiede al sito', () async {
+    final offline = _Offline();
+    await files.ongoing.parent.create(recursive: true);
+    await Tracking(files.ongoing).record(
+      Series(provider: 'mangak', id: 'S1', title: 'S', url: 'https://mangak.io/s', coverUrl: null,
+          metadata: const {}, chapters: const []),
+      const ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'f'),
+      settled: const [],
+      metadata: const {'releaseStatus': 'ongoing'},
+    );
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(p.join(dir.path, 'libreria')),
+        httpFor: (provider, {userAgent, cookies = const {}}) => offline,
+      ),
+      blocked: () async => null,
+      log: (_) {},
+    );
+    await worker.configureCheck(unfollowed: {'mangak:S1'});
+    await worker.checkNow();
+    expect(offline.calls, 0);
+    expect((await worker.checkSettings()).unfollowed, {'mangak:S1'});
+    await worker.close();
+  });
+
+  test('una serie ferma alla verifica aspetta la pagina dal telefono, poi scende', () async {
+    await files.ongoing.parent.create(recursive: true);
+    await Tracking(files.ongoing).record(
+      const Series(provider: 'manhwaread', id: 'disfarming', title: 'Disfarming', url: _manhwa, coverUrl: null,
+          metadata: {}, chapters: []),
+      const ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'f'),
+      settled: const ['chapter-01'],
+      metadata: const {'releaseStatus': 'ongoing'},
+    );
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(p.join(dir.path, 'libreria')),
+        httpFor: (provider, {userAgent, cookies = const {}}) => _Challenged(),
+      ),
+      blocked: () async => null,
+      log: (_) {},
+    );
+    await worker.configureCheck(enabled: false);
+    await worker.checkNow();
+    expect([for (final entry in await worker.gated()) entry.key], ['manhwaread:disfarming']);
+    expect(await files.jobs(), isEmpty);
+    // Una pagina che non è di nessuna serie ferma non cambia niente.
+    expect((await worker.checkPages({'https://manhwaread.com/manhwa/altra/': _manhwaPage})).checked, 0);
+    final report = await worker.checkPages({_manhwa: _manhwaPage});
+    expect(report.checked, 1);
+    expect(await worker.gated(), isEmpty);
+    final queued = (await files.jobs()).single;
+    expect(queued.ids, {'chapter-02'});
+    expect(queued.snapshot, isNotNull);
     await worker.close();
   });
 

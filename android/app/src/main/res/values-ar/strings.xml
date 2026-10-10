@@ -4,6 +4,8 @@
     <string name="channel_arrivals_description">وصل إلى المكتبة فصل جديد من سلسلة تتابعها.</string>
     <string name="channel_invites">خوادم مشتركة</string>
     <string name="channel_invites_description">منحك أحدهم حق الوصول إلى Kagami Server الخاص به.</string>
+    <string name="channel_verify">عمليات تحقق المواقع</string>
+    <string name="channel_verify_description">يطلب أحد المواقع تحققًا لا يمكن أن يتمّه سواك، وفحص السلاسل في الانتظار.</string>
     <string name="archive_downloading">تنزيلات المانغا</string>
     <string name="channel_archive_description">السلاسل التي يقوم Kagami بتنزيلها من المواقع.</string>
     <string name="archive_checking">جارٍ التحقق من السلاسل المستمرة</string>

@@ -702,6 +702,9 @@ class ServerSection extends ConsumerWidget {
     ));
     if (info != null) {
       final check = info.check;
+      // Acceso, spento e su quali serie lo decide la scelta fra le
+      // impostazioni: qui resta l'ora.
+      final mine = ref.watch(archiveEngineProvider) == ArchiveEngine.server;
       children.addAll([
         const SizedBox(height: 12),
         KGroup(
@@ -710,34 +713,23 @@ class ServerSection extends ConsumerWidget {
               icon: LucideIcons.calendarClock,
               title: l10n.serverCheckDaily,
               subtitle: [
-                if (check.enabled) l10n.serverCheckDailyAt(clockOf(check.minutes)) else l10n.serverCheckDailyOff,
+                if (!mine)
+                  l10n.serverCheckByPhone
+                else if (check.enabled)
+                  l10n.serverCheckDailyAt(clockOf(check.minutes))
+                else
+                  l10n.serverCheckDailyOff,
                 if (check.checkedAt case final at?) l10n.serverCheckLast(archiveWhen(at), check.queued),
               ].join('\n'),
-              onTap: view.error != null || !check.enabled ? null : () => _checkTime(context, notifier, check),
-              trailing: Switch(
-                value: check.enabled,
-                onChanged: view.error != null
-                    ? null
-                    : (value) => _guard(context, () => notifier.configureCheck(enabled: value)),
-              ),
+              trailing: mine ? const Icon(LucideIcons.chevronRight, size: 18) : null,
+              onTap: view.error != null || !mine ? null : () => _checkTime(context, notifier, check),
             ),
-            if (check.enabled)
+            if (mine)
               KTile(
-                icon: LucideIcons.libraryBig,
-                title: l10n.serverCheckLibrary,
-                subtitle: check.library ? l10n.serverCheckLibraryOn : l10n.serverCheckLibraryOff,
-                trailing: Switch(
-                  value: check.library,
-                  onChanged: view.error != null
-                      ? null
-                      : (value) => _guard(context, () => notifier.configureCheck(library: value)),
-                ),
+                icon: LucideIcons.refreshCw,
+                title: l10n.archiveCheckNow,
+                onTap: view.error != null ? null : () => _checkNow(context, notifier),
               ),
-            KTile(
-              icon: LucideIcons.refreshCw,
-              title: l10n.archiveCheckNow,
-              onTap: view.error != null ? null : () => _checkNow(context, notifier),
-            ),
           ],
         ),
         const SizedBox(height: 12),

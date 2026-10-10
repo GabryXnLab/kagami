@@ -1288,10 +1288,10 @@ abstract class AppLocalizations {
   /// **'Man mano non si può con questo sito: vuole la verifica del browser a ogni lettura, e da solo il telefono non la supera.'**
   String get archiveModeAheadUnavailable;
 
-  /// Nota sotto le destinazioni in modalità «Man mano», quando il server collegato è di una versione che non la sa fare e quindi non compare fra le scelte
+  /// Avviso quando si tocca «Man mano» mentre scarica il server collegato, che è di una versione che non lo sa fare
   ///
   /// In it, this message translates to:
-  /// **'Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un\'ora dall\'uscita di una versione nuova. Intanto man mano scarica dal telefono.'**
+  /// **'Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un\'ora dall\'uscita di una versione nuova.'**
   String get archiveModeAheadServer;
 
   /// Suggerimento del campo che filtra l'elenco dei capitoli; Invio sceglie il capitolo con quel numero
@@ -1711,20 +1711,20 @@ abstract class AppLocalizations {
   /// Spiegazione del controllo delle serie in corso
   ///
   /// In it, this message translates to:
-  /// **'Le serie in corso scaricate da qui si ricontrollano: arrivano solo i capitoli nuovi, nella stessa destinazione. Quelle del server le segue il server.'**
+  /// **'Ogni giorno si ricontrollano tutte le serie in corso della libreria, scaricate da qui o da altri, tranne quelle che hai smesso di seguire: arrivano solo i capitoli nuovi. Riscaricarne una dal sito la fa seguire di nuovo.'**
   String get archiveTrackedIntro;
+
+  /// Nota al posto dei comandi del controllo delle serie seguite, in Scarica un manga, quando nelle Impostazioni si è scelto che controlli il server
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie seguite le controlla il server, come scelto nelle Impostazioni («Chi scarica e controlla»). Quelle che seguiva il telefono restano ferme finché non torni al telefono.'**
+  String get archiveTrackedByServer;
 
   /// Interruttore del controllo giornaliero delle serie in corso
   ///
   /// In it, this message translates to:
   /// **'Controllo ogni giorno'**
   String get archiveCheckDaily;
-
-  /// Controllo giornaliero spento: si controlla solo su richiesta
-  ///
-  /// In it, this message translates to:
-  /// **'Solo a mano'**
-  String get archiveCheckManual;
 
   /// Ora del controllo giornaliero; time è un orario già formattato
   ///
@@ -4294,6 +4294,42 @@ abstract class AppLocalizations {
   /// **'Cerca un titolo o incolla un link'**
   String get moreDownloadSubtitle;
 
+  /// Voce delle Impostazioni, sotto «Scarica un manga»: sceglie se serie nuove, «man mano» e controllo delle serie seguite li fa il server collegato o il telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Chi scarica e controlla'**
+  String get settingsEngine;
+
+  /// Valore della voce «Chi scarica e controlla»: il server collegato
+  ///
+  /// In it, this message translates to:
+  /// **'Il server'**
+  String get settingsEngineServer;
+
+  /// Valore della voce «Chi scarica e controlla»: questo telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono'**
+  String get settingsEnginePhone;
+
+  /// Spiegazione della scelta «Il server» in «Chi scarica e controlla», sotto la voce e nel foglio della scelta
+  ///
+  /// In it, this message translates to:
+  /// **'Serie nuove, man mano e controllo delle serie seguite: tutto sul server, che guarda anche le serie scaricate dal telefono su Drive'**
+  String get settingsEngineServerNote;
+
+  /// Spiegazione della scelta «Il telefono» in «Chi scarica e controlla», sotto la voce e nel foglio della scelta
+  ///
+  /// In it, this message translates to:
+  /// **'Serie nuove, man mano e controllo delle serie seguite: tutto sul telefono. Il server resta collegato, ma non controlla niente'**
+  String get settingsEnginePhoneNote;
+
+  /// Sottotitolo di «Chi scarica e controlla» quando nessun server è collegato e la scelta non c'è; «Scarica un manga» è la voce delle Impostazioni da cui si collega
+  ///
+  /// In it, this message translates to:
+  /// **'Tutto sul telefono. Per affidarlo a un server, collegalo da «Scarica un manga»'**
+  String get settingsEngineNoServer;
+
   /// Voce delle Impostazioni che apre la cronologia di lettura
   ///
   /// In it, this message translates to:
@@ -5341,23 +5377,11 @@ abstract class AppLocalizations {
   /// **'Spento: i capitoli nuovi si scaricano solo a mano'**
   String get serverCheckDailyOff;
 
-  /// Titolo dell'interruttore che fa controllare al server tutte le serie della libreria su Drive
+  /// Sottotitolo del controllo quotidiano del server quando nelle Impostazioni («Chi scarica e controlla») si è scelto il telefono
   ///
   /// In it, this message translates to:
-  /// **'Tutta la libreria su Drive'**
-  String get serverCheckLibrary;
-
-  /// Sottotitolo dell'interruttore della libreria intera, acceso
-  ///
-  /// In it, this message translates to:
-  /// **'Anche le serie scaricate dal telefono o da altri, non solo dal server'**
-  String get serverCheckLibraryOn;
-
-  /// Sottotitolo dell'interruttore della libreria intera, spento
-  ///
-  /// In it, this message translates to:
-  /// **'Solo le serie in corso scaricate dal server'**
-  String get serverCheckLibraryOff;
+  /// **'Spento: le serie seguite le controlla il telefono, come scelto nelle Impostazioni'**
+  String get serverCheckByPhone;
 
   /// Esito dell'ultimo controllo del server; {when} è già formattato (es. «ieri alle 4:00»), {count} le serie con capitoli nuovi
   ///
@@ -6006,6 +6030,54 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Nel testo condiviso non c\'è nessun link.'**
   String get shareNoLinks;
+
+  /// Titolo della notifica: il controllo automatico ha trovato serie ferme alla verifica di Cloudflare; sites è il nome del sito (o più nomi separati da virgola)
+  ///
+  /// In it, this message translates to:
+  /// **'{sites} chiede la verifica'**
+  String dataVerifyTitle(String sites);
+
+  /// Testo della notifica delle serie ferme alla verifica del sito; toccarla apre la verifica
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Il controllo non ha potuto leggere una serie. Tocca per passare la verifica.} other{Il controllo non ha potuto leggere {count} serie. Tocca per passare la verifica.}}'**
+  String dataVerifyText(int count);
+
+  /// Scarica un manga, sezione serie seguite: titolo della scheda delle serie ferme alla verifica del sito
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Una serie aspetta la verifica} other{{count} serie aspettano la verifica}}'**
+  String archiveGatedTitle(int count);
+
+  /// Spiegazione sotto il titolo della scheda delle serie ferme alla verifica; sites è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'{sites} chiede di spuntare «Verify you are human», e il controllo automatico non lo fa. Passala tu: il controllo riparte da queste serie.'**
+  String archiveGatedBody(String sites);
+
+  /// Pulsante della scheda delle serie ferme: apre la verifica del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica'**
+  String get archiveGatedAction;
+
+  /// Avviso: l'utente è uscito dalla verifica senza passarla
+  ///
+  /// In it, this message translates to:
+  /// **'La verifica non è stata passata: le serie restano in attesa.'**
+  String get archiveGatedNothing;
+
+  /// Avviso: verifica passata, il controllo delle serie è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica passata, controllo le serie…'**
+  String get archiveGatedChecking;
+
+  /// Esito del controllo dopo la verifica passata a mano: quante serie hanno capitoli nuovi in coda; pezzo di frase dopo cui viene il punto
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{capitoli nuovi per una serie} other{capitoli nuovi per {count} serie}}'**
+  String archiveCheckQueuedCount(int count);
 }
 
 class _AppLocalizationsDelegate

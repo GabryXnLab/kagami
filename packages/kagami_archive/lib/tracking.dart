@@ -23,10 +23,14 @@
 /// capitoli nuovi elencati e nessuna tavola. Al primo download vero della
 /// serie la scheda diventa una serie seguita come le altre.
 ///
-/// Si seguono solo le serie scaricate dall'app: quelle del server le segue
-/// il suo timer, e seguirle da tutt'e due vorrebbe dire scaricare due volte
-/// gli stessi capitoli. È stato del controllo, non un indice MALF, e resta
-/// nello spazio dell'app.
+/// Qui stanno le serie scaricate da chi controlla, telefono o server; le
+/// altre serie in corso della libreria le guarda [checkLibrary]. Le guarda
+/// uno solo dei due, mai entrambi: vorrebbe dire scaricare due volte gli
+/// stessi capitoli. È stato del controllo, non un indice MALF, e resta
+/// nello spazio di chi controlla.
+///
+/// I siti dietro la verifica del browser si leggono con un [PageBrowser],
+/// se chi controlla ne ha uno, e il lavoro porta con sé la pagina letta.
 ///
 /// Il server può guardare anche tutta la libreria su Drive
 /// ([checkLibrary]): ogni serie di `library.json`, chiunque l'abbia
@@ -35,6 +39,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -152,6 +157,22 @@ class CheckReport {
   /// indice, nessun capitolo da scaricare.
   final List<String> cards = [];
   final List<({String title, String error})> failed = [];
+
+  /// Fra le [failed], quelle ferme alla verifica del sito: la può passare
+  /// solo una persona, dall'app.
+  final List<GatedSeries> gated = [];
+
+  /// Aggiunge a questo il resoconto di [other], un altro pezzo dello stesso
+  /// controllo.
+  void absorb(CheckReport other) {
+    checked += other.checked;
+    repaired.addAll(other.repaired);
+    queued.addAll(other.queued);
+    removed.addAll(other.removed);
+    cards.addAll(other.cards);
+    failed.addAll(other.failed);
+    gated.addAll(other.gated);
+  }
 }
 
 class Tracking {
@@ -234,27 +255,27 @@ class Tracking {
 
   /// Rilegge le serie e mette in coda i capitoli nuovi. Un errore su una
   /// serie non ferma le altre: resta annotata, e si riprova al controllo
-  /// seguente. Con [only] si guardano solo quelle serie.
+  /// seguente. Con [only] si guardano solo quelle serie; quelle in [skip]
+  /// (le serie che l'utente ha smesso di seguire) mai.
   Future<CheckReport> check(
     ArchiveFiles files,
     ProviderHttp Function(Provider provider) httpFor, {
+    PageBrowser? browser,
     bool Function()? cancelled,
     Set<String>? only,
+    Set<String> skip = const {},
   }) async {
     final report = CheckReport();
-    final delegated = await files.delegatedFolder();
+    if (await files.delegated()) return report;
     for (final entry in await load()) {
       if (cancelled?.call() ?? false) break;
       if (only != null && !only.contains(entry.key)) continue;
-      if (delegated != null &&
-          entry.target.destination == ArchiveDestination.drive &&
-          entry.target.folderId == delegated) {
-        continue;
-      }
+      if (skip.contains(entry.key)) continue;
       final Series series;
+      final Uint8List? page;
       try {
         final provider = selectProvider(entry.url);
-        series = await provider.fetchSeries(entry.url, httpFor(provider));
+        (:series, :page) = await readSeries(provider, entry.url, httpFor(provider), browser: browser);
       } on ProviderOffline {
         rethrow;
       } on ProviderError catch (error) {
@@ -262,6 +283,7 @@ class Tracking {
             ? 'Il sito chiede la verifica: apri la serie da «Scarica un manga».'
             : '$error';
         report.failed.add((title: entry.title, error: message));
+        if (error is CloudflareChallenge) report.gated.add(GatedSeries(key: entry.key, title: entry.title, url: entry.url));
         await _update(entry.copyWith(checkedAt: DateTime.now(), problem: message));
         continue;
       }
@@ -273,13 +295,15 @@ class Tracking {
       // «concluso»: si mette in coda prima di smettere di seguire la serie.
       if (entry.card) {
         if (fresh.isNotEmpty) {
+          final id = 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}';
           await files.enqueue(ArchiveJob(
-            id: 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
+            id: id,
             url: entry.url,
             title: series.title,
             target: entry.target,
             ids: const {},
             automatic: true,
+            snapshot: await files.saveSnapshot(id, page),
           ));
           report.queued.add(series.title);
           report.cards.add(series.title);
@@ -294,14 +318,16 @@ class Tracking {
       }
       final queued = entry.ahead == null ? fresh : fresh.take(entry.wanted).toList();
       if (queued.isNotEmpty) {
+        final id = 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}';
         await files.enqueue(ArchiveJob(
-          id: 'check-${entry.key}-${DateTime.now().millisecondsSinceEpoch}',
+          id: id,
           url: entry.url,
           title: series.title,
           target: entry.target,
           ids: queued.toSet(),
           automatic: true,
           ahead: entry.ahead,
+          snapshot: await files.saveSnapshot(id, page),
         ));
         report.queued.add(series.title);
       }
@@ -341,16 +367,19 @@ class Tracking {
 /// nell'indice. Le schede manuali ([manualProvider]) non hanno un sito da
 /// rileggere e si saltano.
 ///
-/// Si saltano le serie in [skip] (quelle che segue già [Tracking]), quelle
-/// già in coda — un lavoro nuovo sullo stesso link prenderebbe il posto di
-/// quello dell'utente — e quelle dei siti dietro la verifica del browser, che
-/// senza il telefono non si leggono.
+/// Si saltano le serie in [skip] (quelle che segue già [Tracking] e quelle
+/// che l'utente ha smesso di seguire), quelle già in coda — un lavoro nuovo
+/// sullo stesso link prenderebbe il posto di quello dell'utente — e, senza
+/// un [browser], quelle dei siti dietro la verifica del browser. Con [only]
+/// si guardano solo quelle serie.
 Future<CheckReport> checkLibrary({
   required ArchiveFiles files,
   required ArchiveStore store,
   required ArchiveTarget target,
   required ProviderHttp Function(Provider provider) httpFor,
+  PageBrowser? browser,
   Set<String> skip = const {},
+  Set<String>? only,
   bool Function()? cancelled,
   Duration pause = const Duration(seconds: 1),
 }) async {
@@ -366,13 +395,14 @@ Future<CheckReport> checkLibrary({
     if (key is! String || path is! String || url is! String) continue;
     if (row['provider'] == manualProvider) continue;
     if (skip.contains(key) || queued.contains(url)) continue;
+    if (only != null && !only.contains(key)) continue;
     final Provider provider;
     try {
       provider = selectProvider(url);
     } on ProviderError {
       continue;
     }
-    if (provider.needsBrowser) continue;
+    if (provider.needsBrowser && browser == null) continue;
     final title = row['title'] as String? ?? key;
     final index = await store.readJson(p.posix.join(path, seriesIndexName));
     final entries = (index?['chapters'] as List? ?? const []).whereType<Map<String, Object?>>().toList();
@@ -386,28 +416,33 @@ Future<CheckReport> checkLibrary({
     };
     final status = index?['releaseStatus'] ?? row['releaseStatus'];
     var fresh = <String>[];
+    Uint8List? page;
     if (status != 'completed' && status != 'cancelled') {
       if (!first && pause > Duration.zero) await Future<void>.delayed(pause);
       first = false;
       try {
-        final series = await provider.fetchSeries(url, httpFor(provider));
+        final Series series;
+        (:series, :page) = await readSeries(provider, url, httpFor(provider), browser: browser);
         fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
         report.checked++;
       } on ProviderOffline {
         rethrow;
       } on ProviderError catch (error) {
         report.failed.add((title: title, error: '$error'));
+        if (error is CloudflareChallenge) report.gated.add(GatedSeries(key: key, title: title, url: url));
         continue;
       }
     }
     if (fresh.isEmpty && halfway.isEmpty) continue;
+    final id = 'library-$key-${DateTime.now().millisecondsSinceEpoch}';
     await files.enqueue(ArchiveJob(
-      id: 'library-$key-${DateTime.now().millisecondsSinceEpoch}',
+      id: id,
       url: url,
       title: title,
       target: target,
       ids: card ? const {} : {...fresh, ...halfway},
       automatic: true,
+      snapshot: await files.saveSnapshot(id, page),
     ));
     if (fresh.isNotEmpty) report.queued.add(title);
     if (card) report.cards.add(title);

@@ -173,6 +173,19 @@ void main() {
     final check = await client.configureCheck(enabled: false, minutes: 75);
     expect((check.enabled, check.minutes, check.library), (false, 75, true));
     expect((await client.info()).checkMinutes, isNull);
+    final excluded = await client.configureCheck(unfollowed: {'mangak:A1'});
+    expect(excluded.unfollowed, {'mangak:A1'});
+    expect(excluded.minutes, 75);
+    expect((await client.info()).unfollowed, isTrue);
+
+    jobs.blocked = const [GatedSeries(key: 'manhwaread:d', title: 'D', url: 'https://manhwaread.com/manhwa/d/')];
+    final info = await client.info();
+    expect(info.verify, isTrue);
+    expect(info.check.gated.single.title, 'D');
+    final passed = await client.checkPages({'https://manhwaread.com/manhwa/d/': '<html></html>'});
+    expect(passed.checked, 1);
+    expect(passed.queued, 1);
+    expect(jobs.pages.single.keys, ['https://manhwaread.com/manhwa/d/']);
 
     final folder = await client.chooseFolder('nuova');
     expect(folder, (id: 'nuova', name: 'Scelta'));

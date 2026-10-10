@@ -10,13 +10,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/runner.dart';
-import 'package:kagami_archive/tracking.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../data/drive.dart';
 import '../data/library_location.dart';
 import '../data/network.dart';
 import 'device.dart';
+import 'phone_check.dart';
 
 /// Il lucchetto del giro: un file ritoccato ogni tanto, come quello della
 /// sincronizzazione. I motori stanno nello stesso processo, e un lucchetto
@@ -41,7 +41,8 @@ class _RunLock {
   }
 }
 
-/// Esegue la coda; con [check], prima controlla le serie in corso. Dice
+/// Esegue la coda; con [check], prima controlla le serie in corso
+/// ([checkFromPhone]). Dice
 /// sempre `done` al Kotlin, con come è finita: è ciò che il lavoro aspetta
 /// per spegnere il motore e decidere se ripartire.
 Future<void> runBackgroundArchive({required bool check}) async {
@@ -53,6 +54,9 @@ Future<void> runBackgroundArchive({required bool check}) async {
   var end = RunEnd.done;
   // Il controllo non riuscito per la rete si ritenta fra poco, non domani.
   var checkFailed = false;
+  // Le serie che solo una persona può sbloccare: le annuncia il Kotlin, a
+  // giro finito.
+  var gated = const <GatedSeries>[];
   DriveClient? client;
   _RunLock? lock;
   try {
@@ -63,14 +67,17 @@ Future<void> runBackgroundArchive({required bool check}) async {
     final environment = deviceEnvironment(files, client, directories.cache);
     if (check) {
       try {
-        await Tracking(files.ongoing).check(
-          files,
-          (provider) => environment.httpFor(provider),
-          cancelled: () => stopped,
-        );
+        gated = (await checkFromPhone(files, environment, browser: const NativePageBrowser(), cancelled: () => stopped))
+            .gated;
       } on ProviderOffline {
         end = RunEnd.retry;
         checkFailed = true;
+      } on DriveOffline {
+        end = RunEnd.retry;
+        checkFailed = true;
+      } on DriveException {
+        // Permesso o cartella di Drive che non vanno: riprovare fra mezz'ora
+        // non li aggiusta, e la coda gira lo stesso.
       }
     }
     // Un altro motore sta già scaricando: i capitoli messi in coda dal
@@ -104,6 +111,12 @@ Future<void> runBackgroundArchive({required bool check}) async {
   } finally {
     await lock?.release();
     client?.close();
-    await channel.invokeMethod<void>('done', {'end': end.name, 'checkFailed': checkFailed});
+    final notice = gated.isEmpty ? null : gatedNotice(gated);
+    await channel.invokeMethod<void>('done', {
+      'end': end.name,
+      'checkFailed': checkFailed,
+      'verifyTitle': ?notice?.title,
+      'verifyText': ?notice?.text,
+    });
   }
 }

@@ -769,7 +769,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'Le serveur lié ne sait pas encore télécharger au fil de la lecture : il se met à jour seul dans l\'heure qui suit une nouvelle version. En attendant, ce mode télécharge depuis le téléphone.';
+      'Le serveur lié ne sait pas encore télécharger au fil de la lecture : il se met à jour seul dans l\'heure qui suit une nouvelle version.';
 
   @override
   String get archiveChapterSearch => 'Rechercher par numéro ou titre';
@@ -1078,13 +1078,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'Les séries en cours téléchargées d\'ici sont revérifiées : seuls les nouveaux chapitres arrivent, dans la même destination. Celles du serveur sont suivies par le serveur.';
+      'Chaque jour, toutes les séries en cours de la bibliothèque sont revérifiées, téléchargées d\'ici ou par d\'autres, sauf celles que vous ne suivez plus : seuls les nouveaux chapitres arrivent. Retélécharger une série depuis le site la fait suivre à nouveau.';
+
+  @override
+  String get archiveTrackedByServer =>
+      'Les séries suivies sont vérifiées par le serveur, comme choisi dans les Paramètres (« Qui télécharge et vérifie »). Celles que suivait le téléphone restent en pause jusqu\'à ce que vous reveniez au téléphone.';
 
   @override
   String get archiveCheckDaily => 'Vérification quotidienne';
-
-  @override
-  String get archiveCheckManual => 'À la main seulement';
 
   @override
   String archiveCheckAt(String time) {
@@ -2754,6 +2755,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get moreDownloadSubtitle => 'Cherche un titre ou colle un lien';
 
   @override
+  String get settingsEngine => 'Qui télécharge et vérifie';
+
+  @override
+  String get settingsEngineServer => 'Le serveur';
+
+  @override
+  String get settingsEnginePhone => 'Le téléphone';
+
+  @override
+  String get settingsEngineServerNote =>
+      'Nouvelles séries, au fil de la lecture et vérification des séries suivies : tout sur le serveur, qui surveille aussi les séries téléchargées par le téléphone sur Drive';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'Nouvelles séries, au fil de la lecture et vérification des séries suivies : tout sur le téléphone. Le serveur reste lié mais ne vérifie rien';
+
+  @override
+  String get settingsEngineNoServer =>
+      'Tout sur le téléphone. Pour le confier à un serveur, liez-en un depuis « Télécharger un manga »';
+
+  @override
   String get moreHistory => 'Historique';
 
   @override
@@ -3530,15 +3552,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Désactivé : les nouveaux chapitres ne se téléchargent qu\'à la main';
 
   @override
-  String get serverCheckLibrary => 'Toute la bibliothèque sur Drive';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'Aussi les séries téléchargées par le téléphone ou par d\'autres, pas seulement par le serveur';
-
-  @override
-  String get serverCheckLibraryOff =>
-      'Seulement les séries en cours téléchargées par le serveur';
+  String get serverCheckByPhone =>
+      'Désactivée : les séries suivies sont vérifiées par le téléphone, comme choisi dans les Paramètres';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3991,4 +4006,59 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'Le texte partagé ne contient aucun lien.';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites demande la vérification';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'La vérification automatique n\'a pas pu lire $count séries. Touchez pour passer la vérification.',
+      one: 'La vérification automatique n\'a pas pu lire une série. Touchez pour passer la vérification.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count séries attendent la vérification',
+      one: 'Une série attend la vérification',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites demande de cocher « Verify you are human », et le contrôle automatique ne le fait pas. Passez-la vous-même : le contrôle reprend à partir de ces séries.';
+  }
+
+  @override
+  String get archiveGatedAction => 'Vérifier';
+
+  @override
+  String get archiveGatedNothing =>
+      'La vérification n\'a pas été passée : les séries restent en attente.';
+
+  @override
+  String get archiveGatedChecking =>
+      'Vérification passée, contrôle des séries…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'nouveaux chapitres pour $count séries',
+      one: 'nouveaux chapitres pour une série',
+    );
+    return '$_temp0';
+  }
 }

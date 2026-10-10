@@ -289,8 +289,16 @@ nel proprio progetto Firebase.
     i token. La notifica dell'invito la dà l'app di chi lo riceve;
   - il server non fa TLS. L'HTTPS lo mette chi lo espone (Tailscale Funnel,
     reverse proxy); in chiaro va bene solo in casa o dentro Tailscale;
-  - niente browser: per ManhwaRead la pagina della serie la manda il
-    telefono (`snapshot`), le tavole si prendono dal CDN;
+  - per ManhwaRead la pagina della serie da scaricare la manda il telefono
+    (`snapshot`), le tavole si prendono dal CDN. I controlli la leggono da
+    sé con un Chromium senza schermo (`browser.dart`, DevTools su un
+    WebSocket, senza dipendenze; nell'immagine c'è `chromium`), e il
+    telefono ad app chiusa con una WebView invisibile (`PageBrowser.kt`):
+    tutti e due passano solo la verifica che si risolve da sola, la casella
+    «Verify you are human» non la spunta nessuno, di proposito. Le serie
+    rimaste ferme (`GatedSeries`, `check.gated`) le sblocca l'utente
+    dall'app (`passVerification`, notifica `verify:` del giro ad app
+    chiusa), che manda le pagine con `POST /v2/check/pages`;
   - l'immagine Docker si costruisce dalla radice (serve `packages/`), e
     `.dockerignore` fa entrare solo `server/` e il motore. La pubblica su
     GHCR `ci.yml` dal repo pubblico, ed è quella del comando dell'app
@@ -527,12 +535,19 @@ nel proprio progetto Firebase.
   stato pubblicato e libreria riletta), e il controllo porta dal sito solo i
   capitoli nuovi che lei chiede (`TrackedSeries.wanted`). Il controllo
   quotidiano senza rete si riprova dopo mezz'ora, e all'avvio l'app rimette
-  la catena se si è spezzata (`ExistingWorkPolicy.KEEP`). Il server, se l'account
-  lo lascia acceso, guarda anche tutta la libreria su Drive
-  (`checkLibrary`): nuovi sono i capitoli che l'`index.json` della serie non
-  elenca, non quelli non archiviati, che possono esserlo per scelta. Il
-  telefono gli lascia allora le sue serie di quella cartella
-  (`archive/server-check.json`), per non scaricarle due volte.
+  la catena se si è spezzata (`ExistingWorkPolicy.KEEP`). Chi scarica e
+  controlla lo sceglie l'utente (`archive.engine` fra le impostazioni,
+  `archiveEngineProvider`): tutto il server o tutto il telefono — serie
+  nuove, man mano, controllo —, mai metà e metà. Chi controlla guarda ogni
+  giorno le serie che segue lui e tutte le altre serie in corso della
+  libreria (`checkLibrary`: nuovi sono i capitoli che l'`index.json` della
+  serie non elenca, non quelli non archiviati, che possono esserlo per
+  scelta), tranne quelle di «Smetti di seguire» (`archive.unfollowed`, al
+  server con `PUT /v2/check`; riscaricare la serie la fa seguire di nuovo).
+  Il telefono lo fa con `checkFromPhone` su Drive o, senza, sulla cartella
+  scelta, e il suo controllo non si spegne; l'altro lato non controlla
+  niente. `ArchiveEngineSync` porta tutto in `archive/check-scope.json`,
+  letto ad app chiusa, nella catena del controllo e sul server.
 - **Una scheda è una serie MALF senza capitoli, non un dato dell'app.**
   Salvare un manga letto altrove (Scarica un manga → «Solo la scheda»,
   scheda manuale, Importa più link, Condividi) scrive `series.json`,

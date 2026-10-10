@@ -4,6 +4,8 @@
     <string name="channel_arrivals_description">A new chapter of a series you follow has arrived in the library.</string>
     <string name="channel_invites">Shared servers</string>
     <string name="channel_invites_description">Someone gave you access to their Kagami Server.</string>
+    <string name="channel_verify">Site verifications</string>
+    <string name="channel_verify_description">A site asks for a verification only you can pass, and the series check is waiting.</string>
     <string name="archive_downloading">Manga downloads</string>
     <string name="channel_archive_description">The series Kagami is downloading from sites.</string>
     <string name="archive_checking">Checking ongoing series</string>

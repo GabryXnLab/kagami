@@ -83,9 +83,10 @@ void main() {
       'drive': {'authorized': true, 'folderId': 'cartella-$owner', 'folderName': 'Manga'},
     });
     expect(body['check'], {
-      'minutes': 240, 'time': 240, 'enabled': true, 'library': true,
-      'checked': 0, 'queued': 0, 'failed': 0,
+      'minutes': 240, 'time': 240, 'enabled': true, 'library': true, 'unfollowed': <Object?>[],
+      'checked': 0, 'queued': 0, 'failed': 0, 'gated': <Object?>[],
     });
+    expect(body['features'], containsAll(['ahead', 'unfollowed', 'verify']));
   });
 
   test('gli utenti sono del proprietario: gli altri ricevono owner_only', () async {
@@ -227,6 +228,19 @@ void main() {
     expect(changed, 200);
     expect((check!['minutes'], check['time'], check['enabled'], check['library']), (null, 90, false, false));
     expect((await call('PUT', '/v2/check', body: {'minutes': 1440})).$1, 400);
+    final (_, excluded) = await call('PUT', '/v2/check', body: {'unfollowed': ['mangak:A1']});
+    expect(excluded!['unfollowed'], ['mangak:A1']);
+    expect(excluded['time'], 90);
+    expect((await call('PUT', '/v2/check', body: {'unfollowed': [1]})).$1, 400);
+    expect((await call('PUT', '/v2/check', body: {'unfollowed': 'mangak:A1'})).$1, 400);
+    final (checkedPages, pages) = await call('POST', '/v2/check/pages', body: {
+      'pages': [{'url': 'https://manhwaread.com/manhwa/d/', 'html': '<html></html>'}],
+    });
+    expect(checkedPages, 200);
+    expect((pages!['checked'], pages['queued']), (1, 1));
+    expect(pages['gated'], isEmpty);
+    expect((await call('POST', '/v2/check/pages', body: {'pages': <Object?>[]})).$1, 400);
+    expect((await call('POST', '/v2/check/pages', body: {'pages': [{'url': 'x'}]})).$1, 400);
 
     final link = 'https://drive.google.com/drive/folders/1AbC_d-EF?usp=sharing';
     final (status, body) = await call('PUT', '/v2/me/folder', body: {'folderId': link});

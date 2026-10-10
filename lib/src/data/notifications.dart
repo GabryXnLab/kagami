@@ -61,6 +61,10 @@ const MethodChannel notificationsChannel = MethodChannel('kagami/notifications')
 /// chiave della serie, che non comincia mai in questo modo.
 const String serverInvitePrefix = 'server-invite:';
 
+/// La chiave della notifica delle serie ferme alla verifica di un sito
+/// (`ArrivalNotifier.VERIFY_KEY`): toccandola si apre la verifica.
+const String verifyNotificationKey = 'verify:';
+
 class ArrivalNotifications {
   ArrivalNotifications({this.channel = notificationsChannel})
       : _native = !kIsWeb && Platform.isAndroid;

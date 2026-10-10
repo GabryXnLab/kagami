@@ -13,10 +13,12 @@ import 'package:path/path.dart' as p;
 
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/providers.dart' show SuppliedPages;
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/tracking.dart';
 
 import 'archive/device.dart';
+import 'archive/phone_check.dart';
 import 'data/arrivals.dart';
 import 'data/backup.dart';
 import 'data/cleanup.dart';
@@ -1797,8 +1799,11 @@ class ArchiveController extends Notifier<ArchiveView> {
     await refresh();
   }
 
+  /// Smette di seguire la serie: il telefono la dimentica e il controllo
+  /// automatico, di chiunque sia, non la guarda più.
   Future<void> forget(TrackedSeries series) async {
     await Tracking(_files.ongoing).forget(series.key);
+    await ref.read(unfollowedProvider.notifier).unfollow(series.key);
     await refresh();
   }
 
@@ -1808,14 +1813,43 @@ class ArchiveController extends Notifier<ArchiveView> {
     await refresh();
   }
 
-  /// Il controllo delle serie in corso adesso, qui nell'app: sono poche
-  /// pagine, e i capitoli nuovi li scarica poi la coda.
+  /// Il controllo delle serie in corso adesso, qui nell'app, lo stesso del
+  /// giro quotidiano: i capitoli nuovi li scarica poi la coda.
   Future<CheckReport> checkNow() async {
-    final report = await Tracking(_files.ongoing).check(
-      _files,
-      (provider) => SiteHttp(provider.allowedHost),
-    );
+    final client = DriveClient(ref.read(driveAuthProvider).token, network: NetworkMonitor.instance);
+    final CheckReport report;
+    try {
+      report = await checkFromPhone(
+        _files,
+        deviceEnvironment(_files, client, ref.read(appDirectoriesProvider).cache),
+        browser: const NativePageBrowser(),
+      );
+    } finally {
+      client.close();
+    }
     if (report.queued.isNotEmpty) await const ArchiveScheduler().start();
+    await refresh();
+    return report;
+  }
+
+  /// Il controllo delle sole serie ferme alla verifica, con le loro pagine
+  /// aperte a mano ([pages], per il link annotato in [GatedSeries.url]).
+  Future<CheckReport> checkPages(Map<String, String> pages) async {
+    final only = {for (final entry in await _files.gated()) if (pages.containsKey(entry.url)) entry.key};
+    if (only.isEmpty) return CheckReport();
+    final client = DriveClient(ref.read(driveAuthProvider).token, network: NetworkMonitor.instance);
+    final CheckReport report;
+    try {
+      report = await checkFromPhone(
+        _files,
+        deviceEnvironment(_files, client, ref.read(appDirectoriesProvider).cache),
+        browser: SuppliedPages(pages),
+        only: only,
+      );
+    } finally {
+      client.close();
+    }
+    if (report.queued.isNotEmpty || report.repaired.isNotEmpty) await const ArchiveScheduler().start();
     await refresh();
     return report;
   }
@@ -1893,23 +1927,27 @@ class ReadAhead extends Notifier<void> {
 
   static bool _due(DateTime? checked) => checked == null || DateTime.now().difference(checked) > _recheck;
 
+  /// «Man mano» lo fa tutto chi l'utente ha scelto ([archiveEngineProvider]):
+  /// le serie seguite dall'altro restano ferme finché non si torna a lui.
   Future<void> _plan() async {
-    if (await _planServer()) return;
-    await _planPhone();
+    if (ref.read(archiveEngineProvider) == ArchiveEngine.server) {
+      await _planServer();
+    } else {
+      await _planPhone();
+    }
   }
 
-  /// `true` se il catalogo va riletto prima di decidere.
-  Future<bool> _planServer() async {
+  Future<void> _planServer() async {
     final link = ref.read(serverLinkProvider).value;
-    if (link == null) return false;
+    if (link == null) return;
     final client = serverClient(ref, link);
     try {
       final smart = [for (final series in await client.ongoing()) if (series.ahead != null) series];
-      if (smart.isEmpty) return false;
+      if (smart.isEmpty) return;
       final queue = await client.queue();
       final seen = _seenServer;
       _seenServer = queue.history.firstOrNull?.finishedAt;
-      if (_stale(_seenServer, seen)) return true;
+      if (_stale(_seenServer, seen)) return;
       for (final series in smart) {
         final same = [for (final job in queue.jobs) if (job.url == series.url) job];
         if (same.any((job) => job.ids == null)) continue;
@@ -1934,7 +1972,6 @@ class ReadAhead extends Notifier<void> {
     } finally {
       client.close();
     }
-    return false;
   }
 
   Future<void> _planPhone() async {
@@ -1972,7 +2009,12 @@ class ReadAhead extends Notifier<void> {
     }
     if (check.isNotEmpty) {
       try {
-        final report = await tracking.check(files, (provider) => SiteHttp(provider.allowedHost), only: check);
+        final report = await tracking.check(
+          files,
+          (provider) => SiteHttp(provider.allowedHost),
+          only: check,
+          skip: ref.read(unfollowedProvider).value ?? const {},
+        );
         if (report.queued.isNotEmpty) queued = true;
       } on ProviderOffline {
         // Lo rifà il controllo quotidiano, o la prossima uscita dal lettore.
@@ -2012,6 +2054,194 @@ class ServerLinkNotifier extends AsyncNotifier<ServerLink?> {
 
 final serverLinkProvider =
     AsyncNotifierProvider<ServerLinkNotifier, ServerLink?>(ServerLinkNotifier.new);
+
+/// Chi scarica e chi controlla: le serie nuove, «man mano» e il controllo
+/// delle serie seguite li fa tutti il server collegato o tutti il telefono,
+/// mai metà e metà — due controlli sulla stessa cartella di Drive
+/// scaricherebbero due volte gli stessi capitoli.
+enum ArchiveEngine { phone, server }
+
+/// La scelta dell'utente, fra le impostazioni del database come il
+/// collegamento al server; `null` finché non l'ha fatta.
+class ArchiveEngineNotifier extends AsyncNotifier<ArchiveEngine?> {
+  static const String _key = 'archive.engine';
+
+  @override
+  Future<ArchiveEngine?> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    return ArchiveEngine.values.where((engine) => engine.name == value).firstOrNull;
+  }
+
+  Future<void> choose(ArchiveEngine engine) async {
+    state = AsyncData(engine);
+    await ref.read(userRepositoryProvider).writeSetting(_key, engine.name);
+  }
+}
+
+final archiveEngineChoiceProvider =
+    AsyncNotifierProvider<ArchiveEngineNotifier, ArchiveEngine?>(ArchiveEngineNotifier.new);
+
+/// Chi scarica e controlla adesso: il server solo se è collegato. Senza una
+/// scelta fatta, il server collegato, come prima che ci fosse la scelta.
+final archiveEngineProvider = Provider<ArchiveEngine>((ref) {
+  if (ref.watch(serverLinkProvider).value == null) return ArchiveEngine.phone;
+  return ref.watch(archiveEngineChoiceProvider).value ?? ArchiveEngine.server;
+});
+
+/// Le serie che l'utente ha smesso di seguire («Smetti di seguire»): il
+/// controllo automatico non le guarda più, da qualunque parte giri. Stanno
+/// fra le impostazioni del database, quindi in backup e account; al server
+/// le porta [ArchiveEngineSync]. Riscaricare la serie la fa seguire di nuovo.
+class UnfollowedNotifier extends AsyncNotifier<Set<String>> {
+  static const String _key = 'archive.unfollowed';
+
+  @override
+  Future<Set<String>> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    if (value == null || value.isEmpty) return const {};
+    try {
+      return {...(jsonDecode(value) as List).whereType<String>()};
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  Future<void> unfollow(String key) async => _write({...await future, key});
+
+  Future<void> follow(String key) async {
+    final current = await future;
+    if (current.contains(key)) await _write({...current}..remove(key));
+  }
+
+  Future<void> _write(Set<String> keys) async {
+    state = AsyncData(keys);
+    await ref.read(userRepositoryProvider).writeSetting(_key, jsonEncode([...keys]));
+  }
+}
+
+final unfollowedProvider = AsyncNotifierProvider<UnfollowedNotifier, Set<String>>(UnfollowedNotifier.new);
+
+/// L'ora del controllo quotidiano del telefono per chi non l'ha scelta: il
+/// controllo c'è sempre, come quello del server.
+const int defaultCheckMinutes = 4 * 60;
+
+/// Ciò che decide il controllo, quando tutto è letto: prima, il server di
+/// partenza e l'elenco vuoto sono solo ipotesi.
+typedef _CheckPlan = ({ArchiveEngine engine, Set<String> unfollowed, String? driveFolder, String? localRoot});
+
+final _checkPlanProvider = Provider<_CheckPlan?>((ref) {
+  final unfollowed = ref.watch(unfollowedProvider);
+  if (ref.watch(serverLinkProvider).isLoading ||
+      ref.watch(archiveEngineChoiceProvider).isLoading ||
+      ref.watch(driveFolderProvider).isLoading ||
+      unfollowed.isLoading) {
+    return null;
+  }
+  final signedIn = ref.watch(cloudAccountProvider.select((status) => status.signedIn));
+  return (
+    engine: ref.watch(archiveEngineProvider),
+    unfollowed: unfollowed.value ?? const {},
+    // La cartella può arrivare da un backup anche in una build senza
+    // Firebase, dove Drive non si può aprire.
+    driveFolder: cloudAvailable && signedIn ? ref.watch(driveFolderProvider).value?.id : null,
+    localRoot: ref.watch(libraryRootProvider),
+  );
+});
+
+/// Porta la scelta di chi controlla dove la leggono quelli che non hanno il
+/// database: il file del controllo del telefono, letto anche ad app chiusa
+/// ([ArchiveFiles.writeScope]), la catena del controllo quotidiano e,
+/// quando cambia, il controllo del server con le serie escluse. Vive
+/// accanto alla shell.
+class ArchiveEngineSync extends Notifier<void> {
+  @override
+  void build() {
+    ref.listen(_checkPlanProvider, (previous, plan) {
+      if (plan == null) return;
+      final changed = previous != null &&
+          (previous.engine != plan.engine || !const SetEquality<String>().equals(previous.unfollowed, plan.unfollowed));
+      unawaited(_apply(plan, changed: changed));
+    }, fireImmediately: true);
+  }
+
+  Future<void> _apply(_CheckPlan plan, {required bool changed}) async {
+    final files = ref.read(archiveFilesProvider);
+    final server = plan.engine == ArchiveEngine.server;
+    final link = ref.read(serverLinkProvider).value;
+    await files.writeScope(CheckScope(
+      toServer: server,
+      driveFolder: plan.driveFolder,
+      localRoot: plan.localRoot,
+      unfollowed: plan.unfollowed,
+      server: server ? link?.url.toString() : null,
+    ));
+    // Il controllo del telefono si accoda da solo giorno dopo giorno; se un
+    // giro è morto prima di farlo, la catena si rimette qui. Con il server
+    // il giro resta, ma chiede solo al server quali serie aspettano la
+    // verifica: due ore dopo, perché trovi il controllo della notte già
+    // fatto quando le ore dei due coincidono, come di partenza.
+    final settings = await files.settings();
+    final minutes = settings.minutes ?? defaultCheckMinutes;
+    await const ArchiveScheduler().apply(
+      CheckSettings(minutes: server ? (minutes + 120) % (24 * 60) : minutes, wifiOnly: settings.wifiOnly),
+      keep: !changed,
+    );
+    if (!changed || link == null) return;
+    final client = serverClient(ref, link);
+    try {
+      await alignServerCheck(client, plan.engine, plan.unfollowed);
+    } on ServerException {
+      // Lo rimette in riga la schermata del server, alla prossima apertura.
+    } on IOException {
+      // Lo stesso, senza rete.
+    } finally {
+      client.close();
+    }
+  }
+}
+
+final archiveEngineSyncProvider = NotifierProvider<ArchiveEngineSync, void>(ArchiveEngineSync.new);
+
+/// Le serie che il controllo ha trovato ferme alla verifica di un sito, da
+/// chi controlla: il file del telefono o, con il server, la sua risposta.
+/// Un server che non sa dirlo (`verify`) non ne ha.
+final gatedSeriesProvider = FutureProvider.autoDispose<List<GatedSeries>>((ref) async {
+  if (ref.watch(archiveEngineProvider) == ArchiveEngine.phone) {
+    return ref.watch(archiveFilesProvider).gated();
+  }
+  final link = ref.watch(serverLinkProvider).value;
+  if (link == null) return const [];
+  final client = serverClient(ref, link);
+  try {
+    final info = await client.info();
+    return info.verify ? info.check.gated : const [];
+  } on ServerException {
+    return const [];
+  } on IOException {
+    return const [];
+  } finally {
+    client.close();
+  }
+});
+
+/// Accende o spegne il controllo quotidiano del server secondo [engine] e
+/// gli dà le serie escluse, se non è già così ([check], com'è adesso). Con il
+/// server controlla tutta la libreria su Drive, perché anche le serie
+/// scaricate dal telefono le segue lui. Un server che non conosce
+/// `unfollowed` ([knowsUnfollowed] falso) l'elenco lo ignora: non glielo si
+/// ripete a ogni giro.
+Future<RemoteCheck?> alignServerCheck(
+  ServerClient client,
+  ArchiveEngine engine,
+  Set<String> unfollowed, {
+  RemoteCheck? check,
+  bool knowsUnfollowed = true,
+}) async {
+  final server = engine == ArchiveEngine.server;
+  final same = !knowsUnfollowed || const SetEquality<String>().equals(check?.unfollowed, unfollowed);
+  if (check != null && same && (server ? check.enabled && check.library : !check.enabled)) return null;
+  return client.configureCheck(enabled: server, library: server ? true : null, unfollowed: unfollowed);
+}
 
 final serverAccessProvider = Provider<ServerAccess>((ref) => const ServerAccess());
 
@@ -2121,6 +2351,8 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
       return RemoteArchiveView(link: link, error: currentL10n().dataServerSignInRequired, unauthorized: true);
     }
     final client = _client = serverClient(ref, link);
+    // Cambiando chi controlla, il controllo del server va riletto.
+    ref.listen(archiveEngineProvider, (_, _) => unawaited(refresh(full: true)));
     _tick = 0;
     _lastOutcome = null;
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => unawaited(refresh()));
@@ -2153,9 +2385,10 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
         ref.invalidate(libraryCatalogProvider);
       }
       _lastOutcome = marker;
-      if (info != null) await _delegate(info);
+      final aligned = info == null ? null : await _align(client, info);
+      if (!ref.mounted || client != _client) return;
       state = state.copyWith(
-        info: info,
+        info: aligned,
         queue: queue,
         ongoing: ongoing,
         users: users,
@@ -2205,27 +2438,38 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     await refresh();
   }
 
+  /// Smette di seguire la serie: il server la dimentica e il controllo
+  /// automatico, di chiunque sia, non la guarda più.
   Future<void> forget(RemoteSeries series) async {
     await _live.forget(series.key);
+    await ref.read(unfollowedProvider.notifier).unfollow(series.key);
     await refresh(full: true);
   }
 
   Future<void> check() => _live.check();
 
-  /// Il controllo quotidiano del server per questo account.
-  Future<void> configureCheck({bool? enabled, int? minutes, bool? library}) async {
-    final check = await _live.configureCheck(enabled: enabled, minutes: minutes, library: library);
+  /// L'ora del controllo quotidiano del server per questo account; acceso o
+  /// spento lo decide [archiveEngineProvider].
+  Future<void> configureCheck({required int minutes}) async {
+    final check = await _live.configureCheck(minutes: minutes);
     final info = state.info?.withCheck(check);
     if (info == null) return;
-    await _delegate(info);
     state = state.copyWith(info: info);
   }
 
-  /// Il controllo del telefono lascia al server le serie della cartella di
-  /// cui il server guarda ogni giorno tutta la libreria.
-  Future<void> _delegate(ServerInfo info) => ref.read(archiveFilesProvider).delegate(
-        info.ready && info.check.enabled && info.check.library ? info.folderId : null,
-      );
+  /// Il controllo del server segue [archiveEngineProvider]: acceso se le
+  /// serie le controlla lui, spento se le controlla il telefono. Si rimette
+  /// in riga qui se la scelta è cambiata senza che il server rispondesse.
+  Future<ServerInfo> _align(ServerClient client, ServerInfo info) async {
+    final check = await alignServerCheck(
+      client,
+      ref.read(archiveEngineProvider),
+      ref.read(unfollowedProvider).value ?? const {},
+      check: info.check,
+      knowsUnfollowed: info.unfollowed,
+    );
+    return check == null ? info : info.withCheck(check);
+  }
 
   /// Dice al server di scrivere nella cartella di Drive che legge l'app.
   Future<void> useFolder(DriveFolder folder) async {
@@ -2277,7 +2521,6 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
         // lo si può togliere anche da myaccount.google.com.
       }
     }
-    await ref.read(archiveFilesProvider).delegate(null);
     await ref.read(serverLinkProvider.notifier).choose(null);
   }
 }

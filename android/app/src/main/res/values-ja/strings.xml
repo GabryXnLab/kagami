@@ -4,6 +4,8 @@
     <string name="channel_arrivals_description">フォロー中のシリーズの新しい話がライブラリに届きました。</string>
     <string name="channel_invites">共有サーバー</string>
     <string name="channel_invites_description">誰かがあなたに Kagami Server へのアクセスを許可しました。</string>
+    <string name="channel_verify">サイトの確認</string>
+    <string name="channel_verify_description">サイトがあなたにしかできない確認を求めていて、シリーズのチェックが待機しています。</string>
     <string name="archive_downloading">マンガのダウンロード</string>
     <string name="channel_archive_description">Kagami がサイトからダウンロード中のシリーズ。</string>
     <string name="archive_checking">連載中のシリーズを確認中</string>

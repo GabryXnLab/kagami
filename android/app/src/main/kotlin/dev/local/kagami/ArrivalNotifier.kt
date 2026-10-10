@@ -31,6 +31,10 @@ import java.util.concurrent.TimeUnit
  * tocco, con una chiave che Dart riconosce (`server-invite:`), ma un canale
  * suo, perché chi spegne i capitoli nuovi non spenga anche questo.
  *
+ * Con `verify`, dal giro di `ArchiveWorker`, l'avviso che il controllo ha
+ * trovato serie ferme alla verifica di un sito: una sola notifica, con la
+ * chiave `verify:` che Dart riconosce, e un canale suo.
+ *
  * Con `watch` Dart consegna ciò che serve a controllare la cartella locale
  * ad app chiusa, e qui si programma `LibraryWatchWorker`.
  *
@@ -123,6 +127,8 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
         const val EXTRA_SERIES = "dev.local.kagami.series"
         private const val CHANNEL_ID = "arrivals"
         private const val INVITES_ID = "server-invites"
+        private const val VERIFY_ID = "site-checks"
+        const val VERIFY_KEY = "verify:"
         private const val GROUP = "dev.local.kagami.arrivals"
         private const val NOTIFICATION_ID = 1
 
@@ -156,6 +162,22 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 )
             }
             notify(context, INVITES_ID, key, title, text, Notification.CATEGORY_SOCIAL, null)
+        }
+
+        fun verify(context: Context, title: String, text: String) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        VERIFY_ID,
+                        context.getString(R.string.channel_verify),
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply {
+                        description = context.getString(R.string.channel_verify_description)
+                    },
+                )
+            }
+            notify(context, VERIFY_ID, VERIFY_KEY, title, text, Notification.CATEGORY_REMINDER, null)
         }
 
         private fun notify(

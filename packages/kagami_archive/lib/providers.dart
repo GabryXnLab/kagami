@@ -16,9 +16,12 @@
 ///
 /// Il resto — app, server, coda, serie in corso — non nomina nessun sito: se
 /// uno sta dietro una verifica del browser lo dice [Provider.browser], e la
-/// WebView, la pagina mandata al server e il salto nel controllo ad app chiusa
-/// seguono da lì.
+/// WebView, la pagina mandata al server e il browser dei controlli
+/// ([PageBrowser]) seguono da lì.
 library;
+
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'http.dart';
 import 'model.dart';
@@ -103,6 +106,60 @@ class BrowserGate {
 
   /// Sulla pagina principale o dei risultati: c'è la ricerca del sito.
   final String searchReady;
+}
+
+/// Un browser vero, che apre la pagina di una serie dietro la verifica del
+/// sito senza nessuno davanti: Chromium senza schermo sul server, una
+/// WebView invisibile sul telefono. È ciò che lascia ai controlli delle
+/// serie seguite anche i siti protetti; il pacchetto un browser non ce l'ha.
+abstract interface class PageBrowser {
+  /// L'HTML di [url] appena `gate.seriesReady` riconosce la pagina vera;
+  /// `null` se la verifica non si risolve da sola.
+  Future<String?> seriesPage(String url, BrowserGate gate);
+}
+
+/// Le pagine che una persona ha già aperto, passata la verifica: il
+/// telefono le prende e il controllo le legge da qui, per sé o mandate al
+/// server (`POST /v2/check/pages`). Le chiavi sono i link, come li scrive
+/// il sito ([Provider.canonical]).
+class SuppliedPages implements PageBrowser {
+  SuppliedPages(Map<String, String> pages)
+      : _pages = {for (final MapEntry(:key, :value) in pages.entries) _canonical(key): value};
+
+  final Map<String, String> _pages;
+
+  static String _canonical(String url) {
+    try {
+      return selectProvider(url).canonical(url);
+    } on ProviderError {
+      return url;
+    }
+  }
+
+  @override
+  Future<String?> seriesPage(String url, BrowserGate gate) async => _pages[url];
+}
+
+/// Una serie letta dal sito, con la pagina presa dal [PageBrowser] se è
+/// servito: il lavoro che ne nasce la porta con sé, come quella che manda il
+/// telefono dopo la verifica.
+typedef SitePage = ({Series series, Uint8List? page});
+
+/// Legge [url] come sempre e, se il sito risponde con la verifica e c'è un
+/// [browser], la rilegge da lì. Senza browser la verifica resta un
+/// [CloudflareChallenge].
+Future<SitePage> readSeries(Provider provider, String url, ProviderHttp http, {PageBrowser? browser}) async {
+  try {
+    return (series: await provider.fetchSeries(url, http), page: null);
+  } on CloudflareChallenge {
+    final gate = provider.browser;
+    if (gate == null || browser == null) rethrow;
+    final canonical = provider.canonical(url);
+    final html = await browser.seriesPage(canonical, gate);
+    if (html == null) rethrow;
+    final page = Uint8List.fromList(utf8.encode(html));
+    return (series: await provider.fetchSeries(url, SnapshotHttp(http, canonical, page)), page: page);
+  }
 }
 
 /// Una serie trovata cercando: quanto basta a riconoscerla e il link da

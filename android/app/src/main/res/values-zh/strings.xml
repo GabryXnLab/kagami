@@ -4,6 +4,8 @@
     <string name="channel_arrivals_description">你关注的系列有新章节加入了书库。</string>
     <string name="channel_invites">共享服务器</string>
     <string name="channel_invites_description">有人让你使用他的 Kagami Server。</string>
+    <string name="channel_verify">网站验证</string>
+    <string name="channel_verify_description">某个网站需要只有你能完成的验证，作品检查正在等待。</string>
     <string name="archive_downloading">漫画下载</string>
     <string name="channel_archive_description">Kagami 正在从网站下载的系列。</string>
     <string name="archive_checking">正在检查连载中的系列</string>

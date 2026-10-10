@@ -239,13 +239,15 @@ void main() {
       expect((await tracked()).single.chapters, ['C1', 'C2', 'C3']);
     });
 
-    test('una serie su Drive la lascia al server, se lui guarda tutta quella cartella', () async {
+    test('lascia tutto al server, se è lui a controllare, e salta le serie escluse', () async {
       final series = await MangaK().fetchSeries('https://mangak.io/test-series', http);
       const drive = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella');
       await Tracking(files.ongoing).record(series, drive, settled: const ['C1'], metadata: const {'releaseStatus': 'ongoing'});
-      await files.delegate('cartella');
+      await files.writeScope(const CheckScope(toServer: true));
       expect((await check()).checked, 0);
-      await files.delegate(null);
+      await files.writeScope(const CheckScope());
+      // Né una serie che l'utente ha smesso di seguire.
+      expect((await Tracking(files.ongoing).check(files, (provider) => http, skip: {series.key})).checked, 0);
       expect((await check()).queued, ['Test / Series']);
     });
 
@@ -457,6 +459,39 @@ void main() {
       final report = await check();
       expect(report.failed.single.error, contains('verifica'));
       expect((await tracked()).single.problem, contains('verifica'));
+    });
+
+    test('una serie ferma alla verifica si annota, e la pagina aperta a mano la sblocca', () async {
+      final provider = selectProvider(FakeManhwaRead.url);
+      final series = await provider.fetchSeries(FakeManhwaRead.url, FakeManhwaRead());
+      const drive = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella');
+      await Tracking(files.ongoing).record(series, drive, settled: const ['1'], metadata: const {'releaseStatus': 'ongoing'});
+      final blocked = await Tracking(files.ongoing).check(files, (provider) => ChallengedHttp());
+      expect(blocked.gated.single.key, series.key);
+      await files.recordGated(blocked.gated);
+      expect((await files.gated()).single.url, FakeManhwaRead.url);
+      final page = utf8.decode((await FakeManhwaRead().get(FakeManhwaRead.url)).body);
+      final passed = await Tracking(files.ongoing).check(
+        files,
+        (provider) => ChallengedHttp(),
+        browser: SuppliedPages({FakeManhwaRead.url: page}),
+        only: {series.key},
+      );
+      expect(passed.checked, 1);
+      expect(passed.gated, isEmpty);
+      expect((await files.jobs()).single.snapshot, isNotNull);
+      await files.recordGated(passed.gated, only: {series.key});
+      expect(await files.gated(), isEmpty);
+    });
+
+    test('un controllo di poche serie non dimentica le altre ferme alla verifica', () async {
+      const a = GatedSeries(key: 'manhwaread:a', title: 'A', url: 'https://manhwaread.com/manhwa/a/');
+      const b = GatedSeries(key: 'manhwaread:b', title: 'B', url: 'https://manhwaread.com/manhwa/b/');
+      await files.recordGated(const [a, b]);
+      await files.recordGated(const [], only: {a.key});
+      expect([for (final entry in await files.gated()) entry.key], [b.key]);
+      await files.recordGated(const [a]);
+      expect([for (final entry in await files.gated()) entry.key], [a.key]);
     });
 
     test('il file sopravvive a formati vecchi o rovinati', () async {

@@ -15,6 +15,7 @@ import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/providers.dart' show PageBrowser, SuppliedPages, selectProvider;
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -63,6 +64,7 @@ class ServerCheck {
     this.enabled = true,
     this.minutes = 4 * 60,
     this.library = true,
+    this.unfollowed = const {},
     this.checkedAt,
     this.checked = 0,
     this.queued = 0,
@@ -73,6 +75,7 @@ class ServerCheck {
         enabled: json['enabled'] as bool? ?? fallback.enabled,
         minutes: (json['minutes'] as num?)?.toInt() ?? fallback.minutes,
         library: json['library'] as bool? ?? fallback.library,
+        unfollowed: {...?(json['unfollowed'] as List?)?.whereType<String>()},
         checkedAt: DateTime.tryParse('${json['checkedAt']}'),
         checked: (json['checked'] as num?)?.toInt() ?? 0,
         queued: (json['queued'] as num?)?.toInt() ?? 0,
@@ -86,6 +89,10 @@ class ServerCheck {
 
   /// Anche le serie della libreria che il server non ha scaricato.
   final bool library;
+
+  /// Le serie che l'utente ha smesso di seguire: il controllo non le guarda
+  /// più, né fra quelle del server né nella libreria.
+  final Set<String> unfollowed;
   final DateTime? checkedAt;
   final int checked;
   final int queued;
@@ -95,6 +102,7 @@ class ServerCheck {
     bool? enabled,
     int? minutes,
     bool? library,
+    Set<String>? unfollowed,
     DateTime? checkedAt,
     int? checked,
     int? queued,
@@ -104,6 +112,7 @@ class ServerCheck {
         enabled: enabled ?? this.enabled,
         minutes: minutes ?? this.minutes,
         library: library ?? this.library,
+        unfollowed: unfollowed ?? this.unfollowed,
         checkedAt: checkedAt ?? this.checkedAt,
         checked: checked ?? this.checked,
         queued: queued ?? this.queued,
@@ -114,6 +123,7 @@ class ServerCheck {
         'enabled': enabled,
         'minutes': minutes,
         'library': library,
+        'unfollowed': [...unfollowed],
         'checkedAt': ?checkedAt?.toIso8601String(),
         'checked': checked,
         'queued': queued,
@@ -139,7 +149,14 @@ abstract interface class JobControl {
   Future<ServerCheck> checkSettings();
 
   /// Cambia il controllo quotidiano e lo riprogramma.
-  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library});
+  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed});
+
+  /// Le serie che l'ultimo controllo ha trovato ferme alla verifica del sito.
+  Future<List<GatedSeries>> gated();
+
+  /// Il controllo delle serie ferme alla verifica, con le loro pagine
+  /// aperte da una persona sul telefono ([pages], per link).
+  Future<CheckReport> checkPages(Map<String, String> pages);
 }
 
 class ServerWorker implements JobControl {
@@ -149,6 +166,7 @@ class ServerWorker implements JobControl {
     required this.blocked,
     this.checkMinutes,
     this.folder,
+    this.browser,
     this.retryAfter = const Duration(minutes: 1),
     this.checkRetry = const Duration(minutes: 30),
     this.log = _stderr,
@@ -168,6 +186,10 @@ class ServerWorker implements JobControl {
 
   /// La cartella della libreria di questo account, per guardarla tutta.
   final String? Function()? folder;
+
+  /// Chi legge le pagine dei siti dietro la verifica del browser; senza, i
+  /// controlli li saltano.
+  final PageBrowser? browser;
   final Duration retryAfter;
 
   /// Un controllo andato a vuoto per la rete o per Drive si riprova dopo
@@ -285,8 +307,9 @@ class ServerWorker implements JobControl {
       writeAtomically(_checkFile, utf8.encode(jsonEncode(settings.toJson())));
 
   @override
-  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library}) async {
-    final settings = (await checkSettings()).copyWith(enabled: enabled, minutes: minutes, library: library);
+  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed}) async {
+    final settings = (await checkSettings())
+        .copyWith(enabled: enabled, minutes: minutes, library: library, unfollowed: unfollowed);
     await _saveCheck(settings);
     _checkTimer?.cancel();
     _scheduleCheck();
@@ -317,8 +340,10 @@ class ServerWorker implements JobControl {
       final report = await Tracking(files.ongoing).check(
         files,
         (provider) => environment.httpFor(provider),
+        browser: browser,
         cancelled: () => _closed,
         only: {key},
+        skip: (await checkSettings()).unfollowed,
       );
       if (report.queued.isNotEmpty) wake();
     } on ProviderOffline {
@@ -332,40 +357,49 @@ class ServerWorker implements JobControl {
     if (!_closed) _retryTimer = Timer(checkRetry, () => unawaited(checkNow()));
   }
 
+  /// Le serie che segue il server e, con `library`, le altre della libreria
+  /// su Drive; con [only] solo quelle.
+  Future<CheckReport> _sweep(ServerCheck settings, {PageBrowser? browser, Set<String>? only}) async {
+    final tracking = Tracking(files.ongoing);
+    final report = await tracking.check(
+      files,
+      (provider) => environment.httpFor(provider),
+      browser: browser,
+      cancelled: () => _closed,
+      only: only,
+      skip: settings.unfollowed,
+    );
+    log('Serie in corso: ${report.checked} controllate, ${report.queued.length} con capitoli nuovi.');
+    final folderId = folder?.call();
+    if (settings.library && folderId != null && !_closed) {
+      final target = ArchiveTarget(destination: ArchiveDestination.drive, folderId: folderId);
+      final library = await checkLibrary(
+        files: files,
+        store: environment.storeFor(target),
+        target: target,
+        httpFor: (provider) => environment.httpFor(provider),
+        browser: browser,
+        skip: {for (final entry in await tracking.load()) entry.key, ...settings.unfollowed},
+        only: only,
+        cancelled: () => _closed,
+      );
+      report.absorb(library);
+      log('Libreria su Drive: ${library.checked} serie controllate, ${library.queued.length} con capitoli '
+          'nuovi, ${library.repaired.length} con l\'indice da riparare.');
+    }
+    if (report.gated.isNotEmpty) {
+      log('Ferme alla verifica del sito, da passare dall\'app: ${report.gated.length}.');
+    }
+    await files.recordGated(report.gated, only: only);
+    return report;
+  }
+
   Future<void> _check() async {
     if (await blocked() != null) return;
     final settings = await checkSettings();
-    var checked = 0;
-    var queued = 0;
-    var failed = 0;
+    final CheckReport report;
     try {
-      final tracking = Tracking(files.ongoing);
-      final report = await tracking.check(
-        files,
-        (provider) => environment.httpFor(provider),
-        cancelled: () => _closed,
-      );
-      checked += report.checked;
-      queued += report.queued.length;
-      failed += report.failed.length;
-      log('Serie in corso: ${report.checked} controllate, ${report.queued.length} con capitoli nuovi.');
-      final folderId = folder?.call();
-      if (settings.library && folderId != null && !_closed) {
-        final target = ArchiveTarget(destination: ArchiveDestination.drive, folderId: folderId);
-        final library = await checkLibrary(
-          files: files,
-          store: environment.storeFor(target),
-          target: target,
-          httpFor: (provider) => environment.httpFor(provider),
-          skip: {for (final entry in await tracking.load()) entry.key},
-          cancelled: () => _closed,
-        );
-        checked += library.checked;
-        queued += library.queued.length;
-        failed += library.failed.length;
-        log('Libreria su Drive: ${library.checked} serie controllate, ${library.queued.length} con capitoli '
-            'nuovi, ${library.repaired.length} con l\'indice da riparare.');
-      }
+      report = await _sweep(settings, browser: browser);
     } on ProviderOffline {
       _retryCheck('rete assente');
       return;
@@ -373,8 +407,37 @@ class ServerWorker implements JobControl {
       _retryCheck('Drive non risponde ($error)');
       return;
     }
-    await _saveCheck((await checkSettings())
-        .copyWith(checkedAt: DateTime.now(), checked: checked, queued: queued, failed: failed));
+    await _saveCheck((await checkSettings()).copyWith(
+      checkedAt: DateTime.now(),
+      checked: report.checked,
+      queued: report.queued.length,
+      failed: report.failed.length,
+    ));
     wake();
+  }
+
+  @override
+  Future<List<GatedSeries>> gated() => files.gated();
+
+  @override
+  Future<CheckReport> checkPages(Map<String, String> pages) async {
+    final supplied = SuppliedPages(pages);
+    final links = {for (final url in pages.keys) _canonical(url)};
+    final only = {
+      for (final entry in await files.gated())
+        if (links.contains(_canonical(entry.url))) entry.key,
+    };
+    if (only.isEmpty || await blocked() != null) return CheckReport();
+    final report = await _sweep(await checkSettings(), browser: supplied, only: only);
+    if (report.queued.isNotEmpty || report.repaired.isNotEmpty) wake();
+    return report;
+  }
+
+  static String _canonical(String url) {
+    try {
+      return selectProvider(url).canonical(url);
+    } on Object {
+      return url;
+    }
   }
 }

@@ -38,12 +38,19 @@ class ApiError implements Exception {
   final String message;
 }
 
+/// Quante serie escluse dal controllo accetta `PUT /v2/check`.
+const int maxUnfollowed = 5000;
+
+/// Quante pagine accetta `POST /v2/check/pages` in una volta.
+const int maxPages = 50;
+
 class ServerApi {
   ServerApi({
     required this.name,
     required this.identity,
     required this.accounts,
     required this.images,
+    this.browser = false,
     this.log = _stderr,
   });
 
@@ -56,6 +63,9 @@ class ServerApi {
 
   /// Se il server fa miniature e tessere (c'è `vips`).
   final bool images;
+
+  /// Se il server ha un Chromium per i siti dietro la verifica del browser.
+  final bool browser;
   final void Function(String line) log;
 
   static void _stderr(String line) => stderr.writeln(line);
@@ -130,6 +140,7 @@ class ServerApi {
       ('PUT', ['ongoing', final key]) => (HttpStatus.ok, await _want(me, key, await _body(request))),
       ('POST', ['check']) => _check(me),
       ('PUT', ['check']) => (HttpStatus.ok, await _configureCheck(me, await _body(request))),
+      ('POST', ['check', 'pages']) => (HttpStatus.ok, await _checkPages(me, await _body(request))),
       ('GET', ['users']) => (HttpStatus.ok, await _users(_owner(accounts, email))),
       ('POST', ['users']) => (HttpStatus.created, await _addUser(_owner(accounts, email), await _body(request))),
       ('DELETE', ['users', final who]) => await _removeUser(_owner(accounts, email), who),
@@ -190,8 +201,11 @@ class ServerApi {
         'images': images,
         // Ciò che questo server sa fare oltre alla v2 di partenza: l'app
         // offre una funzione solo a un server che la elenca.
-        'features': const ['ahead'],
-        'check': _checkJson(await me.jobs.checkSettings()),
+        'features': ['ahead', 'unfollowed', 'verify', if (browser) 'browser'],
+        'check': {
+          ..._checkJson(await me.jobs.checkSettings()),
+          'gated': [for (final entry in await me.jobs.gated()) entry.toJson()],
+        },
         'me': {'email': email, 'owner': email == accounts.owner, 'drive': await _drive(me.drive)},
       };
 
@@ -365,6 +379,7 @@ class ServerApi {
         'time': settings.minutes,
         'enabled': settings.enabled,
         'library': settings.library,
+        'unfollowed': [...settings.unfollowed],
         'checkedAt': ?settings.checkedAt?.toIso8601String(),
         'checked': settings.checked,
         'queued': settings.queued,
@@ -375,17 +390,47 @@ class ServerApi {
     final enabled = body['enabled'];
     final minutes = body['minutes'];
     final library = body['library'];
+    final unfollowed = body['unfollowed'];
     if ((enabled != null && enabled is! bool) || (library != null && library is! bool)) {
       throw const ApiError(HttpStatus.badRequest, 'bad_request', '«enabled» e «library» sono sì o no.');
     }
     if (minutes != null && (minutes is! int || minutes < 0 || minutes >= 24 * 60)) {
       throw const ApiError(HttpStatus.badRequest, 'bad_request', '«minutes» va da 0 a 1439.');
     }
+    if (unfollowed != null &&
+        (unfollowed is! List || unfollowed.length > maxUnfollowed || unfollowed.any((key) => key is! String))) {
+      throw const ApiError(
+          HttpStatus.badRequest, 'bad_request', '«unfollowed» è un elenco di chiavi di serie, al più $maxUnfollowed.');
+    }
     return _checkJson(await me.jobs.configureCheck(
       enabled: enabled as bool?,
       minutes: minutes as int?,
       library: library as bool?,
+      unfollowed: unfollowed == null ? null : {for (final key in unfollowed as List) key as String},
     ));
+  }
+
+  /// Le pagine delle serie ferme alla verifica, aperte sul telefono da chi
+  /// l'ha passata: il controllo di quelle serie si fa adesso, e la risposta
+  /// dice com'è andato.
+  Future<Map<String, Object?>> _checkPages(UserSpace me, Map<String, Object?> body) async {
+    final pages = body['pages'];
+    if (pages is! List ||
+        pages.isEmpty ||
+        pages.length > maxPages ||
+        pages.any((page) => page is! Map || page['url'] is! String || page['html'] is! String)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request',
+          '«pages» è un elenco di pagine, da 1 a $maxPages, ognuna con «url» e «html».');
+    }
+    final report = await me.jobs.checkPages({
+      for (final page in pages.cast<Map>()) page['url'] as String: page['html'] as String,
+    });
+    return {
+      'checked': report.checked,
+      'queued': report.queued.length,
+      'failed': report.failed.length,
+      'gated': [for (final entry in report.gated) entry.toJson()],
+    };
   }
 
   (int, Object?) _check(UserSpace me) {

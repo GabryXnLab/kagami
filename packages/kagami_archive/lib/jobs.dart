@@ -10,6 +10,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
@@ -320,6 +321,60 @@ class CheckSettings {
   Map<String, Object?> toJson() => {'minutes': ?minutes, 'wifiOnly': wifiOnly};
 }
 
+/// Cosa controlla il telefono: niente, se controlla tutto il server
+/// collegato ([toServer]); altrimenti le serie che segue lui e quelle in
+/// corso della libreria — su Drive se ha la cartella, altrimenti nella
+/// cartella scelta sul telefono —, tranne quelle che l'utente ha smesso di
+/// seguire.
+class CheckScope {
+  const CheckScope({this.toServer = false, this.driveFolder, this.localRoot, this.unfollowed = const {}, this.server});
+
+  factory CheckScope.fromJson(Map<String, Object?> json) => CheckScope(
+        toServer: json['toServer'] == true,
+        driveFolder: json['driveFolder'] as String?,
+        localRoot: json['localRoot'] as String?,
+        unfollowed: {...?(json['unfollowed'] as List?)?.whereType<String>()},
+        server: json['server'] as String?,
+      );
+
+  final bool toServer;
+  final String? driveFolder;
+  final String? localRoot;
+  final Set<String> unfollowed;
+
+  /// L'indirizzo del server che controlla ([toServer]): ad app chiusa il
+  /// telefono gli chiede quali serie sono ferme alla verifica del sito.
+  final String? server;
+
+  Map<String, Object?> toJson() => {
+        'toServer': toServer,
+        'driveFolder': ?driveFolder,
+        'localRoot': ?localRoot,
+        'unfollowed': [...unfollowed],
+        'server': ?server,
+      };
+}
+
+/// Una serie che il controllo non ha potuto leggere perché il sito voleva
+/// la verifica del browser, e nessun browser senza persone l'ha passata: la
+/// casella «Verify you are human» la spunta solo chi usa il telefono. Resta
+/// annotata finché un controllo non la legge, così l'app può chiederla.
+class GatedSeries {
+  const GatedSeries({required this.key, required this.title, required this.url});
+
+  factory GatedSeries.fromJson(Map<String, Object?> json) => GatedSeries(
+        key: json['key'] as String,
+        title: json['title'] as String? ?? json['key'] as String,
+        url: json['url'] as String,
+      );
+
+  final String key;
+  final String title;
+  final String url;
+
+  Map<String, Object?> toJson() => {'key': key, 'title': title, 'url': url};
+}
+
 class ArchiveFiles {
   ArchiveFiles(String supportDirectory)
       : directory = Directory(p.join(supportDirectory, 'archive'));
@@ -333,27 +388,58 @@ class ArchiveFiles {
   File get _mutex => File(p.join(directory.path, 'queue.lock'));
   File get runLock => File(p.join(directory.path, 'run.lock'));
   File get ongoing => File(p.join(directory.path, 'ongoing.json'));
-  File get _delegated => File(p.join(directory.path, 'server-check.json'));
+  File get _scope => File(p.join(directory.path, 'check-scope.json'));
+  File get _gated => File(p.join(directory.path, 'gated.json'));
 
-  /// La cartella di Drive di cui il server collegato controlla ogni giorno
-  /// tutta la libreria: le serie del telefono che scendono lì le segue lui,
-  /// e controllarle anche da qui scaricherebbe due volte gli stessi capitoli
-  /// nella stessa cartella. Un file, perché lo legge anche il controllo ad
-  /// app chiusa, che il server non lo conosce.
-  Future<String?> delegatedFolder() async => (await readJsonFile(_delegated))?['folderId'] as String?;
+  /// Cosa controlla il telefono, come l'ha scritto l'app: lo legge anche il
+  /// controllo ad app chiusa, che il database non lo apre.
+  Future<CheckScope> scope() async {
+    final json = await readJsonFile(_scope);
+    return json == null ? const CheckScope() : CheckScope.fromJson(json);
+  }
 
-  Future<void> delegate(String? folderId) async {
-    if (folderId == null) {
-      if (await _delegated.exists()) await _delegated.delete();
-    } else if (await delegatedFolder() != folderId) {
-      await writeAtomically(_delegated, utf8.encode(jsonEncode({'folderId': folderId})));
-    }
+  Future<void> writeScope(CheckScope scope) => writeAtomically(_scope, utf8.encode(jsonEncode(scope.toJson())));
+
+  /// Se le serie le controlla il server, e il telefono nessuna.
+  Future<bool> delegated() async => (await scope()).toServer;
+
+  /// Le serie ferme alla verifica del sito, dall'ultimo controllo.
+  Future<List<GatedSeries>> gated() async => [
+        for (final row in ((await readJsonFile(_gated))?['series'] as List? ?? const [])
+            .whereType<Map<String, Object?>>())
+          if (row['key'] is String && row['url'] is String) GatedSeries.fromJson(row),
+      ];
+
+  /// Annota le serie [found] ferme alla verifica in un controllo che ha
+  /// guardato tutto, o solo le serie [only]: allora le altre annotate prima
+  /// restano, perché quel controllo non le ha guardate.
+  Future<void> recordGated(List<GatedSeries> found, {Set<String>? only}) async {
+    final kept = only == null ? const <GatedSeries>[] : [
+      for (final entry in await gated())
+        if (!only.contains(entry.key)) entry,
+    ];
+    final keys = {for (final entry in found) entry.key};
+    final all = [...kept.where((entry) => !keys.contains(entry.key)), ...found];
+    await writeAtomically(
+      _gated,
+      utf8.encode(jsonEncode({'series': [for (final entry in all) entry.toJson()]})),
+    );
   }
 
   /// Le tavole dei capitoli preparati per Drive, finché Drive non le ha.
   Directory staging(String folderId) => Directory(p.join(directory.path, 'staging', folderId));
 
   Directory get snapshots => Directory(p.join(directory.path, 'pages'));
+
+  /// Mette da parte [page] per il lavoro [id], che la legge al posto del
+  /// sito ([ArchiveJob.snapshot]); `null` senza pagina.
+  Future<String?> saveSnapshot(String id, Uint8List? page) async {
+    if (page == null) return null;
+    final file = File(p.join(snapshots.path, '$id.html'));
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(page);
+    return file.path;
+  }
 
   /// Le modifiche alla coda passano una alla volta: la scrivono sia l'app
   /// sia il lavoro, in due motori diversi dello stesso processo.

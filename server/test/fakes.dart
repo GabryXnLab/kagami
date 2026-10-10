@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/tracking.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:path/path.dart' as p;
 
@@ -46,8 +47,22 @@ class FakeJobs implements JobControl {
   Future<ServerCheck> checkSettings() async => check;
 
   @override
-  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library}) async =>
-      check = check.copyWith(enabled: enabled, minutes: minutes, library: library);
+  Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed}) async =>
+      check = check.copyWith(enabled: enabled, minutes: minutes, library: library, unfollowed: unfollowed);
+
+  List<GatedSeries> blocked = const [];
+  final List<Map<String, String>> pages = [];
+
+  @override
+  Future<List<GatedSeries>> gated() async => blocked;
+
+  @override
+  Future<CheckReport> checkPages(Map<String, String> pages) async {
+    this.pages.add(pages);
+    return CheckReport()
+      ..checked = pages.length
+      ..queued.addAll(pages.keys);
+  }
 }
 
 class FakeDrive implements DriveSetup {

@@ -16,20 +16,22 @@ FROM build AS test
 # Il contratto dei siti controlla che ognuno abbia la sua icona fra gli asset
 # dell'app: le icone entrano solo qui, l'immagine del server non le usa.
 COPY assets/providers /src/assets/providers
-RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools \
+RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools chromium \
     && rm -rf /var/lib/apt/lists/*
 RUN cd /src/packages/kagami_archive && dart test && cd /src/server && dart analyze --fatal-infos && dart test
 
 FROM debian:trixie-slim
 # libvips per miniature e tessere, i certificati per parlare con Google e con
-# i siti, tzdata perché il controllo delle serie in corso va all'ora di TZ.
-RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools ca-certificates tzdata \
+# i siti, tzdata perché il controllo delle serie in corso va all'ora di TZ,
+# Chromium per leggere i siti dietro la verifica del browser.
+RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools ca-certificates tzdata chromium \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --uid 1000 --create-home kagami \
     && mkdir /data && chown kagami:kagami /data
 COPY --from=build /kagami-server /usr/local/bin/kagami-server
 USER kagami
 ENV KAGAMI_DATA=/data
+ENV KAGAMI_CHROMIUM=/usr/bin/chromium
 VOLUME /data
 EXPOSE 8080
 HEALTHCHECK --interval=1m --timeout=10s --start-period=30s --start-interval=5s CMD ["kagami-server", "ping"]

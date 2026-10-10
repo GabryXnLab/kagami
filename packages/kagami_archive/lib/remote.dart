@@ -284,6 +284,17 @@ class ServerInfo {
   /// Scarica «man mano» (`ahead` nei lavori, `PUT /ongoing/{key}`).
   bool get ahead => features.contains('ahead');
 
+  /// Il controllo salta le serie escluse dall'app (`unfollowed`).
+  bool get unfollowed => features.contains('unfollowed');
+
+  /// Il controllo legge anche i siti dietro la verifica del browser.
+  bool get browser => features.contains('browser');
+
+  /// Dice quali serie sono ferme alla verifica del sito
+  /// ([RemoteCheck.gated]) e ne accetta le pagine aperte sul telefono
+  /// ([ServerClient.checkPages]).
+  bool get verify => features.contains('verify');
+
   /// L'ora del controllo, `null` se è spento.
   int? get checkMinutes => check.enabled ? check.minutes : null;
 
@@ -331,10 +342,12 @@ class RemoteCheck {
     this.enabled = false,
     this.minutes = 4 * 60,
     this.library = false,
+    this.unfollowed = const {},
     this.checkedAt,
     this.checked = 0,
     this.queued = 0,
     this.failed = 0,
+    this.gated = const [],
   });
 
   /// Un server di prima dà solo `minutes`, `null` se è spento, e guarda solo
@@ -345,20 +358,31 @@ class RemoteCheck {
       enabled: json['enabled'] as bool? ?? minutes != null,
       minutes: (json['time'] as num?)?.toInt() ?? minutes ?? 4 * 60,
       library: json['library'] == true,
+      unfollowed: {...?(json['unfollowed'] as List?)?.whereType<String>()},
       checkedAt: DateTime.tryParse('${json['checkedAt']}'),
       checked: (json['checked'] as num?)?.toInt() ?? 0,
       queued: (json['queued'] as num?)?.toInt() ?? 0,
       failed: (json['failed'] as num?)?.toInt() ?? 0,
+      gated: [
+        for (final row in (json['gated'] as List? ?? const []).whereType<Map<String, Object?>>())
+          if (row['key'] is String && row['url'] is String) GatedSeries.fromJson(row),
+      ],
     );
   }
 
   final bool enabled;
   final int minutes;
   final bool library;
+
+  /// Le serie che il controllo salta.
+  final Set<String> unfollowed;
   final DateTime? checkedAt;
   final int checked;
   final int queued;
   final int failed;
+
+  /// Le serie che il controllo ha trovato ferme alla verifica del sito.
+  final List<GatedSeries> gated;
 }
 
 class RemoteJob {
@@ -550,12 +574,26 @@ class ServerClient {
 
   Future<void> check() => _call('POST', '/v$serverApi/check');
 
-  Future<RemoteCheck> configureCheck({bool? enabled, int? minutes, bool? library}) async =>
+  Future<RemoteCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed}) async =>
       RemoteCheck.fromJson((await _call('PUT', '/v$serverApi/check', body: {
         'enabled': ?enabled,
         'minutes': ?minutes,
         'library': ?library,
+        if (unfollowed != null) 'unfollowed': [...unfollowed],
       }))!);
+
+  /// Manda le pagine delle serie ferme alla verifica, aperte sul telefono
+  /// ([pages], per link): il server le controlla subito.
+  Future<({int checked, int queued, List<GatedSeries> gated})> checkPages(Map<String, String> pages) async {
+    final json = (await _call('POST', '/v$serverApi/check/pages', body: {
+      'pages': [for (final MapEntry(:key, :value) in pages.entries) {'url': key, 'html': value}],
+    }))!;
+    return (
+      checked: (json['checked'] as num?)?.toInt() ?? 0,
+      queued: (json['queued'] as num?)?.toInt() ?? 0,
+      gated: RemoteCheck.fromJson({'gated': json['gated']}).gated,
+    );
+  }
 
   /// Dà al server il permesso sul proprio Drive e la cartella dove scrivere.
   Future<({String? id, String? name})> grantDrive(String refreshToken, String folderId) async =>

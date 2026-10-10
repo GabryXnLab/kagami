@@ -127,9 +127,12 @@ il controllo di salute di Docker.
   "providers": [{"id": "mangak", "name": "MangaK"}, {"id": "manhwaread", "name": "ManhwaRead"},
                 {"id": "asurascans", "name": "Asura Scans"}],
   "images": true,
-  "features": ["ahead"],
+  "features": ["ahead", "unfollowed", "verify", "browser"],
   "check": {"minutes": 240, "time": 240, "enabled": true, "library": true,
-            "checkedAt": "…", "checked": 12, "queued": 2, "failed": 0},
+            "unfollowed": ["mangak:A1"],
+            "checkedAt": "…", "checked": 12, "queued": 2, "failed": 1,
+            "gated": [{"key": "manhwaread:disfarming", "title": "Disfarming",
+                       "url": "https://manhwaread.com/manhwa/disfarming/"}]},
   "me": {
     "email": "amico@gmail.com", "owner": false,
     "drive": {"authorized": true, "folderId": "1XyZ…", "folderName": "Manga"}
@@ -145,13 +148,22 @@ il controllo di salute di Docker.
 - `features`: ciò che il server sa fare oltre alla v2 di partenza. Un
   client offre una funzione solo a un server che la elenca; un server di
   prima non ha il campo. `ahead`: scarica «man mano» (`ahead` e
-  `automatic` in `POST /v2/jobs`, `PUT /v2/ongoing/{key}`).
+  `automatic` in `POST /v2/jobs`, `PUT /v2/ongoing/{key}`). `unfollowed`:
+  il controllo salta le serie escluse (`PUT /v2/check`). `browser`: il
+  server ha un Chromium e il controllo legge anche i siti dietro la
+  verifica del browser, quando la verifica si risolve da sola; senza, li
+  salta. `verify`: dice quali serie sono ferme alla verifica (`gated` in
+  `check`) e ne accetta le pagine (`POST /v2/check/pages`).
 - `check` è il controllo quotidiano di chi chiama (`PUT /v2/check`):
   `time` l'ora, in minuti dalla mezzanotte del server; `minutes` la stessa
   ora, `null` se è spento (`enabled`), come per i client di prima;
-  `library` se guarda tutta la libreria su Drive; `checkedAt`, `checked`,
+  `library` se guarda tutta la libreria su Drive; `unfollowed` le chiavi
+  delle serie che l'utente ha smesso di seguire; `checkedAt`, `checked`,
   `queued`, `failed` com'è andato l'ultimo: serie controllate, con capitoli
-  nuovi, con errori.
+  nuovi, con errori. `gated` sono le serie che il controllo non ha letto
+  perché il sito voleva una verifica che nessun browser senza persone
+  passa (la casella «Verify you are human»): restano lì finché un
+  controllo non le legge.
 
 ### `PUT /v2/me/drive` — dà al server il permesso sul proprio Drive
 
@@ -285,10 +297,14 @@ Smette di seguire la serie. I capitoli già archiviati restano.
 ### `PUT /v2/check` — regola il proprio controllo quotidiano
 
 ```json
-{"enabled": true, "minutes": 270, "library": true}
+{"enabled": true, "minutes": 270, "library": true, "unfollowed": ["mangak:A1"]}
 ```
 
 Ogni campo è facoltativo: cambia solo ciò che c'è. `minutes` da 0 a 1439.
+`unfollowed` sostituisce l'elenco intero (al più 5000 chiavi): il
+controllo non guarda quelle serie, né fra quelle di `GET /v2/ongoing` né
+nella libreria. L'elenco è dell'app, che lo tiene fra i dati dell'utente e
+lo rimanda quando cambia.
 Risponde con lo stesso `check` di `GET /v2/server`.
 
 Con `library` il controllo guarda, oltre alle serie di `GET /v2/ongoing`,
@@ -296,12 +312,34 @@ ogni serie del `library.json` della propria cartella: mette in coda (lavori
 `automatic`) i capitoli del sito che l'`index.json` della serie non elenca,
 e quelli che l'indice dà a metà, che il giro salta se su Drive sono interi
 riscrivendo l'indice. Salta le serie concluse (senza chiederle al sito),
-quelle già in coda e quelle dei siti con la verifica del browser.
+quelle già in coda, quelle escluse e, senza `browser` fra le `features`,
+quelle dei siti con la verifica del browser. Una serie letta col browser
+porta nel lavoro la pagina letta, come lo `snapshot` del telefono.
 
 ### `POST /v2/check` → `202`
 
 Il controllo quotidiano di chi chiama, subito, anche se è spento. Risponde prima di
 finire: i capitoli nuovi compaiono in `GET /v2/jobs`.
+
+### `POST /v2/check/pages` — le pagine delle serie ferme alla verifica
+
+```json
+{"pages": [{"url": "https://manhwaread.com/manhwa/disfarming/", "html": "<!DOCTYPE html>…"}]}
+```
+
+Da 1 a 50 pagine, nel limite del corpo. La verifica la passa una persona
+sul telefono, che poi apre le serie di `gated` e manda qui le loro pagine:
+il server controlla subito quelle serie, e solo quelle, come farebbe il
+controllo quotidiano, leggendo la pagina da qui al posto del sito. Una
+pagina di una serie che non è in `gated` si ignora. Risponde a controllo
+finito:
+
+```json
+{"checked": 1, "queued": 1, "failed": 0, "gated": []}
+```
+
+`gated` sono le serie mandate che restano ferme (una pagina che non era
+quella della serie).
 
 ## Utenti — solo il proprietario
 

@@ -4,6 +4,8 @@
     <string name="channel_arrivals_description">आपकी फ़ॉलो की गई सीरीज़ का एक नया अध्याय लाइब्रेरी में आ गया है।</string>
     <string name="channel_invites">साझा सर्वर</string>
     <string name="channel_invites_description">किसी ने आपको अपने Kagami Server का एक्सेस दिया है।</string>
+    <string name="channel_verify">साइट सत्यापन</string>
+    <string name="channel_verify_description">एक साइट ऐसा सत्यापन माँग रही है जो केवल आप कर सकते हैं, और सीरीज़ की जाँच प्रतीक्षा में है।</string>
     <string name="archive_downloading">मंगा डाउनलोड</string>
     <string name="channel_archive_description">वे सीरीज़ जिन्हें Kagami साइटों से डाउनलोड कर रहा है।</string>
     <string name="archive_checking">चालू सीरीज़ की जाँच हो रही है</string>

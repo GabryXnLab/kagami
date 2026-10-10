@@ -39,6 +39,10 @@ class ServerPaths {
   File get users => File(p.join(root.path, 'users.json'));
   Directory get scratch => Directory(p.join(root.path, 'scratch'));
 
+  /// Il profilo di Chromium: i cookie di una verifica passata valgono anche
+  /// al controllo seguente.
+  Directory get browser => Directory(p.join(root.path, 'browser'));
+
   /// La cartella di un utente: un'impronta dell'indirizzo, perché un
   /// indirizzo non è un nome di cartella valido ovunque.
   Directory user(String email) =>

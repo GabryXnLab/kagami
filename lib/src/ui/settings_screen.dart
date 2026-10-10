@@ -77,6 +77,7 @@ Future<void> _choose<T>(
   required T current,
   required List<T> values,
   required String Function(T) label,
+  String Function(T)? note,
   required ValueChanged<T> onChosen,
 }) =>
     showKagamiSheet<void>(
@@ -94,7 +95,11 @@ Future<void> _choose<T>(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
             for (final value in values)
-              RadioListTile<T>(value: value, title: Text(label(value))),
+              RadioListTile<T>(
+                value: value,
+                title: Text(label(value)),
+                subtitle: note == null ? null : Text(note(value)),
+              ),
           ],
         ),
       ),
@@ -119,6 +124,40 @@ class _Theme extends ConsumerWidget {
         label: (value) => _themeLabel(l10n, value),
         onChosen: ref.read(themeModeProvider.notifier).set,
       ),
+    );
+  }
+}
+
+/// Chi scarica le serie nuove e controlla quelle seguite: il server
+/// collegato o il telefono. Senza un server la scelta non c'è.
+class _Engine extends ConsumerWidget {
+  const _Engine();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final linked = ref.watch(serverLinkProvider).value != null;
+    final engine = ref.watch(archiveEngineProvider);
+    String label(ArchiveEngine value) =>
+        value == ArchiveEngine.server ? l10n.settingsEngineServer : l10n.settingsEnginePhone;
+    String note(ArchiveEngine value) =>
+        value == ArchiveEngine.server ? l10n.settingsEngineServerNote : l10n.settingsEnginePhoneNote;
+    return KTile(
+      icon: LucideIcons.serverCog,
+      title: l10n.settingsEngine,
+      subtitle: linked ? note(engine) : l10n.settingsEngineNoServer,
+      trailing: _Value(label(engine)),
+      onTap: !linked
+          ? null
+          : () => _choose<ArchiveEngine>(
+                context,
+                title: l10n.settingsEngine,
+                current: engine,
+                values: const [ArchiveEngine.server, ArchiveEngine.phone],
+                label: label,
+                note: note,
+                onChosen: ref.read(archiveEngineChoiceProvider.notifier).choose,
+              ),
     );
   }
 }
@@ -187,6 +226,7 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const _Value(),
                     onTap: () => open(const ArchiveScreen()),
                   ),
+                  const _Engine(),
                 ],
               ),
             ),

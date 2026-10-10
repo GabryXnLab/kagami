@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/bulk_import.dart';
-import '../archive/device.dart';
 import '../data/notifications.dart';
 import '../data/share_intake.dart';
 import '../l10n.dart';
@@ -56,12 +55,6 @@ class _AppShellState extends ConsumerState<AppShell>
     SharedText.instance.launched().then((text) {
       if (text != null && mounted) _openShared(text);
     });
-    // Il controllo delle serie seguite si accoda da solo giorno dopo giorno;
-    // se un giro è morto prima di farlo, la catena si rimette qui.
-    unawaited(ref
-        .read(archiveFilesProvider)
-        .settings()
-        .then((settings) => const ArchiveScheduler().apply(settings, keep: true)));
   }
 
   @override
@@ -72,13 +65,18 @@ class _AppShellState extends ConsumerState<AppShell>
     super.dispose();
   }
 
-  /// Il tocco su una notifica porta alla scheda della serie, o per un
-  /// invito a un server dove lo si collega. Con l'app appena avviata la
+  /// Il tocco su una notifica porta alla scheda della serie, per un invito
+  /// a un server dove lo si collega, per le serie ferme alla verifica di un
+  /// sito alla verifica. Con l'app appena avviata la
   /// libreria non è ancora letta: la si aspetta, altrimenti la scheda
   /// direbbe che la serie non c'è.
   Future<void> _openFromNotification(String key) async {
     if (key.startsWith(serverInvitePrefix)) {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchiveScreen()));
+      return;
+    }
+    if (key == verifyNotificationKey) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchiveScreen(verify: true)));
       return;
     }
     await ref.read(libraryIndexProvider.future);
@@ -201,6 +199,9 @@ class _AppShellState extends ConsumerState<AppShell>
     // Le serie scaricate man mano chiedono il capitolo seguente uscendo dal
     // lettore, qualunque destinazione sia aperta.
     ref.listen(readAheadProvider, (_, _) {});
+    // Chi controlla le serie seguite va scritto dove lo legge il giro ad app
+    // chiusa, e con lui la catena del controllo quotidiano.
+    ref.listen(archiveEngineSyncProvider, (_, _) {});
     // Le cartelle cambiate vanno scritte dove le legge il giro programmato,
     // anche se nessuno apre la schermata della sincronizzazione.
     ref.listen(folderSyncSettingsProvider, (_, _) {});

@@ -25,6 +25,7 @@ import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
+import '../archive/phone_check.dart';
 import '../l10n.dart';
 import '../providers.dart';
 import 'archive_series.dart';
@@ -121,15 +122,72 @@ Future<InspectedSeries> inspectArchiveLink(
   }
 }
 
-/// Dove può andare una serie adesso: il server per primo, se c'è ed è
-/// pronto, perché chi l'ha collegato vuole che scarichi lui; poi Drive, se
-/// la libreria ne ha la cartella, altrimenti il telefono.
+/// Fa passare all'utente la verifica che ha fermato il controllo di
+/// [gated], e fa ripartire il controllo da quelle serie, da chi controlla.
+///
+/// Per ogni serie la pagina la prova prima la WebView invisibile: i cookie
+/// sono di tutta l'app, quindi dopo la prima verifica passata a mano le
+/// altre serie dello stesso sito di solito non la chiedono più. Quando la
+/// chiede, si apre [BrowserCheckPage]; chiusa senza passarla, ci si ferma
+/// lì e si controlla ciò che si è preso. Il telefono controlla da sé
+/// ([ArchiveController.checkPages]); il server riceve le pagine
+/// (`POST /v2/check/pages`), perché la verifica passata vale solo per
+/// questo browser e questo indirizzo. Torna com'è andata, `null` se non si
+/// è presa nessuna pagina. [onChecking] dice che le pagine ci sono e il
+/// controllo comincia.
+Future<({int checked, int queued, int gated})?> passVerification(
+  BuildContext context,
+  WidgetRef ref,
+  List<GatedSeries> gated, {
+  VoidCallback? onChecking,
+}) async {
+  final pages = <String, String>{};
+  for (final entry in gated) {
+    final Provider provider;
+    try {
+      provider = selectProvider(entry.url);
+    } on ProviderError {
+      continue;
+    }
+    final gate = provider.browser;
+    if (gate == null) continue;
+    final canonical = provider.canonical(entry.url);
+    var html = await const NativePageBrowser().seriesPage(canonical, gate);
+    if (html == null) {
+      if (!context.mounted) break;
+      final pass = await BrowserCheckPage.open(context, canonical, gate.hosts, ready: gate.seriesReady);
+      if (pass == null) break;
+      html = utf8.decode(pass.html);
+    }
+    pages[entry.url] = html;
+  }
+  if (pages.isEmpty) return null;
+  onChecking?.call();
+  final link = ref.read(serverLinkProvider).value;
+  if (ref.read(archiveEngineProvider) == ArchiveEngine.server && link != null) {
+    final client = ServerClient(link, ref.read(serverAccessProvider).idToken);
+    try {
+      final result = await client.checkPages(pages);
+      return (checked: result.checked, queued: result.queued, gated: result.gated.length);
+    } finally {
+      client.close();
+    }
+  }
+  final report = await ref.read(archiveProvider.notifier).checkPages(pages);
+  return (checked: report.checked, queued: report.queued.length, gated: report.gated.length);
+}
+
+/// Dove può andare una serie adesso: Drive, se la libreria ne ha la
+/// cartella, altrimenti il telefono. Se scarica il server
+/// ([archiveEngineProvider]) c'è lui per primo, e la pagina della serie
+/// offre solo lui: gli altri restano per le schede, che le scrive il
+/// telefono.
 List<ArchiveWhere> archiveDestinations(WidgetRef ref) {
   // La cartella può arrivare da un backup anche in una build senza
   // Firebase, dove Drive non si può aprire.
   final drive = cloudAvailable && ref.read(driveFolderProvider).value != null;
   return [
-    if (ref.read(remoteArchiveProvider).ready) ArchiveWhere.server,
+    if (ref.read(archiveEngineProvider) == ArchiveEngine.server) ArchiveWhere.server,
     ...drive ? const [ArchiveWhere.drive, ArchiveWhere.driveAndPhone] : const [ArchiveWhere.phone],
   ];
 }
@@ -295,6 +353,8 @@ Future<void> queueArchiveJob(
         cookies: pass?.cookies ?? const {},
         ahead: choice.ahead,
       ));
+  // Chi la riscarica la vuole seguire di nuovo.
+  await ref.read(unfollowedProvider.notifier).follow(inspected.series.key);
   final card = choice.card;
   if (card != null) await saveArchiveCard(ref, inspected.series, card);
 }
@@ -358,6 +418,7 @@ Future<bool> _sendToServer(
     messenger.showSnackBar(SnackBar(content: Text(error.message)));
     return false;
   }
+  await ref.read(unfollowedProvider.notifier).follow(inspected.series.key);
   messenger.showSnackBar(SnackBar(
     content: Text(currentL10n().archiveQueuedServerSnack(inspected.series.title, name)),
   ));

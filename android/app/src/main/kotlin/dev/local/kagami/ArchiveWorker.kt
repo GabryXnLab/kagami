@@ -55,6 +55,9 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     @Volatile
     private var checkFailed = false
 
+    /** L'avviso delle serie ferme alla verifica del sito, scritto da Dart. */
+    private var verify: Pair<String, String>? = null
+
     private val check get() = inputData.getBoolean(CHECK, false)
 
     override fun doWork(): Result {
@@ -64,6 +67,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         val finished = CountDownLatch(1)
         var engine: FlutterEngine? = null
         var images: ArchiveImages? = null
+        var browser: PageBrowser? = null
         main.post {
             try {
                 val loader = FlutterInjector.instance().flutterLoader()
@@ -72,12 +76,16 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 val started = FlutterEngine(applicationContext)
                 engine = started
                 images = ArchiveImages(started.dartExecutor.binaryMessenger)
+                browser = PageBrowser(started.dartExecutor.binaryMessenger, applicationContext)
                 channel = MethodChannel(started.dartExecutor.binaryMessenger, CHANNEL).apply {
                     setMethodCallHandler { call, result ->
                         when (call.method) {
                             "done" -> {
                                 end = call.argument<String>("end") ?: "done"
                                 checkFailed = call.argument<Boolean>("checkFailed") ?: false
+                                val title = call.argument<String>("verifyTitle")
+                                val text = call.argument<String>("verifyText")
+                                verify = if (title != null && text != null) title to text else null
                                 result.success(null)
                                 finished.countDown()
                             }
@@ -122,8 +130,10 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             channel?.setMethodCallHandler(null)
             channel = null
             images?.dispose()
+            browser?.dispose()
             engine?.destroy()
         }
+        verify?.let { (title, text) -> ArrivalNotifier.verify(applicationContext, title, text) }
         if (check && !isStopped) {
             val minutes = inputData.getInt(MINUTES, -1)
             if (minutes >= 0) {

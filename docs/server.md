@@ -146,20 +146,29 @@ nel comando per la tua) e su cosa.
   altro archiviatore. Sono nuovi i capitoli del sito che l'`index.json`
   della serie non elenca: chi ha scaricato dal capitolo 16 in poi non si
   ritrova in coda i precedenti. Le serie concluse non si chiedono al sito,
-  e quelle di ManhwaRead, dietro la verifica del browser, si saltano. Un
+  e quelle di ManhwaRead, dietro la verifica del browser, si leggono con
+  Chromium (sotto) o, se la verifica non passa, finiscono fra gli errori. Un
   capitolo che l'indice dà a metà si rimette in coda: se su Drive è intero
-  il giro lo salta e ripara l'indice. Il telefono, finché è collegato, lascia
-  al server le serie che scendono in quella cartella, per non scaricarle due
-  volte.
+  il giro lo salta e ripara l'indice. Si saltano le serie per cui nell'app si è
+  toccato «Smetti di seguire». Se nell'app si è scelto che controlli il
+  server, il telefono non controlla niente; se si è scelto il telefono, il
+  controllo del server si spegne.
 
 `check.minutes` in `config.json` nel volume è l'ora di partenza per gli
 account che non l'hanno ancora scelta (`null`: spento di partenza).
 
 ## ManhwaRead e Cloudflare
 
-Il server non ha un browser per superare la verifica di Cloudflare. La supera
-chi usa il telefono, nella schermata dell'app come sempre, e il telefono
-manda al server la pagina della serie. Le tavole il server le prende dal CDN
+Per scaricare una serie nuova la verifica di Cloudflare la supera chi usa il
+telefono, nella schermata dell'app come sempre, e il telefono manda al server
+la pagina della serie. Per i controlli quotidiani il server apre la pagina con
+il Chromium dell'immagine (`KAGAMI_CHROMIUM` per indicarne un altro), senza
+schermo: passa la verifica che si risolve da sola, non quella che chiede di
+spuntare «Verify you are human», che capita soprattutto dagli indirizzi dei
+data center. Allora quella serie resta in attesa (`check.gated`): il telefono
+lo avvisa con una notifica, la verifica la passa chi lo usa, e il telefono
+manda al server le pagine di quelle serie (`POST /v2/check/pages`), che le
+controlla subito. Le tavole il server le prende dal CDN
 del sito. Se il sito blocca anche quello dall'indirizzo del server, il lavoro
 finisce con un errore che lo dice, e quella serie va scaricata dal telefono.
 

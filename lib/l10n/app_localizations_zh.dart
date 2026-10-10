@@ -745,8 +745,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveModeAheadUnavailable => '这个网站无法使用：每次访问都要求浏览器验证，手机无法自行通过。';
 
   @override
-  String get archiveModeAheadServer =>
-      '已连接的服务器还不支持“边读边下”：新版本发布后一小时内会自动更新。在此之前，此模式由手机下载。';
+  String get archiveModeAheadServer => '已连接的服务器还不支持“边读边下”：新版本发布后一小时内会自动更新。';
 
   @override
   String get archiveChapterSearch => '按编号或标题搜索';
@@ -1043,13 +1042,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      '从这里下载的连载中作品会定期检查：只下载新章节，保存到同一位置。服务器上的作品由服务器跟进。';
+      '每天都会重新检查库中所有连载中的系列（无论是从这里还是由其他方式下载的），已取消关注的除外：只会下载新章节。从网站重新下载某个系列即可重新关注它。';
+
+  @override
+  String get archiveTrackedByServer =>
+      '关注的系列由服务器检查，这是你在设置（“由谁下载和检查”）中的选择。手机原本关注的系列会暂停，直到你切回手机。';
 
   @override
   String get archiveCheckDaily => '每天检查';
-
-  @override
-  String get archiveCheckManual => '仅手动';
 
   @override
   String archiveCheckAt(String time) {
@@ -2652,6 +2652,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get moreDownloadSubtitle => '搜索标题或粘贴链接';
 
   @override
+  String get settingsEngine => '由谁下载和检查';
+
+  @override
+  String get settingsEngineServer => '服务器';
+
+  @override
+  String get settingsEnginePhone => '手机';
+
+  @override
+  String get settingsEngineServerNote =>
+      '新系列、边读边下以及关注系列的检查：全部由服务器完成，手机下载到 Drive 的系列也由它照看';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      '新系列、边读边下以及关注系列的检查：全部在手机上完成。服务器保持连接，但不做任何检查';
+
+  @override
+  String get settingsEngineNoServer => '全部在手机上。如需交给服务器，请在“下载漫画”中连接一个';
+
+  @override
   String get moreHistory => '阅读历史';
 
   @override
@@ -3396,13 +3416,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverCheckDailyOff => '已关闭：新章节只能手动下载';
 
   @override
-  String get serverCheckLibrary => 'Drive 上的整个书库';
-
-  @override
-  String get serverCheckLibraryOn => '也包括手机或其他方式下载的系列，而不只是服务器下载的';
-
-  @override
-  String get serverCheckLibraryOff => '仅限服务器下载的连载中系列';
+  String get serverCheckByPhone => '已关闭：按你在设置中的选择，关注的系列由手机检查';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3829,4 +3843,53 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareNoLinks => '分享的文本中没有链接。';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites 需要验证';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '检查未能读取 $count 部作品。点按以完成验证。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部作品等待验证',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites 要求勾选“Verify you are human”，自动检查不会这样做。请你亲自完成验证：检查将从这些作品继续。';
+  }
+
+  @override
+  String get archiveGatedAction => '验证';
+
+  @override
+  String get archiveGatedNothing => '未完成验证：这些作品仍在等待。';
+
+  @override
+  String get archiveGatedChecking => '验证已完成，正在检查作品…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部作品有新章节',
+    );
+    return '$_temp0';
+  }
 }

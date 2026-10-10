@@ -766,7 +766,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'O servidor vinculado ainda não sabe baixar conforme você lê: ele se atualiza sozinho em até uma hora após sair uma versão nova. Até lá, este modo baixa pelo telefone.';
+      'O servidor vinculado ainda não sabe baixar conforme você lê: ele se atualiza sozinho em até uma hora após sair uma versão nova.';
 
   @override
   String get archiveChapterSearch => 'Buscar por número ou título';
@@ -1075,13 +1075,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'As séries em andamento baixadas por aqui são verificadas de novo: chegam só os capítulos novos, no mesmo destino. As do servidor são acompanhadas pelo servidor.';
+      'Todos os dias todas as séries em andamento da biblioteca são verificadas de novo, baixadas daqui ou por outros, exceto as que você deixou de seguir: só chegam os capítulos novos. Baixar uma de novo pelo site faz com que volte a ser seguida.';
+
+  @override
+  String get archiveTrackedByServer =>
+      'As séries seguidas são verificadas pelo servidor, como escolhido nas Configurações (“Quem baixa e verifica”). As que o celular seguia ficam paradas até você voltar para o celular.';
 
   @override
   String get archiveCheckDaily => 'Verificação diária';
-
-  @override
-  String get archiveCheckManual => 'Só manualmente';
 
   @override
   String archiveCheckAt(String time) {
@@ -2740,6 +2741,27 @@ class AppLocalizationsPt extends AppLocalizations {
   String get moreDownloadSubtitle => 'Busque um título ou cole um link';
 
   @override
+  String get settingsEngine => 'Quem baixa e verifica';
+
+  @override
+  String get settingsEngineServer => 'O servidor';
+
+  @override
+  String get settingsEnginePhone => 'O celular';
+
+  @override
+  String get settingsEngineServerNote =>
+      'Séries novas, conforme você lê e verificação das séries seguidas: tudo no servidor, que também acompanha as séries que o celular baixou no Drive';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'Séries novas, conforme você lê e verificação das séries seguidas: tudo no celular. O servidor continua vinculado, mas não verifica nada';
+
+  @override
+  String get settingsEngineNoServer =>
+      'Tudo no celular. Para deixar com um servidor, vincule um em “Baixar um mangá”';
+
+  @override
   String get moreHistory => 'Histórico';
 
   @override
@@ -3508,15 +3530,8 @@ class AppLocalizationsPt extends AppLocalizations {
       'Desligado: os capítulos novos só são baixados à mão';
 
   @override
-  String get serverCheckLibrary => 'Toda a biblioteca no Drive';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'Também as séries baixadas pelo celular ou por outros, não só pelo servidor';
-
-  @override
-  String get serverCheckLibraryOff =>
-      'Só as séries em andamento baixadas pelo servidor';
+  String get serverCheckByPhone =>
+      'Desligado: as séries seguidas são verificadas pelo celular, como escolhido nas Configurações';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3965,4 +3980,59 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'O texto compartilhado não contém links.';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites pede a verificação';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'A verificação automática não conseguiu ler $count séries. Toque para passar a verificação.',
+      one: 'A verificação automática não conseguiu ler uma série. Toque para passar a verificação.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count séries aguardam a verificação',
+      one: 'Uma série aguarda a verificação',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites pede para marcar «Verify you are human», e a verificação automática não faz isso. Passe você: a verificação continua a partir destas séries.';
+  }
+
+  @override
+  String get archiveGatedAction => 'Verificar';
+
+  @override
+  String get archiveGatedNothing =>
+      'A verificação não foi concluída: as séries continuam aguardando.';
+
+  @override
+  String get archiveGatedChecking =>
+      'Verificação concluída, verificando as séries…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'capítulos novos de $count séries',
+      one: 'capítulos novos de uma série',
+    );
+    return '$_temp0';
+  }
 }

@@ -807,7 +807,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'الخادم المتصل لا يعرف بعد التنزيل أثناء القراءة: يحدّث نفسه خلال ساعة من صدور نسخة جديدة. حتى ذلك الحين ينزّل هذا الوضع من الهاتف.';
+      'الخادم المتصل لا يعرف بعد التنزيل أثناء القراءة: يحدّث نفسه خلال ساعة من صدور نسخة جديدة.';
 
   @override
   String get archiveChapterSearch => 'ابحث بالرقم أو العنوان';
@@ -1119,13 +1119,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'السلاسل المستمرة المنزَّلة من هنا تُفحص من جديد: تصل الفصول الجديدة فقط، إلى الوجهة نفسها. أما سلاسل الخادم فيتابعها الخادم.';
+      'كل يوم يُعاد التحقق من جميع السلاسل الجارية في المكتبة، سواء نُزّلت من هنا أو بطريقة أخرى، باستثناء التي توقفت عن متابعتها: تصل الفصول الجديدة فقط. إعادة تنزيل سلسلة من الموقع تجعلها متابَعة من جديد.';
+
+  @override
+  String get archiveTrackedByServer =>
+      'يتحقق الخادم من السلاسل المتابَعة، كما اخترت في الإعدادات («من يُنزّل ويتحقق»). السلاسل التي كان يتابعها الهاتف تبقى متوقفة حتى تعود إلى الهاتف.';
 
   @override
   String get archiveCheckDaily => 'فحص كل يوم';
-
-  @override
-  String get archiveCheckManual => 'يدويًا فقط';
 
   @override
   String archiveCheckAt(String time) {
@@ -2816,6 +2817,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get moreDownloadSubtitle => 'ابحث عن عنوان أو الصق رابطًا';
 
   @override
+  String get settingsEngine => 'من يُنزّل ويتحقق';
+
+  @override
+  String get settingsEngineServer => 'الخادم';
+
+  @override
+  String get settingsEnginePhone => 'الهاتف';
+
+  @override
+  String get settingsEngineServerNote =>
+      'السلاسل الجديدة والتنزيل أثناء القراءة والتحقق من السلاسل المتابَعة: كلها على الخادم، الذي يراقب أيضًا السلاسل التي نزّلها الهاتف على Drive';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'السلاسل الجديدة والتنزيل أثناء القراءة والتحقق من السلاسل المتابَعة: كلها على الهاتف. يبقى الخادم متصلًا لكنه لا يتحقق من شيء';
+
+  @override
+  String get settingsEngineNoServer =>
+      'كل شيء على الهاتف. لتسليمه إلى خادم، اربط واحدًا من «تنزيل مانغا»';
+
+  @override
   String get moreHistory => 'السجل';
 
   @override
@@ -3621,14 +3643,8 @@ class AppLocalizationsAr extends AppLocalizations {
       'متوقف: لا تُنزَّل الفصول الجديدة إلا يدويًا';
 
   @override
-  String get serverCheckLibrary => 'المكتبة كاملة على Drive';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'وكذلك السلاسل التي نزّلها الهاتف أو غيره، لا الخادم وحده';
-
-  @override
-  String get serverCheckLibraryOff => 'السلاسل الجارية التي نزّلها الخادم فقط';
+  String get serverCheckByPhone =>
+      'متوقف: يتحقق الهاتف من السلاسل المتابَعة، كما اخترت في الإعدادات';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -4090,4 +4106,57 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'لا يحتوي النص المُشارَك على أي رابط.';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return 'يطلب $sites التحقق';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تعذّر على الفحص قراءة $count سلاسل. انقر لإتمام التحقق.',
+      one: 'تعذّر على الفحص قراءة سلسلة واحدة. انقر لإتمام التحقق.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سلاسل تنتظر التحقق',
+      one: 'سلسلة واحدة تنتظر التحقق',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return 'يطلب $sites تحديد «Verify you are human»، والفحص التلقائي لا يفعل ذلك. أتمّه بنفسك: يستأنف الفحص من هذه السلاسل.';
+  }
+
+  @override
+  String get archiveGatedAction => 'تحقّق';
+
+  @override
+  String get archiveGatedNothing =>
+      'لم يتم التحقق: لا تزال السلاسل في الانتظار.';
+
+  @override
+  String get archiveGatedChecking => 'تم التحقق، جارٍ فحص السلاسل…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'فصول جديدة لـ $count سلاسل',
+      one: 'فصول جديدة لسلسلة واحدة',
+    );
+    return '$_temp0';
+  }
 }

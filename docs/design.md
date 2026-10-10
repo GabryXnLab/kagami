@@ -180,7 +180,7 @@ copertina, elenco), che non tocca stato, voto e nota; «Inizia a scaricare», al
 posto di «Riprendi» quando non c'è niente da leggere, e «Scarica altri
 capitoli», quando ne mancano, aprono la pagina di «Scarica un manga» su «Dal
 capitolo». Il lavoro va dove la serie già sta: sul telefono se è tutta lì;
-altrimenti al server, se c'è, o su Drive. Una scheda (nessun capitolo) non va
+altrimenti al server, se è lui a scaricare, o su Drive. Una scheda (nessun capitolo) non va
 mai al server, la scrive il telefono.
 
 Una scheda manuale ha in più «Collega a un sito», per quando il sito è stato
@@ -888,13 +888,14 @@ I capitoli prima del primo che si ha non arrivano da soli: chi parte dal 40
 non vuole i primi trentanove. Arrivati in fondo all'elenco che si
 conosceva, i capitoli nuovi li porta il controllo delle serie seguite, solo
 quanti ne servono, e una serie man mano resta seguita anche conclusa,
-finché non si smette. Con un server collegato è lui a scaricare e a
-seguire la serie, ma i capitoli glieli chiede l'app, che sa cosa si legge:
-quelli dell'indice li mette nella sua coda, quelli nuovi del sito glieli fa
-cercare (`docs/server-api.md`, `PUT /v2/ongoing/{key}`). Un server di
-prima, che non elenca `ahead` fra le sue `features`, non lo offre: man
-mano allora scarica il telefono. Non c'è con i siti dietro la verifica del
-browser, che né il telefono né il server superano da soli.
+finché non si smette. Quando scarica il server (sotto, «Chi scarica e
+controlla») è lui a scaricare e a seguire la serie, ma i capitoli glieli
+chiede l'app, che sa cosa si legge: quelli dell'indice li mette nella sua
+coda, quelli nuovi del sito glieli fa cercare (`docs/server-api.md`,
+`PUT /v2/ongoing/{key}`). Un server di prima, che non elenca `ahead` fra le
+sue `features`, non lo offre, e man mano non c'è finché non si aggiorna.
+Non c'è nemmeno con i siti dietro la verifica del browser, che né il
+telefono né il server superano da soli.
 
 La pausa è un ritmo, non una fila: le tavole di un capitolo scendono su più
 corsie, e la pausa separa l'inizio di una richiesta dal seguente. Quando il
@@ -932,8 +933,43 @@ all'ora del controllo manca la rete si riprova mezz'ora dopo, e aprendo
 l'app la catena dei controlli si rimette in piedi se si era spezzata.
 Quelle del server le segue il suo timer.
 
-ManhwaRead sta spesso dietro la verifica di Cloudflare: sul server la passa
-Chromium; qui la pagina si apre in una WebView, la verifica la supera chi
+**Chi scarica e controlla** (Impostazioni, sotto «Scarica un manga») è una
+scelta sola, fra il server collegato e il telefono, e vale per tutto: le
+serie nuove, man mano e il controllo delle serie seguite. Mai metà e metà:
+due controlli sulla stessa cartella di Drive scaricherebbero due volte gli
+stessi capitoli, e man mano chiederebbe capitoli a chi non segue la serie.
+Col server, la pagina della serie offre solo lui (le schede le scrive
+comunque il telefono), il suo controllo quotidiano è acceso e guarda tutta
+la libreria su Drive, e il telefono non controlla niente, nemmeno ad app
+chiusa: le serie che seguiva restano ferme. Col telefono, il server resta
+collegato ma il suo controllo è spento, e le sue serie restano ferme. Senza
+una scelta fatta, con un server collegato scarica lui. La scelta sta fra le
+impostazioni del database, quindi va in backup e account; il lavoro ad app
+chiusa la legge da `archive/check-scope.json`.
+
+Chi controlla guarda **tutte le serie in corso della libreria**, non solo
+quelle che ha scaricato lui: il telefono quelle di Drive, o della cartella
+scelta se Drive non c'è, il server quelle della sua cartella di Drive.
+Restano fuori solo le serie per cui si è toccato «Smetti di seguire», che
+diventa un'esclusione che dura (fra le impostazioni, quindi in backup e
+account, e mandata al server); riscaricare la serie la fa seguire di nuovo.
+Il controllo del telefono non si spegne più: se ne sceglie l'ora e il
+Wi-Fi. I siti dietro la verifica del browser si leggono con Chromium senza
+schermo sul server e con una WebView invisibile sul telefono, anche ad app
+chiusa; passa la verifica che si risolve da sola, mentre la casella
+«Verify you are human» la deve spuntare una persona. Lì la serie resta in
+attesa (`archive/gated.json` sul telefono, `check.gated` sul server): il
+controllo ad app chiusa lo dice con una notifica — col server, il telefono
+glielo chiede due ore dopo l'ora del controllo —, e «Scarica un manga» ne
+mostra una scheda. Toccandola la pagina la prova prima la WebView
+invisibile, perché una verifica passata vale per tutte le WebView
+dell'app; se serve si apre quella visibile e la casella la spunta
+l'utente. Il controllo riparte poi solo da quelle serie, con le pagine
+prese: sul telefono, o mandate al server, perché la verifica vale per
+questo browser e questo indirizzo.
+
+ManhwaRead sta spesso dietro la verifica di Cloudflare: scaricando, la
+pagina si apre in una WebView, la verifica la supera chi
 usa il telefono, e appena compare l'elenco dei capitoli l'app se lo prende
 e torna indietro da sola.
 
@@ -997,9 +1033,8 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
   suo lavoro e cancella dal server permesso, coda e serie seguite; ciò che è
   già sul suo Drive resta. **Scollegare** il server, per chi non è il
   proprietario, gli fa dimenticare il proprio permesso e la propria coda.
-- **La destinazione «Server»** compare per prima quando il server ha il
-  permesso di Drive e una cartella di chi usa l'app, e scarica solo su
-  Drive: il telefono gli manda il link con le stesse scelte (tutta, dal
+- **La destinazione «Server»** è l'unica quando si è scelto che scarichi
+  lui, e scarica solo su Drive: il telefono gli manda il link con le stesse scelte (tutta, dal
   capitolo, i capitoli scelti, la pausa). Il telefono verifica la serie
   come sempre, perché mostrarla è suo compito; per ManhwaRead gli manda
   anche la pagina passata dalla verifica, perché il server non ha un

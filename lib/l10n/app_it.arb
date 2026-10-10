@@ -945,9 +945,9 @@
   "@archiveModeAheadUnavailable": {
     "description": "Avviso quando si tocca «Man mano» per un sito protetto da Cloudflare"
   },
-  "archiveModeAheadServer": "Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un'ora dall'uscita di una versione nuova. Intanto man mano scarica dal telefono.",
+  "archiveModeAheadServer": "Il server collegato non sa ancora scaricare man mano: si aggiorna da solo entro un'ora dall'uscita di una versione nuova.",
   "@archiveModeAheadServer": {
-    "description": "Nota sotto le destinazioni in modalità «Man mano», quando il server collegato è di una versione che non la sa fare e quindi non compare fra le scelte"
+    "description": "Avviso quando si tocca «Man mano» mentre scarica il server collegato, che è di una versione che non lo sa fare"
   },
   "archiveChapterSearch": "Cerca per numero o titolo",
   "@archiveChapterSearch": {
@@ -1360,17 +1360,17 @@
   "@archiveTracked": {
     "description": "Titolo della sezione sul controllo dei capitoli nuovi delle serie ancora in uscita"
   },
-  "archiveTrackedIntro": "Le serie in corso scaricate da qui si ricontrollano: arrivano solo i capitoli nuovi, nella stessa destinazione. Quelle del server le segue il server.",
+  "archiveTrackedIntro": "Ogni giorno si ricontrollano tutte le serie in corso della libreria, scaricate da qui o da altri, tranne quelle che hai smesso di seguire: arrivano solo i capitoli nuovi. Riscaricarne una dal sito la fa seguire di nuovo.",
   "@archiveTrackedIntro": {
     "description": "Spiegazione del controllo delle serie in corso"
+  },
+  "archiveTrackedByServer": "Le serie seguite le controlla il server, come scelto nelle Impostazioni («Chi scarica e controlla»). Quelle che seguiva il telefono restano ferme finché non torni al telefono.",
+  "@archiveTrackedByServer": {
+    "description": "Nota al posto dei comandi del controllo delle serie seguite, in Scarica un manga, quando nelle Impostazioni si è scelto che controlli il server"
   },
   "archiveCheckDaily": "Controllo ogni giorno",
   "@archiveCheckDaily": {
     "description": "Interruttore del controllo giornaliero delle serie in corso"
-  },
-  "archiveCheckManual": "Solo a mano",
-  "@archiveCheckManual": {
-    "description": "Controllo giornaliero spento: si controlla solo su richiesta"
   },
   "archiveCheckAt": "Alle {time}, anche ad app chiusa",
   "@archiveCheckAt": {
@@ -3502,6 +3502,30 @@
   "@moreDownloadSubtitle": {
     "description": "Sottotitolo della voce «Scarica un manga»"
   },
+  "settingsEngine": "Chi scarica e controlla",
+  "@settingsEngine": {
+    "description": "Voce delle Impostazioni, sotto «Scarica un manga»: sceglie se serie nuove, «man mano» e controllo delle serie seguite li fa il server collegato o il telefono"
+  },
+  "settingsEngineServer": "Il server",
+  "@settingsEngineServer": {
+    "description": "Valore della voce «Chi scarica e controlla»: il server collegato"
+  },
+  "settingsEnginePhone": "Il telefono",
+  "@settingsEnginePhone": {
+    "description": "Valore della voce «Chi scarica e controlla»: questo telefono"
+  },
+  "settingsEngineServerNote": "Serie nuove, man mano e controllo delle serie seguite: tutto sul server, che guarda anche le serie scaricate dal telefono su Drive",
+  "@settingsEngineServerNote": {
+    "description": "Spiegazione della scelta «Il server» in «Chi scarica e controlla», sotto la voce e nel foglio della scelta"
+  },
+  "settingsEnginePhoneNote": "Serie nuove, man mano e controllo delle serie seguite: tutto sul telefono. Il server resta collegato, ma non controlla niente",
+  "@settingsEnginePhoneNote": {
+    "description": "Spiegazione della scelta «Il telefono» in «Chi scarica e controlla», sotto la voce e nel foglio della scelta"
+  },
+  "settingsEngineNoServer": "Tutto sul telefono. Per affidarlo a un server, collegalo da «Scarica un manga»",
+  "@settingsEngineNoServer": {
+    "description": "Sottotitolo di «Chi scarica e controlla» quando nessun server è collegato e la scelta non c'è; «Scarica un manga» è la voce delle Impostazioni da cui si collega"
+  },
   "moreHistory": "Cronologia",
   "@moreHistory": {
     "description": "Voce delle Impostazioni che apre la cronologia di lettura"
@@ -4499,17 +4523,9 @@
   "@serverCheckDailyOff": {
     "description": "Sottotitolo del controllo quotidiano del server spento"
   },
-  "serverCheckLibrary": "Tutta la libreria su Drive",
-  "@serverCheckLibrary": {
-    "description": "Titolo dell'interruttore che fa controllare al server tutte le serie della libreria su Drive"
-  },
-  "serverCheckLibraryOn": "Anche le serie scaricate dal telefono o da altri, non solo dal server",
-  "@serverCheckLibraryOn": {
-    "description": "Sottotitolo dell'interruttore della libreria intera, acceso"
-  },
-  "serverCheckLibraryOff": "Solo le serie in corso scaricate dal server",
-  "@serverCheckLibraryOff": {
-    "description": "Sottotitolo dell'interruttore della libreria intera, spento"
+  "serverCheckByPhone": "Spento: le serie seguite le controlla il telefono, come scelto nelle Impostazioni",
+  "@serverCheckByPhone": {
+    "description": "Sottotitolo del controllo quotidiano del server quando nelle Impostazioni («Chi scarica e controlla») si è scelto il telefono"
   },
   "serverCheckLast": "Ultimo controllo {when}: {count, plural, =0{nessun capitolo nuovo} =1{1 serie con capitoli nuovi} other{{count} serie con capitoli nuovi}}",
   "@serverCheckLast": {
@@ -5086,5 +5102,62 @@
   "shareNoLinks": "Nel testo condiviso non c'è nessun link.",
   "@shareNoLinks": {
     "description": "Avviso quando si condivide con Kagami un testo senza link"
+  },
+  "dataVerifyTitle": "{sites} chiede la verifica",
+  "@dataVerifyTitle": {
+    "description": "Titolo della notifica: il controllo automatico ha trovato serie ferme alla verifica di Cloudflare; sites è il nome del sito (o più nomi separati da virgola)",
+    "placeholders": {
+      "sites": {
+        "type": "String"
+      }
+    }
+  },
+  "dataVerifyText": "{count, plural, =1{Il controllo non ha potuto leggere una serie. Tocca per passare la verifica.} other{Il controllo non ha potuto leggere {count} serie. Tocca per passare la verifica.}}",
+  "@dataVerifyText": {
+    "description": "Testo della notifica delle serie ferme alla verifica del sito; toccarla apre la verifica",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveGatedTitle": "{count, plural, =1{Una serie aspetta la verifica} other{{count} serie aspettano la verifica}}",
+  "@archiveGatedTitle": {
+    "description": "Scarica un manga, sezione serie seguite: titolo della scheda delle serie ferme alla verifica del sito",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveGatedBody": "{sites} chiede di spuntare «Verify you are human», e il controllo automatico non lo fa. Passala tu: il controllo riparte da queste serie.",
+  "@archiveGatedBody": {
+    "description": "Spiegazione sotto il titolo della scheda delle serie ferme alla verifica; sites è il nome del sito",
+    "placeholders": {
+      "sites": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveGatedAction": "Verifica",
+  "@archiveGatedAction": {
+    "description": "Pulsante della scheda delle serie ferme: apre la verifica del sito"
+  },
+  "archiveGatedNothing": "La verifica non è stata passata: le serie restano in attesa.",
+  "@archiveGatedNothing": {
+    "description": "Avviso: l'utente è uscito dalla verifica senza passarla"
+  },
+  "archiveGatedChecking": "Verifica passata, controllo le serie…",
+  "@archiveGatedChecking": {
+    "description": "Avviso: verifica passata, il controllo delle serie è in corso"
+  },
+  "archiveCheckQueuedCount": "{count, plural, =1{capitoli nuovi per una serie} other{capitoli nuovi per {count} serie}}",
+  "@archiveCheckQueuedCount": {
+    "description": "Esito del controllo dopo la verifica passata a mano: quante serie hanno capitoli nuovi in coda; pezzo di frase dopo cui viene il punto",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

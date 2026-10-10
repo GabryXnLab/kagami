@@ -764,7 +764,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get archiveModeAheadServer =>
-      'जुड़ा सर्वर अभी “पढ़ते-पढ़ते” डाउनलोड नहीं कर सकता: नया संस्करण आने के एक घंटे के भीतर वह ख़ुद अपडेट हो जाता है। तब तक यह मोड फ़ोन से डाउनलोड करता है।';
+      'जुड़ा सर्वर अभी “पढ़ते-पढ़ते” डाउनलोड नहीं कर सकता: नया संस्करण आने के एक घंटे के भीतर वह ख़ुद अपडेट हो जाता है।';
 
   @override
   String get archiveChapterSearch => 'नंबर या शीर्षक से खोजें';
@@ -1072,13 +1072,14 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get archiveTrackedIntro =>
-      'यहाँ से डाउनलोड की गई जारी सीरीज़ की दोबारा जाँच होती है: उसी जगह सिर्फ़ नए अध्याय आते हैं। सर्वर वाली सीरीज़ को सर्वर ट्रैक करता है।';
+      'लाइब्रेरी की सभी चालू सीरीज़ रोज़ फिर से जाँची जाती हैं, चाहे यहाँ से डाउनलोड हुई हों या किसी और तरीके से, सिवाय उनके जिन्हें आपने फ़ॉलो करना बंद किया है: सिर्फ़ नए अध्याय आते हैं। साइट से किसी सीरीज़ को फिर डाउनलोड करने पर वह फिर फ़ॉलो होने लगती है।';
+
+  @override
+  String get archiveTrackedByServer =>
+      'फ़ॉलो की गई सीरीज़ सर्वर जाँचता है, जैसा सेटिंग (“कौन डाउनलोड और जाँच करता है”) में चुना गया है। फ़ोन जिन्हें फ़ॉलो कर रहा था, वे फ़ोन पर लौटने तक रुकी रहती हैं।';
 
   @override
   String get archiveCheckDaily => 'रोज़ जाँच';
-
-  @override
-  String get archiveCheckManual => 'सिर्फ़ हाथ से';
 
   @override
   String archiveCheckAt(String time) {
@@ -2737,6 +2738,27 @@ class AppLocalizationsHi extends AppLocalizations {
   String get moreDownloadSubtitle => 'शीर्षक खोजें या लिंक पेस्ट करें';
 
   @override
+  String get settingsEngine => 'कौन डाउनलोड और जाँच करता है';
+
+  @override
+  String get settingsEngineServer => 'सर्वर';
+
+  @override
+  String get settingsEnginePhone => 'फ़ोन';
+
+  @override
+  String get settingsEngineServerNote =>
+      'नई सीरीज़, “पढ़ते-पढ़ते” और फ़ॉलो की गई सीरीज़ की जाँच: सब सर्वर पर, जो फ़ोन द्वारा Drive पर डाउनलोड की गई सीरीज़ भी देखता है';
+
+  @override
+  String get settingsEnginePhoneNote =>
+      'नई सीरीज़, “पढ़ते-पढ़ते” और फ़ॉलो की गई सीरीज़ की जाँच: सब फ़ोन पर। सर्वर जुड़ा रहता है, पर कुछ नहीं जाँचता';
+
+  @override
+  String get settingsEngineNoServer =>
+      'सब फ़ोन पर। इसे सर्वर को सौंपने के लिए “मंगा डाउनलोड करें” से एक सर्वर जोड़ें';
+
+  @override
   String get moreHistory => 'इतिहास';
 
   @override
@@ -3502,15 +3524,8 @@ class AppLocalizationsHi extends AppLocalizations {
       'बंद: नए अध्याय सिर्फ़ हाथ से डाउनलोड होते हैं';
 
   @override
-  String get serverCheckLibrary => 'Drive पर पूरी लाइब्रेरी';
-
-  @override
-  String get serverCheckLibraryOn =>
-      'सिर्फ़ सर्वर ही नहीं, फ़ोन या दूसरों से डाउनलोड की गई सीरीज़ भी';
-
-  @override
-  String get serverCheckLibraryOff =>
-      'सिर्फ़ सर्वर से डाउनलोड की गई चालू सीरीज़';
+  String get serverCheckByPhone =>
+      'बंद: सेटिंग में चुने अनुसार, फ़ॉलो की गई सीरीज़ फ़ोन जाँचता है';
 
   @override
   String serverCheckLast(String when, int count) {
@@ -3959,4 +3974,59 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get shareNoLinks => 'साझा किए गए टेक्स्ट में कोई लिंक नहीं है।';
+
+  @override
+  String dataVerifyTitle(String sites) {
+    return '$sites सत्यापन माँग रहा है';
+  }
+
+  @override
+  String dataVerifyText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'जाँच $count सीरीज़ नहीं पढ़ सकी। सत्यापन पूरा करने के लिए टैप करें।',
+      one: 'जाँच एक सीरीज़ नहीं पढ़ सकी। सत्यापन पूरा करने के लिए टैप करें।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़ सत्यापन की प्रतीक्षा में हैं',
+      one: 'एक सीरीज़ सत्यापन की प्रतीक्षा में है',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveGatedBody(String sites) {
+    return '$sites «Verify you are human» पर टिक करने को कहता है, और अपने-आप होने वाली जाँच ऐसा नहीं करती। इसे आप ख़ुद पूरा करें: जाँच इन्हीं सीरीज़ से फिर शुरू होगी।';
+  }
+
+  @override
+  String get archiveGatedAction => 'सत्यापित करें';
+
+  @override
+  String get archiveGatedNothing =>
+      'सत्यापन पूरा नहीं हुआ: सीरीज़ अब भी प्रतीक्षा में हैं।';
+
+  @override
+  String get archiveGatedChecking =>
+      'सत्यापन पूरा हुआ, सीरीज़ जाँची जा रही हैं…';
+
+  @override
+  String archiveCheckQueuedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़ के नए अध्याय',
+      one: 'एक सीरीज़ के नए अध्याय',
+    );
+    return '$_temp0';
+  }
 }

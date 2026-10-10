@@ -21,9 +21,11 @@ import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/remote.dart' show ServerException;
 import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../archive/phone_check.dart' show gatedSites;
 import '../format/malf.dart';
 import '../providers.dart';
 import 'archive_flow.dart';
@@ -102,13 +104,16 @@ String _destinationName(AppLocalizations l10n, ArchiveDestination destination) =
     };
 
 class ArchiveScreen extends ConsumerStatefulWidget {
-  const ArchiveScreen({this.link, this.importText, super.key});
+  const ArchiveScreen({this.link, this.importText, this.verify = false, super.key});
 
   /// Un link condiviso con l'app: si apre già incollato e verificato.
   final String? link;
 
   /// Il testo condiviso con più link: si apre l'import, già compilato.
   final String? importText;
+
+  /// Dalla notifica delle serie ferme alla verifica: la si apre subito.
+  final bool verify;
 
   @override
   ConsumerState<ArchiveScreen> createState() => _ArchiveScreenState();
@@ -154,6 +159,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           _link.text = link!;
           unawaited(_verify());
         }
+      });
+    }
+    if (widget.verify) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final gated = await ref.read(gatedSeriesProvider.future);
+        if (mounted && gated.isNotEmpty) await _passVerification(gated);
       });
     }
   }
@@ -789,7 +800,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     final notifier = ref.read(archiveProvider.notifier);
     final muted = context.tokens.muted;
     final l10n = context.l10n;
-    final minutes = view.check.minutes;
+    final minutes = view.check.minutes ?? defaultCheckMinutes;
     return [
       const SizedBox(height: 30),
       KSection(l10n.archiveTracked),
@@ -798,20 +809,23 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         style: KagamiType.body(12.5, height: 1.45, color: muted),
       ),
       const SizedBox(height: 12),
-      KGroup(
-        children: [
-          KTile(
-            icon: LucideIcons.clock,
-            title: l10n.archiveCheckDaily,
-            subtitle: minutes == null ? l10n.archiveCheckManual : l10n.archiveCheckAt(clockOf(minutes)),
-            onTap: () => _toggleCheck(view.check),
-            trailing: Switch(value: minutes != null, onChanged: (_) => _toggleCheck(view.check)),
+      // Se controlla il server, il telefono non controlla niente: restano
+      // solo le serie che seguiva, per smettere di seguirle.
+      if (ref.watch(archiveEngineProvider) == ArchiveEngine.server)
+        KCard(
+          padding: const EdgeInsets.all(14),
+          child: Text(
+            l10n.archiveTrackedByServer,
+            style: KagamiType.body(12.5, height: 1.45, color: muted),
           ),
-          if (minutes != null) ...[
+        )
+      else
+        KGroup(
+          children: [
             KTile(
-              icon: LucideIcons.alarmClock,
-              title: l10n.archiveCheckTime,
-              subtitle: clockOf(minutes),
+              icon: LucideIcons.clock,
+              title: l10n.archiveCheckDaily,
+              subtitle: l10n.archiveCheckAt(clockOf(minutes)),
               trailing: const Icon(LucideIcons.chevronRight, size: 18),
               onTap: () => _chooseTime(view.check),
             ),
@@ -827,14 +841,14 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                 onChanged: (value) => notifier.setCheck(CheckSettings(minutes: minutes, wifiOnly: value)),
               ),
             ),
+            KTile(
+              icon: LucideIcons.refreshCw,
+              title: l10n.archiveCheckNow,
+              onTap: _checkNow,
+            ),
           ],
-          KTile(
-            icon: LucideIcons.refreshCw,
-            title: l10n.archiveCheckNow,
-            onTap: view.tracked.isEmpty ? null : _checkNow,
-          ),
-        ],
-      ),
+        ),
+      ..._gated(),
       const SizedBox(height: 12),
       ArchiveFollowedTile(
         count: view.tracked.length,
@@ -842,6 +856,83 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         tiles: _followedTiles,
       ),
     ];
+  }
+
+  /// Le serie ferme alla verifica di un sito, da chi controlla: una scheda
+  /// con il pulsante che la fa passare.
+  List<Widget> _gated() {
+    final gated = ref.watch(gatedSeriesProvider).value ?? const [];
+    if (gated.isEmpty) return const [];
+    final l10n = context.l10n;
+    final muted = context.tokens.muted;
+    return [
+      const SizedBox(height: 12),
+      KCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(LucideIcons.shieldAlert, size: 18, color: context.tokens.danger),
+                const SizedBox(width: 12),
+                Expanded(child: Text(l10n.archiveGatedTitle(gated.length), style: KagamiType.title(14.5, color: context.colors.onSurface))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              [for (final entry in gated) entry.title].join(', '),
+              style: KagamiType.body(12.5, height: 1.45),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.archiveGatedBody(gatedSites(gated)),
+              style: KagamiType.body(12.5, height: 1.45, color: muted),
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.tonalIcon(
+                icon: const Icon(LucideIcons.shieldCheck, size: 18),
+                label: Text(l10n.archiveGatedAction),
+                onPressed: () => _passVerification(gated),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _passVerification(List<GatedSeries> gated) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await passVerification(
+        context,
+        ref,
+        gated,
+        onChecking: () => messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveGatedChecking))),
+      );
+      final l10n = currentL10n();
+      if (result == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.archiveGatedNothing)));
+        return;
+      }
+      final parts = [
+        if (result.queued > 0) l10n.archiveCheckQueuedCount(result.queued),
+        if (result.gated > 0) l10n.archiveCheckFailed(result.gated),
+      ];
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(
+        content: Text(parts.isEmpty ? l10n.archiveNoNewChapters : l10n.archiveCheckReport(parts.join(l10n.archiveCheckSeparator))),
+      ));
+    } on ProviderOffline {
+      messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveNoConnection)));
+    } on ServerException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      ref.invalidate(gatedSeriesProvider);
+    }
   }
 
   /// Le serie seguite dal telefono, per il foglio.
@@ -879,14 +970,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     ];
   }
 
-  Future<void> _toggleCheck(CheckSettings settings) => ref
-      .read(archiveProvider.notifier)
-      .setCheck(settings.minutes == null
-          ? CheckSettings(minutes: 4 * 60, wifiOnly: settings.wifiOnly)
-          : CheckSettings(wifiOnly: settings.wifiOnly));
-
   Future<void> _chooseTime(CheckSettings settings) async {
-    final minutes = settings.minutes ?? 4 * 60;
+    final minutes = settings.minutes ?? defaultCheckMinutes;
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),

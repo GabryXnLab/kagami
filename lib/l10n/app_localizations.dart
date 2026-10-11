@@ -5707,6 +5707,54 @@ abstract class AppLocalizations {
   /// **'«{title}» collegata: la serie comparirà in libreria quando il lavoro sarà finito.'**
   String seriesLinkDone(String title);
 
+  /// Azione nella scheda di una serie scaricata, e titolo della sua pagina: la riscarica da un altro provider tenendo i dati personali
+  ///
+  /// In it, this message translates to:
+  /// **'Cambia provider'**
+  String get seriesSwitchProvider;
+
+  /// Spiegazione in cima alla pagina «Cambia provider»: cosa si riscarica, che la copia vecchia si toglie e cosa passa alla serie nuova
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli il provider da cui riscaricare la serie. Capitoli, tavole e metadati si riscaricano da lì e la copia di ora si toglie, da Drive nel cestino. Stato, voto, nota, raccolte, capitoli letti e punto di lettura passano alla serie nuova, capitolo per capitolo.'**
+  String get seriesSwitchMessage;
+
+  /// Sottotitolo del provider scelto nella pagina «Cambia provider»: toccandolo se ne sceglie un altro
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca per sceglierne un altro'**
+  String get seriesSwitchOther;
+
+  /// Mentre «Cambia provider» cerca la serie sul provider scelto; {title} è il titolo della serie, {site} il nome del provider
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco «{title}» su {site}…'**
+  String seriesSwitchSearching(String title, String site);
+
+  /// Avviso quando il provider scelto in «Cambia provider» non ha una serie con lo stesso titolo; {title} è il titolo, {site} il provider
+  ///
+  /// In it, this message translates to:
+  /// **'«{title}» non è stata trovata su {site}. Forse lì ha un altro titolo: cercala qui sotto e scegli quella giusta.'**
+  String seriesSwitchNotFound(String title, String site);
+
+  /// Suggerimento della barra di ricerca in «Cambia provider»; {site} è il provider scelto
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca su {site}'**
+  String seriesSwitchSearchHint(String site);
+
+  /// Conferma dopo aver cambiato il sito di una serie: il lavoro è in coda; {title} è il titolo della serie, {site} il nome del sito nuovo
+  ///
+  /// In it, this message translates to:
+  /// **'«{title}» ora viene da {site}: comparirà in libreria quando il lavoro sarà finito.'**
+  String seriesSwitchDone(String title, String site);
+
+  /// Aggiunta alla conferma di «Cambia sito»: quanti capitoli letti non hanno un capitolo con lo stesso numero sul sito nuovo
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Un capitolo letto non c\'è sul sito nuovo e resta solo nella cronologia.} other{{count} capitoli letti non ci sono sul sito nuovo e restano solo nella cronologia.}}'**
+  String seriesSwitchMissing(int count);
+
   /// Pulsante in «Scarica un manga»: apre il modulo per salvare una scheda senza link, senza scaricare niente
   ///
   /// In it, this message translates to:

@@ -3741,6 +3741,48 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'Cambia provider';
+
+  @override
+  String get seriesSwitchMessage =>
+      'Scegli il provider da cui riscaricare la serie. Capitoli, tavole e metadati si riscaricano da lì e la copia di ora si toglie, da Drive nel cestino. Stato, voto, nota, raccolte, capitoli letti e punto di lettura passano alla serie nuova, capitolo per capitolo.';
+
+  @override
+  String get seriesSwitchOther => 'Tocca per sceglierne un altro';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return 'Cerco «$title» su $site…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '«$title» non è stata trovata su $site. Forse lì ha un altro titolo: cercala qui sotto e scegli quella giusta.';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return 'Cerca su $site';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '«$title» ora viene da $site: comparirà in libreria quando il lavoro sarà finito.';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count capitoli letti non ci sono sul sito nuovo e restano solo nella cronologia.',
+      one: 'Un capitolo letto non c\'è sul sito nuovo e resta solo nella cronologia.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'Aggiungi senza link';
 
   @override

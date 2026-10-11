@@ -21,6 +21,7 @@ import '../data/cleanup.dart';
 import '../data/downloads.dart';
 import '../data/library.dart';
 import '../data/library_view.dart';
+import '../data/site_switch.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
 import '../l10n.dart';
@@ -29,6 +30,7 @@ import 'archive_flow.dart';
 import 'archive_series.dart' show ArchiveChoice, ArchiveMode, ArchiveWhere, reachedChapterIndex;
 import 'drive_ui.dart';
 import 'library_screen.dart' show seriesRoute;
+import 'provider_switch.dart';
 import 'reader_screen.dart';
 import 'theme.dart';
 import 'widgets/cleanup_sheet.dart';
@@ -228,25 +230,26 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                             onOpen: _open,
                           ),
                   ),
-                  if (signals.entry.source != null || signals.entry.provider == manualProvider) ...[
-                    const SizedBox(height: 12),
-                    Entrance(
-                      index: 1,
-                      child: _SiteActions(
-                        busy: _siteBusy,
-                        onOpen: signals.entry.source == null
-                            ? null
-                            : () => openInBrowser(context, signals.entry.source!),
-                        onLink: signals.entry.provider == manualProvider
-                            ? () => _linkToSite(signals.entry)
-                            : null,
-                        onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
-                        onMore: siteSource == null || offerStart || missing.isEmpty
-                            ? null
-                            : () => _startDownload(siteSource),
-                      ),
+                  const SizedBox(height: 12),
+                  Entrance(
+                    index: 1,
+                    child: _SiteActions(
+                      busy: _siteBusy,
+                      onOpen: signals.entry.source == null
+                          ? null
+                          : () => openInBrowser(context, signals.entry.source!),
+                      onLink: signals.entry.provider == manualProvider
+                          ? () => _linkToSite(signals.entry)
+                          : null,
+                      onSwitch: signals.entry.provider == manualProvider
+                          ? null
+                          : () => _switchProvider(signals.entry),
+                      onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
+                      onMore: siteSource == null || offerStart || missing.isEmpty
+                          ? null
+                          : () => _startDownload(siteSource),
                     ),
-                  ],
+                  ),
                   const SizedBox(height: 18),
                   Entrance(index: 2, child: _Numbers(signals: signals)),
                   const SizedBox(height: 22),
@@ -567,6 +570,84 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       );
       messenger.showSnackBar(SnackBar(
         content: Text(l10n.seriesLinkDone(inspected.series.title)),
+      ));
+      if (removed) navigator.maybePop();
+    } finally {
+      if (mounted) setState(() => _siteBusy = false);
+    }
+  }
+
+  /// «Cambia provider»: la serie si riscarica da un altro provider, con
+  /// un'altra chiave. Quale serie del provider lo decide [ProviderSwitchPage];
+  /// poi, come per «Collega a un sito», solo a lavoro in coda i dati
+  /// personali passano alla serie nuova — i capitoli abbinati per numero
+  /// ([matchChapters]) — e la copia di ora si toglie. La scelta parte dai
+  /// capitoli che la serie ha già, perché ciò che si toglie torni.
+  Future<void> _switchProvider(SeriesEntry entry) async {
+    if (_siteBusy) return;
+    final l10n = context.l10n;
+    final manifest = await ref.read(seriesManifestProvider(entry.key).future);
+    final metadata = manifest?['metadata'];
+    final alternatives = metadata is Map ? metadata['alternativeTitles'] : null;
+    if (!mounted) return;
+    final link = await ProviderSwitchPage.open(context, entry, [
+      entry.title,
+      if (alternatives is List)
+        for (final title in alternatives)
+          if (title is String && title.trim().isNotEmpty) title,
+    ]);
+    if (link == null || !mounted) return;
+    setState(() => _siteBusy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      final InspectedSeries inspected;
+      try {
+        inspected = await inspectArchiveLink(context, link);
+      } on ProviderError catch (error) {
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        return;
+      }
+      if (!mounted) return;
+      final fresh = inspected.series;
+      final old = ref.read(seriesChaptersProvider(entry.key)).value?.index.chapters ?? const <ChapterEntry>[];
+      final chapters = matchChapters(old, fresh.chapters);
+      final picked = {
+        for (final chapter in old)
+          if (chapter.isReadable) ?chapters[chapter.id],
+      };
+      final mode = picked.isEmpty
+          ? ArchiveMode.card
+          : picked.length == fresh.chapters.length
+              ? ArchiveMode.all
+              : ArchiveMode.pick;
+      final choice = await chooseArchive(
+        context,
+        ref,
+        inspected,
+        where: _where(card: mode == ArchiveMode.card),
+        mode: mode,
+        picked: picked,
+      );
+      if (choice == null || !mounted) return;
+      if (!await enqueueArchive(context, ref, inspected, choice) || !mounted) return;
+      final read = ref.read(seriesStateProvider(entry.key)).readChapters;
+      await ref.read(readingProvider.notifier).moveSeries(entry.key, fresh.key, chapters: chapters);
+      if (!mounted) return;
+      final removed = await removeSeriesNow(
+        context,
+        ref,
+        [entry],
+        keepUrls: {normalizeLink(fresh.url)},
+        announce: false,
+      );
+      final missing = read.where((id) => !chapters.containsKey(id)).length;
+      final provider = site.providerById(fresh.provider);
+      messenger.showSnackBar(SnackBar(
+        content: Text([
+          l10n.seriesSwitchDone(fresh.title, provider?.name ?? fresh.provider),
+          if (missing > 0) l10n.seriesSwitchMissing(missing),
+        ].join(' ')),
       ));
       if (removed) navigator.maybePop();
     } finally {
@@ -1302,6 +1383,7 @@ class _SiteActions extends StatelessWidget {
     required this.onRefresh,
     required this.onMore,
     this.onLink,
+    this.onSwitch,
   });
 
   final bool busy;
@@ -1311,6 +1393,9 @@ class _SiteActions extends StatelessWidget {
 
   /// Solo per una scheda manuale: legarla a un sito che Kagami sa scaricare.
   final VoidCallback? onLink;
+
+  /// Per le altre: riscaricarla da un altro provider.
+  final VoidCallback? onSwitch;
 
   /// `null` se Kagami non sa leggere quel sito.
   final VoidCallback? onRefresh;
@@ -1332,6 +1417,12 @@ class _SiteActions extends StatelessWidget {
               label: context.l10n.seriesLinkSite,
               icon: LucideIcons.link,
               onTap: busy ? null : onLink,
+            ),
+          if (onSwitch != null)
+            KChip(
+              label: context.l10n.seriesSwitchProvider,
+              icon: LucideIcons.arrowLeftRight,
+              onTap: busy ? null : onSwitch,
             ),
           if (onMore != null)
             KChip(

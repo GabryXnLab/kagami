@@ -3738,6 +3738,48 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'Mudar de provedor';
+
+  @override
+  String get seriesSwitchMessage =>
+      'Escolha o provedor de onde baixar a série de novo. Capítulos, páginas e metadados são baixados de novo de lá e a cópia atual é removida, no Drive para a lixeira. Status, nota, comentário, coleções, capítulos lidos e ponto de leitura passam para a nova série, capítulo por capítulo.';
+
+  @override
+  String get seriesSwitchOther => 'Toque para escolher outro';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return 'Procurando \"$title\" em $site…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '\"$title\" não foi encontrada em $site. Talvez lá tenha outro título: procure abaixo e escolha a certa.';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return 'Pesquisar em $site';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '\"$title\" agora vem de $site: aparecerá na biblioteca quando o trabalho terminar.';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count capítulos lidos não estão no novo site e ficam só no histórico.',
+      one: 'Um capítulo lido não está no novo site e fica só no histórico.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'Adicionar sem link';
 
   @override

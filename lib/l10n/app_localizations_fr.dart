@@ -3761,6 +3761,48 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'Changer de fournisseur';
+
+  @override
+  String get seriesSwitchMessage =>
+      'Choisissez le fournisseur depuis lequel retélécharger la série. Chapitres, pages et métadonnées sont retéléchargés depuis celui-ci et la copie actuelle est supprimée, dans la corbeille sur Drive. Statut, note, commentaire, collections, chapitres lus et point de lecture passent à la nouvelle série, chapitre par chapitre.';
+
+  @override
+  String get seriesSwitchOther => 'Touchez pour en choisir un autre';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return 'Recherche de « $title » sur $site…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '« $title » est introuvable sur $site. Elle y a peut-être un autre titre : cherchez-la ci-dessous et choisissez la bonne.';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return 'Rechercher sur $site';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '« $title » vient maintenant de $site : elle apparaîtra dans la bibliothèque à la fin de la tâche.';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count chapitres lus n\'existent pas sur le nouveau site et restent seulement dans l\'historique.',
+      one: 'Un chapitre lu n\'existe pas sur le nouveau site et reste seulement dans l\'historique.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'Ajouter sans lien';
 
   @override

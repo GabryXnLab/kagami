@@ -132,7 +132,7 @@ partenza, perché si legge di sera; chiaro o come il sistema a scelta.
 ### Scaricare le serie
 
 - Da **Impostazioni → Scarica un manga**: cerchi un titolo (MangaK, ManhwaRead, Asura
-  Scans) o ne incolli il link, controlli copertina, autori e capitoli, e scegli.
+  Scans, Coffee Manga) o ne incolli il link, controlli copertina, autori e capitoli, e scegli.
 - Tutta la serie, dal capitolo scelto in poi o solo i capitoli selezionati;
   sulla cartella di Drive, su Drive e sul telefono, o solo sul telefono.
 - Una pausa regolabile fra le richieste, perché i siti bloccano chi scarica a
@@ -144,6 +144,11 @@ partenza, perché si legge di sera; chiaro o come il sistema a scelta.
   capitoli nuovi.
 - ManhwaRead sta spesso dietro la verifica di Cloudflare: la superi tu, in una
   pagina dentro l'app, e Kagami continua da lì.
+- Dalla scheda, **Cambia provider** riscarica una serie da un altro sito:
+  scegli il provider, Kagami cerca la serie per titolo (o la cerchi tu, se
+  lì si chiama diversamente), e arrivano tavole e metadati nuovi, mentre
+  stato, voto, raccolte, capitoli letti e punto di lettura passano alla
+  serie nuova, capitolo per capitolo.
 
 ### Dati personali
 
@@ -179,7 +184,7 @@ MALF, chiunque l'abbia scritta.
 
 ```mermaid
 flowchart LR
-  sites["Siti<br/>MangaK · ManhwaRead · Asura Scans"]
+  sites["Siti<br/>MangaK · ManhwaRead · Asura Scans · Coffee Manga"]
   phone["Kagami sul telefono<br/>Scarica un manga"]
   server["Kagami Server<br/>su un tuo computer"]
   others["Altri archiviatori<br/>che scrivono MALF"]

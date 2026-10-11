@@ -110,6 +110,7 @@ lib/
     data/downloads.dart        da Drive alla cartella: il pulsante «Scarica»
     data/cleanup.dart          capitoli letti da togliere dal telefono: cosa e quanto
     data/series_removal.dart   togliere una serie: telefono, Drive nel cestino, coda, serie seguite
+    data/site_switch.dart      cambiare provider: la serie fra i risultati per titolo, i capitoli per numero
     data/read_ahead.dart       scaricare man mano: quali capitoli mancano davanti al lettore
     data/folder_sync.dart      cartella del telefono ↔ Drive: piano, giro, ricordi
     data/folder_sync_schedule.dart  giro a mano e programmato (+ FolderSyncWorker.kt)
@@ -142,6 +143,7 @@ lib/
     ui/archive_series.dart     la pagina di una serie letta dal sito: modalità, capitoli, destinazione
     ui/archive_flow.dart       il percorso riusabile: link → verifica → pagina della serie → coda, browser
     ui/archive_manual.dart     la scheda manuale: senza link o con un sito non supportato, titolo e copertina dalla pagina
+    ui/provider_switch.dart    Cambia provider: elenco dei provider, verifica per titolo, ricerca se non c'è
     ui/archive_import.dart     Importa più link: opzioni, il giro una serie alla volta, stato di ogni riga, verifiche
     ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
     data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
@@ -159,7 +161,7 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/http.dart                client limitato ai domini, pagina presa dalla WebView
   lib/providers.dart           registro dei siti, `Provider`, `BrowserGate`
   lib/providers/kit.dart       attrezzi comuni dei siti: link, testi, ordine dei capitoli
-  lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans
+  lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans, Coffee Manga
   lib/archiver.dart            dal sito alla libreria: manifest, ripresa, tessere
   lib/indexes.dart             index.json, pages.json, riga di libreria, firma
   lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)
@@ -203,6 +205,7 @@ test/arrivals_test.dart        pallino dei capitoli nuovi, notifiche, silenzio n
 test/folder_sync_test.dart     piano della sincronizzazione e giri contro un Drive finto
 test/tag_tint_test.dart        il colore di un'etichetta dipende solo dal suo testo
 test/bulk_import_test.dart     link dal testo e dal JSON, doppioni, già presente, sito o scheda manuale
+test/site_switch_test.dart     la serie fra i risultati del provider nuovo, capitoli abbinati per numero o nome
 test/archive_choice_test.dart  il punto di lettura che precompila la pagina della serie letta dal sito
 firestore.rules                il proprio documento solo a sé; gli inviti ai server a mittente e destinatario
 docs/design.md                 funzionalità, interfaccia e scelte tecniche

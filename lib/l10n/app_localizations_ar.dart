@@ -3850,6 +3850,48 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'تغيير المزوّد';
+
+  @override
+  String get seriesSwitchMessage =>
+      'اختر المزوّد الذي ستُنزَّل منه السلسلة من جديد. ستُنزَّل الفصول والصفحات والبيانات الوصفية من جديد من هناك وتُحذف النسخة الحالية، وفي Drive تذهب إلى سلة المهملات. تنتقل الحالة والتقييم والملاحظة والمجموعات والفصول المقروءة وموضع القراءة إلى السلسلة الجديدة، فصلًا بفصل.';
+
+  @override
+  String get seriesSwitchOther => 'انقر لاختيار مزوّد آخر';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return 'جارٍ البحث عن «$title» في $site…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return 'لم يُعثر على «$title» في $site. ربما لها عنوان آخر هناك: ابحث عنها في الأسفل واختر الصحيحة.';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return 'ابحث في $site';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '«$title» تأتي الآن من $site: ستظهر في المكتبة عند انتهاء المهمة.';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count من الفصول المقروءة غير موجودة في الموقع الجديد وتبقى في السجل فقط.',
+      one: 'فصل مقروء واحد غير موجود في الموقع الجديد ويبقى في السجل فقط.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'إضافة بدون رابط';
 
   @override

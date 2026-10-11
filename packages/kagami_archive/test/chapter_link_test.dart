@@ -79,6 +79,21 @@ void main() {
     );
   });
 
+  test('Coffee Manga', () async {
+    await check(
+      seriesUrl: FakeCoffeeManga.url,
+      chapterUrl: '${FakeCoffeeManga.url}chapter-1-5/',
+      expectedSeries: FakeCoffeeManga.url,
+      providerId: 'coffeemanga',
+      load: (p) => p.fetchSeries(FakeCoffeeManga.url, FakeCoffeeManga()),
+      number: '1.5',
+      sameChapter: [
+        '${FakeCoffeeManga.url}chapter-1-5',
+        'https://www.coffeemanga.net/manga/the-house-without-time/chapter-1-5/?style=list',
+      ],
+    );
+  });
+
   test('un link di nessun sito è UnsupportedLink, e resta un ProviderError', () {
     for (final url in [
       'https://example.com/manhwa/x/chapter-1/',

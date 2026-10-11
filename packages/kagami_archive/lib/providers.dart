@@ -26,6 +26,7 @@ import 'dart:typed_data';
 import 'http.dart';
 import 'model.dart';
 import 'providers/asurascans.dart';
+import 'providers/coffeemanga.dart';
 import 'providers/kit.dart' show chapterKey;
 import 'providers/mangak.dart';
 import 'providers/manhwaread.dart';
@@ -188,7 +189,7 @@ class SearchResult {
 /// tendina, non di una pagina di risultati.
 const int searchLimit = 10;
 
-final List<Provider> providers = [MangaK(), ManhwaRead(), AsuraScans()];
+final List<Provider> providers = [MangaK(), ManhwaRead(), AsuraScans(), CoffeeManga()];
 
 final RegExp chapterNumberPattern =
     RegExp(r'\bchapter\s*0*(\d+)(?:[.,](\d+))?\b', caseSensitive: false);

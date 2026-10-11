@@ -4814,6 +4814,72 @@
       }
     }
   },
+  "seriesSwitchProvider": "Cambia provider",
+  "@seriesSwitchProvider": {
+    "description": "Azione nella scheda di una serie scaricata, e titolo della sua pagina: la riscarica da un altro provider tenendo i dati personali"
+  },
+  "seriesSwitchMessage": "Scegli il provider da cui riscaricare la serie. Capitoli, tavole e metadati si riscaricano da lì e la copia di ora si toglie, da Drive nel cestino. Stato, voto, nota, raccolte, capitoli letti e punto di lettura passano alla serie nuova, capitolo per capitolo.",
+  "@seriesSwitchMessage": {
+    "description": "Spiegazione in cima alla pagina «Cambia provider»: cosa si riscarica, che la copia vecchia si toglie e cosa passa alla serie nuova"
+  },
+  "seriesSwitchOther": "Tocca per sceglierne un altro",
+  "@seriesSwitchOther": {
+    "description": "Sottotitolo del provider scelto nella pagina «Cambia provider»: toccandolo se ne sceglie un altro"
+  },
+  "seriesSwitchSearching": "Cerco «{title}» su {site}…",
+  "@seriesSwitchSearching": {
+    "description": "Mentre «Cambia provider» cerca la serie sul provider scelto; {title} è il titolo della serie, {site} il nome del provider",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesSwitchNotFound": "«{title}» non è stata trovata su {site}. Forse lì ha un altro titolo: cercala qui sotto e scegli quella giusta.",
+  "@seriesSwitchNotFound": {
+    "description": "Avviso quando il provider scelto in «Cambia provider» non ha una serie con lo stesso titolo; {title} è il titolo, {site} il provider",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesSwitchSearchHint": "Cerca su {site}",
+  "@seriesSwitchSearchHint": {
+    "description": "Suggerimento della barra di ricerca in «Cambia provider»; {site} è il provider scelto",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesSwitchDone": "«{title}» ora viene da {site}: comparirà in libreria quando il lavoro sarà finito.",
+  "@seriesSwitchDone": {
+    "description": "Conferma dopo aver cambiato il sito di una serie: il lavoro è in coda; {title} è il titolo della serie, {site} il nome del sito nuovo",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesSwitchMissing": "{count, plural, =1{Un capitolo letto non c'è sul sito nuovo e resta solo nella cronologia.} other{{count} capitoli letti non ci sono sul sito nuovo e restano solo nella cronologia.}}",
+  "@seriesSwitchMissing": {
+    "description": "Aggiunta alla conferma di «Cambia sito»: quanti capitoli letti non hanno un capitolo con lo stesso numero sul sito nuovo",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "archiveManualAction": "Aggiungi senza link",
   "@archiveManualAction": {
     "description": "Pulsante in «Scarica un manga»: apre il modulo per salvare una scheda senza link, senza scaricare niente"

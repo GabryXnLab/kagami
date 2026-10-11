@@ -199,6 +199,29 @@ senza toccare il lavoro appena accodato anche se ha lo stesso link. La serie
 vera compare in libreria quando il lavoro finisce; fino ad allora la scheda
 chiude e un avviso lo dice.
 
+Ogni altra serie ha invece «Cambia provider», per riscaricarla da un sito
+diverso quando quello di prima chiude, rallenta o ha tavole peggiori. Non si
+incolla un link: si sceglie il provider dallo stesso elenco con le icone di
+«Scarica un manga» (`ui/provider_switch.dart`, quello di ora escluso), e la
+pagina cerca da sé la serie con la ricerca del provider, col titolo e poi con
+i titoli alternativi del manifest. Se un risultato ha lo stesso titolo, a
+meno di maiuscole e punteggiatura (`sameSeries`), lo prende senza chiedere;
+altrimenti dice che la serie non è stata trovata e lascia la barra di
+ricerca di quel provider, già col titolo, perché lì la serie può chiamarsi
+in un altro modo: si sceglie dai risultati. Un provider dietro Cloudflare
+cerca dalla WebView invisibile e, se la verifica chiede un tocco, offre la
+riga che la apre. Dalla serie scelta in poi è il percorso di «Collega a un
+sito», con due differenze. La pagina di scelta si apre sui capitoli che
+la serie ha già: tutta la serie se c'erano tutti, gli stessi spuntati se
+erano alcuni, la scheda se non ce n'era nessuno. E `moveSeries` riceve la
+traduzione degli id dei capitoli (`data/site_switch.dart`), perché ogni sito
+ha i suoi. I capitoli si abbinano per numero, quelli senza numero per nome.
+Letti, posizioni, cronologia e segnalibri seguono il capitolo. Un letto che
+il sito nuovo non ha resta col suo id, quindi conta solo nella cronologia, e
+l'avviso finale dice quanti sono. La copia vecchia si toglie come la scheda
+manuale: cartelle, Drive nel cestino, coda e serie seguita, anche sul
+server. Tavole e metadati arrivano interi dal sito nuovo.
+
 Ogni capitolo che non è né sul telefono né su Drive ha l'icona «Scarica dal
 sito», anche se letto o saltato, e la barra di selezione offre lo stesso per i
 selezionati: archivia solo quei capitoli, senza la pagina di scelta. La pagina
@@ -223,7 +246,7 @@ Due modalità, scelte per serie e ricordate:
 - **continua** (webtoon): tutte le tavole del capitolo una sotto l'altra,
   attaccate — nessun margine, nessun separatore, nessun riquadro: un capitolo
   è una striscia sola che si scorre dall'inizio alla fine, che è come sono
-  fatti i manhwa da MangaK, ManhwaRead e Asura Scans;
+  fatti i manhwa da MangaK, ManhwaRead, Asura Scans e Coffee Manga;
 - **paginata**: una tavola per volta, con direzione destra→sinistra o
   sinistra→destra.
 
@@ -758,14 +781,15 @@ migliaia di letture.
 
 Impostazioni → Scarica un manga fa dal telefono quello che il pannello MangaArchive
 di Cobalt fa dal server: si cerca un titolo o si incolla il link di una
-serie (MangaK, ManhwaRead, Asura Scans), la si verifica — titolo,
+serie (MangaK, ManhwaRead, Asura Scans, Coffee Manga), la si verifica — titolo,
 copertina, autori, generi, capitoli — e la si scarica, o se ne salva solo la
 scheda. Va bene anche il link di un capitolo: si legge la serie a cui
 appartiene, e quel capitolo è il punto a cui si è arrivati.
 
 La ricerca dà, mentre si scrive, quello che darebbe la barra di ricerca di
 ogni sito: MangaK con la sua API (`titles/search`), Asura Scans con la sua
-(`api/search`, senza i romanzi), ManhwaRead con la pagina dei risultati
+(`api/search`, senza i romanzi), Coffee Manga con la sua pagina dei
+risultati (`/?s=…&post_type=wp-manga`), ManhwaRead con la pagina dei risultati
 (`/?s=…`), letta da una WebView invisibile perché Cloudflare
 non risponde al client HTTP dell'app nemmeno dopo la verifica, e blocca a
 parte la ricerca rapida di `admin-ajax.php`. Se la verifica chiede un tocco,
@@ -979,6 +1003,12 @@ anticipato, che senza abbonamento non hanno tavole, restano fuori
 dall'elenco finché non si liberano, e allora arrivano come capitoli nuovi.
 I link del sito portano un suffisso che cambia (`/comics/nano-machine-bd5bdaf8`):
 in libreria resta quello senza, che il sito ridirige.
+
+Coffee Manga è un WordPress senza Cloudflare: l'elenco intero dei capitoli
+sta in un JSON della pagina della serie (`mk-chapters-data`), le tavole
+nella pagina del capitolo con le loro misure. I capitoli VIP restano fuori
+come quelli in accesso anticipato di Asura Scans. La serie si riconosce
+dall'id del post e non dallo slug, che sul sito a volte è casuale.
 
 ### Scaricare dal proprio server
 

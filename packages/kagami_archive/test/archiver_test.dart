@@ -13,6 +13,7 @@ import 'package:kagami_archive/indexes.dart';
 import 'package:kagami_archive/manual.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers/asurascans.dart';
+import 'package:kagami_archive/providers/coffeemanga.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/drive.dart';
@@ -440,6 +441,26 @@ void main() {
     expect(chapters, ['0001 - Chapter 1 [101]', '0002 - Chapter 2 - The Arena [102]']);
     final index = readJson(File(p.join(folder, 'index.json')));
     expect((index['chapters'] as List).map((c) => ((c as Map)['id'], c['complete'])), [('101', true), ('102', true)]);
+  });
+
+  test('Coffee Manga fa la stessa strada degli altri siti', () async {
+    final coffee = FakeCoffeeManga();
+    final provider = CoffeeManga();
+    final series = await provider.fetchSeries(FakeCoffeeManga.url, coffee);
+    final result = await Archiver(
+      provider: provider,
+      http: coffee,
+      store: LocalStore(libraryPath()),
+      scratch: Directory(p.join(temporary.path, 'scratch')),
+      images: images,
+      delay: Duration.zero,
+    ).download(series);
+    expect((result.completed, result.pagesDownloaded), (2, 4));
+    expect(result.failed, isEmpty);
+    final folder = p.join(libraryPath(), result.folder);
+    expect(p.basename(folder), 'The House Without Time [coffeemanga-7743]');
+    final chapters = Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)).toList()..sort();
+    expect(chapters, ['0001 - Chapter 1 [217607]', '0001.5 - Chapter 1.5 [217610]']);
   });
 
   group('direttamente su Drive', () {

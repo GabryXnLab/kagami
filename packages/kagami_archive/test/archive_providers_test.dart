@@ -11,6 +11,7 @@ import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/names.dart';
 import 'package:kagami_archive/providers.dart';
 import 'package:kagami_archive/providers/asurascans.dart';
+import 'package:kagami_archive/providers/coffeemanga.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/providers/manhwaread.dart';
 
@@ -364,6 +365,108 @@ void main() {
       expect((results.first.chapters, results.first.releaseStatus), (332, 'ongoing'));
       expect(results.first.coverUrl, 'https://cdn.asurascans.com/asura-images/covers/nano-machine.e31bdb.webp');
       expect((results.last.coverUrl, results.last.releaseStatus), (null, 'cancelled'));
+    });
+  });
+
+  group('Coffee Manga', () {
+    final provider = CoffeeManga();
+    const url = FakeCoffeeManga.url;
+
+    test('link della serie, non dei capitoli né di altri siti', () {
+      expect(selectProvider(url).id, 'coffeemanga');
+      expect(selectProvider('https://coffeemanga.net/manga/ocveobera7alg81').id, 'coffeemanga');
+      for (final other in [
+        '${url}chapter-1/',
+        'http://coffeemanga.net/manga/the-house-without-time/',
+        'https://coffeemanga.net/manga/the-house-without-time/?ref=1',
+        'https://coffeemanga.net/manga-genre/action/',
+        'https://coffeemanga.com/manga/the-house-without-time/',
+      ]) {
+        expect(provider.accepts(other), isFalse, reason: other);
+      }
+      expect(provider.canonical('https://www.coffeemanga.net/manga/the-house-without-time'), url);
+      expect(provider.needsBrowser, isFalse);
+      expect(() => provider.validateUrl('https://example.com/x.jpg'), throwsA(isA<ProviderError>()));
+    });
+
+    test('serie dalla pagina, capitoli dal JSON e senza quelli VIP', () async {
+      final http = FakeCoffeeManga();
+      final series = await provider.fetchSeries(url, http);
+      expect(http.requests, [url]);
+      expect((series.key, series.title, series.url), ('coffeemanga:7743', 'The House Without Time', url));
+      expect(series.coverUrl, FakeCoffeeManga.cover);
+      expect(series.chapters.map((c) => (c.id, c.number, c.title)), [
+        ('217607', '1', 'Chapter 1'),
+        ('217610', '1.5', 'Chapter 1.5'),
+      ]);
+      expect(series.chapters.first.url, '${url}chapter-1/');
+      expect(series.chapters.first.metadata.containsKey('rd'), isFalse);
+      expect(chapterFolderName(series.chapters.last), '0001.5 - Chapter 1.5 [217610]');
+      final metadata = normalizeMetadata(series.metadata);
+      expect(metadata['description'], 'A broken girl\nmeets an old man.\n\nTime stands still.');
+      expect(metadata['genres'], ['Action', 'Fantasy']);
+      expect(metadata['tags'], ['fantasy-adventure']);
+      expect(metadata['authors'], ['Writer', 'Other Writer']);
+      expect(metadata['alternativeTitles'], ['Shard of Time', '시간이 머문 집']);
+      expect(metadata['releaseStatus'], 'ongoing');
+    });
+
+    test('un elenco più corto di quanto la pagina dichiara si ferma', () async {
+      final http = FakeCoffeeManga()..declared = 5;
+      await expectLater(
+        provider.fetchSeries(url, http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('3 capitoli su 5'))),
+      );
+    });
+
+    test('tavole da src e data-src, con le misure quando ci sono', () async {
+      final http = FakeCoffeeManga();
+      final series = await provider.fetchSeries(url, http);
+      final content = await provider.fetchPages(series.chapters.first, http);
+      expect(http.requests.last, '${url}chapter-1/');
+      expect(content.pages.map((page) => (page.url, page.width, page.height)), [
+        (http.chapterPages[217607]![0], 720, 692),
+        (http.chapterPages[217607]![1], null, null),
+        (http.chapterPages[217607]![2], null, null),
+      ]);
+    });
+
+    test('un capitolo chiuso o di un\'altra pagina non passa per vuoto', () async {
+      final http = FakeCoffeeManga();
+      await expectLater(
+        provider.fetchPages(Chapter('418312', 'Chapter 3', '3', '${url}chapter-3/'), http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('VIP'))),
+      );
+      await expectLater(
+        provider.fetchPages(Chapter('1', 'Chapter 1', '1', '${url}chapter-1/'), http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('non corrispondente'))),
+      );
+    });
+
+    test('la ricerca è la pagina dei risultati del sito', () async {
+      final http = SearchHttp(page: '''
+<div class="agrid" id="mkAgrid">
+<a class="acard" href="https://coffeemanga.net/manga/ocveobera7alg81/" title="Merry Psycho">
+  <div class="ac-img"><div class="ac-status st-on-going"><span class="dot"></span>OnGoing</div>
+  <img width="275" height="400" src="https://coffeemanga.net/wp-content/uploads/2026/09/merry-psycho-cover.jpg" class="ac-cover wp-post-image">
+  <div class="ac-ch">Chapter 78</div></div>
+  <div class="ac-t">Merry Psycho</div>
+</a>
+<a class="acard" href="https://coffeemanga.net/manga/psycho-eyes/" title="Psycho Eyes">
+  <div class="ac-img"><div class="ac-status st-completed">Completed</div>
+  <img src="https://cdn.example.com/c.jpg" class="ac-cover"></div>
+</a>
+<a class="acard" href="https://coffeemanga.net/aviso/news/" title="News"></a>
+</div>''');
+      final results = await provider.search(' psycho ', http);
+      expect(Uri.parse(http.requests.single).queryParameters, {'s': 'psycho', 'post_type': 'wp-manga'});
+      expect(results.map((r) => (r.title, r.url, r.releaseStatus)), [
+        ('Merry Psycho', 'https://coffeemanga.net/manga/ocveobera7alg81/', 'ongoing'),
+        ('Psycho Eyes', 'https://coffeemanga.net/manga/psycho-eyes/', 'completed'),
+      ]);
+      expect(results.first.coverUrl, 'https://coffeemanga.net/wp-content/uploads/2026/09/merry-psycho-cover.jpg');
+      expect(results.last.coverUrl, isNull);
+      expect(await provider.search('zzz', SearchHttp(page: '<p>No matches found.</p>')), isEmpty);
     });
   });
 

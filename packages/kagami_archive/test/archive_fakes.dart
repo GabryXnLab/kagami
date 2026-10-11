@@ -1,6 +1,7 @@
 // Siti finti per i test dell'archivio: rispondono da memoria come MangaK,
-// ManhwaRead e Asura Scans, con le fixture di `mangaarchive/tests` sul server
-// e, per Asura, risposte dell'API vera ridotte all'osso.
+// ManhwaRead, Asura Scans e Coffee Manga, con le fixture di
+// `mangaarchive/tests` sul server e, per Asura e Coffee Manga, risposte del
+// sito vero ridotte all'osso.
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -309,6 +310,106 @@ class FakeAsuraScans implements ProviderHttp {
 
   @override
   Future<bool> imageExists(String url, {required String referer}) => throw UnimplementedError();
+}
+
+/// Coffee Manga: le pagine vere ridotte a ciò che il provider legge.
+class FakeCoffeeManga implements ProviderHttp {
+  FakeCoffeeManga() {
+    for (final pages in chapterPages.values) {
+      for (final page in pages) {
+        images[page] = webp(80, 120, page);
+      }
+    }
+    images[cover] = webp(80, 120, 'cover');
+  }
+
+  static const String url = 'https://coffeemanga.net/manga/the-house-without-time/';
+  static const String cover = 'https://coffeemanga.net/wp-content/uploads/2025/12/The-House-Without-Time-193x278-1.jpg';
+  static const String _data = 'https://coffeemanga.net/wp-content/uploads/WP-manga/data/manga_694020ff1c5c2';
+
+  /// Dal più recente, come le dà il sito; il 3 è riservato ai VIP.
+  final List<Map<String, Object?>> items = [
+    {'id': 418312, 'num': '3', 'name': 'Chapter 3', 'url': '${url}chapter-3/', 'ago': 'June 18, 2026', 'st': 'locked', 'lk': 1, 'rd': 0, 'rg': 0, 'nw': 1},
+    {'id': 217610, 'num': '1.5', 'name': 'Chapter 1.5', 'url': '${url}chapter-1-5/', 'ago': 'December 16, 2025', 'st': 'free', 'lk': 0, 'rd': 0, 'rg': 0, 'nw': 0},
+    {'id': 217607, 'num': '1', 'name': 'Chapter 1', 'url': '${url}chapter-1/', 'ago': 'December 15, 2025', 'st': 'free', 'lk': 0, 'rd': 0, 'rg': 0, 'nw': 0},
+  ];
+
+  /// Quanti capitoli dichiara la pagina; `null` per quelli dell'elenco.
+  int? declared;
+
+  final Map<int, List<String>> chapterPages = {
+    217607: ['$_data/chapter-1/001.jpg', '$_data/chapter-1/002.jpg', '$_data/chapter-1/003.jpg'],
+    217610: ['$_data/chapter-1-5/001.jpg'],
+  };
+
+  final Map<String, Uint8List> images = {};
+  final List<String> requests = [];
+
+  String get _series => '''
+<html><head>
+<meta property="og:image" content="$cover"/>
+</head><body class="single-wp-manga postid-7743">
+<div class="hero"><div class="hposter"><div class="hposter__card">
+<img width="193" height="278" src="$cover" class="attachment-300x450 wp-post-image" alt="The House Without Time">
+</div></div>
+<div class="hcol">
+<h1 class="htitle">
+The House Without Time			</h1>
+<div class="htags"><span class="htag htag--status is-on-going">OnGoing</span></div>
+<div class="hchips hchips--genres"><span class="hchips-label">Genres</span><a class="chip" href="https://coffeemanga.net/manga-genre/action/">Action</a><a class="chip" href="https://coffeemanga.net/manga-genre/fantasy/">Fantasy</a></div>
+<div class="hchips hchips--tags"><span class="hchips-label">Tags</span><a class="chip chip--tag" href="https://coffeemanga.net/manga-tag/fantasy-adventure/">fantasy-adventure</a></div>
+<div class="ratecard"><div class="rc-score"><div class="rc-num">4.0</div></div></div>
+<div class="syn clamp" id="syn"><p>A broken girl<br>meets an old man.</p><p>Time stands still.</p>
+</div>
+<div class="sinfo" id="sinfo"><div class="sinfo-grid" id="sinfoGrid">
+<div class="sir"><span class="l">Status</span><span class="v">OnGoing</span></div>
+<div class="sir sir--wide"><span class="l">Alternative</span><span class="v">Shard of Time / 시간이 머문 집</span></div>
+<div class="sir"><span class="l">Author(s)</span><span class="v">Writer, Other Writer</span></div>
+<div class="sir"><span class="l">Chapters</span><span class="v">${declared ?? items.length}</span></div>
+</div></div>
+</div></div>
+<div class="mk-chapters" id="mkChapters">
+<div class="stitle">Chapters <span class="cnt">${declared ?? items.length}</span></div>
+<div class="clist list" id="clist" aria-live="polite"></div>
+</div>
+<script id="mk-chapters-data" type="application/json">${jsonEncode({'mangaId': 7743, 'pageSize': 30, 'logged': 0, 'items': items}).replaceAll('/', r'\/')}</script>
+</body></html>''';
+
+  String _chapter(int id) {
+    final pages = [
+      for (final (i, page) in (chapterPages[id] ?? const <String>[]).indexed)
+        // Le prime tavole hanno `src` e le misure, le altre `data-src`.
+        i == 0
+            ? '<div class="page-break no-gaps"><img id="image-$i" src="$page"\n'
+                ' class="wp-manga-chapter-img img-responsive" width="720" height="692"></div>'
+            : '<div class="page-break no-gaps"><img id="image-$i" data-src="$page"\n'
+                ' class="wp-manga-chapter-img img-responsive lazyload effect-fade"></div>',
+    ];
+    final locked = chapterPages.containsKey(id)
+        ? ''
+        : '<div class="wp-manga-chapter-permissions-msg"><a href="#">Unlock</a></div>';
+    return '<html><body><div class="reading-content dynr-reading">'
+        '<input type="hidden" id="wp-manga-current-chap" data-id="$id" value="chapter"/>'
+        '${pages.join('\n')}</div>$locked</body></html>';
+  }
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    requests.add(url);
+    final image = images[url];
+    if (image != null) return _image(image);
+    if (url == FakeCoffeeManga.url) return _html(_series);
+    for (final item in items) {
+      if (url == item['url']) return _html(_chapter(item['id'] as int));
+    }
+    throw HttpStatusError(404);
+  }
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) => throw UnimplementedError();
+
+  @override
+  Future<Map<String, Object?>> json(String url) => throw UnimplementedError();
 }
 
 class ChallengedHttp implements ProviderHttp {

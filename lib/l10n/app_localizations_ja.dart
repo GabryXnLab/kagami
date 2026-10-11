@@ -3629,6 +3629,46 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'プロバイダーを変更';
+
+  @override
+  String get seriesSwitchMessage =>
+      'シリーズを再ダウンロードするプロバイダーを選んでください。章、ページ、メタデータはそこから再ダウンロードされ、今のコピーは削除されます（Drive ではゴミ箱へ）。ステータス、評価、メモ、コレクション、既読の章、読書位置は章ごとに新しいシリーズへ移ります。';
+
+  @override
+  String get seriesSwitchOther => 'タップして別のものを選択';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return '$site で「$title」を探しています…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '$site で「$title」が見つかりませんでした。別のタイトルかもしれません。下で検索して正しいものを選んでください。';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return '$site で検索';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '「$title」は $site から取得するようになりました。ジョブが終わるとライブラリに表示されます。';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '既読の章のうち $count 章は新しいサイトになく、履歴にだけ残ります。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'リンクなしで追加';
 
   @override

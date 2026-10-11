@@ -3732,6 +3732,48 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => 'प्रोवाइडर बदलें';
+
+  @override
+  String get seriesSwitchMessage =>
+      'वह प्रोवाइडर चुनें जहाँ से सीरीज़ फिर से डाउनलोड करनी है। अध्याय, पेज और मेटाडेटा वहाँ से फिर से डाउनलोड होंगे और मौजूदा कॉपी हटा दी जाएगी, Drive पर रीसायकल बिन में। स्थिति, रेटिंग, नोट, संग्रह, पढ़े गए अध्याय और पढ़ने की जगह अध्याय-दर-अध्याय नई सीरीज़ में चले जाएँगे।';
+
+  @override
+  String get seriesSwitchOther => 'दूसरा चुनने के लिए टैप करें';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return '$site पर \"$title\" खोजा जा रहा है…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '$site पर \"$title\" नहीं मिली। शायद वहाँ इसका दूसरा नाम है: नीचे खोजें और सही वाली चुनें।';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return '$site पर खोजें';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '\"$title\" अब $site से आती है: काम पूरा होने पर लाइब्रेरी में दिखेगी।';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'पढ़े गए $count अध्याय नई साइट पर नहीं हैं और सिर्फ़ इतिहास में रहेंगे।',
+      one: 'पढ़ा गया एक अध्याय नई साइट पर नहीं है और सिर्फ़ इतिहास में रहेगा।',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => 'बिना लिंक के जोड़ें';
 
   @override

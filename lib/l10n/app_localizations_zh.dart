@@ -3616,6 +3616,46 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get seriesSwitchProvider => '更换来源';
+
+  @override
+  String get seriesSwitchMessage =>
+      '选择要从哪个来源重新下载这个系列。章节、页面和元数据会从那里重新下载，当前副本会被删除（Drive 上移到回收站）。状态、评分、备注、收藏集、已读章节和阅读位置会逐章转移到新系列。';
+
+  @override
+  String get seriesSwitchOther => '点按以选择其他来源';
+
+  @override
+  String seriesSwitchSearching(String title, String site) {
+    return '正在 $site 上查找「$title」…';
+  }
+
+  @override
+  String seriesSwitchNotFound(String title, String site) {
+    return '在 $site 上没有找到「$title」。它在那里可能用了别的标题：请在下方搜索并选择正确的系列。';
+  }
+
+  @override
+  String seriesSwitchSearchHint(String site) {
+    return '在 $site 上搜索';
+  }
+
+  @override
+  String seriesSwitchDone(String title, String site) {
+    return '「$title」现在来自 $site：任务完成后会出现在书库中。';
+  }
+
+  @override
+  String seriesSwitchMissing(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '有 $count 个已读章节在新站点上不存在，只保留在历史记录中。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get archiveManualAction => '无链接添加';
 
   @override

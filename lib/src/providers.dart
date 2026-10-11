@@ -720,9 +720,10 @@ class Reading extends AsyncNotifier<ReadingData> {
 
   /// Porta i dati personali di [from] su [to] (`UserRepository.moveSeries`):
   /// serve a collegare una scheda manuale alla serie vera, che ha un'altra
-  /// chiave.
-  Future<void> moveSeries(String from, String to) async {
-    await _repository.moveSeries(from, to);
+  /// chiave, e a cambiare il sito di una serie, con [chapters] che traduce
+  /// gli id dei capitoli.
+  Future<void> moveSeries(String from, String to, {Map<String, String> chapters = const {}}) async {
+    await _repository.moveSeries(from, to, chapters: chapters);
     _publish(
       await _repository.loadStates(),
       await _repository.loadCollections(),

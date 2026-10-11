@@ -389,5 +389,44 @@ void main() {
       await repository.moveSeries(from, to);
       expect(await repository.loadStates(), isEmpty);
     });
+
+    test('cambiando sito i capitoli seguono il numero, anche con id scambiati', () async {
+      const old = 'mangak:S1';
+      const fresh = 'coffeemanga:7743';
+      // Il «2» del sito nuovo ha l'id che il vecchio dava al «3»: rinominare
+      // in un passo solo sposterebbe due volte lo stesso capitolo.
+      await repository.markChapters(old, ['a1', 'a2', '2'], true);
+      await repository.saveProgress(
+        old,
+        ReadingProgress(chapterId: '3', page: 4, pageCount: 20, updatedAt: DateTime.utc(2026, 6, 1)),
+      );
+      await repository.logSession(
+        seriesKey: old,
+        chapterId: 'a2',
+        startedAt: DateTime.utc(2026, 6, 1, 10),
+        endedAt: DateTime.utc(2026, 6, 1, 10, 30),
+        pagesRead: 12,
+      );
+      await repository.addBookmark(seriesKey: old, chapterId: 'gone', page: 3);
+
+      await repository.moveSeries(old, fresh, chapters: {'a1': '1', 'a2': '2', '2': '3', '3': '4'});
+
+      final state = (await repository.loadStates())[fresh]!;
+      expect(state.readChapters, {'1', '2', '3'});
+      expect(state.progress?.chapterId, '4');
+      expect((await db.select(db.readingSessions).get()).single.chapterId, '2');
+      // Un capitolo che il sito nuovo non ha resta com'era.
+      expect((await repository.bookmarks(fresh)).single.chapterId, 'gone');
+      expect((await repository.loadStates()).containsKey(old), isFalse);
+    });
+
+    test('due capitoli vecchi sullo stesso nuovo ne lasciano uno', () async {
+      const old = 'mangak:S1';
+      const fresh = 'coffeemanga:7743';
+      await repository.markChapters(old, ['a', 'b'], true);
+      await repository.moveSeries(old, fresh, chapters: {'a': '1', 'b': '1'});
+      expect((await repository.loadStates())[fresh]!.readChapters, {'1'});
+      expect(await db.select(db.chapterReads).get(), hasLength(1));
+    });
   });
 }

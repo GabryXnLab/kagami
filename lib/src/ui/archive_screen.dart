@@ -26,6 +26,7 @@ import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/phone_check.dart' show gatedSites;
+import '../data/site_switch.dart' show titleKey;
 import '../format/malf.dart';
 import '../providers.dart';
 import 'archive_flow.dart';
@@ -90,12 +91,6 @@ class _SearchFilters {
         notInLibrary: notInLibrary ?? this.notInLibrary,
       );
 }
-
-/// Il titolo come lo si confronta: i risultati non portano l'id della serie
-/// (MangaK lo dà solo nella pagina), quindi «già in libreria» è lo stesso
-/// sito e lo stesso titolo, a meno di maiuscole e punteggiatura.
-String _titleKey(String title) =>
-    title.toLowerCase().replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), '');
 
 String _destinationName(AppLocalizations l10n, ArchiveDestination destination) => switch (destination) {
       ArchiveDestination.drive => l10n.archiveWhereDrive,
@@ -621,9 +616,12 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
   List<Widget> _results() {
     final owned = <String, Set<String>>{};
     for (final entry in ref.watch(libraryIndexProvider).value?.series ?? const <SeriesEntry>[]) {
-      owned.putIfAbsent(entry.provider, () => {}).add(_titleKey(entry.title));
+      owned.putIfAbsent(entry.provider, () => {}).add(titleKey(entry.title));
     }
-    bool inLibrary(SearchResult result) => owned[result.provider]?.contains(_titleKey(result.title)) ?? false;
+    // I risultati non portano l'id della serie (MangaK lo dà solo nella
+    // pagina), quindi «già in libreria» è lo stesso sito e lo stesso titolo,
+    // a meno di maiuscole e punteggiatura.
+    bool inLibrary(SearchResult result) => owned[result.provider]?.contains(titleKey(result.title)) ?? false;
     return [
       for (final provider in providers)
         if (_found[provider.id] case final found? when _filters.searches(provider)) ...[
@@ -653,7 +651,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       return KGroup(
         children: [
           for (final result in shown)
-            _ResultTile(
+            ArchiveResultTile(
               result: result,
               referer: provider.home,
               inLibrary: inLibrary(result),
@@ -1027,13 +1025,14 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
 
 /// Una serie trovata: la copertina piccola, il titolo e ciò che il sito ne
 /// dice. Stesse misure di [KTile], perché le linee di [KGroup] tornino.
-class _ResultTile extends StatelessWidget {
-  const _ResultTile({
+class ArchiveResultTile extends StatelessWidget {
+  const ArchiveResultTile({
     required this.result,
     required this.referer,
     required this.details,
     this.inLibrary = false,
     this.onTap,
+    super.key,
   });
 
   final SearchResult result;

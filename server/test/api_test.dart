@@ -76,7 +76,7 @@ void main() {
     expect(body!['api'], 2);
     expect(body['name'], 'Prova');
     expect(body['owner'], owner);
-    expect([for (final row in body['providers'] as List) (row as Map)['id']], containsAll(['mangak', 'manhwaread', 'asurascans']));
+    expect([for (final row in body['providers'] as List) (row as Map)['id']], containsAll(['mangak', 'manhwaread', 'asurascans', 'coffeemanga']));
     expect(body['me'], {
       'email': owner,
       'owner': true,

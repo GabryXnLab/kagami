@@ -285,9 +285,14 @@ class UserRepository {
   /// backup — vince il record con `updatedAt` più recente, le date si tengono
   /// la più vecchia di inizio e la più recente di apertura — e per tutto il
   /// resto resta la riga di [to]. Alla fine di [from] non resta niente.
-  Future<void> moveSeries(String from, String to) async {
+  ///
+  /// [chapters] traduce gli id dei capitoli di [from] in quelli di [to], per
+  /// una serie che cambia sito: letti, posizioni, cronologia e segnalibri
+  /// seguono il capitolo. Quelli che non vi compaiono restano come sono.
+  Future<void> moveSeries(String from, String to, {Map<String, String> chapters = const {}}) async {
     if (from == to) return;
     await db.transaction(() async {
+      if (chapters.isNotEmpty) await _renameChapters(from, chapters);
       final source = await _row(from);
       final target = await _row(to);
       if (source != null && target == null) {
@@ -353,6 +358,50 @@ class UserRepository {
                 row.profileId.equals(profileId) & row.seriesKey.equals(from)))
           .go();
     });
+  }
+
+  /// In due passi, passando da un prefisso che nessun id ha: i due siti
+  /// possono dare gli stessi id a capitoli diversi, e rinominare in un
+  /// passo solo sposterebbe due volte un capitolo che diventa l'id di un
+  /// altro ancora da spostare.
+  Future<void> _renameChapters(String series, Map<String, String> chapters) async {
+    const moving = '\u0001';
+    for (final table in <TableInfo<Table, dynamic>>[
+      db.chapterReads,
+      db.progresses,
+      db.readingSessions,
+      db.bookmarks,
+    ]) {
+      final name = table.actualTableName;
+      for (final MapEntry(key: old, value: fresh) in chapters.entries) {
+        await db.customUpdate(
+          'UPDATE OR IGNORE $name SET chapter_id = ? '
+          'WHERE profile_id = ? AND series_key = ? AND chapter_id = ?',
+          variables: [Variable('$moving$fresh'), Variable(profileId), Variable(series), Variable(old)],
+          updates: {table},
+        );
+        // Ciò che non si è potuto rinominare è un doppione di una riga che
+        // c'è già: due capitoli del vecchio sito finiti sullo stesso del nuovo.
+        await db.customUpdate(
+          'DELETE FROM $name WHERE profile_id = ? AND series_key = ? AND chapter_id = ?',
+          variables: [Variable(profileId), Variable(series), Variable(old)],
+          updates: {table},
+        );
+      }
+      await db.customUpdate(
+        'UPDATE OR IGNORE $name SET chapter_id = substr(chapter_id, 2) '
+        'WHERE profile_id = ? AND series_key = ? AND substr(chapter_id, 1, 1) = ?',
+        variables: [Variable(profileId), Variable(series), Variable(moving)],
+        updates: {table},
+      );
+      // Qui invece il doppione è di un capitolo rimasto col suo id, che è
+      // già quello del sito nuovo.
+      await db.customUpdate(
+        'DELETE FROM $name WHERE profile_id = ? AND series_key = ? AND substr(chapter_id, 1, 1) = ?',
+        variables: [Variable(profileId), Variable(series), Variable(moving)],
+        updates: {table},
+      );
+    }
   }
 
   Future<SeriesStateRow?> _row(String key) => (db.select(db.seriesStates)

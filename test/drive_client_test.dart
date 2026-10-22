@@ -33,7 +33,7 @@ void main() {
       await temp.delete(recursive: true);
     });
 
-    DriveClient client(NetworkMonitor network, {Duration? stall, int? multipartLimit}) => DriveClient(
+    DriveClient client(NetworkMonitor network, {Duration? stall, Duration? answer, int? multipartLimit}) => DriveClient(
           ({refresh = false}) async => 'token',
           network: network,
           endpoint: (path, query) => Uri.http(
@@ -42,6 +42,7 @@ void main() {
             query,
           ),
           stall: stall ?? const Duration(seconds: 20),
+          answer: answer ?? const Duration(seconds: 20),
           multipartLimit: multipartLimit ?? 5 * 1024 * 1024,
         );
 
@@ -128,6 +129,28 @@ void main() {
       );
       expect(DateTime.now().difference(started), lessThan(const Duration(seconds: 2)));
       expect(await target.length(), 10);
+      drive.close();
+    });
+
+    test('le risposte arrivate tardi non tengono occupate le connessioni', () async {
+      // Il server di Kagami si è fermato per una settimana così: otto risposte
+      // arrivate dopo la scadenza, mai lette, tenevano le otto connessioni del
+      // client, e ogni richiesta seguente aspettava un posto per sempre.
+      var slow = true;
+      handle = (request) async {
+        if (slow) await Future<void>.delayed(const Duration(milliseconds: 600));
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'id': 'C1', 'name': 'a', 'mimeType': 'text/plain'}));
+        await request.response.close();
+      };
+      final drive = client(monitor(), answer: const Duration(milliseconds: 200));
+      await Future.wait([
+        for (var i = 0; i < 12; i++) expectLater(drive.file('C1'), throwsA(isA<DriveOffline>())),
+      ]);
+      await Future<void>.delayed(const Duration(seconds: 1));
+      slow = false;
+      final item = await drive.file('C1').timeout(const Duration(seconds: 5));
+      expect(item.id, 'C1');
       drive.close();
     });
 

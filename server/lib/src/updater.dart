@@ -183,6 +183,10 @@ Map<String, Object?> recreateBody(
     if (jsonEncode(config[key]) == jsonEncode(inherited[key])) config.remove(key);
   }
   final host = Map<String, Object?>.of(info['HostConfig'] as Map<String, Object?>);
+  // I contenitori avviati prima che il comando dell'app avesse `--init` lo
+  // prendono al primo aggiornamento: senza, i figli di Chromium finiti
+  // restano zombi. Chi l'ha spento apposta lo ritrova spento.
+  host['Init'] ??= true;
   // Un volume senza nome (la `VOLUME /data` dell'immagine, se chi l'ha
   // avviato non ha dato `-v`) va riattaccato per nome, o il contenitore
   // nuovo ne avrebbe uno vuoto.

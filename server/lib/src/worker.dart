@@ -212,6 +212,28 @@ class ServerWorker implements JobControl {
   Future<void>? _loop;
   Future<void>? _checking;
 
+  /// L'ultimo segno di vita del giro in corso; `null` se non gira.
+  DateTime? _alive;
+  DateTime? _checkingSince;
+
+  /// Il giro senza segni di vita da più di [run], o il controllo cominciato
+  /// da più di [check]. È un'attesa che nessun limite ha preso: in Dart un
+  /// `await` non si interrompe da fuori, e l'unico rimedio è ripartire.
+  /// Vedere `serve`.
+  String? stuck({required Duration run, required Duration check}) {
+    if (_closed) return null;
+    final now = DateTime.now();
+    final alive = _alive;
+    if (alive != null && now.difference(alive) > run) {
+      return 'il giro non dà segni di vita da ${now.difference(alive).inMinutes} minuti';
+    }
+    final since = _checkingSince;
+    if (since != null && now.difference(since) > check) {
+      return 'il controllo è cominciato ${now.difference(since).inMinutes} minuti fa e non finisce';
+    }
+    return null;
+  }
+
   void start() {
     _loop = _run();
     _scheduleCheck();
@@ -267,13 +289,18 @@ class ServerWorker implements JobControl {
         await _sleep(queued.isEmpty ? null : retryAfter);
         continue;
       }
+      _alive = DateTime.now();
       final end = await ArchiveRunner(
         files,
         environment,
         cancelled: () => _closed || _cancelling != null,
-        onStatus: (status) => _running = status.state == ArchiveState.running ? status.jobId : null,
+        onStatus: (status) {
+          _alive = DateTime.now();
+          _running = status.state == ArchiveState.running ? status.jobId : null;
+        },
         onError: (error, stack) async => log('Errore nel giro: $error\n$stack'),
       ).run();
+      _alive = null;
       _running = null;
       final cancelling = _cancelling;
       if (cancelling != null) {
@@ -331,7 +358,13 @@ class ServerWorker implements JobControl {
   }
 
   @override
-  Future<void> checkNow() => _checking ??= _check().whenComplete(() => _checking = null);
+  Future<void> checkNow() => _checking ??= () {
+        _checkingSince = DateTime.now();
+        return _check().whenComplete(() {
+          _checking = null;
+          _checkingSince = null;
+        });
+      }();
 
   @override
   Future<void> checkSeries(String key) async {

@@ -312,7 +312,7 @@ Nell'app, *Impostazioni → Scarica un manga → Server → Crea il tuo server*:
 prepara un comando solo, da incollare su un computer con Docker.
 
 ```bash
-docker run -d --name kagami-server --restart unless-stopped \
+docker run -d --name kagami-server --init --restart unless-stopped \
   -p 8080:8080 -v kagami-data:/data \
   -e KAGAMI_SETUP=… ghcr.io/gabryxnlab/kagami-server:latest
 ```

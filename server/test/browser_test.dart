@@ -45,6 +45,18 @@ void main() {
     expect(html, contains('Chrome/'));
   }, skip: missing, timeout: const Timeout(Duration(minutes: 2)));
 
+  test('il blocco lasciato dal contenitore di prima non ferma Chromium', () async {
+    // Come dopo un aggiornamento: il profilo è bloccato a nome di una
+    // macchina che non c'è più.
+    final stale = await Directory.systemTemp.createTemp('kagami-browser-');
+    addTearDown(() => stale.delete(recursive: true));
+    await Link('${stale.path}/SingletonLock').create('98116193a76f-104169');
+    await Link('${stale.path}/SingletonSocket').create('/tmp/org.chromium.Chromium.sparito/SingletonSocket');
+    final browser = HeadlessBrowser(chromium!, stale, timeout: const Duration(seconds: 20), log: (_) {});
+    addTearDown(browser.close);
+    expect(await browser.seriesPage('http://127.0.0.1:${site.port}/serie', gate), contains('chaptersList'));
+  }, skip: missing, timeout: const Timeout(Duration(minutes: 2)));
+
   test('una verifica che non passa dà null', () async {
     final browser = HeadlessBrowser(chromium!, profile, timeout: const Duration(seconds: 3), log: (_) {});
     addTearDown(browser.close);

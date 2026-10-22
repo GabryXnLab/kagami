@@ -109,23 +109,47 @@ String gatedSites(List<GatedSeries> gated) => {
   return (title: l10n.dataVerifyTitle(gatedSites(gated)), text: l10n.dataVerifyText(gated.length));
 }
 
-/// Le serie che il server di [url] ha trovato ferme alla verifica, chieste
-/// ad app chiusa: il motore senza schermo non ha ancora acceso Firebase, e
-/// il token dell'account passa da lì. Senza risposta, nessuna.
-Future<List<GatedSeries>> gatedOnServer(String url) async {
+/// Le serie che il server di [url] ha trovato ferme alla verifica e che il
+/// telefono non è riuscito a sbloccare da sé, ad app chiusa.
+///
+/// Il server non ha la verifica passata dall'utente: il cookie vale solo per
+/// il browser e l'indirizzo che l'hanno ottenuto. Il telefono sì, quindi
+/// apre ogni serie con [browser] e manda al server le pagine prese
+/// (`POST /v2/check/pages`), come farebbe l'utente da «Verifica»: così la
+/// verifica data una volta serve anche ai controlli del server, finché il
+/// sito la tiene buona. Il motore senza schermo non ha ancora acceso
+/// Firebase, e il token dell'account passa da lì. Senza risposta, nessuna.
+Future<List<GatedSeries>> passServerGated(String url, PageBrowser browser) async {
   try {
     if (Firebase.apps.isEmpty) await Firebase.initializeApp();
   } on Exception {
     return const [];
   }
   final client = ServerClient(ServerLink(Uri.parse(url)), const ServerAccess().idToken);
+  List<GatedSeries> gated = const [];
   try {
     final info = await client.info();
-    return info.verify ? info.check.gated : const [];
+    if (!info.verify) return const [];
+    gated = info.check.gated;
+    final pages = <String, String>{};
+    for (final entry in gated) {
+      final Provider provider;
+      try {
+        provider = selectProvider(entry.url);
+      } on ProviderError {
+        continue;
+      }
+      final gate = provider.browser;
+      if (gate == null) continue;
+      final html = await browser.seriesPage(provider.canonical(entry.url), gate);
+      if (html != null) pages[entry.url] = html;
+    }
+    if (pages.isEmpty) return gated;
+    return (await client.checkPages(pages)).gated;
   } on ServerException {
-    return const [];
+    return gated;
   } on IOException {
-    return const [];
+    return gated;
   } finally {
     client.close();
   }

@@ -32,10 +32,10 @@ Nell'app: *Impostazioni → Scarica un manga → Server → Crea il tuo server*.
    sul tuo Drive. L'app prepara due comandi così:
 
    ```bash
-   docker run -d --name kagami-server --restart unless-stopped \
+   docker run -d --name kagami-server --init --restart unless-stopped \
      -p 8080:8080 -v kagami-data:/data \
      -e KAGAMI_SETUP=eyJ2IjoxLC… ghcr.io/gabryxnlab/kagami-server:latest
-   docker run -d --name kagami-updater --restart unless-stopped --no-healthcheck \
+   docker run -d --name kagami-updater --init --restart unless-stopped --no-healthcheck \
      -u 0 -v /var/run/docker.sock:/var/run/docker.sock \
      ghcr.io/gabryxnlab/kagami-server:latest update
    ```
@@ -43,6 +43,10 @@ Nell'app: *Impostazioni → Scarica un manga → Server → Crea il tuo server*.
 3. Copiali e incollali nel terminale del computer. Il primo scarica
    l'immagine, avvia il server e lo fa ripartire da solo dopo un riavvio; il
    secondo lo tiene aggiornato (vedi [Aggiornamenti](#aggiornamenti)).
+   `--restart` serve anche a un'altra cosa: se un download resta un'ora senza
+   avanzare, o il controllo dei capitoli nuovi quattro ore senza finire, il
+   server esce (codice 75) e Docker lo riaccende; il lavoro riprende dalle
+   tavole già scaricate.
 4. Torna all'app e scrivi l'indirizzo del computer (vedi sotto): l'app
    verifica che il server ti riconosca come proprietario, e il server compare
    come destinazione, con la sua coda sotto quella del telefono.

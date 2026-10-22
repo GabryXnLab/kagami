@@ -44,6 +44,22 @@ class _Challenged implements ProviderHttp {
   Future<Map<String, Object?>> json(String url) async => throw const CloudflareChallenge();
 }
 
+/// Un sito che non risponde e non dà errore: la richiesta resta appesa.
+class _Hanging implements ProviderHttp {
+  _Hanging(this.answer);
+
+  final Future<HttpResult> answer;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) => answer;
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) => Completer<bool>().future;
+
+  @override
+  Future<Map<String, Object?>> json(String url) => answer.then((_) => const {});
+}
+
 const _manhwa = 'https://manhwaread.com/manhwa/disfarming/';
 
 /// La pagina della serie come la vede chi ha passato la verifica.
@@ -227,6 +243,31 @@ void main() {
   test('spento in config.json (check.minutes null), il controllo parte spento', () async {
     final worker = ServerWorker(files, environment(), blocked: () async => null, log: (_) {});
     expect((await worker.checkSettings()).enabled, isFalse);
+  });
+
+  test('un giro che aspetta per sempre si vede, e uno che lavora no', () async {
+    final hanging = Completer<HttpResult>();
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(p.join(dir.path, 'libreria')),
+        httpFor: (_, {userAgent, cookies = const {}}) => _Hanging(hanging.future),
+      ),
+      blocked: () async => null,
+      log: (_) {},
+    );
+    expect(worker.stuck(run: Duration.zero, check: Duration.zero), isNull);
+    await files.enqueue(job('a', 'https://mangak.io/chronicle-of-runes'));
+    worker.start();
+    await until(() async => (await files.status()).state == ArchiveState.running);
+    expect(worker.stuck(run: const Duration(hours: 1), check: const Duration(hours: 4)), isNull);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(worker.stuck(run: const Duration(milliseconds: 10), check: const Duration(hours: 4)),
+        contains('segni di vita'));
+    hanging.completeError(const ProviderOffline());
+    await worker.close();
+    expect(worker.stuck(run: Duration.zero, check: Duration.zero), isNull);
   });
 
   test('un lavoro in attesa si toglie dalla coda', () async {

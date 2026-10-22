@@ -98,6 +98,16 @@ class _Chromium {
 
   static Future<_Chromium> launch(String executable, Directory profile, void Function(String) log) async {
     await profile.create(recursive: true);
+    // Il blocco del profilo porta il nome della macchina: il contenitore
+    // ricreato ha un nome nuovo, e Chromium crede il profilo in uso altrove
+    // e se ne va (21). Il profilo è solo di questo processo, uno alla volta.
+    for (final name in const ['SingletonLock', 'SingletonCookie', 'SingletonSocket']) {
+      try {
+        await Link('${profile.path}/$name').delete();
+      } on FileSystemException {
+        // Non c'era.
+      }
+    }
     final process = await Process.start(executable, [
       '--headless=new',
       // Dentro Docker, da utente normale, la sandbox di Chromium non ha i

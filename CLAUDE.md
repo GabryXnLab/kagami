@@ -91,129 +91,18 @@ ignora.
 
 ## Struttura
 
+Albero completo (ogni file di `lib/`, del pacchetto, del server e dei test, con una riga di
+descrizione): [docs/struttura.md](docs/struttura.md). In breve:
+
 ```text
-lib/
-  main.dart                    avvio, tema, ripristino della cartella salvata
-  src/
-    format/malf.dart           modelli del formato dell'archivio (sola lettura)
-    archive/device.dart        il motore sul telefono: immagini dal Kotlin (+ ArchiveImages.kt),
-                               destinazioni, avvio del lavoro (+ ArchiveWorker.kt)
-    archive/background.dart    il giro nel motore senza schermo
-    archive/manual_card.dart   salvare una scheda manuale senza interfaccia: store, dati personali, link già presenti
-    archive/bulk_import.dart   tanti link in una volta: testo o JSON, righe senza doppioni, strada di ognuna
-    format/reading.dart        stato di lettura, raccolte, merge dei conflitti
-    data/library.dart          sorgenti unite per serie e per capitolo
-    data/library_repository.dart  la sorgente locale: indici, download, capitoli presenti
-    data/drive.dart            client REST di Drive, token, cache delle tavole
-    data/drive_library.dart    la sorgente Drive: indici, percorsi, streaming
-    data/network.dart          se c'è rete e quando torna (+ NetworkWatcher.kt)
-    data/downloads.dart        da Drive alla cartella: il pulsante «Scarica»
-    data/cleanup.dart          capitoli letti da togliere dal telefono: cosa e quanto
-    data/series_removal.dart   togliere una serie: telefono, Drive nel cestino, coda, serie seguite
-    data/site_switch.dart      cambiare provider: la serie fra i risultati per titolo, i capitoli per numero
-    data/read_ahead.dart       scaricare man mano: quali capitoli mancano davanti al lettore
-    data/folder_sync.dart      cartella del telefono ↔ Drive: piano, giro, ricordi
-    data/folder_sync_schedule.dart  giro a mano e programmato (+ FolderSyncWorker.kt)
-    data/db/database.dart      schema SQLite dei dati personali (+ .g.dart)
-    data/user_repository.dart  stato, capitoli letti, cronologia, raccolte
-    data/statistics.dart       aggregazioni della cronologia per i grafici
-    data/backup.dart           esportazione, ripristino, copia automatica
-    data/cloud.dart            accesso con Google e sincronizzazione dei dati
-    data/library_location.dart cartella scelta e permessi di piattaforma
-    data/library_view.dart     segnali per serie, ricerca, filtri, ordinamenti
-    data/arrivals.dart         capitoli nuovi: conteggio e di quali dare notizia
-    data/notifications.dart    notifiche dei capitoli nuovi (+ ArrivalNotifier.kt, LibraryWatchWorker.kt)
-    data/share_intake.dart     Condividi → Kagami: il testo condiviso, all'avvio e ad app aperta (+ SharedText.kt)
-    data/reader_settings.dart  modalità di lettura per serie (non è MALF)
-    data/page_decoder.dart     file interi col codec di Flutter, fasce e tessere dal Kotlin
-    data/phone_tiles.dart      tessere fatte dal telefono per le tavole alte non tagliate
-    data/reader_probe.dart     misure di fluidità del lettore, accese dalle impostazioni
-    providers.dart             grafo delle dipendenze
-    ui/app_shell.dart          le quattro destinazioni
-    ui/home_screen.dart        riprendi, aggiornamenti, da iniziare, simili
-    ui/library_screen.dart     griglia, ricerca, filtri; griglia riusabile
-    ui/series_screen.dart      scheda: metadati, capitoli, stato e voto
-    ui/reader_screen.dart      lettore continuo e paginato
-    ui/collections_screen.dart raccolte automatiche e manuali
-    ui/history_screen.dart     cronologia per giorno e incognito
-    ui/statistics_screen.dart  numeri e grafici della lettura
-    ui/settings_screen.dart    la quarta destinazione: profilo, scaricare, cronologia, statistiche,
-                               incognito, aspetto; pagine di libreria, lettura, account, dati
-    ui/archive_screen.dart     Scarica un manga: ricerca, link, coda, scaricate di recente, serie seguite
-    ui/archive_series.dart     la pagina di una serie letta dal sito: modalità, capitoli, destinazione
-    ui/archive_flow.dart       il percorso riusabile: link → verifica → pagina della serie → coda, browser
-    ui/archive_manual.dart     la scheda manuale: senza link o con un sito non supportato, titolo e copertina dalla pagina
-    ui/provider_switch.dart    Cambia provider: elenco dei provider, verifica per titolo, ricerca se non c'è
-    ui/archive_import.dart     Importa più link: opzioni, il giro una serie alla volta, stato di ogni riga, verifiche
-    ui/archive_server.dart     il server lì dentro: crearlo, collegarlo, utenti, coda, cartella
-    data/server_access.dart    account davanti al server: token, permesso di Drive, inviti su Firestore
-    ui/browser_check_page.dart WebView per la verifica di Cloudflare e per cercare sui siti protetti
-    ui/setup_screen.dart       permesso, cartella, stati vuoti e di errore
-    ui/reader_metrics.dart     geometria della striscia a fasce, senza schermo
-    ui/page_bands.dart         magazzino delle fasce, catena delle fonti, disegno
-    ui/drive_ui.dart           collegare Drive, cartelle, destinazione, avvisi
-    ui/sync_screen.dart        direzione, cancellazioni, ora della sincronizzazione
-    ui/theme.dart              superfici, tipografia e colori di significato
-    ui/widgets/kit.dart        schede, pastiglie, segmentati, fogli, vuoti
-    ui/widgets/                copertina, origine, fogli raccolte, pulizia e punto di lettura, grafici
-packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il server
-  lib/model.dart, names.dart, images.dart   metadati, nomi di cartella, header
-  lib/http.dart                client limitato ai domini, pagina presa dalla WebView
-  lib/providers.dart           registro dei siti, `Provider`, `BrowserGate`
-  lib/providers/kit.dart       attrezzi comuni dei siti: link, testi, ordine dei capitoli
-  lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans, Coffee Manga
-  lib/archiver.dart            dal sito alla libreria: manifest, ripresa, tessere
-  lib/indexes.dart             index.json, pages.json, riga di libreria, firma
-  lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)
-  lib/drive.dart               client REST di Drive, `SyncRemote`, `NetworkState`
-  lib/remote.dart              client dell'API del server, `KAGAMI_SETUP` e comando, indirizzi privati
-  lib/google_token.dart        endpoint dei token di Google: riscattare e rinnovare i permessi
-  lib/image_tools.dart         miniature e tessere: l'interfaccia, chi le fa è fuori
-  lib/jobs.dart, runner.dart   coda, avanzamento, storico, il giro
-  lib/tracking.dart            serie in corso e controllo dei capitoli nuovi
-  lib/manual.dart              schede manuali: pseudo-sito `manual`, chiave dal link, scrittura senza capitoli
-  test/                        provider con fixture copiate, contratto di ogni sito,
-                               motore su cartella e Drive finto, coda, serie in corso (`dart test`)
-server/                        Kagami Server, Dart puro (`dart compile exe`)
-  bin/kagami_server.dart       riga di comando: serve, users, status, ping, idle, update
-  lib/src/api.dart             l'API v2: rotte, chi chiama, utenti, validazione dei lavori
-  lib/src/identity.dart        token d'identità di Firebase: firma RS256, progetto, account Google
-  lib/src/users.dart           account ammessi, proprietario, uno spazio (coda, Drive, giro) per utente
-  lib/src/google.dart          il Drive di un utente: refresh token e cartella
-  lib/src/worker.dart          il giro della coda (ArchiveRunner) e il controllo quotidiano
-  lib/src/images.dart          miniature e tessere con libvips
-  lib/src/updater.dart         l'aggiornatore: API di Docker sul socket, ricrea il server con l'immagine nuova
-  lib/src/config.dart, server.dart  cartella dei dati, `KAGAMI_SETUP`, impostazioni, accensione
-  test/                        firme vere con una chiave di prova, Google finto, API e client sul loopback, giro
-  Dockerfile, docker-compose.yml  immagine con libvips; il target `test` fa girare anche i test di vips
-lib/l10n/                      testi dell'interfaccia: app_it.arb l'originale, le altre lingue tradotte (+ generati)
-lib/src/l10n.dart              `context.l10n`, `currentL10n()` fuori dai widget, nomi delle lingue
-fonts/                         Figtree, il carattere dell'interfaccia
-assets/providers/              icone dei siti da cui si archivia (`Provider.icon`)
-test_driver/app.dart           l'app con Flutter Driver acceso, per l'MCP di Dart sull'emulatore
-test/malf_test.dart            legge una libreria finta creata dal test stesso
-test/library_view_test.dart    segnali, filtri e ordinamenti senza disco
-test/user_repository_test.dart database in memoria: stato, cronologia, import
-test/backup_test.dart          andata e ritorno di un backup fra due database
-test/reader_metrics_test.dart  la striscia si tocca: fasce, altezze, ripresa
-test/page_bands_test.dart      decodifica a ritagli e sfratto delle fasce
-test/library_merge_test.dart   unione delle sorgenti, capitoli presenti, cache
-test/drive_library_test.dart   Drive finto in memoria: richieste, percorsi, download, offline
-test/drive_client_test.dart    client contro un server locale: ripresa, blocchi, offline
-test/network_test.dart         monitor della rete e fasce che tornano da sole
-test/arrivals_test.dart        pallino dei capitoli nuovi, notifiche, silenzio nel backup
-test/folder_sync_test.dart     piano della sincronizzazione e giri contro un Drive finto
-test/tag_tint_test.dart        il colore di un'etichetta dipende solo dal suo testo
-test/bulk_import_test.dart     link dal testo e dal JSON, doppioni, già presente, sito o scheda manuale
-test/site_switch_test.dart     la serie fra i risultati del provider nuovo, capitoli abbinati per numero o nome
-test/archive_choice_test.dart  il punto di lettura che precompila la pagina della serie letta dal sito
-firestore.rules                il proprio documento solo a sé; gli inviti ai server a mittente e destinatario
-docs/design.md                 funzionalità, interfaccia e scelte tecniche
-docs/malf.md                   il formato della libreria: l'originale della specifica
-docs/server-api.md             l'API v1 fra app e server: l'originale del protocollo
-docs/server.md                 installare il server: Drive, chiavi, come raggiungerlo
-docs/readme/                   banner del README, chiaro e scuro (SVG, testo già in tracciati)
-.github/workflows/             CI (`ci.yml`), APK e IPA di ogni merge (`build.yml`), release, wrapper del manutentore (+ CLAUDE.md proprio)
+lib/                  l'app Flutter (src/format, archive, data, ui; l10n/ i testi in nove lingue)
+packages/kagami_archive/  l'archiviatore, Dart puro: lo usano l'app e il server
+server/               Kagami Server, Dart puro (`dart compile exe`), Dockerfile
+test/, test_driver/   test dell'app; l'app con Flutter Driver acceso per l'MCP di Dart
+docs/                 design.md, malf.md (formato), server-api.md, server.md e i documenti d'area (tabella sotto)
+firestore.rules       il proprio documento solo a sé; gli inviti ai server a mittente e destinatario
+fonts/, assets/       Figtree; icone dei siti da cui si archivia
+.github/workflows/    CI, APK e IPA di ogni merge, release, wrapper del manutentore (+ CLAUDE.md proprio)
 ```
 
 ## Comandi
@@ -254,6 +143,27 @@ sincronizzazione —, **release** per i crash che vengono da R8. L'accesso con
 Google funziona solo con una chiave di firma la cui impronta SHA-1 è registrata
 nel proprio progetto Firebase.
 
+## Aree (instradatore)
+
+I fatti d'area stanno nei documenti di sottosistema; si leggono prima di toccare i file indicati.
+Un `CLAUDE.md` annidato si carica da solo lavorando in quella cartella.
+
+| Area | File | Da leggere |
+|---|---|---|
+| Kagami Server (identità, `KAGAMI_SETUP`, utenti, coda, aggiornatore) | `server/`, `lib/src/ui/archive_server.dart`, `lib/src/data/server_access.dart` | `server/CLAUDE.md` (annidato), `docs/server-api.md`, `docs/server.md` |
+| Archiviatore: pacchetto Dart puro, un file per sito | `packages/kagami_archive/` | `packages/kagami_archive/CLAUDE.md` (annidato), `docs/malf.md` |
+| Archiviare: cartella condivisa, schede manuali, indici su Drive | `lib/src/archive/`, `lib/src/ui/archive_*.dart` | `docs/archivio.md` |
+| Libreria ibrida, indici, cancellazioni, capitoli nuovi e «Novità» | `lib/src/data/library*.dart`, `series_removal.dart`, `arrivals.dart`, `notifications.dart` | `docs/libreria.md`, `docs/malf.md` |
+| Lettore: tavole, fasce, decodifica, posizione di lettura | `lib/src/ui/reader_*.dart`, `page_bands.dart`, `lib/src/data/page_decoder.dart` | `docs/lettore.md` |
+| Dati personali, backup, account, grafici | `lib/src/data/db/`, `user_repository.dart`, `backup.dart`, `cloud.dart`, `statistics.dart` | `docs/dati.md` |
+| Drive, rete, cache, sincronizzazione della cartella | `lib/src/data/drive*.dart`, `network.dart`, `folder_sync*.dart`, `downloads.dart` | `docs/drive.md` |
+| Testi e lingue | `lib/l10n/`, `lib/src/l10n.dart` | `lib/l10n/CLAUDE.md` (annidato) |
+| Interfaccia e scelte di prodotto | `lib/src/ui/` | `docs/design.md` |
+| CI, build, release | `.github/workflows/` | `.github/workflows/CLAUDE.md` (annidato) |
+
+⚠️ Documenti grandi: `docs/design.md` (71 KB) e `README.md` (26 KB) non si leggono interi, `rg -n` e
+poi la sezione; `docs/malf.md` e `docs/server-api.md` (15 KB ciascuno) solo per la parte che serve.
+
 ## Note architetturali importanti
 
 - **Kagami è indipendente da Cobalt Extended, e resta così.** Il progetto
@@ -265,404 +175,54 @@ nel proprio progetto Firebase.
   Anche il server per scaricare lontano dal telefono è di Kagami, sta in questo
   repo e parla un protocollo di Kagami. Non va mai sostituito con
   `mangaarchive`, Cobalt o un servizio del manutentore, nemmeno «per ora».
-- **Kagami Server è l'archiviatore del telefono su un computer acceso.** Stesso
-  `ArchiveRunner`, stessi file di coda e stato (`ArchiveFiles`), uno spazio
-  per account in `users/` della cartella dei dati, destinazione solo la
-  cartella di Drive della libreria di chi chiede. Il protocollo è
-  `docs/server-api.md`, e si cambia prima lì. Vincoli:
-  - sul server non si configura niente e non si fa nessun accesso: tutto
-    arriva da `KAGAMI_SETUP`, che l'app genera per il proprietario dentro un
-    comando `docker run` (progetto Firebase, client «Web», permesso di Drive
-    e cartella del proprietario). Si applica quando cambia, per impronta:
-    rilanciare lo stesso comando non rimette un permesso vecchio;
-  - chi chiama lo dice il **token d'identità di Firebase** (`Bearer`),
-    verificato con le chiavi pubbliche di Google (`identity.dart`, RS256
-    confrontando il blocco intero, senza dipendenze): `aud` il progetto,
-    accesso con Google, indirizzo verificato. Niente sessioni né chiavi su
-    disco; l'elenco degli account è del proprietario, che lo cambia
-    dall'app (`/v2/users`);
-  - ogni account ha il **suo** Drive: un refresh token per il client «Web»
-    del progetto Firebase, riscattato dall'app dal `serverAuthCode` di
-    Android col segreto del client, che mette chi compila
-    (`--dart-define=GOOGLE_SERVER_CLIENT_SECRET`). Il telefono non può
-    prestare il suo token, che dura un'ora. Con l'app OAuth in «Testing» i
-    permessi scadono in sette giorni: `docs/server.md` lo dice;
-  - gli inviti sono documenti Firestore (`serverInvites`, regole in
-    `firestore.rules`): il server non manda email e di Firebase conosce solo
-    i token. La notifica dell'invito la dà l'app di chi lo riceve;
-  - il server non fa TLS. L'HTTPS lo mette chi lo espone (Tailscale Funnel,
-    reverse proxy); in chiaro va bene solo in casa o dentro Tailscale;
-  - per ManhwaRead la pagina della serie da scaricare la manda il telefono
-    (`snapshot`), le tavole si prendono dal CDN. I controlli la leggono da
-    sé con un Chromium senza schermo (`browser.dart`, DevTools su un
-    WebSocket, senza dipendenze; nell'immagine c'è `chromium`), e il
-    telefono ad app chiusa con una WebView invisibile (`PageBrowser.kt`):
-    tutti e due passano solo la verifica che si risolve da sola, la casella
-    «Verify you are human» non la spunta nessuno, di proposito. Le serie
-    rimaste ferme (`GatedSeries`, `check.gated`) le sblocca l'utente
-    dall'app (`passVerification`, notifica `verify:` del giro ad app
-    chiusa), che manda le pagine con `POST /v2/check/pages`;
-  - l'immagine Docker si costruisce dalla radice (serve `packages/`), e
-    `.dockerignore` fa entrare solo `server/` e il motore. La pubblica su
-    GHCR `ci.yml` dal repo pubblico, ed è quella del comando dell'app
-    (`serverImage`): non contiene niente di personale. Sulla macchina
-    condivisa si toglie per nome solo ciò che si è creato, mai con `prune`;
-  - si aggiorna da sé: il comando dell'app accende anche `kagami-updater`,
-    la stessa immagine con `update`, il socket di Docker e root, che ogni
-    ora scarica l'immagine e, se è cambiata e il server non scarica,
-    ricrea il contenitore con la sua configurazione (`recreateBody`) e poi
-    sé stesso. Niente Watchtower (fermo, e muto con Docker 29); il socket
-    non entra mai nel contenitore del server;
-  - «man mano» sul server: la serie la segue lui (`ahead`), i capitoli li
-    chiede l'app, che sa cosa si legge (`POST /v2/jobs` con `automatic`,
-    `PUT /v2/ongoing/{key}`). L'app lo offre solo a un server che elenca
-    `ahead` fra le `features` di `/v2/server`: una funzione nuova del
-    protocollo si dichiara lì, perché il server si aggiorna quando vuole;
-  - il target `test` del Dockerfile è quello che blocca la pubblicazione
-    dell'immagine in CI: ciò che i test leggono fuori da `server/` e dal
-    motore (le icone di `assets/providers`) va copiato lì;
-  - prima di ogni giro si chiede se il Drive di quell'account è pronto
-    (`UserDrive.blocked`): senza, i lavori aspettano in coda invece di
-    fallire tutti;
-  - nell'app il collegamento (`server.link`) è solo l'indirizzo, fra le
-    impostazioni del database, quindi va in backup e account. La coda del
-    server si chiede solo a schermata aperta (`remoteArchiveProvider`,
-    autoDispose). Il client è `packages/kagami_archive/lib/remote.dart`, e i
-    test del server lo provano contro `ServerApi`: chi cambia l'API cambia
-    tutti e due.
-- **L'archiviatore è un pacchetto Dart puro** (`packages/kagami_archive/`),
-  perché lo usano sia l'app sia il server, e il server non ha Flutter. Lì non
-  entra niente di Flutter, Android o dell'account. Ciò che il telefono
-  aggiunge arriva da fuori, per interfaccia: le immagini (`ImageTools`, sul
-  telefono il Kotlin), il token (la funzione passata a `DriveClient`, sul
-  telefono `DriveAuth`), la rete (`NetworkState`, sul telefono
-  `NetworkMonitor`) e i guasti (`ArchiveRunner.onError`, sul telefono
-  Sentry).
-- **Un sito è un file, e nient'altro lo nomina.** Ogni provider sta in
-  `packages/kagami_archive/lib/providers/<id>.dart`, usa `providers/kit.dart`
-  per ciò che deve valere uguale per tutti (link accettati, testi, ordine e
-  unicità dei capitoli) e si registra in `providers`; l'icona è
-  `assets/providers/<id>.png`. App, server, coda e serie in corso non
-  chiedono mai «quale sito»: un sito dietro Cloudflare lo dice con
-  `Provider.browser` (`BrowserGate`: host dei cookie, segni della pagina
-  vera), e da lì seguono WebView, ricerca invisibile, `snapshot` per il
-  server e salto nei controlli automatici. `provider_contract_test.dart`
-  ferma un sito registrato senza icona, con un id non valido o con una
-  verifica su host non suoi. Un attrezzo che serve a due siti va nel kit,
-  non copiato.
-- **Gli indici non si ricostruiscono qui**, se non per le serie che l'app
-  archivia lei (`packages/kagami_archive/`). `library.json`, `index.json` e
-  `pages.json` di una libreria esistente li scrive l'archiviatore. Se mancano, l'app lo dice e
-  rimanda a chi ha scritto la libreria: scandire l'albero dal telefono è
-  esattamente il costo che il formato esiste per evitare.
-- **Ogni decodifica JSON passa da `compute`.** `library.json` di una libreria
-  vera è di qualche centinaio di kilobyte e sul thread della UI si vede.
-- **In lettura continua le tavole stanno attaccate.** Ogni pagina occupa
-  esattamente l'altezza che le tocca alla larghezza dello schermo, e il
-  rapporto arriva prima da `pages.json`, poi — appena l'immagine è decodificata
-  — da quello vero, che ha la precedenza. Correggere una tavola già superata
-  sposta lo scorrimento di altrettanto, altrimenti il capitolo scivola via da
-  solo. La matematica sta in `ui/reader_metrics.dart` perché è l'unica parte
-  del lettore che si possa provare senza uno schermo.
-- **Una fascia si prende dalla prima fonte che ce l'ha**, in quest'ordine:
-  tessera dell'archivio (MALF `tiles`), tavola intera se è bassa, tessera
-  tagliata dal telefono (`data/phone_tiles.dart`), ritaglio nativo. Le prime
-  tre sono file per il codec di Flutter; il ritaglio è ciò che resta per le
-  tavole alte che nessuno ha ancora tagliato. Il motivo è il thread: da
-  Flutter 3.29 Dart gira sul thread principale di Android, senza modo di
-  separarli, e ogni fascia nativa porta megabyte di pixel in Dart. Le righe
-  sono le stesse da ogni fonte, quindi una che manca passa alla seguente
-  (`PageBandCache._fetch`) senza muovere la striscia. Una nuova fonte va in
-  quella catena, non nel lettore.
-- **Una tavola non si decodifica intera: si decodifica a fasce.** Le tavole di
-  un manhwa stitchato arrivano a 16383 px — intere sono cinquanta megabyte di
-  bitmap e una texture più grande di quanto la GPU accetti, e tre vive nella
-  lista sono l'app che sparisce. Le fasce le dà il Kotlin
-  (`android/app/src/main/kotlin/dev/local/kagami/PageDecoder.kt`, lato Dart
-  `data/page_decoder.dart`): decodifica la tavola **una volta**, la tiene in
-  memoria nativa (due al massimo, fino a 64 MB l'una) e ne ritaglia le
-  fasce. Non ritaglia dal file con `BitmapRegionDecoder`, se non per le
-  tavole più grandi di così: il decodificatore WebP non sa saltare le righe
-  sopra il ritaglio, e l'ultima fascia di una tavola costava quanto la
-  tavola intera — undici fasce, sei tavole di lavoro. I pixel tornano come byte grezzi, con la
-  risposta data dal thread del decodificatore e non da `MethodChannel`: da
-  Flutter 3.29 il thread di Android è quello dell'interfaccia, e il codec
-  standard che ricopia megabyte a ogni fascia lì dentro è uno scatto nello
-  scorrimento. Una fascia è alta al più 512 px della sorgente,
-  un terzo di schermata — ogni fascia è una texture caricata sulla GPU in un
-  colpo solo, e a 1536 px quel caricamento era lo scatto al cambio di
-  fascia —, e **le fasce sono gli elementi della lista**: è così che
-  la memoria dipende dallo schermo e non dall'altezza della tavola. Il
-  magazzino (`ui/page_bands.dart`) ne tiene sei schermate e butta per prime
-  quelle che non guarda più nessuno, mai quelle sullo schermo. Dove il
-  decodificatore a ritagli non c'è — build Linux, test — non si taglia niente e
-  un tetto agli otto megapixel evita il disastro. Niente ingrandisce una
-  tavola: resta alla risoluzione del file. La griglia, per lo stesso motivo,
-  legge `cover.thumb.webp` e non la copertina piena.
-- **`width`/`height` in `pages.json` servono a impaginare senza aprire i file.**
-  Un capitolo deve poter riservare lo spazio di scorrimento prima che le
-  immagini siano decodificate, altrimenti la posizione salta durante la lettura.
-- **Su Android serve l'accesso a tutti i file**
-  (`MANAGE_EXTERNAL_STORAGE`), non il Storage Access Framework: SAF costa una
-  chiamata di piattaforma per file e qui i file sono decine di migliaia. È una
-  scelta consapevole, documentata in `docs/design.md`, e va spiegata all'utente
-  nella schermata che la chiede.
-- **La sincronizzazione può essere a metà.** Record senza file, capitoli
-  annunciati e non scaricati, indice più vecchio dei file: sono stati normali,
-  non errori. L'app mostra ciò che ha.
-- **Lo stato utente vive nel database dell'app**, non più in `reading/`. La
-  cronologia è una riga per capitolo letto con la sua data, e le statistiche
-  sono raggruppamenti per data: su un JSON riletto e riscritto per intero a
-  ogni gesto non stavano in piedi. `reading/state.json` e `collections.json`
-  si leggono **una volta sola**, per importarli, e non si riscrivono più.
-- **Il backup è ciò che prima faceva la cartella sincronizzata.** Un file
-  compresso esportabile dove si vuole, più una copia automatica al giorno in
-  `reading/backup/`, che FolderSync porta fuori dal telefono con i manga.
-  Ripristinando si sceglie se fondere o sostituire; fondendo, i capitoli letti
-  si uniscono — un capitolo letto non torna mai da leggere — e sul resto vince
-  il record con `updatedAt` più recente, impostazioni comprese: la
-  sincronizzazione d'avvio altrimenti rimetteva il valore vecchio in rete
-  sopra una cartella di Drive appena scelta. Sessioni e segnalibri non hanno
-  un «più recente»: un indice unico li tiene una volta sola, perché la
-  sincronizzazione è una fusione e un doppione rifuso a ogni giro raddoppia.
-- **Ogni tabella ha `profileId`.** Oggi il profilo è uno solo, ma la libreria è
-  condivisa: è il gancio previsto per più lettori sullo stesso archivio.
 - **`permission_handler` è fermo a `^12.0.0` di proposito.** La 14 dichiara
   `compileSdk = 37`, mentre l'Android Gradle Plugin generato da Flutter 3.47
   (9.1.0) supporta al massimo 36, e una platform `android-37` "pura" non esiste
   più nel repository di Google: ci sono solo `37.0`, `37.1`, `37.2`. Alzare il
   vincolo senza aggiornare AGP fa fallire la build.
-- **Nel database non entra la libreria.** Gli indici MALF sono già la forma
-  indicizzata e li scrive qualcun altro: copiarli significherebbe mantenere una
-  seconda versione da invalidare a ogni sincronizzazione. Il campo `signature`
-  dice se una serie è cambiata senza confrontare i capitoli.
-- **La posizione di lettura è un punto, non una tavola, e non si scrive al
-  ritmo dello scorrimento.** Su un webtoon una tavola è dieci schermate: la
-  ripresa porta con sé quanto se n'era scorso (`progresses.offset`, nel backup
-  e quindi nell'account). La riga va su disco dopo una pausa di un secondo e
-  mezzo; la fotografia in memoria dei dati personali si pubblica una volta
-  sola, uscendo dal lettore. Pubblicarla prima ricalcolava segnali, filtri e
-  ordinamenti di tutta la libreria — che resta montata sotto il lettore — a
-  ogni movimento del dito. Lo stesso vale per il capitolo finito, segnato in
-  silenzio e pubblicato all'uscita, e per l'apertura della scheda,
-  pubblicata a transizione finita.
+- Il resto dei vincoli per area è nei documenti della tabella sopra: spostati lì senza riassumerli,
+  con le stesse parole.
 
-- **La libreria è ibrida: una serie sola, risolta per capitolo.** Cartella
-  scelta, spazio privato dell'app e Drive sono `LibraryShelf` in ordine di
-  preferenza (`data/library.dart`); le serie si uniscono per chiave, i
-  capitoli per id, e ogni capitolo si legge dalla prima sorgente che lo sa
-  servire. Un capitolo locale conta solo se la sua cartella c'è davvero
-  (una lettura di `chapters/` per serie), altrimenti si legge da Drive o si
-  mostra come non scaricato. L'icona d'origine compare solo quando Drive c'è.
-- **L'app cancella solo quando lo chiede l'utente**: eliminando una serie
-  (`data/series_removal.dart`: cartelle sul telefono, su Drive nel cestino
-  con la sua riga di `library.json`, coda e serie seguite; le serie tolte
-  restano nascoste per firma in `library.removed`, perché una copia locale
-  vecchia di `library.json` non le riporti) o dal foglio «Libera spazio»
-  (`data/cleanup.dart`), solo capitoli già letti: cartella scelta, spazio dell'app, cache di
-  Drive e, se lo si accende (spento di partenza), Drive stesso — nel
-  cestino. Si propone aprendo la scheda solo per ciò che sta sul telefono,
-  finché l'utente non dice «Non chiedere più» (`cleanup.quiet`, nel backup).
-  Il foglio decide per sé: ciò che toglie lo annota per la sincronizzazione
-  (`sync/released.json`), che al giro seguente non lo riporta e non lo toglie
-  dall'altra parte, e mentre un giro è in corso aspetta. Con FolderSync,
-  che l'app non vede, può solo avvisare.
-- **Un capitolo tolto da Drive resta nel suo indice** finché il server non
-  lo riscrive: `DriveRepository` lo ricorda (`withdrawn.json`) e non lo
-  serve (`LibraryShelf.withdrawnChapters`), finché un elenco nuovo della
-  cartella dei capitoli non lo mostra di nuovo, rimesso dal server.
-- **I capitoli precedenti a uno finito si segnano letti solo chiedendo**, una
-  volta per lettura, e con `estimated`: non sono letture di oggi, e
-  cronologia e statistiche non le contano. Anche quelli non scaricati né
-  sul telefono né su Drive (serie archiviata da un capitolo in poi): per
-  questo i segnali di una serie archiviata a metà e cominciata si contano
-  sul suo indice (`SeriesSignals.needsChapters`), perché senza i letti si
-  suppongono tutti archiviati e la serie risulterebbe finita.
-- **Una tavola di Drive è un indirizzo `drive:…` finché non serve.** Il
-  magazzino delle fasce aspetta che `RemoteFiles` l'abbia portata in cache —
-  fuori dal decodificatore, che è uno solo e non deve fermarsi dietro a un
-  download — e poi la decodifica come un file qualsiasi: fasce, geometria e
-  ripresa non devono sapere da dove arriva. Le tavole del capitolo scendono
-  in ordine, dalla prima all'ultima, non inseguendo lo schermo. Non
-  aggiungere al lettore rami per Drive.
-- **Drive si paga in richieste, non in byte.** All'apertura: elenco della
-  radice più una ricerca unica per indici e copertine di tutte le serie. Gli
-  elenchi delle cartelle stanno su disco e si rifanno solo se manca un nome;
-  un'istantanea apre la libreria a ogni avvio, anche con la rete, e Drive
-  si rilegge dietro alla griglia (`DriveRepository.revalidate`). Il token
-  si chiede per l'indirizzo dell'account, mai con
-  `attemptLightweightAuthentication`, che rifà l'accesso a schermo. Vedere
-  `docs/design.md`.
-- **La rete è uno stato, non un tentativo.** `NetworkMonitor`
-  (`data/network.dart`, lato nativo `NetworkWatcher.kt`) dice se c'è rete; un
-  errore di rete è `DriveOffline` e passa da solo. Offline le richieste
-  falliscono subito, la cache si legge lo stesso, le tavole mostrano un
-  avviso che sparisce quando la rete torna (le riprova `PageBandCache`).
-  I download riprendono con `Range`, quindi un file `.part` non si cancella
-  per un errore di rete. Chi aggiunge una richiesta a Drive passa da
-  `DriveClient`, che sa tutto questo.
-- **La cache di Drive butta per capitolo, non per tavola.** I nomi dei file
-  sono impronte, quindi il lettore annota quali tavole fanno ogni capitolo
-  aperto (`RemoteFiles.rememberChapter`) e `planCache` in `data/drive.dart`
-  decide con lo stato di lettura: finito o già passato esce dopo tre giorni,
-  lasciato dopo due settimane, il seguito di un capitolo a metà e le
-  miniature mai prima del resto. I conti si rifanno quando lo stato si
-  pubblica — all'avvio e uscendo dal lettore — mai mentre si scorre.
-- **Scaricando da Drive, l'app non riscrive mai `library.json`**: con FolderSync
-  bidirezionale finirebbe su Drive al posto di quello del server. I capitoli
-  vanno nell'albero MALF (via `.part`, rinominati a fine download) e le serie
-  scaricate in `reading/downloads.json`. Senza una cartella scelta vanno nello
-  spazio privato dell'app, dopo averlo chiesto.
-- **L'archiviatore è `mangaarchive` in Dart, e la cartella è condivisa.**
-  Stessi nomi di cartella, manifest e indici del server, provati con le sue
-  fixture: server e telefono si allungano a vicenda le serie su Drive
-  (regole in `malf.md`, «Chi scrive»). Su Drive `library.json` si cambia
-  una riga alla volta e il server tiene le righe che non ha; sul telefono
-  non si tocca e le serie vanno in `reading/downloads.json`. Una cartella di
-  Drive senza `library.json` è una libreria vuota. Le tavole lasciano il
-  telefono solo dopo il confronto dell'MD5 con Drive. I download girano in
-  `ArchiveWorker.kt` (in primo piano, motore Dart senza schermo) perché una
-  serie sono ore; coda e stato sono file in `archive/` nello spazio
-  dell'app. ManhwaRead dietro Cloudflare passa da una WebView
-  (`browser_check_page.dart`): la verifica la fa l'utente, e user agent e
-  cookie seguono il lavoro. Anche la sua ricerca passa da una WebView,
-  invisibile e grande quanto lo schermo (`BrowserFetcher`): Cloudflare non
-  risponde a `SiteHttp` nemmeno con quei cookie, e in una WebView di un
-  pixel la verifica non si risolve da sola. Si seguono solo le serie in corso scaricate
-  dall'app: quelle del server le segue il suo timer. Una serie esce dal
-  controllo solo se il sito la dà per conclusa o cancellata, dopo aver messo
-  in coda gli ultimi capitoli; un lavoro automatico si aggiunge a quello
-  dell'utente per la stessa serie, non lo sostituisce. Scaricando «man
-  mano» (`ArchiveJob.ahead`, `TrackedSeries.ahead`) l'app tiene cinque
-  capitoli da leggere davanti al lettore (`data/read_ahead.dart`, a ogni
-  stato pubblicato e libreria riletta), e il controllo porta dal sito solo i
-  capitoli nuovi che lei chiede (`TrackedSeries.wanted`). Il controllo
-  quotidiano senza rete si riprova dopo mezz'ora, e all'avvio l'app rimette
-  la catena se si è spezzata (`ExistingWorkPolicy.KEEP`). Chi scarica e
-  controlla lo sceglie l'utente (`archive.engine` fra le impostazioni,
-  `archiveEngineProvider`): tutto il server o tutto il telefono — serie
-  nuove, man mano, controllo —, mai metà e metà. Chi controlla guarda ogni
-  giorno le serie che segue lui e tutte le altre serie in corso della
-  libreria (`checkLibrary`: nuovi sono i capitoli che l'`index.json` della
-  serie non elenca, non quelli non archiviati, che possono esserlo per
-  scelta), tranne quelle di «Smetti di seguire» (`archive.unfollowed`, al
-  server con `PUT /v2/check`; riscaricare la serie la fa seguire di nuovo).
-  Il telefono lo fa con `checkFromPhone` su Drive o, senza, sulla cartella
-  scelta, e il suo controllo non si spegne; l'altro lato non controlla
-  niente. `ArchiveEngineSync` porta tutto in `archive/check-scope.json`,
-  letto ad app chiusa, nella catena del controllo e sul server.
-- **Una scheda è una serie MALF senza capitoli, non un dato dell'app.**
-  Salvare un manga letto altrove (Scarica un manga → «Solo la scheda»,
-  scheda manuale, Importa più link, Condividi) scrive `series.json`,
-  copertina, indici e riga di libreria come un download con `ids` vuoto
-  (`ArchiveJob.cardOnly`): così sopravvive a una reinstallazione e compare
-  ovunque compaia la libreria. Il link generale è `source`. Le schede le
-  scrive il telefono e mai il server; quelle in corso si seguono
-  (`TrackedSeries.card`) riscrivendo solo l'indice. Un sito che Kagami non
-  conosce è lo pseudo-provider `manual` (`packages/kagami_archive/lib/manual.dart`),
-  chiave dal link normalizzato: nessun capitolo, solo il numero a cui si è
-  arrivati (`seriesStates.reachedChapter`), e «Collega a un sito» porta poi
-  i dati personali sulla serie vera (`moveSeries`). Lo stato dell'utente
-  si scrive subito, prima che il lavoro finisca: è indicizzato per chiave e
-  non aspetta che la serie esista. «Arrivato al 52» vuol dire 52 letto
-  (stimato) e si scarica dal 53.
-- **Su Drive una voce d'indice si riusa solo se è intera.** Ricostruendo
-  `index.json` e `pages.json`, `DriveStore` riprende dall'indice di prima i
-  capitoli completi e con le tavole; gli altri li rilegge dal loro
-  `chapter.json`. Copiare anche le voci a metà le rendeva eterne: un
-  capitolo indicizzato mentre saliva restava «non scaricato» anche dopo.
-- **Lo scope è `drive.readonly`, e `drive` solo per chi carica.** Leggere,
-  scaricare e sincronizzare in sola discesa usano la sola lettura; lo scope
-  completo (dichiarato nella schermata di consenso del progetto Firebase) si
-  chiede quando l'utente sceglie una sincronizzazione che carica su Drive, o
-  un download dai siti con destinazione Drive
-  (`DriveAuth.authorize(write: true)`), perché le cartelle le ha create
-  rclone e `drive.file` non ci lascerebbe scrivere.
-- **La sincronizzazione della cartella è di Kagami** (`data/folder_sync.dart`),
-  al posto di FolderSync: da Drive, verso Drive o in entrambe, a mano o ogni
-  giorno a un'ora. Non confronta contenuti: ricorda per ogni file com'era
-  all'ultimo giro (`sync/state.json` nello spazio dell'app, fuori dal
-  backup) e copia ciò che è cambiato da una parte; cambiato da tutt'e due
-  vince il più recente. Gli indici MALF non salgono mai. Senza «Propaga le
-  cancellazioni» un file tolto da una parte resta dall'altra e non torna —
-  è ciò che tiene in piedi «Libera spazio» —; con, da Drive si toglie solo
-  nel cestino. Le impostazioni stanno in `sync/settings.json` e non nel
-  database perché le legge anche il giro programmato.
-- **Il giro programmato è lo stesso Dart dell'app.** `FolderSyncWorker.kt`
-  (WorkManager, un lavoro singolo che a fine giro accoda quello del giorno
-  dopo: un periodico scivolerebbe d'ora) accende un motore Flutter senza
-  schermo su `folderSyncMain` in `main.dart`, in primo piano con una
-  notifica perché un lavoro normale ha dieci minuti. Il token lo dà
-  `google_sign_in` senza attività, dal permesso già concesso. App e lavoro
-  stanno nello stesso processo: si escludono con il lucchetto su disco
-  `sync/lock`, non con uno del sistema.
-- **"Novità" ha finalmente una data sua.** L'ultima apertura della scheda
-  (`lastOpenedAt`) la registra il database; prima ci si doveva accontentare di
-  `updatedAt` dello stato, che cambiava anche solo mettendo un voto. Il backup
-  se la porta dietro, quindi non è più un dato che muore reinstallando.
-- **I capitoli nuovi si contano, non si datano.** MALF dà la data
-  dell'ultimo arrivo, non quanti capitoli sono arrivati: il numero sul
-  pallino è la differenza con un riferimento per serie (`SeriesArrivals`),
-  preso aprendo la scheda. Il riferimento è del telefono e resta fuori dal
-  backup; il silenzio per serie (`seriesStates.muted`) invece ci entra.
-  Si guarda solo un catalogo senza avvisi e con la cartella di Drive già
-  nota, e i conteggi non scendono mai: una libreria letta a metà farebbe
-  sembrare nuovi, dopo, i capitoli che c'erano già — salvo quando cambia la
-  base: una scheda (`SeriesSignals.isCard`) conta i capitoli del sito
-  (`SeriesSignals.arrivalCount`), le altre gli archiviati, e il riferimento
-  ricorda su quale dei due è stato preso (`SeriesArrivals.onSite`); al primo
-  download, o tornando scheda, riparte da ciò che c'è senza annunciare.
-  Ad app chiusa i conteggi del sito stanno sotto `<chiave>@site` in
-  `record.json`, perché un numero del sito riletto come di archiviati
-  fermerebbe le notizie. Le notifiche sono Kotlin
-  puro (`ArrivalNotifier.kt`), nessun pacchetto. Ad app chiusa
-  `LibraryWatchWorker.kt` (WorkManager, ogni ora) guarda solo la cartella
-  locale: le serie da guardare gliele lascia Dart uscendo
-  (`arrivals/watch.json`), quelle annunciate gliele rilegge Dart
-  (`arrivals/record.json`). Drive non c'è perché servirebbe il token
-  dell'account fuori dall'app.
-- **Le modalità di lettura non sono MALF**: sono impostazioni di
-  visualizzazione e il formato non le prevede. Stanno però nel database insieme
-  al resto, quindi il backup se le porta dietro; una serie senza impostazioni
-  proprie eredita quelle predefinite, che sono l'ultima scelta fatta.
-- **La cartella di Drive è un'impostazione del database** (`drive.folder`),
-  quindi viaggia con backup e account: su un telefono nuovo la libreria
-  compare al primo accesso.
-- **Nell'account viaggia il file di backup, non le tabelle.** Quello che
-  l'app mette su Firestore è esattamente ciò che esporta come file — gli
-  stessi byte compressi, in un `Blob` dentro `readers/{uid}` — perché le
-  regole con cui due copie si fondono esistono già, sono quelle del backup e
-  sono provate. Rispecchiare campo per campo avrebbe voluto dire tenere lo
-  schema in due posti e riscriverle una seconda volta. Sincronizzare è quindi
-  `import(remoto, merge)` seguito dal rinvio del risultato, e avviene in tre
-  momenti soltanto — all'avvio, uscendo dall'app e a richiesta — perché
-  mandare su i dati a ogni pagina girata terrebbe accesa la radio per tutta
-  la lettura. Non si manda mai su senza aver fuso (la `revision` del documento
-  dice se un altro ha scritto), e il backup di Android è spento: rimetteva
-  un database vecchio che la prima uscita dall'app scriveva sopra l'account.
-- **L'accesso passa dal token d'identità, non dal browser.** `google_sign_in`
-  chiede al sistema chi è l'utente e Firebase verifica la firma: per conto di
-  quale client OAuth chiederlo lo dice `google-services.json`, quindi nel
-  codice non c'è nessun identificativo da tenere aggiornato. Su una
-  piattaforma senza Firebase — la build Linux, che serve solo a verificare
-  che il codice compili — la sezione «Account» dice che non c'è.
-- **I grafici hanno una tavolozza verificata**, non scelta a occhio: sei tinte
-  in ordine fisso, controllate per chi non distingue i colori come la
-  maggioranza su entrambe le superfici. L'ordine non si cicla e nessun grafico
-  affida l'identità al solo colore: accanto ci sono legenda e valori.
-- **I testi sono in `app_it.arb`, le altre lingue lo seguono.** Un testo
-  nuovo si scrive in italiano in `app_it.arb`, con una `description` che dica
-  dove compare (chi traduce non vede lo schermo), e si traduce negli altri
-  `app_<lingua>.arb`; finché manca, quella lingua mostra l'italiano. Frasi
-  intere con segnaposto e plurali ICU, mai pezzi concatenati: l'ordine delle
-  parole cambia fra le lingue. Date e ore da `DateFormat` col locale, mai
-  nomi di mesi scritti a mano. Dove non c'è un `BuildContext` (eccezioni,
-  etichette degli enum, notifiche) si usa `currentL10n()`, che legge la lingua
-  scelta (`app.locale` fra le impostazioni del database, vuota per quella del
-  sistema). Il Kotlin ha i suoi testi in `res/values*/strings.xml` e, da
-  Android 13, la lingua gliela passa Dart (`kagami/locale`) perché valga ad
-  app chiusa. I messaggi del motore (`packages/kagami_archive/`) restano in
-  italiano: li produce anche il server, che una lingua non ce l'ha.
+## Strumenti per gli agenti
+
+Workflow degli agenti: ricetta ottimizza-claude rev. 2026-10-15.2. Gli strumenti stanno in
+`scripts/agent/` e `.claude/` (non vanno nel repo pubblico).
+
+| Cosa | Dove |
+|---|---|
+| stato del repo all'avvio (hook) | `scripts/agent/session-brief.sh` |
+| verifica sul diff (`flutter analyze`, test relativi ai file toccati, `dart analyze`/`dart test` di pacchetto e server); `--full` per tutto | `scripts/agent/verify.sh` |
+| `dart analyze` dei file toccati a fine turno (hook Stop; esce se `stop_hook_active`) | `scripts/agent/stop-check.sh` |
+| output di `flutter test`/`dart test` su file: a Claude arrivano errori, coda ed exit code veri (`--full-output` per averlo intero; log in `.claude/.cache/`) | `scripts/agent/filtra-output.sh` (hook PreToolUse con `if`) |
+| guardie: `dart format`, npm/yarn, segreti in `git add`, build senza timeout; edit a mano di `*.g.dart` e `app_localizations*.dart` | `scripts/agent/guard-bash.sh`, `guard-edit.sh` |
+| brief comune dei subagenti che scrivono codice | `scripts/agent/brief-subagente.md` — il prompt non lo ricopia |
+| agenti di progetto: `correttore` (sonnet, 1-3 difetti dalla causa al test), `collaudatore` (haiku, collaudo a schermo sull'emulatore della macchina di prova, descritta nelle note locali) | `.claude/agents/` |
+| skill di progetto: `riprendi`, `chiudi-sessione`, `piano` (handoff in `handoff/<feature>/`) | `.claude/skills/` |
+
+Lettura: `rg -n` e poi `Read` con offset/limit; un file oltre ~400 righe non si legge intero.
+Nessun subagente senza modello deciso (haiku per cercare e collaudare, sonnet per implementare con
+un contratto chiaro, opus solo per causa ignota). Un subagente = 1-3 voci coese.
+
+## Scelte e libertà
+
+- Codice e identificatori in inglese; commenti, documentazione, commit e risposte in italiano.
+- Commit atomici per voce, messaggio da file (`git commit -F`), mai `-m` con backtick o `$(…)`.
+- Niente formattatori su file interi (il progetto non segue `dart format`), niente refactor non
+  richiesto, commenti solo per il perché non ovvio. Mai `git stash` dove si usano worktree.
+- Adozione, non sovrascrittura: una lettura fallita (Drive, disco, rete) non è «vuoto»; tre stati
+  (*non ho potuto chiedere* ≠ *non c'è* ≠ *c'è*) davanti a ogni scrittura che parte da uno stato letto.
+- Test verdi: un rosso si diagnostica, non si archivia come «noto»; nessuna feature dichiarata
+  finita senza test.
+- **Push su `main` solo se il proprietario lo chiede**: avvia `build.yml` (APK e IPA su runner) e
+  `public-sync.yml` (PR sul repo pubblico). Mai force push.
+- Libertà senza chiedere: ristrutturare file di documentazione e workflow (CLAUDE.md, skill, agenti,
+  script) quando riduce lo spreco; cancellare codice morto coperto da test.
+
+# Compact instructions
+
+Nel riassunto conserva: voce in corso e criterio di fine, file modificati, comandi di verifica e
+ultimo esito, decisioni del proprietario della sessione. Dopo la compattazione `session-brief.sh`
+ristampa le note architetturali.
 
 ## Convenzioni
 

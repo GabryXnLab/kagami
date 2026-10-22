@@ -286,9 +286,15 @@ class ArchiveScheduler(messenger: BinaryMessenger, private val context: Context)
             )
             "unschedule" -> WorkManager.getInstance(context).cancelUniqueWork(ArchiveWorker.CHECK_NAME)
             // I cookie della WebView che ha superato la verifica del sito,
-            // compresi quelli HttpOnly che da JavaScript non si vedono.
+            // compresi quelli HttpOnly che da JavaScript non si vedono. Si
+            // chiedono a verifica appena passata, ed è lì che vanno scritti su
+            // disco: la WebView li salva quando vuole, e un'app chiusa subito
+            // dopo può perdere il cookie che il controllo della notte, in un
+            // processo nuovo, deve ritrovare.
             "cookies" -> {
-                result.success(CookieManager.getInstance().getCookie(call.argument<String>("url")!!))
+                val cookies = CookieManager.getInstance()
+                cookies.flush()
+                result.success(cookies.getCookie(call.argument<String>("url")!!))
                 return
             }
             else -> {

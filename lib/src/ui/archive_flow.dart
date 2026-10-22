@@ -25,7 +25,6 @@ import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../format/malf.dart';
 import '../format/reading.dart';
-import '../archive/phone_check.dart';
 import '../l10n.dart';
 import '../providers.dart';
 import 'archive_series.dart';
@@ -125,11 +124,12 @@ Future<InspectedSeries> inspectArchiveLink(
 /// Fa passare all'utente la verifica che ha fermato il controllo di
 /// [gated], e fa ripartire il controllo da quelle serie, da chi controlla.
 ///
-/// Per ogni serie la pagina la prova prima la WebView invisibile: i cookie
-/// sono di tutta l'app, quindi dopo la prima verifica passata a mano le
-/// altre serie dello stesso sito di solito non la chiedono più. Quando la
-/// chiede, si apre [BrowserCheckPage]; chiusa senza passarla, ci si ferma
-/// lì e si controlla ciò che si è preso. Il telefono controlla da sé
+/// Per ogni serie si apre subito [BrowserCheckPage]: la WebView invisibile
+/// ci ha già provato nel controllo, e riprovarci faceva aspettare fino a 45
+/// secondi a serie prima di vedere qualcosa. Con la verifica ancora buona (i
+/// cookie sono di tutta l'app) la pagina si chiude da sola appena arriva
+/// l'elenco dei capitoli; chiusa senza passarla, ci si ferma lì e si
+/// controlla ciò che si è preso. Il telefono controlla da sé
 /// ([ArchiveController.checkPages]); il server riceve le pagine
 /// (`POST /v2/check/pages`), perché la verifica passata vale solo per
 /// questo browser e questo indirizzo. Torna com'è andata, `null` se non si
@@ -151,15 +151,10 @@ Future<({int checked, int queued, int gated})?> passVerification(
     }
     final gate = provider.browser;
     if (gate == null) continue;
-    final canonical = provider.canonical(entry.url);
-    var html = await const NativePageBrowser().seriesPage(canonical, gate);
-    if (html == null) {
-      if (!context.mounted) break;
-      final pass = await BrowserCheckPage.open(context, canonical, gate.hosts, ready: gate.seriesReady);
-      if (pass == null) break;
-      html = utf8.decode(pass.html);
-    }
-    pages[entry.url] = html;
+    if (!context.mounted) break;
+    final pass = await BrowserCheckPage.open(context, provider.canonical(entry.url), gate.hosts, ready: gate.seriesReady);
+    if (pass == null) break;
+    pages[entry.url] = utf8.decode(pass.html);
   }
   if (pages.isEmpty) return null;
   onChecking?.call();
@@ -215,7 +210,10 @@ String archiveServerHint(BuildContext context, WidgetRef ref) {
 /// su «Dal capitolo» se il link era di un capitolo, altrimenti su «Tutta».
 /// Senza [start] il capitolo di partenza lo propone la pagina, dopo l'ultimo
 /// letto. [stateKey] dice da quale serie prendere ciò che la pagina precompila
-/// (stato, voto, nota, punto di lettura), se non è quella di [inspected]. Restituisce `null` se l'utente torna indietro senza scegliere.
+/// (stato, voto, nota, punto di lettura), se non è quella di [inspected].
+/// La raccolta proposta è l'ultima scelta (`archiveCollectionProvider`), e
+/// la scelta fatta qui diventa la prossima proposta. Restituisce `null` se
+/// l'utente torna indietro senza scegliere.
 Future<ArchiveChoice?> chooseArchive(
   BuildContext context,
   WidgetRef ref,
@@ -226,9 +224,11 @@ Future<ArchiveChoice?> chooseArchive(
   String? start,
   Set<String> picked = const {},
   String? stateKey,
-}) {
+}) async {
   final destinations = archiveDestinations(ref);
-  return ArchiveSeriesPage.open(
+  final last = await ref.read(archiveCollectionProvider.future);
+  if (!context.mounted) return null;
+  final choice = await ArchiveSeriesPage.open(
     context,
     series: inspected.series,
     metadata: inspected.metadata,
@@ -242,13 +242,21 @@ Future<ArchiveChoice?> chooseArchive(
     picked: picked,
     linkedChapterId: inspected.linkedChapter?.id,
     stateKey: stateKey,
+    // Una raccolta cancellata nel frattempo non si propone più.
+    collection: ref.read(collectionsProvider).any((row) => row.id == last) ? last : null,
   );
+  if (choice != null) await ref.read(archiveCollectionProvider.notifier).choose(choice.collection);
+  return choice;
 }
 
 /// Mette in coda [choice] per [inspected]: sul telefono chiede, se servono,
 /// la cartella in cui tenere i capitoli e il permesso di scrivere su Drive,
 /// e salva la pagina della verifica per il lavoro; al server manda il link
 /// con le stesse scelte.
+///
+/// Messa in coda, la serie entra nella raccolta della scelta
+/// ([ArchiveChoice.collection]): le raccolte sono per chiave, come lo stato,
+/// e non aspettano che la serie esista.
 ///
 /// Una scheda ([ArchiveChoice.card]) va solo al telefono: appena è in coda
 /// se ne scrive anche lo stato dell'utente ([saveArchiveCard]), così la
@@ -263,11 +271,16 @@ Future<bool> enqueueArchive(
   ArchiveChoice choice,
 ) async {
   final destination = choice.where.local;
-  if (destination == null) return _sendToServer(context, ref, inspected, choice);
+  if (destination == null) {
+    final sent = await _sendToServer(context, ref, inspected, choice);
+    if (sent) await _addToCollection(ref, inspected.series.key, choice.collection);
+    return sent;
+  }
   final messenger = ScaffoldMessenger.of(context);
   final target = await archiveTargetFor(context, ref, destination);
   if (target == null) return false;
   await queueArchiveJob(ref, inspected, choice, target);
+  await _addToCollection(ref, inspected.series.key, choice.collection);
   final l10n = currentL10n();
   // Un lavoro senza capitoli è una scheda anche quando non porta uno stato
   // da scrivere: è l'aggiornamento di una già in libreria.
@@ -278,6 +291,11 @@ Future<bool> enqueueArchive(
         : l10n.archiveQueuedSnack(inspected.series.title)),
   ));
   return true;
+}
+
+Future<void> _addToCollection(WidgetRef ref, String key, String? collection) async {
+  if (collection == null || !ref.read(collectionsProvider).any((row) => row.id == collection)) return;
+  await ref.read(readingProvider.notifier).setSeriesInCollection(collection, key, true);
 }
 
 /// Dove scrive un lavoro del telefono verso [destination]: chiede, se

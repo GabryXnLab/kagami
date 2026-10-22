@@ -118,15 +118,19 @@ class ServerSetup {
 /// e gira come root, quindi è un contenitore a parte: il server, che parla
 /// con internet, non deve poter comandare la macchina. Senza controllo di
 /// salute, che chiede al server della porta 8080 e lì non c'è.
+///
+/// `--init`: il server è il primo processo del contenitore, e i figli di
+/// Chromium che finiscono resterebbero lì come zombi, senza nessuno che li
+/// raccolga.
 String serverCommand(ServerSetup setup, {required String image, int port = 8080}) =>
-    'docker run -d --name kagami-server --restart unless-stopped '
+    'docker run -d --name kagami-server --init --restart unless-stopped '
     '-p $port:8080 -v kagami-data:/data '
     '-e KAGAMI_SETUP=${setup.encode()} '
     '$image\n'
     '${updaterCommand(image)}';
 
 String updaterCommand(String image) =>
-    'docker run -d --name kagami-updater --restart unless-stopped --no-healthcheck '
+    'docker run -d --name kagami-updater --init --restart unless-stopped --no-healthcheck '
     '-u 0 -v /var/run/docker.sock:/var/run/docker.sock '
     '$image update';
 
@@ -585,7 +589,9 @@ class ServerClient {
   /// Manda le pagine delle serie ferme alla verifica, aperte sul telefono
   /// ([pages], per link): il server le controlla subito.
   Future<({int checked, int queued, List<GatedSeries> gated})> checkPages(Map<String, String> pages) async {
-    final json = (await _call('POST', '/v$serverApi/check/pages', body: {
+    // Il server risponde a controllo finito, che per più serie con Drive di
+    // mezzo va ben oltre i 30 secondi delle altre chiamate.
+    final json = (await _call('POST', '/v$serverApi/check/pages', timeout: const Duration(minutes: 5), body: {
       'pages': [for (final MapEntry(:key, :value) in pages.entries) {'url': key, 'html': value}],
     }))!;
     return (
@@ -630,11 +636,12 @@ class ServerClient {
     String path, {
     Map<String, Object?>? body,
     bool authorized = true,
+    Duration timeout = const Duration(seconds: 30),
   }) async {
-    var (status, text) = await _send(method, path, body, authorized ? await token() : null);
+    var (status, text) = await _send(method, path, body, authorized ? await token() : null, timeout);
     // Un token scaduto fra due richieste: se ne chiede uno nuovo, una volta.
     if (status == HttpStatus.unauthorized && authorized) {
-      (status, text) = await _send(method, path, body, await token(refresh: true));
+      (status, text) = await _send(method, path, body, await token(refresh: true), timeout);
     }
     Object? json;
     try {
@@ -664,7 +671,13 @@ class ServerClient {
     );
   }
 
-  Future<(int, String)> _send(String method, String path, Map<String, Object?>? body, String? bearer) async {
+  Future<(int, String)> _send(
+    String method,
+    String path,
+    Map<String, Object?>? body,
+    String? bearer,
+    Duration timeout,
+  ) async {
     final base = link.url;
     final uri = base.replace(path: '${base.path}$path');
     try {
@@ -678,8 +691,8 @@ class ServerClient {
       } else {
         request.contentLength = 0;
       }
-      final response = await request.close().timeout(const Duration(seconds: 30));
-      final text = await utf8.decodeStream(response).timeout(const Duration(seconds: 30));
+      final response = await request.close().timeout(timeout);
+      final text = await utf8.decodeStream(response).timeout(timeout);
       return (response.statusCode, text);
     } on SocketException {
       throw const ServerOffline();

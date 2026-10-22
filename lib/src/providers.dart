@@ -1869,9 +1869,25 @@ final archiveProvider =
 /// capitoli li chiede l'app: quelli che l'indice conosce in coda sul server
 /// (`POST /v2/jobs` con `ahead` e `automatic`), quelli nuovi del sito con
 /// `PUT /v2/ongoing/{key}`, che li fa cercare a lui.
+///
+/// Finché i capitoli chiesti non sono arrivati si torna a guardare la coda,
+/// con l'app in primo piano: nessun altro lo fa, se la schermata «Scarica un
+/// manga» è chiusa, e senza si vedrebbero solo alla prossima uscita dal
+/// lettore.
 class ReadAhead extends Notifier<void> {
+  ReadAhead({this.followEvery = const Duration(seconds: 15)});
+
+  /// Ogni quanto si ripassa mentre si aspetta un capitolo.
+  final Duration followEvery;
+
   Future<void> _work = Future.value();
   Timer? _soon;
+  Timer? _follow;
+
+  /// L'ultima volta che si è chiesto qualcosa a chi scarica: per un po' il
+  /// lavoro può non essere ancora in coda (il controllo del sito, sul
+  /// server, lo mette dopo).
+  DateTime? _askedAt;
 
   /// L'ultimo download finito visto qui, dal telefono e dal server: uno più
   /// recente vuol dire capitoli che la libreria in memoria non conosce
@@ -1883,11 +1899,30 @@ class ReadAhead extends Notifier<void> {
   /// uscita dal lettore, che in fondo alla serie sono tutte uguali.
   static const Duration _recheck = Duration(hours: 6);
 
+  static const Duration _askedWindow = Duration(minutes: 2);
+
   @override
   void build() {
     ref.listen(readingProvider, (_, _) => _schedule());
     ref.listen(libraryCatalogProvider, (_, _) => _schedule());
-    ref.onDispose(() => _soon?.cancel());
+    // Tornando in primo piano la libreria non sempre si rilegge: il giro
+    // fermato in background riparte da qui.
+    final lifecycle = AppLifecycleListener(onResume: _schedule);
+    ref.onDispose(() {
+      _soon?.cancel();
+      _follow?.cancel();
+      lifecycle.dispose();
+    });
+  }
+
+  /// Ancora lavoro in arrivo: si ripassa fra poco. In background no, per non
+  /// tenere sveglia la radio; al ritorno ci pensa [build].
+  void _followUp(bool pending) {
+    _follow?.cancel();
+    final asked = _askedAt != null && DateTime.now().difference(_askedAt!) < _askedWindow;
+    if (!pending && !asked) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    _follow = Timer(followEvery, _schedule);
   }
 
   /// Pubblicare lo stato e rileggere la libreria arrivano spesso insieme.
@@ -1942,10 +1977,13 @@ class ReadAhead extends Notifier<void> {
     final link = ref.read(serverLinkProvider).value;
     if (link == null) return;
     final client = serverClient(ref, link);
+    var pending = false;
     try {
       final smart = [for (final series in await client.ongoing()) if (series.ahead != null) series];
       if (smart.isEmpty) return;
       final queue = await client.queue();
+      final urls = {for (final series in smart) series.url};
+      pending = queue.jobs.any((job) => urls.contains(job.url));
       final seen = _seenServer;
       _seenServer = queue.history.firstOrNull?.finishedAt;
       if (_stale(_seenServer, seen)) return;
@@ -1962,8 +2000,12 @@ class ReadAhead extends Notifier<void> {
             ahead: series.ahead,
             automatic: true,
           );
+          _askedAt = DateTime.now();
         }
-        if (plan.wanted != series.wanted) await client.want(series.key, plan.wanted);
+        if (plan.wanted != series.wanted) {
+          await client.want(series.key, plan.wanted);
+          if (plan.wanted > 0) _askedAt = DateTime.now();
+        }
       }
     } on ServerException {
       // Server spento, account non ammesso, versione vecchia: ci si riprova
@@ -1972,6 +2014,7 @@ class ReadAhead extends Notifier<void> {
       // Lo stesso, senza rete.
     } finally {
       client.close();
+      _followUp(pending);
     }
   }
 
@@ -1980,10 +2023,12 @@ class ReadAhead extends Notifier<void> {
     final tracking = Tracking(files.ongoing);
     final smart = [for (final entry in await tracking.load()) if (entry.ahead != null) entry];
     if (smart.isEmpty) return;
+    final jobs = await files.jobs();
+    final urls = {for (final entry in smart) entry.url};
+    _followUp(jobs.any((job) => urls.contains(job.url)));
     final seen = _seenLocal;
     _seenLocal = (await files.history()).firstOrNull?.finishedAt;
     if (_stale(_seenLocal, seen)) return;
-    final jobs = await files.jobs();
     var queued = false;
     final check = <String>{};
     for (final entry in smart) {
@@ -2004,6 +2049,8 @@ class ReadAhead extends Notifier<void> {
           ahead: entry.ahead,
         ));
         queued = true;
+        _askedAt = DateTime.now();
+        _followUp(true);
       }
       await tracking.want(entry.key, plan.wanted);
       if (plan.wanted > 0 && _due(entry.checkedAt)) check.add(entry.key);
@@ -2121,6 +2168,27 @@ class UnfollowedNotifier extends AsyncNotifier<Set<String>> {
 }
 
 final unfollowedProvider = AsyncNotifierProvider<UnfollowedNotifier, Set<String>>(UnfollowedNotifier.new);
+
+/// La raccolta scelta l'ultima volta scaricando una serie (o importando
+/// tanti link): la pagina di una serie nuova parte da lì. `null` è «nessuna
+/// raccolta», anche come scelta fatta.
+class ArchiveCollectionNotifier extends AsyncNotifier<String?> {
+  static const String _key = 'archive.collection';
+
+  @override
+  Future<String?> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    return value == null || value.isEmpty ? null : value;
+  }
+
+  Future<void> choose(String? id) async {
+    state = AsyncData(id);
+    await ref.read(userRepositoryProvider).writeSetting(_key, id ?? '');
+  }
+}
+
+final archiveCollectionProvider =
+    AsyncNotifierProvider<ArchiveCollectionNotifier, String?>(ArchiveCollectionNotifier.new);
 
 /// L'ora del controllo quotidiano del telefono per chi non l'ha scelta: il
 /// controllo c'è sempre, come quello del server.

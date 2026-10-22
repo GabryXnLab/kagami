@@ -159,6 +159,7 @@ void main() {
     expect(body.containsKey('Hostname'), isFalse);
     expect((body['HostConfig'] as Map)['Binds'], ['kagami-data:/data', 'anonimo:/cache']);
     expect((body['HostConfig'] as Map)['RestartPolicy'], {'Name': 'unless-stopped'});
+    expect((body['HostConfig'] as Map)['Init'], isTrue);
     expect(body['NetworkingConfig'], {
       'EndpointsConfig': {
         'casa': {'Aliases': ['kagami']},

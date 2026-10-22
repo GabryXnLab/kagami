@@ -24,6 +24,7 @@ import '../l10n.dart';
 import '../providers.dart';
 import 'series_screen.dart' show shelfIcons, shelfLabels, showRatingSheet;
 import 'theme.dart';
+import 'widgets/collection_sheet.dart' show pickCollection;
 import 'widgets/kit.dart';
 
 /// Dove va una serie: una delle destinazioni del telefono, o il server.
@@ -98,10 +99,16 @@ class ArchiveChoice {
     this.ids,
     this.ahead,
     this.card,
+    this.collection,
   });
 
   /// Solo la scheda: [ids] vuoto, nessun capitolo, e lo stato da scrivere.
-  const ArchiveChoice.card({required this.where, required ArchiveCard this.card, this.delayMs = 200})
+  const ArchiveChoice.card({
+    required this.where,
+    required ArchiveCard this.card,
+    this.delayMs = 200,
+    this.collection,
+  })
       : start = null,
         ids = const {},
         ahead = null;
@@ -119,6 +126,9 @@ class ArchiveChoice {
   final int? ahead;
 
   final ArchiveCard? card;
+
+  /// La raccolta in cui mettere la serie; `null`, nessuna.
+  final String? collection;
 }
 
 String archiveStatusLabel(AppLocalizations l10n, Object? value) => switch (value) {
@@ -174,6 +184,7 @@ class ArchiveSeriesPage extends ConsumerStatefulWidget {
     this.picked = const {},
     this.linkedChapterId,
     this.stateKey,
+    this.collection,
     super.key,
   });
 
@@ -205,6 +216,9 @@ class ArchiveSeriesPage extends ConsumerStatefulWidget {
   /// manuale, sono i suoi.
   final String? stateKey;
 
+  /// La raccolta proposta, l'ultima scelta.
+  final String? collection;
+
   static Future<ArchiveChoice?> open(
     BuildContext context, {
     required Series series,
@@ -219,6 +233,7 @@ class ArchiveSeriesPage extends ConsumerStatefulWidget {
     Set<String> picked = const {},
     String? linkedChapterId,
     String? stateKey,
+    String? collection,
   }) =>
       Navigator.of(context).push<ArchiveChoice>(MaterialPageRoute(
         builder: (_) => ArchiveSeriesPage(
@@ -234,6 +249,7 @@ class ArchiveSeriesPage extends ConsumerStatefulWidget {
           picked: picked,
           linkedChapterId: linkedChapterId,
           stateKey: stateKey,
+          collection: collection,
         ),
       ));
 
@@ -257,11 +273,14 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
   bool _advanced = false;
   late ArchiveWhere _where = widget.destination;
   late int _delayMs = widget.delayMs;
+  late String? _collection = widget.collection;
 
   /// La scheda: l'ultimo capitolo letto e i campi del ripiano, partendo da
   /// ciò che i dati personali sanno già di questa serie.
   String? _reached;
-  late final SeriesState _known = ref.read(seriesStateProvider(widget.stateKey ?? widget.series.key));
+  // Letto in initState: lasciato pigro, lo leggeva la prima volta dispose()
+  // per le note mai aperte, con un ref che a pagina chiusa non si usa più.
+  late final SeriesState _known;
   late ShelfStatus _status = _known.status;
   late int? _rating = _known.rating;
   late bool _favorite = _known.favorite;
@@ -293,6 +312,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
   @override
   void initState() {
     super.initState();
+    _known = ref.read(seriesStateProvider(widget.stateKey ?? widget.series.key));
     if (_mode == ArchiveMode.ahead && !_aheadPossible) _mode = ArchiveMode.all;
     final reached = _reachedIndex();
     if (reached >= 0) _reached = _chapters[reached].id;
@@ -440,14 +460,19 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
     return _newestFirst ? shown.reversed.toList() : shown;
   }
 
+  Future<void> _chooseCollection() async {
+    final chosen = await pickCollection(context, current: _collection);
+    if (chosen != null && mounted) setState(() => _collection = chosen.$1);
+  }
+
   void _confirm() {
     final start = _start;
     final ArchiveChoice choice;
     switch (_mode) {
       case ArchiveMode.all:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs);
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, collection: _collection);
       case ArchiveMode.from:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs, start: start);
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, start: start, collection: _collection);
       case ArchiveMode.ahead:
         final index = _startIndex;
         choice = ArchiveChoice(
@@ -455,9 +480,10 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
           delayMs: _delayMs,
           ids: {for (final chapter in _chapters.skip(index).take(readAheadWindow)) chapter.id},
           ahead: readAheadWindow,
+          collection: _collection,
         );
       case ArchiveMode.pick:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs, ids: {..._picked});
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, ids: {..._picked}, collection: _collection);
       case ArchiveMode.card:
         choice = ArchiveChoice.card(
           where: _where,
@@ -469,6 +495,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
             favorite: _favorite,
             reachedId: _reached,
           ),
+          collection: _collection,
         );
     }
     Navigator.of(context).pop(choice);
@@ -555,6 +582,19 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                   _shelf(),
                   const SizedBox(height: 26),
                 ],
+                KGroup(
+                  children: [
+                    KTile(
+                      icon: LucideIcons.listPlus,
+                      title: l10n.archiveImportCollection,
+                      subtitle: ref.watch(collectionsProvider).where((row) => row.id == _collection).firstOrNull?.name ??
+                          l10n.archiveImportCollectionNone,
+                      trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                      onTap: _chooseCollection,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 26),
                 KSection(l10n.archiveWhereSection),
                 KGroup(
                   children: [

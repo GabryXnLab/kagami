@@ -39,7 +39,7 @@ import 'archive_manual.dart';
 import 'archive_series.dart';
 import 'browser_check_page.dart';
 import 'theme.dart';
-import 'widgets/collection_sheet.dart' show askForCollection;
+import 'widgets/collection_sheet.dart' show pickCollection;
 import 'widgets/kit.dart';
 
 enum _State { waiting, running, saved, manual, known, failed, check }
@@ -84,6 +84,7 @@ class _ArchiveImportPageState extends ConsumerState<ArchiveImportPage> {
   /// Le righe, da quando l'import è partito.
   List<_Row>? _rows;
   String? _collection;
+  bool _collectionChosen = false;
   int _pause = 2;
   bool _running = false;
   bool _stopping = false;
@@ -107,6 +108,19 @@ class _ArchiveImportPageState extends ConsumerState<ArchiveImportPage> {
       for (final provider in providers)
         if (provider.browser case final gate?) provider.id: BrowserFetcher(ready: gate.seriesReady),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    // La raccolta dell'ultima volta, se la si legge prima che l'utente ne
+    // scelga una qui.
+    unawaited(_lastCollection());
+  }
+
+  Future<void> _lastCollection() async {
+    final id = await ref.read(archiveCollectionProvider.future);
+    if (mounted && !_collectionChosen) setState(() => _collection = id);
+  }
 
   @override
   void dispose() {
@@ -338,46 +352,13 @@ class _ArchiveImportPageState extends ConsumerState<ArchiveImportPage> {
   }
 
   Future<void> _chooseCollection() async {
-    final l10n = context.l10n;
-    final chosen = await showKagamiSheet<(String?,)>(
-      context,
-      title: l10n.archiveImportCollection,
-      scrollable: true,
-      action: Consumer(
-        builder: (context, ref, _) => TextButton(
-          onPressed: () async {
-            final before = {for (final row in ref.read(collectionsProvider)) row.id};
-            await askForCollection(context, ref);
-            final created = ref.read(collectionsProvider).where((row) => !before.contains(row.id)).firstOrNull;
-            if (created != null && context.mounted) Navigator.of(context).pop((created.id,));
-          },
-          child: Text(l10n.collectionSheetNew),
-        ),
-      ),
-      builder: (context) => Consumer(
-        builder: (context, ref, _) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
-          children: [
-            KTile(
-              icon: LucideIcons.circleSlash,
-              title: l10n.archiveImportCollectionNone,
-              trailing: _collection == null ? const Icon(LucideIcons.check, size: 18) : null,
-              onTap: () => Navigator.of(context).pop((null,)),
-            ),
-            for (final collection in ref.watch(collectionsProvider))
-              KTile(
-                icon: LucideIcons.bookmark,
-                tint: collection.color == null ? null : Color(collection.color!),
-                title: collection.name,
-                trailing: _collection == collection.id ? const Icon(LucideIcons.check, size: 18) : null,
-                onTap: () => Navigator.of(context).pop((collection.id,)),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (chosen != null && mounted) setState(() => _collection = chosen.$1);
+    final chosen = await pickCollection(context, current: _collection);
+    if (chosen == null || !mounted) return;
+    setState(() {
+      _collection = chosen.$1;
+      _collectionChosen = true;
+    });
+    await ref.read(archiveCollectionProvider.notifier).choose(chosen.$1);
   }
 
   Future<bool> _confirmLeave() async {

@@ -67,8 +67,11 @@ Future<void> runBackgroundArchive({required bool check}) async {
     final environment = deviceEnvironment(files, client, directories.cache);
     if (check) {
       try {
-        gated = (await checkFromPhone(files, environment, browser: const NativePageBrowser(), cancelled: () => stopped))
-            .gated;
+        const browser = NativePageBrowser();
+        final server = (await files.scope()).server;
+        gated = server != null
+            ? await passServerGated(server, browser)
+            : (await checkFromPhone(files, environment, browser: browser, cancelled: () => stopped)).gated;
       } on ProviderOffline {
         end = RunEnd.retry;
         checkFailed = true;

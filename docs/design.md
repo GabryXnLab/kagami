@@ -908,6 +908,9 @@ dell'ultimo letto come lo scrive l'autore, `status` uno fra `planned`,
 primo non letto) e poi tiene sempre cinque capitoli da leggere davanti
 all'ultimo letto o aperto: uscendo dal lettore, o quando la libreria si
 rilegge, l'app mette in coda quelli che mancano (`data/read_ahead.dart`).
+Finché non sono arrivati, con l'app aperta, torna a guardare la coda ogni
+poco e rilegge la libreria appena uno è pronto: si continua a leggere
+mentre scendono, senza aprire «Scarica un manga».
 I capitoli prima del primo che si ha non arrivano da soli: chi parte dal 40
 non vuole i primi trentanove. Arrivati in fondo all'elenco che si
 conosceva, i capitoli nuovi li porta il controllo delle serie seguite, solo

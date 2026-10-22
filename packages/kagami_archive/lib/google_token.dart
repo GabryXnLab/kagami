@@ -47,7 +47,7 @@ Future<Map<String, Object?>> requestGoogleToken(Map<String, String> form, {Uri? 
     request.headers.contentType = ContentType('application', 'x-www-form-urlencoded', charset: 'utf-8');
     request.write(Uri(queryParameters: form).query);
     final response = await request.close().timeout(const Duration(seconds: 30));
-    final body = await utf8.decodeStream(response);
+    final body = await utf8.decodeStream(response).timeout(const Duration(seconds: 30));
     final json = jsonDecode(body);
     if (json is! Map<String, Object?>) throw const DriveException('Risposta di Google non valida');
     if (response.statusCode == HttpStatus.ok && json['access_token'] is String) return json;

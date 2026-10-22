@@ -104,12 +104,13 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   final ImageTools images = vips ? VipsImageTools(paths.scratch) : const NoImageTools();
   final chromium = await HeadlessBrowser.find();
   final browser = chromium == null ? null : HeadlessBrowser(chromium, paths.browser, log: out);
+  final spaces = <String, ServerSpace>{};
   final accounts = applied == null
       ? null
       : Accounts(
           paths.users,
           owner: applied.owner,
-          open: (email) => ServerSpace.open(
+          open: (email) async => spaces[email] = await ServerSpace.open(
             paths.user(email),
             applied.client,
             images: images,
@@ -144,12 +145,29 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
 
   final serving = server.listen((request) => unawaited(api.handle(request)));
 
+  // L'ultima difesa contro un'attesa senza fine: il server è rimasto fermo
+  // una settimana su un lavoro, senza errori, finché qualcuno non l'ha
+  // guardato. Il processo esce e Docker lo riaccende (`--restart`); coda,
+  // stato e tavole già scaricate sono sul disco, e il lavoro riprende da lì.
+  final watchdog = Timer.periodic(const Duration(minutes: 5), (timer) async {
+    for (final MapEntry(key: email, value: space) in spaces.entries) {
+      final why = space.worker.stuck(run: const Duration(hours: 1), check: const Duration(hours: 4));
+      if (why == null) continue;
+      timer.cancel();
+      out('Bloccato per $email: $why. Il server si riavvia.');
+      // La riga deve arrivare al log di Docker prima che il processo esca.
+      await Future.any([stdout.flush(), Future<void>.delayed(const Duration(seconds: 2))]);
+      exit(75);
+    }
+  });
+
   final stop = Completer<void>();
   final signals = [
     ProcessSignal.sigint.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
     if (!Platform.isWindows) ProcessSignal.sigterm.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
   ];
   await stop.future;
+  watchdog.cancel();
   out('Chiusura: i lavori in corso si fermano e restano in coda.');
   for (final signal in signals) {
     await signal.cancel();

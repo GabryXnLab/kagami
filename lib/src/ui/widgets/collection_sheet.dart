@@ -96,6 +96,52 @@ class _CollectionSheet extends ConsumerWidget {
   }
 }
 
+/// Fa scegliere una raccolta fra quelle che ci sono, «Nessuna raccolta» o
+/// una nuova creata lì per lì, che vale come scelta. [current] è quella
+/// segnata. Restituisce la scelta in un record, perché `null` è anche
+/// «nessuna»; `null` se l'utente chiude senza scegliere.
+Future<(String?,)?> pickCollection(BuildContext context, {required String? current}) {
+  final l10n = context.l10n;
+  return showKagamiSheet<(String?,)>(
+    context,
+    title: l10n.archiveImportCollection,
+    scrollable: true,
+    action: Consumer(
+      builder: (context, ref, _) => TextButton(
+        onPressed: () async {
+          final before = {for (final row in ref.read(collectionsProvider)) row.id};
+          await askForCollection(context, ref);
+          final created = ref.read(collectionsProvider).where((row) => !before.contains(row.id)).firstOrNull;
+          if (created != null && context.mounted) Navigator.of(context).pop((created.id,));
+        },
+        child: Text(l10n.collectionSheetNew),
+      ),
+    ),
+    builder: (context) => Consumer(
+      builder: (context, ref, _) => ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
+        children: [
+          KTile(
+            icon: LucideIcons.circleSlash,
+            title: l10n.archiveImportCollectionNone,
+            trailing: current == null ? const Icon(LucideIcons.check, size: 18) : null,
+            onTap: () => Navigator.of(context).pop((null,)),
+          ),
+          for (final collection in ref.watch(collectionsProvider))
+            KTile(
+              icon: LucideIcons.bookmark,
+              tint: collection.color == null ? null : Color(collection.color!),
+              title: collection.name,
+              trailing: current == collection.id ? const Icon(LucideIcons.check, size: 18) : null,
+              onTap: () => Navigator.of(context).pop((collection.id,)),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
 /// Chiede nome e colore di una raccolta. Con [id] la modifica invece di
 /// crearla.
 Future<void> askForCollection(

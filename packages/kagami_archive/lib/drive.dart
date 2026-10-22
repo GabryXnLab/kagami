@@ -136,6 +136,7 @@ class DriveClient {
     @visibleForTesting Uri Function(String path, Map<String, String> query)?
         endpoint,
     @visibleForTesting this.stall = const Duration(seconds: 20),
+    @visibleForTesting this.answer = const Duration(seconds: 20),
     @visibleForTesting this.multipartLimit = 5 * 1024 * 1024,
   })  : _endpoint = endpoint ?? _drive,
         _http = HttpClient() {
@@ -156,6 +157,10 @@ class DriveClient {
 
   /// Quanto silenzio di una connessione aperta vale un'interruzione.
   final Duration stall;
+
+  /// Quanto si aspetta la risposta a una richiesta già mandata, e il posto
+  /// libero per mandarla.
+  final Duration answer;
 
   /// Fin qui un file sale in una richiesta sola: è la misura che Google
   /// indica per il caricamento multipart.
@@ -255,11 +260,18 @@ class DriveClient {
     // che era arrivato deve essere già sul disco, perché è da lì che il
     // prossimo tentativo riparte. Un `IOSink` che riceve un errore può
     // chiudersi buttando ciò che aveva ancora in mano.
-    final file = await target.open(
-      mode: response.statusCode == HttpStatus.partialContent
-          ? FileMode.append
-          : FileMode.write,
-    );
+    final RandomAccessFile file;
+    try {
+      file = await target.open(
+        mode: response.statusCode == HttpStatus.partialContent
+            ? FileMode.append
+            : FileMode.write,
+      );
+    } on Object {
+      // La risposta non letta terrebbe la connessione: vedere [_abandon].
+      unawaited(response.detachSocket().then((socket) => socket.destroy(), onError: (Object _) {}));
+      rethrow;
+    }
     // I pezzi della rete sono di pochi kilobyte, e ognuno scritto da solo è
     // un giro sul thread dell'interfaccia: con tre tavole in arrivo sono
     // centinaia al secondo, e si vedono come scatti nello scorrimento. Si
@@ -303,6 +315,18 @@ class DriveClient {
   Future<HttpClientResponse> _get(Uri uri, {int from = 0}) =>
       _send('GET', uri, from: from);
 
+  /// L'attesa per una richiesta col suo corpo: [answer], più il tempo di
+  /// mandare i byte a 32 KB/s. Un caricamento grande su una rete lenta non è
+  /// una connessione ferma.
+  Duration _sending(int length) => answer + Duration(milliseconds: max(0, length) ~/ 32);
+
+  static void _abandon(HttpClientRequest request) {
+    // Senza chi la ascolta, la risposta interrotta sarebbe un errore non
+    // gestito, e sul server un errore non gestito chiude il processo.
+    request.done.ignore();
+    request.abort();
+  }
+
   /// Una richiesta a Drive, con tutto quello che serve a farla riuscire:
   /// token rinnovato, attese quando Drive rallenta, rete che manca.
   ///
@@ -335,29 +359,50 @@ class DriveClient {
       }
       refresh = false;
       final HttpClientResponse response;
+      HttpClientRequest? request;
       try {
-        final request = await _http.openUrl(method, uri);
+        // Le connessioni per host sono poche: una richiesta che aspetta il
+        // suo posto non dà errore, aspetta. Il posto che arriva dopo la
+        // scadenza va restituito subito, o resta preso.
+        final opening = _http.openUrl(method, uri);
+        request = await opening.timeout(answer, onTimeout: () {
+          unawaited(opening.then(_abandon, onError: (Object _) {}));
+          throw TimeoutException('Nessuna connessione libera', answer);
+        });
         request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
         if (from > 0) request.headers.set(HttpHeaders.rangeHeader, 'bytes=$from-');
         headers.forEach(request.headers.set);
         if (write != null) {
-          await write(request);
+          // Chi scrive mette la lunghezza prima di cominciare: la si legge
+          // dopo averlo avviato.
+          final writing = write(request);
+          await writing.timeout(_sending(request.contentLength));
         } else if (method != 'GET') {
           request.contentLength = 0;
         }
-        response = await request.close().timeout(const Duration(seconds: 20));
-      } on SocketException {
-        network.failed();
-        throw const DriveOffline();
-      } on HandshakeException {
-        network.failed();
-        throw const DriveOffline();
-      } on HttpException {
-        network.failed();
-        throw const DriveOffline('La connessione si è interrotta');
-      } on TimeoutException {
-        network.failed();
-        throw const DriveOffline('La rete è troppo lenta');
+        response = await request.close().timeout(_sending(request.contentLength));
+      } on Object catch (error) {
+        // Una richiesta lasciata a metà tiene la sua connessione finché la
+        // risposta non arriva e qualcuno non la legge: cioè per sempre. Otto
+        // così, e il client non mandava più niente.
+        if (request != null) _abandon(request);
+        if (error is SocketException) {
+          network.failed();
+          throw const DriveOffline();
+        }
+        if (error is HandshakeException) {
+          network.failed();
+          throw const DriveOffline();
+        }
+        if (error is HttpException) {
+          network.failed();
+          throw const DriveOffline('La connessione si è interrotta');
+        }
+        if (error is TimeoutException) {
+          network.failed();
+          throw const DriveOffline('La rete è troppo lenta');
+        }
+        rethrow;
       }
       final status = response.statusCode;
       if (status == HttpStatus.ok ||
@@ -366,7 +411,7 @@ class DriveClient {
         network.succeeded();
         return response;
       }
-      final body = await utf8.decodeStream(response).catchError((_) => '');
+      final body = await utf8.decodeStream(_watch(response)).catchError((_) => '');
       if (status == HttpStatus.unauthorized && !refreshed) {
         refreshed = true;
         refresh = true;
@@ -487,7 +532,7 @@ class DriveClient {
       headers: {'X-Upload-Content-Length': '$length'},
       write: _jsonBody(metadata),
     );
-    await session.drain<void>();
+    await _watch(session).drain<void>();
     final location = session.headers.value(HttpHeaders.locationHeader);
     if (location == null) {
       throw const DriveException('Drive non ha aperto il caricamento');

@@ -1,0 +1,12 @@
+build/
+.dart_tool/
+**/.dart_tool/
+**/build/
+*.g.dart
+lib/l10n/app_localizations*.dart
+pubspec.lock
+**/pubspec.lock
+.idea/
+docs/readme/
+fonts/
+android/.gradle/

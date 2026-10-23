@@ -473,4 +473,18 @@ void main() {
     await later.loadLibrary();
     expect(await later.withdrawnChapters(entry), isEmpty);
   });
+
+  test("l'app aperta vede i capitoli tolti dal lavoro ad app chiusa", () async {
+    final app = repository();
+    final entry = (await app.loadLibrary()).series.single;
+    const path = 'chapters/0001 - Primo [C1]';
+    expect(await app.withdrawnChapters(entry), isEmpty);
+
+    // La pulizia automatica, in un altro motore, ha un suo repository.
+    final worker = repository();
+    await worker.withdrawPaths(entry.path, [path], client);
+    expect(client.calls, contains('trash:C1'));
+
+    expect(await app.withdrawnChapters(entry), {path});
+  });
 }

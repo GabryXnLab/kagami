@@ -26,6 +26,14 @@ void main() {
 
   tearDown(() => db.close());
 
+  test("l'ultima lettura di ogni serie ignora le date stimate", () async {
+    await repository.markChapters('a', ['1'], true, at: DateTime.utc(2026, 1, 1));
+    await repository.markChapters('a', ['2'], true, at: DateTime.utc(2026, 3, 1));
+    await repository.markChapters('a', ['3'], true, at: DateTime.utc(2026, 5, 1), estimated: true);
+    await repository.markChapters('b', ['1'], true, at: DateTime.utc(2026, 2, 1), estimated: true);
+    expect(await repository.lastReads(), {'a': DateTime.utc(2026, 3, 1)});
+  });
+
   test('stato, capitoli letti e posizione tornano indietro interi', () async {
     const key = 'mangak:S1';
     await repository.saveSeriesState(

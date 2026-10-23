@@ -20,6 +20,7 @@ lib/
     data/network.dart          se c'è rete e quando torna (+ NetworkWatcher.kt)
     data/downloads.dart        da Drive alla cartella: il pulsante «Scarica»
     data/cleanup.dart          capitoli letti da togliere dal telefono: cosa e quanto
+    data/auto_cleanup.dart     pulizia automatica: regole, piano su disco, giro (+ AutoCleanupWorker.kt)
     data/series_removal.dart   togliere una serie: telefono, Drive nel cestino, coda, serie seguite
     data/site_switch.dart      cambiare provider: la serie fra i risultati per titolo, i capitoli per numero
     data/read_ahead.dart       scaricare man mano: quali capitoli mancano davanti al lettore
@@ -112,6 +113,7 @@ test/library_merge_test.dart   unione delle sorgenti, capitoli presenti, cache
 test/drive_library_test.dart   Drive finto in memoria: richieste, percorsi, download, offline
 test/drive_client_test.dart    client contro un server locale: ripresa, blocchi, offline
 test/network_test.dart         monitor della rete e fasce che tornano da sole
+test/auto_cleanup_test.dart    pulizia automatica: scadenze del piano e giro su una cartella vera
 test/arrivals_test.dart        pallino dei capitoli nuovi, notifiche, silenzio nel backup
 test/folder_sync_test.dart     piano della sincronizzazione e giri contro un Drive finto
 test/tag_tint_test.dart        il colore di un'etichetta dipende solo dal suo testo

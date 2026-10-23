@@ -152,6 +152,13 @@ class SeriesSignals {
 
   bool get isNew => newChapters > 0;
 
+  /// I capitoli che aspettano dopo dove l'utente è arrivato: per una serie
+  /// cominciata gli archiviati non letti, per una scheda quelli usciti sul
+  /// sito dopo l'ultima apertura. Una serie mai cominciata non ne ha: appena
+  /// scaricata è tutta da iniziare, non un aggiornamento.
+  int get pendingChapters =>
+      isCard ? newChapters : (isStarted ? unreadCount : 0);
+
   /// Data con cui ordinare per "aggiornamento recente".
   DateTime get freshness =>
       entry.latestChapterArchivedAt ?? entry.archivedAt ?? _never;
@@ -164,6 +171,65 @@ class SeriesSignals {
   /// ricerca e nei filtri la distinzione non serve a nessuno.
   Iterable<String> get people => entry.authors.followedBy(entry.artists);
 }
+
+/// Quante serie mostrano gli «Aggiornamenti» della home prima di «Altro», e
+/// quanti capitoli in attesa al massimo può avere una serie per entrarci: chi
+/// è al capitolo 10 di 100 ha una serie da leggere, non un aggiornamento.
+class HomeUpdatesSettings {
+  const HomeUpdatesSettings({
+    this.shown = defaultShown,
+    this.maxPending = defaultMaxPending,
+  });
+
+  factory HomeUpdatesSettings.fromJson(Map<String, Object?> json) =>
+      HomeUpdatesSettings(
+        shown: switch (json['shown']) {
+          final int value when value > 0 => value,
+          _ => defaultShown,
+        },
+        maxPending: switch (json['maxPending']) {
+          final int value when value > 0 => value,
+          _ => defaultMaxPending,
+        },
+      );
+
+  static const int defaultShown = 5;
+  static const int defaultMaxPending = 10;
+
+  final int shown;
+  final int maxPending;
+
+  HomeUpdatesSettings copyWith({int? shown, int? maxPending}) =>
+      HomeUpdatesSettings(
+        shown: shown ?? this.shown,
+        maxPending: maxPending ?? this.maxPending,
+      );
+
+  Map<String, Object?> toJson() => {'shown': shown, 'maxPending': maxPending};
+
+  @override
+  bool operator ==(Object other) =>
+      other is HomeUpdatesSettings &&
+      other.shown == shown &&
+      other.maxPending == maxPending;
+
+  @override
+  int get hashCode => Object.hash(shown, maxPending);
+}
+
+/// Le serie degli «Aggiornamenti», le più fresche prima: tutte, il taglio a
+/// [HomeUpdatesSettings.shown] lo fa la home.
+List<SeriesSignals> homeUpdates(
+  Iterable<SeriesSignals> all,
+  HomeUpdatesSettings settings,
+) =>
+    all.where((signals) {
+      final pending = signals.pendingChapters;
+      return pending > 0 &&
+          pending <= settings.maxPending &&
+          (signals.isCard || signals.entry.latestChapterArchivedAt != null);
+    }).toList()
+      ..sort((a, b) => b.freshness.compareTo(a.freshness));
 
 enum LibrarySort {
   updated,
@@ -596,13 +662,20 @@ class LibraryFacets {
     required this.genres,
     required this.tags,
     required this.authors,
+    this.types = const [],
+    this.providers = const [],
   });
 
   factory LibraryFacets.of(Iterable<SeriesEntry> series) {
     final genres = <String>{};
     final tags = <String>{};
     final authors = <String>{};
+    final types = <String>{};
+    final providers = <String>{};
     for (final entry in series) {
+      final type = entry.type?.trim();
+      if (type != null && type.isNotEmpty) types.add(type.toLowerCase());
+      if (entry.provider.isNotEmpty) providers.add(entry.provider);
       genres.addAll(entry.genres);
       tags.addAll(entry.tags);
       authors
@@ -615,10 +688,86 @@ class LibraryFacets {
       genres: sorted(genres),
       tags: sorted(tags),
       authors: sorted(authors),
+      types: sorted(types),
+      providers: sorted(providers),
     );
   }
 
   final List<String> genres;
   final List<String> tags;
   final List<String> authors;
+
+  /// I `type` presenti, in minuscolo come li confronta `collectionRulesMatch`.
+  final List<String> types;
+  final List<String> providers;
+}
+
+bool _hasAny(Set<String> wanted, String? value) =>
+    value != null && wanted.any((w) => w.toLowerCase() == value.toLowerCase());
+
+/// Se la serie soddisfa le regole di una raccolta. Regole vuote non
+/// combaciano con niente: senza criteri la raccolta non pesca.
+bool collectionRulesMatch(CollectionRules rules, SeriesSignals s) {
+  if (rules.isEmpty) return false;
+  final entry = s.entry;
+  if (rules.types.isNotEmpty && !_hasAny(rules.types, entry.type)) return false;
+  if (rules.tags.isNotEmpty) {
+    final have = {
+      for (final t in [...entry.genres, ...entry.tags]) t.toLowerCase(),
+    };
+    if (!rules.tags.every((t) => have.contains(t.toLowerCase()))) return false;
+  }
+  if (rules.shelf.isNotEmpty && !rules.shelf.contains(s.state.status)) {
+    return false;
+  }
+  if (rules.release.isNotEmpty &&
+      !rules.release.contains(entry.releaseStatus)) {
+    return false;
+  }
+  if (rules.providers.isNotEmpty && !_hasAny(rules.providers, entry.provider)) {
+    return false;
+  }
+  if (rules.favorite && !s.state.favorite) return false;
+  final min = rules.minRating;
+  if (min != null && (s.state.rating ?? 0) < min) return false;
+  return true;
+}
+
+/// Aggiunge a [c] le serie che le sue regole scelgono e toglie quelle che
+/// aveva messo lei e non combaciano più. Restituisce [c] stessa se non cambia
+/// niente, per non pubblicare a vuoto.
+///
+/// Una serie assente da [library] non è «non combacia»: una lettura fallita
+/// o Drive non raggiunto non devono svuotare la raccolta. Le manuali non si
+/// toccano, le [Collection.skipped] non rientrano.
+Collection syncAutoMembers(Collection c, Iterable<SeriesSignals> library) {
+  final present = <String>{};
+  final matching = <SeriesSignals>[];
+  for (final s in library) {
+    present.add(s.entry.key);
+    if (!c.skipped.contains(s.entry.key) &&
+        collectionRulesMatch(c.rules, s)) {
+      matching.add(s);
+    }
+  }
+  final matchKeys = {for (final s in matching) s.entry.key};
+  final drop = {
+    for (final key in c.autoKeys)
+      if (present.contains(key) && !matchKeys.contains(key)) key,
+  };
+  final have = c.seriesKeys.toSet();
+  final add = (matching.where((s) => !have.contains(s.entry.key)).toList()
+        ..sort((a, b) =>
+            a.entry.title.toLowerCase().compareTo(b.entry.title.toLowerCase())))
+      .map((s) => s.entry.key)
+      .toList();
+  if (drop.isEmpty && add.isEmpty) return c;
+  return c.copyWith(
+    seriesKeys: [
+      for (final key in c.seriesKeys)
+        if (!drop.contains(key)) key,
+      ...add,
+    ],
+    autoKeys: {...c.autoKeys.where((k) => !drop.contains(k)), ...add},
+  );
 }

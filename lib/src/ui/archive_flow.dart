@@ -273,7 +273,10 @@ Future<bool> enqueueArchive(
   final destination = choice.where.local;
   if (destination == null) {
     final sent = await _sendToServer(context, ref, inspected, choice);
-    if (sent) await _addToCollection(ref, inspected.series.key, choice.collection);
+    if (sent) {
+      await _addToCollection(ref, inspected.series.key, choice.collection);
+      await _markBeforeAhead(ref, inspected.series, choice);
+    }
     return sent;
   }
   final messenger = ScaffoldMessenger.of(context);
@@ -281,6 +284,7 @@ Future<bool> enqueueArchive(
   if (target == null) return false;
   await queueArchiveJob(ref, inspected, choice, target);
   await _addToCollection(ref, inspected.series.key, choice.collection);
+  await _markBeforeAhead(ref, inspected.series, choice);
   final l10n = currentL10n();
   // Un lavoro senza capitoli è una scheda anche quando non porta uno stato
   // da scrivere: è l'aggiornamento di una già in libreria.
@@ -291,6 +295,22 @@ Future<bool> enqueueArchive(
         : l10n.archiveQueuedSnack(inspected.series.title)),
   ));
   return true;
+}
+
+/// «Man mano» da un capitolo d'inizio: chi comincia da lì ha già letto i
+/// precedenti, che si segnano letti come stimati ([chapterBeforeAhead]).
+Future<void> _markBeforeAhead(WidgetRef ref, Series series, ArchiveChoice choice) async {
+  final ids = choice.ids;
+  if (choice.ahead == null || ids == null || ids.isEmpty) return;
+  final state = ref.read(seriesStateProvider(series.key));
+  final before = chapterBeforeAhead(
+    series.chapters,
+    ids,
+    read: state.readChapters,
+    reachedNumber: state.reachedChapter,
+  );
+  if (before == null) return;
+  await ref.read(readingProvider.notifier).setReachedThrough(series.key, chapterEntriesOf(series), before.id);
 }
 
 Future<void> _addToCollection(WidgetRef ref, String key, String? collection) async {

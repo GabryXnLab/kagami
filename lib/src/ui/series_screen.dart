@@ -17,6 +17,7 @@ import 'package:kagami_archive/manual.dart' show manualProvider, normalizeLink;
 import 'package:kagami_archive/providers.dart' as site;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../data/auto_cleanup.dart' show shouldOfferCleanup;
 import '../data/cleanup.dart';
 import '../data/downloads.dart';
 import '../data/library.dart';
@@ -37,6 +38,7 @@ import 'widgets/cleanup_sheet.dart';
 import 'widgets/collection_sheet.dart';
 import 'widgets/kit.dart';
 import 'widgets/origin.dart';
+import 'widgets/rating_sheet.dart';
 import 'widgets/reached_sheet.dart';
 import 'widgets/remove_sheet.dart';
 import 'widgets/series_cover.dart';
@@ -104,9 +106,6 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
 
   bool _touched = false;
 
-  /// «Ignora» sull'invito a votare: vale finché questa scheda resta aperta.
-  bool _ratingInviteDismissed = false;
-
   /// La serie letta dal sito, una volta per apertura della scheda: ogni
   /// capitolo da scaricare passa da qui, e rileggere la pagina a ogni tocco
   /// sarebbe una richiesta (e, su certi siti, una verifica) per capitolo.
@@ -143,12 +142,24 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     if (!mounted) return;
     ref.read(readingProvider.notifier).touch(widget.seriesKey);
     ref.read(arrivalsProvider.notifier).acknowledge(widget.seriesKey);
-    _offerCleanup();
+    _offerSheets();
   }
 
-  /// Aprendo la scheda, se dei capitoli già letti occupano ancora spazio sul
-  /// telefono, propone di toglierli — finché l'utente non dice di smettere.
+  /// Aprendo la scheda: prima la proposta di liberare spazio, poi, alla sua
+  /// chiusura, l'invito a votare. Mai insieme, un foglio sopra l'altro; e
+  /// prima la pulizia perché è quella che ha qualcosa da fare subito.
+  Future<void> _offerSheets() async {
+    await _offerCleanup();
+    await _offerRating();
+  }
+
+  /// Se dei capitoli già letti occupano ancora spazio sul telefono, propone
+  /// di toglierli — finché l'utente non dice di smettere, e non dove la
+  /// pulizia automatica li toglie già.
   Future<void> _offerCleanup() async {
+    final auto = await ref.read(autoCleanupSettingsProvider.future);
+    final excluded = ref.read(readingProvider).value?.traitsOf(widget.seriesKey).keepChapters ?? false;
+    if (!shouldOfferCleanup(autoRead: auto.read, excluded: excluded) || !mounted) return;
     final quiet = await ref.read(cleanupQuietProvider.future);
     if (quiet.contains(widget.seriesKey) || !mounted) return;
     final leftovers =
@@ -157,6 +168,20 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     // Chi è già entrato nel lettore nel frattempo non va interrotto.
     if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
     await offerCleanup(context, ref, widget.seriesKey, leftovers, asked: true);
+  }
+
+  /// Una serie senza voto, con l'invito acceso, propone di votarla.
+  Future<void> _offerRating() async {
+    final invite = await ref.read(ratingInviteProvider.future);
+    if (!invite || !mounted) return;
+    if (ref.read(readingProvider).value?.traitsOf(widget.seriesKey).noRatingInvite ?? false) return;
+    if (ref.read(seriesSignalsProvider(widget.seriesKey))?.state.rating != null) return;
+    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
+    await offerRating(
+      context,
+      ref,
+      onRate: () => _Shelf._rate(context, ref, widget.seriesKey, null),
+    );
   }
 
   @override
@@ -222,7 +247,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                     child: offerStart
                         ? _StartDownload(
                             busy: _siteBusy,
-                            onStart: () => _startDownload(siteSource),
+                            onStart: () => _startDownload(siteSource, ArchiveMode.ahead),
                           )
                         : _Resume(
                             signals: signals,
@@ -259,19 +284,6 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _Shelf(signals: signals),
-                        _RatingInvite(
-                          visible: signals.state.rating == null &&
-                              _selected.isEmpty &&
-                              !_ratingInviteDismissed,
-                          onRate: () => _Shelf._rate(
-                            context,
-                            ref,
-                            widget.seriesKey,
-                            null,
-                          ),
-                          onIgnore: () =>
-                              setState(() => _ratingInviteDismissed = true),
-                        ),
                       ],
                     ),
                   ),
@@ -723,9 +735,10 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     }
   }
 
-  /// «Inizia a scaricare» e «Scarica altri capitoli»: la pagina in cui si
-  /// sceglie, aperta su «Dal capitolo».
-  Future<void> _startDownload(String source) async {
+  /// «Inizia a scaricare» (una scheda, aperta su «Man mano» dal primo da
+  /// leggere) e «Scarica altri capitoli» (su «Dal capitolo»): la pagina in
+  /// cui si sceglie.
+  Future<void> _startDownload(String source, [ArchiveMode mode = ArchiveMode.from]) async {
     if (_siteBusy) return;
     setState(() => _siteBusy = true);
     try {
@@ -736,7 +749,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
         ref,
         inspected,
         where: _where(),
-        mode: ArchiveMode.from,
+        mode: mode,
       );
       if (choice == null || !mounted) return;
       await enqueueArchive(context, ref, inspected, choice);
@@ -1653,93 +1666,6 @@ class _Shelf extends ConsumerWidget {
     controller.dispose();
     if (saved == null) return;
     await ref.read(readingProvider.notifier).setNotes(key, saved);
-  }
-}
-
-/// L'invito a votare, in linea sotto il ripiano: una card e non un foglio,
-/// perché aprendo la scheda può già comparire quello di «Libera spazio».
-class _RatingInvite extends ConsumerWidget {
-  const _RatingInvite({
-    required this.visible,
-    required this.onRate,
-    required this.onIgnore,
-  });
-
-  final bool visible;
-  final VoidCallback onRate;
-  final VoidCallback onIgnore;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final show = visible && (ref.watch(ratingInviteProvider).value ?? false);
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
-      alignment: Alignment.topCenter,
-      child: !show
-          ? const SizedBox(width: double.infinity)
-          : Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: KCard(
-                color: context.colors.surfaceContainerHigh,
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          LucideIcons.star,
-                          size: 18,
-                          color: context.colors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            l10n.seriesRatingInviteTitle,
-                            style: KagamiType.body(14),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      l10n.seriesRatingInviteBody,
-                      style: KagamiType.body(13).copyWith(
-                        color: context.colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        KButton(
-                          label: l10n.seriesRatingInviteRate,
-                          height: 42,
-                          onPressed: onRate,
-                        ),
-                        const SizedBox(width: 8),
-                        KGhostButton(
-                          label: l10n.seriesRatingInviteIgnore,
-                          height: 42,
-                          onPressed: onIgnore,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: TextButton(
-                        onPressed: () =>
-                            ref.read(ratingInviteProvider.notifier).set(false),
-                        child: Text(l10n.seriesRatingInviteNever),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-    );
   }
 }
 

@@ -15,6 +15,7 @@ class MainActivity : FlutterActivity() {
     private var network: NetworkWatcher? = null
     private var arrivals: ArrivalNotifier? = null
     private var sync: FolderSyncScheduler? = null
+    private var cleanup: AutoCleanupScheduler? = null
     private var archiveImages: ArchiveImages? = null
     private var pageBrowser: PageBrowser? = null
     private var archive: ArchiveScheduler? = null
@@ -27,6 +28,7 @@ class MainActivity : FlutterActivity() {
         arrivals = ArrivalNotifier(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
             .also { it.launchedBy(intent) }
         sync = FolderSyncScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
+        cleanup = AutoCleanupScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         archiveImages = ArchiveImages(flutterEngine.dartExecutor.binaryMessenger)
         pageBrowser = PageBrowser(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
         archive = ArchiveScheduler(flutterEngine.dartExecutor.binaryMessenger, applicationContext)
@@ -83,6 +85,8 @@ class MainActivity : FlutterActivity() {
         arrivals = null
         sync?.dispose()
         sync = null
+        cleanup?.dispose()
+        cleanup = null
         archiveImages?.dispose()
         archiveImages = null
         pageBrowser?.dispose()

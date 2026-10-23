@@ -4102,10 +4102,10 @@ abstract class AppLocalizations {
   /// **'Aggiornamenti'**
   String get homeUpdates;
 
-  /// Home: sottotitolo dell'elenco degli aggiornamenti
+  /// Home: sottotitolo dell'elenco degli aggiornamenti, le serie cominciate con capitoli nuovi dopo l'ultimo letto
   ///
   /// In it, this message translates to:
-  /// **'Capitoli sincronizzati e non ancora letti'**
+  /// **'Capitoli nuovi dopo l\'ultimo letto'**
   String get homeUpdatesSubtitle;
 
   /// Home: ultimo capitolo arrivato di una serie, abbreviato; {number} è il numero del capitolo
@@ -6126,6 +6126,234 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'{count, plural, =1{capitoli nuovi per una serie} other{capitoli nuovi per {count} serie}}'**
   String archiveCheckQueuedCount(int count);
+
+  /// Titolo della sezione nelle impostazioni della libreria con le due regole che tolgono da sole i capitoli dal telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Pulizia automatica'**
+  String get settingsAutoCleanup;
+
+  /// Interruttore: toglie da solo dal telefono i capitoli già letti
+  ///
+  /// In it, this message translates to:
+  /// **'Togli i capitoli letti'**
+  String get settingsAutoCleanupRead;
+
+  /// Sottotitolo dell'interruttore dei capitoli letti: dove li toglie, e che lo stato di lettura resta
+  ///
+  /// In it, this message translates to:
+  /// **'Dal telefono e da Drive, nel cestino, da soli. Dove si è arrivati e i capitoli letti restano'**
+  String get settingsAutoCleanupReadNote;
+
+  /// Interruttore: toglie dal telefono anche i capitoli da leggere delle serie che non si leggono da un po'
+  ///
+  /// In it, this message translates to:
+  /// **'Togli i capitoli delle serie lasciate'**
+  String get settingsAutoCleanupIdle;
+
+  /// Sottotitolo dell'interruttore delle serie lasciate; {count} è il numero di giorni scelto
+  ///
+  /// In it, this message translates to:
+  /// **'Anche quelli da leggere, quando una serie non si legge da {count, plural, =1{1 giorno} other{{count} giorni}}'**
+  String settingsAutoCleanupIdleNote(int count);
+
+  /// Interruttore: mette in pausa le serie in lettura che non si leggono da un po'; usa lo stesso tempo della regola delle serie lasciate
+  ///
+  /// In it, this message translates to:
+  /// **'Metti in pausa le serie lasciate'**
+  String get settingsAutoCleanupPause;
+
+  /// Sottotitolo dell'interruttore della pausa automatica; {count} è il numero di giorni scelto
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie «in lettura» passano a «in pausa» quando non si leggono da {count, plural, =1{1 giorno} other{{count} giorni}}'**
+  String settingsAutoCleanupPauseNote(int count);
+
+  /// Riga che apre la scelta di quanti giorni senza letture rendono una serie lasciata; a destra il valore
+  ///
+  /// In it, this message translates to:
+  /// **'Senza letture da'**
+  String get settingsAutoCleanupIdleAfter;
+
+  /// Un numero di giorni, nella scelta del tempo e come valore della riga
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 giorno} other{{count} giorni}}'**
+  String settingsAutoCleanupDays(int count);
+
+  /// Avviso dopo aver acceso una regola della pulizia automatica, se l'utente non dà il permesso di scrivere su Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Senza il permesso di scrivere su Drive, i capitoli si tolgono solo dal telefono'**
+  String get settingsAutoCleanupPhoneOnly;
+
+  /// Home: pulsante sotto gli aggiornamenti che mostra tutte le serie; {count} è quante sono nascoste
+  ///
+  /// In it, this message translates to:
+  /// **'Altro ({count})'**
+  String homeUpdatesMore(int count);
+
+  /// Home: pulsante sotto gli aggiornamenti aperti che torna a mostrarne solo le prime
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra meno'**
+  String get homeUpdatesLess;
+
+  /// Impostazioni → Libreria: titolo della sezione sugli aggiornamenti della home
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiornamenti in home'**
+  String get settingsHomeUpdates;
+
+  /// Impostazioni → Libreria: riga per scegliere quante serie mostrano gli aggiornamenti della home prima di «Altro»
+  ///
+  /// In it, this message translates to:
+  /// **'Serie mostrate'**
+  String get settingsHomeUpdatesShown;
+
+  /// Impostazioni → Libreria: spiegazione sotto «Serie mostrate»
+  ///
+  /// In it, this message translates to:
+  /// **'Le altre compaiono toccando «Altro»'**
+  String get settingsHomeUpdatesShownNote;
+
+  /// Un numero di serie, nella scelta di quante mostrarne e come valore della riga
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 serie} other{{count} serie}}'**
+  String settingsHomeUpdatesSeries(int count);
+
+  /// Impostazioni → Libreria: riga per scegliere quanti capitoli da leggere al massimo può avere una serie per entrare negli aggiornamenti della home
+  ///
+  /// In it, this message translates to:
+  /// **'Capitoli nuovi al massimo'**
+  String get settingsHomeUpdatesMaxPending;
+
+  /// Impostazioni → Libreria: spiegazione sotto «Capitoli nuovi al massimo»
+  ///
+  /// In it, this message translates to:
+  /// **'Una serie con più capitoli da leggere dopo l\'ultimo letto non è un aggiornamento'**
+  String get settingsHomeUpdatesMaxPendingNote;
+
+  /// Un numero di capitoli, nella scelta del massimo e come valore della riga
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo} other{{count} capitoli}}'**
+  String settingsHomeUpdatesChapters(int count);
+
+  /// Titolo del foglio delle proprietà di una raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Proprietà della raccolta'**
+  String get collectionPropsTitle;
+
+  /// Voce che apre le proprietà di una raccolta (menu della raccolta e foglio di creazione)
+  ///
+  /// In it, this message translates to:
+  /// **'Proprietà'**
+  String get collectionPropsEntry;
+
+  /// Descrizione dell'icona sulla riga di una raccolta che ha regole o caratteristiche attive
+  ///
+  /// In it, this message translates to:
+  /// **'Ha proprietà attive'**
+  String get collectionsHasProps;
+
+  /// Titolo della sezione delle regole di aggiunta automatica, nel foglio delle proprietà
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiunta automatica'**
+  String get collectionPropsAutoTitle;
+
+  /// Nota sotto il titolo dell'aggiunta automatica
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie che combaciano con tutte le regole entrano da sole. Se ne togli una a mano, non rientra.'**
+  String get collectionPropsAutoNote;
+
+  /// Gruppo di scelta: tipo della serie (manga, manhwa...)
+  ///
+  /// In it, this message translates to:
+  /// **'Tipo'**
+  String get collectionPropsTypes;
+
+  /// Gruppo di scelta: generi e tag che la serie deve avere tutti
+  ///
+  /// In it, this message translates to:
+  /// **'Generi e tag (devono esserci tutti)'**
+  String get collectionPropsTags;
+
+  /// Segnaposto della ricerca fra i tag
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca un tag'**
+  String get collectionPropsTagSearch;
+
+  /// Gruppo di scelta: stato di lettura della serie
+  ///
+  /// In it, this message translates to:
+  /// **'Stato di lettura'**
+  String get collectionPropsShelf;
+
+  /// Gruppo di scelta: stato di pubblicazione
+  ///
+  /// In it, this message translates to:
+  /// **'Pubblicazione'**
+  String get collectionPropsRelease;
+
+  /// Gruppo di scelta: sito di provenienza
+  ///
+  /// In it, this message translates to:
+  /// **'Sito'**
+  String get collectionPropsProviders;
+
+  /// Gruppo di scelta: voto minimo
+  ///
+  /// In it, this message translates to:
+  /// **'Voto minimo'**
+  String get collectionPropsMinRating;
+
+  /// Interruttore: solo serie preferite
+  ///
+  /// In it, this message translates to:
+  /// **'Solo preferiti'**
+  String get collectionPropsFavorite;
+
+  /// Titolo della sezione delle caratteristiche che valgono per tutte le serie della raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Per tutte le serie della raccolta'**
+  String get collectionPropsTraitsTitle;
+
+  /// Interruttore: niente notifiche né novità
+  ///
+  /// In it, this message translates to:
+  /// **'Silenzia le novità'**
+  String get collectionPropsMuted;
+
+  /// Interruttore: la pulizia automatica dei capitoli salta le serie della raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Escludi dalla pulizia automatica'**
+  String get collectionPropsKeepChapters;
+
+  /// Interruttore: la pausa automatica salta le serie della raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Escludi dalla pausa automatica'**
+  String get collectionPropsNoAutoPause;
+
+  /// Interruttore: non chiedere il voto a fine lettura
+  ///
+  /// In it, this message translates to:
+  /// **'Non chiedere il voto'**
+  String get collectionPropsNoRatingInvite;
+
+  /// Pulsante che conferma le proprietà
+  ///
+  /// In it, this message translates to:
+  /// **'Applica'**
+  String get collectionPropsApply;
 }
 
 class _AppLocalizationsDelegate

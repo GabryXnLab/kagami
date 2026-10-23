@@ -195,6 +195,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _repository = ref.read(userRepositoryProvider);
     _settingsStore = ref.read(readerSettingsProvider);
     _reading = ref.read(readingProvider.notifier);
+    AutoCleanup.holding.add(widget.seriesKey);
     _loadSettings();
     _hideSystemBars();
   }
@@ -204,6 +205,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _flushSettings();
     _flushProgress();
     _progressTimer?.cancel();
+    AutoCleanup.holding.remove(widget.seriesKey);
     _reading.commitProgress();
     _closeSession();
     PhoneTiles.instance.stop();

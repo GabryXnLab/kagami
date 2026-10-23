@@ -120,15 +120,32 @@ class UserRepository {
     }
     return [
       for (final row in rows)
-        Collection(
-          id: row.id,
-          name: row.name,
-          seriesKeys: members[row.id] ?? const [],
-          color: row.color,
-          order: row.position,
-          updatedAt: row.updatedAt,
-        ),
+        Collection.fromJson({
+          'id': row.id,
+          'name': row.name,
+          'series': members[row.id] ?? const <String>[],
+          'color': row.color,
+          'order': row.position,
+          'updatedAt': row.updatedAt.toIso8601String(),
+          ..._properties(row.properties),
+        }),
     ];
+  }
+
+  /// Una colonna illeggibile vale una raccolta semplice, non una perdita.
+  static Map<String, Object?> _properties(String? text) {
+    if (text == null || text.isEmpty) return const {};
+    try {
+      final json = jsonDecode(text);
+      return json is Map ? Map<String, Object?>.from(json) : const {};
+    } on FormatException {
+      return const {};
+    }
+  }
+
+  static String? _propertiesText(Collection collection) {
+    final json = collection.propertiesJson();
+    return json.isEmpty ? null : jsonEncode(json);
   }
 
   // ---------------------------------------------------------------- scrittura
@@ -263,6 +280,7 @@ class UserRepository {
                 color: Value(collections[index].color),
                 position: Value(index),
                 updatedAt: collections[index].updatedAt ?? DateTime.now().toUtc(),
+                properties: Value(_propertiesText(collections[index])),
               ),
           ]);
           batch.insertAll(db.collectionItems, [
@@ -526,6 +544,21 @@ class UserRepository {
           readAt: row.readAt,
         ),
     ];
+  }
+
+  /// L'ultimo capitolo finito di ogni serie, senza le date stimate: è
+  /// quando l'utente l'ha letta l'ultima volta.
+  Future<Map<String, DateTime>> lastReads() async {
+    final latest = db.chapterReads.readAt.max();
+    final rows = await (db.selectOnly(db.chapterReads)
+          ..addColumns([db.chapterReads.seriesKey, latest])
+          ..where(db.chapterReads.profileId.equals(profileId) & db.chapterReads.estimated.equals(false))
+          ..groupBy([db.chapterReads.seriesKey]))
+        .get();
+    return {
+      for (final row in rows)
+        if (row.read(latest) case final at?) row.read(db.chapterReads.seriesKey)!: at.toUtc(),
+    };
   }
 
   /// Toglie una riga dalla cronologia. Il capitolo torna da leggere: la

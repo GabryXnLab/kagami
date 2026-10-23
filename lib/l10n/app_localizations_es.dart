@@ -2597,7 +2597,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeUpdates => 'Novedades';
 
   @override
-  String get homeUpdatesSubtitle => 'Capítulos sincronizados y aún sin leer';
+  String get homeUpdatesSubtitle => 'Capítulos nuevos después del último leído';
 
   @override
   String homeLatestChapter(String number) {
@@ -4085,4 +4085,168 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => 'Limpieza automática';
+
+  @override
+  String get settingsAutoCleanupRead => 'Quitar capítulos leídos';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      'Del teléfono y de Drive, a la papelera, automáticamente. El progreso y los capítulos leídos se conservan';
+
+  @override
+  String get settingsAutoCleanupIdle =>
+      'Quitar capítulos de series abandonadas';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return 'También los no leídos, si una serie no se lee desde hace $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPause =>
+      'Poner en pausa las series abandonadas';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return 'Las series «leyendo» pasan a «en pausa» si no se leen desde hace $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => 'Sin lecturas durante';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly =>
+      'Sin permiso para escribir en Drive, los capítulos solo se quitan del teléfono';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return 'Más ($count)';
+  }
+
+  @override
+  String get homeUpdatesLess => 'Mostrar menos';
+
+  @override
+  String get settingsHomeUpdates => 'Novedades en Inicio';
+
+  @override
+  String get settingsHomeUpdatesShown => 'Series mostradas';
+
+  @override
+  String get settingsHomeUpdatesShownNote =>
+      'Las demás aparecen al tocar «Más»';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count series',
+      one: '1 serie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => 'Máximo de capítulos nuevos';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote =>
+      'Una serie con más capítulos por leer después del último leído no es una novedad';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capítulos',
+      one: '1 capítulo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionPropsTitle => 'Propiedades de la colección';
+
+  @override
+  String get collectionPropsEntry => 'Propiedades';
+
+  @override
+  String get collectionsHasProps => 'Tiene propiedades activas';
+
+  @override
+  String get collectionPropsAutoTitle => 'Añadido automático';
+
+  @override
+  String get collectionPropsAutoNote =>
+      'Las series que cumplen todas las reglas entran solas. Si quitas una a mano, no vuelve a entrar.';
+
+  @override
+  String get collectionPropsTypes => 'Tipo';
+
+  @override
+  String get collectionPropsTags => 'Géneros y etiquetas (todos obligatorios)';
+
+  @override
+  String get collectionPropsTagSearch => 'Buscar etiqueta';
+
+  @override
+  String get collectionPropsShelf => 'Estado de lectura';
+
+  @override
+  String get collectionPropsRelease => 'Publicación';
+
+  @override
+  String get collectionPropsProviders => 'Sitio';
+
+  @override
+  String get collectionPropsMinRating => 'Nota mínima';
+
+  @override
+  String get collectionPropsFavorite => 'Solo favoritas';
+
+  @override
+  String get collectionPropsTraitsTitle =>
+      'Para todas las series de la colección';
+
+  @override
+  String get collectionPropsMuted => 'Silenciar novedades';
+
+  @override
+  String get collectionPropsKeepChapters => 'Excluir de la limpieza automática';
+
+  @override
+  String get collectionPropsNoAutoPause => 'Excluir de la pausa automática';
+
+  @override
+  String get collectionPropsNoRatingInvite => 'No pedir la nota';
+
+  @override
+  String get collectionPropsApply => 'Aplicar';
 }

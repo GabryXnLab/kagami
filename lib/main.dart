@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'src/archive/background.dart';
+import 'src/data/auto_cleanup.dart';
 import 'src/data/cloud.dart';
 import 'src/data/folder_sync_schedule.dart';
 import 'src/data/library_location.dart';
@@ -61,6 +62,14 @@ Future<void> folderSyncMain() async {
   // Il giro gira ad app chiusa: senza Sentry anche qui un suo errore non lo
   // vedrebbe nessuno.
   await _withSentry(runScheduledFolderSync);
+}
+
+/// La pulizia automatica dei capitoli, nel lavoro di `AutoCleanupWorker.kt`:
+/// toglie ciò che è scaduto mentre l'app era chiusa.
+@pragma('vm:entry-point')
+Future<void> autoCleanupMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _withSentry(runScheduledAutoCleanup);
 }
 
 /// La coda dei download, nel lavoro in primo piano di `ArchiveWorker.kt`.

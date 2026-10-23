@@ -2506,7 +2506,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeUpdates => '更新';
 
   @override
-  String get homeUpdatesSubtitle => '已同步但还没读的章节';
+  String get homeUpdatesSubtitle => '上次读到之后的新章节';
 
   @override
   String homeLatestChapter(String number) {
@@ -3932,4 +3932,146 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => '自动清理';
+
+  @override
+  String get settingsAutoCleanupRead => '删除已读章节';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      '自动从手机和 Drive（移入回收站）删除。阅读进度和已读记录会保留';
+
+  @override
+  String get settingsAutoCleanupIdle => '删除闲置系列的章节';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '系列 $_temp0未读时，未读章节也一并删除';
+  }
+
+  @override
+  String get settingsAutoCleanupPause => '暂停闲置的系列';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '“在读”的系列 $_temp0未读后会转为“暂停”';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => '闲置期限';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly => '没有写入 Drive 的权限，章节只会从手机删除';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return '更多（$count）';
+  }
+
+  @override
+  String get homeUpdatesLess => '收起';
+
+  @override
+  String get settingsHomeUpdates => '首页的更新';
+
+  @override
+  String get settingsHomeUpdatesShown => '显示的作品数';
+
+  @override
+  String get settingsHomeUpdatesShownNote => '其余的点「更多」后显示';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    return '$count 部作品';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => '新章节上限';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote => '上次读到之后待读章节超过此数的作品不算更新';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    return '$count 章';
+  }
+
+  @override
+  String get collectionPropsTitle => '合集属性';
+
+  @override
+  String get collectionPropsEntry => '属性';
+
+  @override
+  String get collectionsHasProps => '已启用属性';
+
+  @override
+  String get collectionPropsAutoTitle => '自动加入';
+
+  @override
+  String get collectionPropsAutoNote => '符合所有规则的作品会自动加入。手动移除的作品不会再回来。';
+
+  @override
+  String get collectionPropsTypes => '类型';
+
+  @override
+  String get collectionPropsTags => '类型与标签(须全部具备)';
+
+  @override
+  String get collectionPropsTagSearch => '搜索标签';
+
+  @override
+  String get collectionPropsShelf => '阅读状态';
+
+  @override
+  String get collectionPropsRelease => '连载状态';
+
+  @override
+  String get collectionPropsProviders => '站点';
+
+  @override
+  String get collectionPropsMinRating => '最低评分';
+
+  @override
+  String get collectionPropsFavorite => '仅收藏';
+
+  @override
+  String get collectionPropsTraitsTitle => '适用于合集中的所有作品';
+
+  @override
+  String get collectionPropsMuted => '静音更新';
+
+  @override
+  String get collectionPropsKeepChapters => '排除出自动清理';
+
+  @override
+  String get collectionPropsNoAutoPause => '排除出自动暂停';
+
+  @override
+  String get collectionPropsNoRatingInvite => '不询问评分';
+
+  @override
+  String get collectionPropsApply => '应用';
 }

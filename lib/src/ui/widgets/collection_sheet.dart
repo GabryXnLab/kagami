@@ -8,6 +8,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../l10n.dart';
 import '../../providers.dart';
 import '../theme.dart';
+import '../../format/reading.dart';
+import 'collection_properties_sheet.dart';
 import 'kit.dart';
 
 /// Tavolozza delle raccolte: pochi colori scelti, perché servono a
@@ -153,6 +155,8 @@ Future<void> askForCollection(
 }) async {
   final controller = TextEditingController(text: name ?? '');
   var chosen = color ?? collectionColors.first;
+  var rules = const CollectionRules();
+  var traits = const CollectionTraits();
   final confirmed = await showKagamiSheet<bool>(
     context,
     title: id == null
@@ -198,6 +202,26 @@ Future<void> askForCollection(
                   ),
               ],
             ),
+            if (id == null) ...[
+              const SizedBox(height: 14),
+              KTile(
+                icon: LucideIcons.slidersHorizontal,
+                title: context.l10n.collectionPropsEntry,
+                tint: rules.isEmpty && traits.isEmpty ? null : context.colors.primary,
+                trailing: const Icon(LucideIcons.chevronRight, size: 18),
+                onTap: () async {
+                  final picked = await showCollectionProperties(
+                    context,
+                    ref,
+                    rules: rules,
+                    traits: traits,
+                  );
+                  if (picked != null) {
+                    setState(() => (rules, traits) = picked);
+                  }
+                },
+              ),
+            ],
             const SizedBox(height: 24),
             KButton(
               label: id == null
@@ -216,7 +240,7 @@ Future<void> askForCollection(
   if (confirmed != true || text.isEmpty) return;
   final reading = ref.read(readingProvider.notifier);
   if (id == null) {
-    await reading.createCollection(text, color: chosen);
+    await reading.createCollection(text, color: chosen, rules: rules, traits: traits);
   } else {
     await reading.editCollection(id, name: text, color: chosen);
   }

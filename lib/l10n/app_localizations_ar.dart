@@ -2651,7 +2651,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeUpdates => 'التحديثات';
 
   @override
-  String get homeUpdatesSubtitle => 'فصول متزامنة ولم تُقرأ بعد';
+  String get homeUpdatesSubtitle => 'فصول جديدة بعد آخر فصل مقروء';
 
   @override
   String homeLatestChapter(String number) {
@@ -4201,4 +4201,173 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => 'التنظيف التلقائي';
+
+  @override
+  String get settingsAutoCleanupRead => 'حذف الفصول المقروءة';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      'من الهاتف ومن Drive إلى سلة المهملات تلقائيًا. يبقى موضع القراءة والفصول المقروءة';
+
+  @override
+  String get settingsAutoCleanupIdle => 'حذف فصول السلاسل المتروكة';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومين',
+      one: 'يوم واحد',
+    );
+    return 'وغير المقروءة أيضًا، إذا لم تُقرأ السلسلة منذ $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPause => 'إيقاف السلاسل المتروكة مؤقتًا';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومين',
+      one: 'يوم واحد',
+    );
+    return 'تنتقل السلاسل «قيد القراءة» إلى «متوقفة مؤقتًا» إذا لم تُقرأ منذ $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => 'مدة الترك';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: 'يومين',
+      one: 'يوم واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly =>
+      'بدون إذن الكتابة على Drive، تُحذف الفصول من الهاتف فقط';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return 'المزيد ($count)';
+  }
+
+  @override
+  String get homeUpdatesLess => 'عرض أقل';
+
+  @override
+  String get settingsHomeUpdates => 'التحديثات في الرئيسية';
+
+  @override
+  String get settingsHomeUpdatesShown => 'السلاسل المعروضة';
+
+  @override
+  String get settingsHomeUpdatesShownNote => 'تظهر البقية عند لمس «المزيد»';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سلاسل',
+      one: 'سلسلة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => 'الحد الأقصى للفصول الجديدة';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote =>
+      'السلسلة التي لديها فصول للقراءة بعد آخر فصل مقروء أكثر من هذا العدد لا تُعدّ تحديثًا';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionPropsTitle => 'خصائص المجموعة';
+
+  @override
+  String get collectionPropsEntry => 'الخصائص';
+
+  @override
+  String get collectionsHasProps => 'لها خصائص مفعّلة';
+
+  @override
+  String get collectionPropsAutoTitle => 'الإضافة التلقائية';
+
+  @override
+  String get collectionPropsAutoNote =>
+      'السلاسل المطابقة لكل القواعد تدخل تلقائيًا. إذا أزلتَ واحدة يدويًا فلن تعود.';
+
+  @override
+  String get collectionPropsTypes => 'النوع';
+
+  @override
+  String get collectionPropsTags => 'الأنواع والوسوم (كلها مطلوبة)';
+
+  @override
+  String get collectionPropsTagSearch => 'ابحث عن وسم';
+
+  @override
+  String get collectionPropsShelf => 'حالة القراءة';
+
+  @override
+  String get collectionPropsRelease => 'النشر';
+
+  @override
+  String get collectionPropsProviders => 'الموقع';
+
+  @override
+  String get collectionPropsMinRating => 'أدنى تقييم';
+
+  @override
+  String get collectionPropsFavorite => 'المفضلة فقط';
+
+  @override
+  String get collectionPropsTraitsTitle => 'لكل سلاسل المجموعة';
+
+  @override
+  String get collectionPropsMuted => 'كتم التحديثات';
+
+  @override
+  String get collectionPropsKeepChapters => 'استثناء من التنظيف التلقائي';
+
+  @override
+  String get collectionPropsNoAutoPause => 'استثناء من الإيقاف المؤقت التلقائي';
+
+  @override
+  String get collectionPropsNoRatingInvite => 'لا تطلب التقييم';
+
+  @override
+  String get collectionPropsApply => 'تطبيق';
 }

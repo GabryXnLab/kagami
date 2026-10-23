@@ -43,15 +43,9 @@ class HomeScreen extends ConsumerWidget {
     final resume = all.where((s) => s.isStarted && s.hasUnread).sorted(
           (a, b) => _lastTouched(b).compareTo(_lastTouched(a)),
         );
-    // Una scheda non ha niente da riprendere qui, ma i capitoli usciti sul
-    // sito sono un aggiornamento come gli altri.
-    final updates = all
-        .where((s) =>
-            (s.hasUnread && s.entry.latestChapterArchivedAt != null) ||
-            (s.isCard && s.isNew))
-        .sorted((a, b) => b.freshness.compareTo(a.freshness))
-        .take(20)
-        .toList(growable: false);
+    final updatesSettings = ref.watch(homeUpdatesSettingsProvider).value ??
+        const HomeUpdatesSettings();
+    final updates = homeUpdates(all, updatesSettings);
     final start = all
         .where(AutoCollection.planned.matches)
         .sorted((a, b) => b.freshness.compareTo(a.freshness));
@@ -97,7 +91,10 @@ class HomeScreen extends ConsumerWidget {
                 if (updates.isNotEmpty)
                   Entrance(
                     index: 2,
-                    child: _UpdatesSection(series: updates),
+                    child: _UpdatesSection(
+                      series: updates,
+                      shown: updatesSettings.shown,
+                    ),
                   ),
                 if (start.isNotEmpty)
                   Entrance(
@@ -410,14 +407,27 @@ class _ResumeCard extends ConsumerWidget {
 
 /// I capitoli arrivati, in ordine di arrivo: è la scheda che in un lettore
 /// con serie in corso si guarda per prima.
-class _UpdatesSection extends StatelessWidget {
-  const _UpdatesSection({required this.series});
+class _UpdatesSection extends StatefulWidget {
+  const _UpdatesSection({required this.series, required this.shown});
 
   final List<SeriesSignals> series;
+
+  /// Quante serie si vedono prima di «Altro».
+  final int shown;
+
+  @override
+  State<_UpdatesSection> createState() => _UpdatesSectionState();
+}
+
+class _UpdatesSectionState extends State<_UpdatesSection> {
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final muted = context.tokens.muted;
+    final hidden = widget.series.length - widget.shown;
+    final series =
+        _expanded ? widget.series : widget.series.take(widget.shown);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -506,7 +516,7 @@ class _UpdatesSection extends StatelessWidget {
                               borderRadius: BorderRadius.circular(9),
                             ),
                             child: Text(
-                              '${signals.isCard ? signals.newChapters : signals.unreadCount}',
+                              '${signals.pendingChapters}',
                               style: KagamiType.figure(
                                 12,
                                 color: signals.isNew
@@ -523,6 +533,21 @@ class _UpdatesSection extends StatelessWidget {
             ),
           ),
         ),
+        if (hidden > 0)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: KGhostButton(
+              label: _expanded
+                  ? context.l10n.homeUpdatesLess
+                  : context.l10n.homeUpdatesMore(hidden),
+              icon: _expanded
+                  ? LucideIcons.chevronUp
+                  : LucideIcons.chevronDown,
+              expand: true,
+              height: 42,
+              onPressed: () => setState(() => _expanded = !_expanded),
+            ),
+          ),
       ],
     );
   }

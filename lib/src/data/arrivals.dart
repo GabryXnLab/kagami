@@ -120,14 +120,18 @@ class ArrivalPlan {
 /// serie seguite e non silenziate; per le altre il riferimento avanza lo
 /// stesso, così cominciare a seguirne una non fa suonare gli arrivi vecchi.
 ///
+/// [mutedKeys] sono le serie silenziate da una raccolta, che si sommano a
+/// quelle silenziate di per sé.
+///
 /// Lo stesso vale quando cambia la base ([ArrivalMark.onSite]): una scheda
 /// che riceve il primo capitolo, o una serie che li perde tutti, riparte da
 /// ciò che ha, senza annunciare niente.
 ArrivalPlan planArrivals(
   Iterable<SeriesEntry> series,
   Map<String, SeriesState> states,
-  Map<String, ArrivalMark> marks,
-) {
+  Map<String, ArrivalMark> marks, {
+  Set<String> mutedKeys = const {},
+}) {
   final changed = <String, ArrivalMark>{};
   final alerts = <ArrivalAlert>[];
   for (final entry in series) {
@@ -144,7 +148,7 @@ ArrivalPlan planArrivals(
       onSite: mark.onSite,
     );
     final state = states[entry.key] ?? const SeriesState();
-    if (state.muted) continue;
+    if (state.muted || mutedKeys.contains(entry.key)) continue;
     final fresh = SeriesSignals.of(entry, state, seenChapters: mark.seen)
         .newChapters;
     if (fresh > 0) {
@@ -174,19 +178,22 @@ Map<String, ArrivalMark> recordedArrivals(
 
 /// Le serie che il controllo ad app chiusa deve guardare, con quanto gli
 /// serve per fare gli stessi conti di [planArrivals] senza lo stato utente:
-/// solo quelle seguite e non silenziate, con un riferimento sulla base che
+/// solo quelle seguite e non silenziate (da sé o da una raccolta: [mutedKeys]), con un riferimento sulla base che
 /// hanno adesso. Le schede portano il nome del sito (`site`): il worker
 /// conta allora i capitoli del sito, e salta la serie se nel frattempo è
 /// cambiata la base, che riprende l'app.
 Map<String, Object?> watchList(
   String root,
   Iterable<SeriesSignals> series,
-  Map<String, ArrivalMark> marks,
-) => {
+  Map<String, ArrivalMark> marks, {
+  Set<String> mutedKeys = const {},
+}) => {
       'root': root,
       'series': {
         for (final signals in series)
-          if (signals.isFollowed && !signals.state.muted)
+          if (signals.isFollowed &&
+              !signals.state.muted &&
+              !mutedKeys.contains(signals.entry.key))
             if (marks[signals.entry.key] case final mark?
                 when mark.fits(signals.entry))
               signals.entry.key: {

@@ -26,6 +26,12 @@ Fatti d'area spostati dal `CLAUDE.md` di root. Codice: `lib/src/data/db/database
 - **La cartella di Drive è un'impostazione del database** (`drive.folder`),
   quindi viaggia con backup e account: su un telefono nuovo la libreria
   compare al primo accesso.
+- **Le proprietà di una raccolta (regole, caratteristiche, serie automatiche e
+  saltate) stanno in una colonna JSON sola**, `collection_rows.properties`
+  (schema 10), e nel backup come campi facoltativi di `Collection.toJson`
+  (`rules`, `traits`, `auto`, `skipped`), scritti solo se non vuoti: un
+  backup vecchio si legge e uno nuovo letto da un'app vecchia perde solo
+  quei campi. Una colonna illeggibile vale una raccolta semplice.
 - **Nell'account viaggia il file di backup, non le tabelle.** Quello che
   l'app mette su Firestore è esattamente ciò che esporta come file — gli
   stessi byte compressi, in un `Blob` dentro `readers/{uid}` — perché le

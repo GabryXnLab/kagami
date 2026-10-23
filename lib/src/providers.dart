@@ -20,6 +20,7 @@ import 'package:kagami_archive/tracking.dart';
 import 'archive/device.dart';
 import 'archive/phone_check.dart';
 import 'data/arrivals.dart';
+import 'data/auto_cleanup.dart';
 import 'data/backup.dart';
 import 'data/cleanup.dart';
 import 'data/cloud.dart';
@@ -602,6 +603,195 @@ class CleanupQuiet extends AsyncNotifier<Set<String>> {
 final cleanupQuietProvider =
     AsyncNotifierProvider<CleanupQuiet, Set<String>>(CleanupQuiet.new);
 
+/// Le regole della pulizia automatica. Fra le impostazioni del database,
+/// quindi nel backup; il lavoro ad app chiusa non le legge, gli basta il
+/// piano che ne viene ([AutoCleanup]).
+class AutoCleanupSettingsNotifier extends AsyncNotifier<AutoCleanupSettings> {
+  static const String _key = 'cleanup.auto';
+
+  @override
+  Future<AutoCleanupSettings> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    if (value == null || value.isEmpty) return const AutoCleanupSettings();
+    try {
+      final json = jsonDecode(value);
+      return json is Map<String, Object?> ? AutoCleanupSettings.fromJson(json) : const AutoCleanupSettings();
+    } on FormatException {
+      return const AutoCleanupSettings();
+    }
+  }
+
+  Future<void> change(AutoCleanupSettings Function(AutoCleanupSettings current) update) async {
+    final next = update(await future);
+    state = AsyncData(next);
+    await ref.read(userRepositoryProvider).writeSetting(_key, jsonEncode(next.toJson()));
+  }
+}
+
+final autoCleanupSettingsProvider =
+    AsyncNotifierProvider<AutoCleanupSettingsNotifier, AutoCleanupSettings>(AutoCleanupSettingsNotifier.new);
+
+final autoCleanupFilesProvider = Provider<AutoCleanupFiles>(
+  (ref) => AutoCleanupFiles(ref.watch(appDirectoriesProvider).support),
+);
+
+/// L'ultima lettura di ogni serie ([seriesActivity]), rifatta quando lo
+/// stato si pubblica.
+final seriesActivityProvider = FutureProvider<Map<String, DateTime>>((ref) async {
+  final reading = await ref.watch(readingProvider.future);
+  final lastReads = await ref.watch(userRepositoryProvider).lastReads();
+  return {
+    for (final key in {...reading.series.keys, ...lastReads.keys})
+      key: ?seriesActivity(reading.of(key), lastReads[key]),
+  };
+});
+
+/// La pulizia automatica dentro l'app: rifà il piano quando cambiano lo
+/// stato pubblicato, la libreria o le regole, toglie ciò che è scaduto —
+/// anche mentre l'app era chiusa — e programma il lavoro per la prossima
+/// scadenza. Vive accanto alla shell, come [readAheadProvider].
+class AutoCleanup extends Notifier<void> {
+  /// Le serie aperte nel lettore: i loro capitoli restano finché non se ne
+  /// esce, anche quelli scaduti — si può star rileggendo proprio quello.
+  /// Fuori da Riverpod perché lo tocca il lettore aprendo e chiudendo, quando
+  /// un provider non si può cambiare.
+  static final Set<String> holding = {};
+
+  Future<void> _work = Future.value();
+  Timer? _soon;
+
+  @override
+  void build() {
+    ref.listen(readingProvider, (_, _) => _schedule());
+    ref.listen(libraryCatalogProvider, (_, _) => _schedule());
+    ref.listen(autoCleanupSettingsProvider, (_, _) => _schedule());
+    // Il tempo passa anche con l'app in background: tornando, ciò che è
+    // scaduto si toglie subito, senza aspettare il lavoro programmato.
+    final lifecycle = AppLifecycleListener(onResume: _schedule);
+    ref.onDispose(() {
+      _soon?.cancel();
+      lifecycle.dispose();
+    });
+  }
+
+  /// Stato, libreria e regole cambiano spesso insieme.
+  void _schedule() {
+    _soon?.cancel();
+    _soon = Timer(const Duration(seconds: 2), () {
+      _work = _work.then((_) => _run()).catchError((Object _) {});
+    });
+  }
+
+  /// La pausa vale anche con la pulizia spenta. Passando da `setStatus` si
+  /// ripubblica lo stato e il giro si rifà, ma la serie non è più «in
+  /// lettura»: si ferma lì.
+  Future<void> _pauseIdle(AutoCleanupSettings settings) async {
+    final reading = ref.read(readingProvider).value;
+    if (reading == null) return;
+    final activity = await ref.read(seriesActivityProvider.future);
+    final now = DateTime.now().toUtc();
+    for (final entry in reading.series.entries.toList()) {
+      if (holding.contains(entry.key)) continue;
+      if (reading.traitsOf(entry.key).noAutoPause) continue;
+      if (dueForPause(entry.value, activity[entry.key], settings.idleDays, now)) {
+        await ref.read(readingProvider.notifier).setStatus(entry.key, ShelfStatus.paused);
+      }
+    }
+  }
+
+  Future<void> _run() async {
+    final settings = await ref.read(autoCleanupSettingsProvider.future);
+    final files = ref.read(autoCleanupFilesProvider);
+    if (settings.pause) await _pauseIdle(settings);
+    if (!settings.active) {
+      await files.writePlan(const []);
+      await const AutoCleanupScheduler().apply(null);
+      return;
+    }
+    final catalog = ref.read(libraryCatalogProvider).value;
+    final library = ref.read(libraryProvider);
+    final reading = ref.read(readingProvider).value;
+    if (catalog == null || library == null || reading == null) return;
+    final activity = await ref.read(seriesActivityProvider.future);
+    final chapters = <StoredChapter>[];
+    for (final entry in catalog.index.series) {
+      final read = reading.of(entry.key).readChapters.isNotEmpty;
+      // Solo i letti: una serie senza capitoli letti non ha niente da dare.
+      if (!settings.idle && !read) continue;
+      final holders = catalog.holders[entry.key] ?? const <LibraryShelf>[];
+      // L'indice si carica solo per le serie che hanno davvero qualcosa sul
+      // telefono: per le altre basta la lettura della cartella.
+      var present = false;
+      for (final shelf in holders.whereType<LibraryRepository>()) {
+        if ((await shelf.presentChapters(entry)).isNotEmpty) {
+          present = true;
+          break;
+        }
+      }
+      if (present) {
+        final loaded = await library.loadSeries(entry, holders);
+        if (loaded != null) chapters.addAll(await phoneChaptersOf(entry, loaded, holders));
+      }
+      // Su Drive c'è tutto l'archivio: si guardano solo le serie che una
+      // regola può toccare, cioè con capitoli letti o già cominciate
+      // ([planAutoCleanup]). Gli indici sono già in memoria; l'elenco dei
+      // capitoli si chiede solo per le serie con capitoli già tolti.
+      final drive = holders.whereType<DriveRepository>().firstOrNull;
+      if (drive != null && (read || activity[entry.key] != null)) {
+        try {
+          chapters.addAll(await driveChaptersOf(entry, drive));
+        } on DriveException {
+          // Senza Drive ora: la serie torna nel piano al giro dopo.
+        }
+      }
+    }
+    final drive = ref.read(driveRepositoryProvider);
+    await files.writePlan(
+      planAutoCleanup(
+        settings: settings,
+        chapters: chapters,
+        state: reading.of,
+        activity: (key) => activity[key],
+        excluded: (key) => reading.traitsOf(key).keepChapters,
+      ),
+      folder: drive?.folderId,
+    );
+    DriveClient? writer;
+    final AutoCleanupOutcome outcome;
+    try {
+      outcome = await runAutoCleanup(
+        files,
+        ref.read(syncFilesProvider),
+        hold: {...holding},
+        withdraw: drive == null
+            ? null
+            : (seriesPath, paths) {
+                final auth = ref.read(driveAuthProvider);
+                writer ??= DriveClient(auth.writeToken, network: NetworkMonitor.instance);
+                return drive.withdrawPaths(seriesPath, paths, writer!);
+              },
+      );
+    } finally {
+      writer?.close();
+    }
+    await const AutoCleanupScheduler().apply(outcome.next);
+    // Un capitolo tolto da Drive non si legge più da lì: anche le sue tavole
+    // in cache sono spazio perso.
+    final cache = ref.read(driveFilesProvider);
+    for (final MapEntry(key: series, value: chapters) in outcome.fromDrive.entries) {
+      await cache?.forgetChapters(series, chapters);
+    }
+    // I capitoli tolti si rileggono da Drive, o si mostrano come non
+    // scaricati: gli elenchi vanno rifatti.
+    for (final key in outcome.removed.keys) {
+      ref.invalidate(seriesChaptersProvider(key));
+      ref.invalidate(readLeftoversProvider(key));
+    }
+  }
+}
+
+final autoCleanupProvider = NotifierProvider<AutoCleanup, void>(AutoCleanup.new);
+
 /// Se aprendo una serie senza voto l'app lo chiede. Fra le impostazioni del
 /// database, quindi nel backup: spenta una volta, vale su ogni telefono.
 class RatingInvite extends AsyncNotifier<bool> {
@@ -643,6 +833,12 @@ class ReadingData {
   List<Collection> containing(String key) => collections
       .where((collection) => collection.seriesKeys.contains(key))
       .toList(growable: false);
+
+  /// Le proprietà di una serie: l'OR di quelle delle raccolte che la
+  /// contengono.
+  CollectionTraits traitsOf(String key) => collections
+      .where((collection) => collection.seriesKeys.contains(key))
+      .fold(const CollectionTraits(), (all, c) => all | c.traits);
 }
 
 /// L'unico punto da cui l'app modifica i dati personali.
@@ -850,10 +1046,19 @@ class Reading extends AsyncNotifier<ReadingData> {
     await _repository.saveSeriesState(key, updated);
   }
 
+  /// Leggere riporta «in lettura» una serie senza stato, da leggere, in
+  /// pausa o abbandonata: la pausa automatica non deve restare addosso a chi
+  /// ha ripreso. Una serie completata resta com'è.
+  static bool _startsReading(ShelfStatus status) =>
+      status == ShelfStatus.none ||
+      status == ShelfStatus.planned ||
+      status == ShelfStatus.paused ||
+      status == ShelfStatus.dropped;
+
   /// Ripresa esatta: pagina e capitolo dove si è smesso.
   ///
-  /// Se lo stato era vuoto la serie passa a "in lettura" da sé: averla aperta
-  /// è già la risposta alla domanda che il menù porrebbe.
+  /// Se lo stato non era «in lettura» la serie ci passa da sé ([_startsReading]):
+  /// averla aperta è già la risposta alla domanda che il menù porrebbe.
   Future<void> saveProgress(
     String key, {
     required String chapterId,
@@ -871,9 +1076,7 @@ class Reading extends AsyncNotifier<ReadingData> {
       updatedAt: DateTime.now().toUtc(),
     );
     final updated = current.copyWith(
-      status: current.status == ShelfStatus.none
-          ? ShelfStatus.reading
-          : current.status,
+      status: _startsReading(current.status) ? ShelfStatus.reading : current.status,
       progress: progress,
     );
     _publish({...data.series, key: updated}, data.collections);
@@ -900,9 +1103,7 @@ class Reading extends AsyncNotifier<ReadingData> {
       updatedAt: DateTime.now().toUtc(),
     );
     final updated = current.copyWith(
-      status: current.status == ShelfStatus.none
-          ? ShelfStatus.reading
-          : current.status,
+      status: _startsReading(current.status) ? ShelfStatus.reading : current.status,
       progress: progress,
     );
     _quiet = ReadingData(
@@ -958,7 +1159,12 @@ class Reading extends AsyncNotifier<ReadingData> {
     }
   }
 
-  Future<void> createCollection(String name, {int? color}) async {
+  Future<void> createCollection(
+    String name, {
+    int? color,
+    CollectionRules rules = const CollectionRules(),
+    CollectionTraits traits = const CollectionTraits(),
+  }) async {
     final current = _data.collections;
     final collection = Collection(
       id: DateTime.now().microsecondsSinceEpoch.toRadixString(36),
@@ -967,18 +1173,36 @@ class Reading extends AsyncNotifier<ReadingData> {
       color: color,
       order: current.length,
       updatedAt: DateTime.now().toUtc(),
+      rules: rules,
+      traits: traits,
     );
     await _replaceCollections([...current, collection]);
   }
 
-  Future<void> editCollection(String id, {String? name, int? color}) async {
+  Future<void> editCollection(
+    String id, {
+    String? name,
+    int? color,
+    CollectionRules? rules,
+    CollectionTraits? traits,
+  }) async {
     await _replaceCollections([
       for (final collection in _data.collections)
         collection.id == id
-            ? collection.copyWith(name: name, color: color)
+            ? collection.copyWith(
+                name: name,
+                color: color,
+                rules: rules,
+                traits: traits,
+              )
             : collection,
     ]);
   }
+
+  /// Per l'autoinserimento: salva le raccolte già aggiornate da
+  /// `syncAutoMembers`, tutte con una scrittura sola.
+  Future<void> replaceCollectionsAuto(List<Collection> collections) =>
+      _replaceCollections(collections);
 
   Future<void> deleteCollection(String id) async {
     await _replaceCollections([
@@ -1003,6 +1227,14 @@ class Reading extends AsyncNotifier<ReadingData> {
                 : collection.seriesKeys
                     .where((k) => k != seriesKey)
                     .toList(growable: false),
+            // Tolta a mano una serie messa dalle regole: non la rimettono.
+            // Aggiunta a mano diventa manuale.
+            autoKeys: collection.autoKeys.where((k) => k != seriesKey).toSet(),
+            skipped: member
+                ? collection.skipped.where((k) => k != seriesKey).toSet()
+                : collection.autoKeys.contains(seriesKey)
+                    ? {...collection.skipped, seriesKey}
+                    : collection.skipped,
           ),
     ]);
   }
@@ -1088,7 +1320,12 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
     final recorded = recordedArrivals(stored, await _files.readRecord());
     final marks = {...stored, ...recorded};
     final reading = await ref.read(readingProvider.future);
-    final plan = planArrivals(catalog.index.series, reading.series, marks);
+    final plan = planArrivals(
+      catalog.index.series,
+      reading.series,
+      marks,
+      mutedKeys: _mutedByCollections(reading),
+    );
     final changed = {...recorded, ...plan.marks};
     if (changed.isEmpty) return;
     state = AsyncData({...marks, ...plan.marks});
@@ -1096,16 +1333,27 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
     await ArrivalNotifications.instance.show(plan.alerts);
   }
 
+  Set<String> _mutedByCollections(ReadingData reading) => {
+        for (final c in reading.collections)
+          if (c.traits.muted) ...c.seriesKeys,
+      };
+
   /// Lascia al controllo ad app chiusa le serie da guardare nella cartella
   /// locale. Lo si fa uscendo dall'app: è da lì in poi che serve, ed è lo
   /// stato più recente che l'app possa dargli.
   void handOver() => _enqueue(() async {
         final root = ref.read(libraryRootProvider);
         final marks = await future;
+        final reading = await ref.read(readingProvider.future);
         await _files.writeWatch(
           root == null
               ? null
-              : watchList(root, ref.read(librarySignalsProvider), marks),
+              : watchList(
+                  root,
+                  ref.read(librarySignalsProvider),
+                  marks,
+                  mutedKeys: _mutedByCollections(reading),
+                ),
         );
         if (root != null) {
           await ArrivalNotifications.instance.watch(_files);
@@ -1268,6 +1516,41 @@ class LibraryDisplayNotifier extends AsyncNotifier<LibraryDisplay> {
 final libraryDisplayProvider =
     AsyncNotifierProvider<LibraryDisplayNotifier, LibraryDisplay>(
   LibraryDisplayNotifier.new,
+);
+
+/// Quanti aggiornamenti mostra la home e quali serie ci entrano. Fra le
+/// impostazioni del database, quindi nel backup.
+class HomeUpdatesSettingsNotifier extends AsyncNotifier<HomeUpdatesSettings> {
+  static const String _key = 'home.updates';
+
+  @override
+  Future<HomeUpdatesSettings> build() async {
+    final value = await ref.watch(userRepositoryProvider).readSetting(_key);
+    if (value == null || value.isEmpty) return const HomeUpdatesSettings();
+    try {
+      final json = jsonDecode(value);
+      return json is Map<String, Object?>
+          ? HomeUpdatesSettings.fromJson(json)
+          : const HomeUpdatesSettings();
+    } on FormatException {
+      return const HomeUpdatesSettings();
+    }
+  }
+
+  Future<void> change(
+    HomeUpdatesSettings Function(HomeUpdatesSettings current) update,
+  ) async {
+    final next = update(await future);
+    state = AsyncData(next);
+    await ref
+        .read(userRepositoryProvider)
+        .writeSetting(_key, jsonEncode(next.toJson()));
+  }
+}
+
+final homeUpdatesSettingsProvider =
+    AsyncNotifierProvider<HomeUpdatesSettingsNotifier, HomeUpdatesSettings>(
+  HomeUpdatesSettingsNotifier.new,
 );
 
 /// Le serie selezionate nella griglia. Vuoto significa che non si sta
@@ -1949,6 +2232,19 @@ class ReadAhead extends Notifier<void> {
     final library = ref.read(libraryProvider);
     final reading = ref.read(readingProvider).value;
     if (catalog == null || library == null || reading == null) return null;
+    // La pulizia automatica toglie i capitoli da leggere di una serie
+    // lasciata: rimetterli in coda vorrebbe dire scaricarli e toglierli a
+    // ogni giro. Si riprende quando si torna a leggerla.
+    final cleanup = ref.read(autoCleanupSettingsProvider).value;
+    final activity = ref.read(seriesActivityProvider).value;
+    if (cleanup != null && activity != null && idleForReadAhead(
+          cleanup,
+          activity[key],
+          DateTime.now(),
+          excluded: reading.traitsOf(key).keepChapters,
+        )) {
+      return null;
+    }
     final row = catalog.index.series.firstWhereOrNull((row) => row.key == key);
     if (row == null) return null;
     final chapters = await library.loadSeries(row, catalog.holders[key] ?? const []);
@@ -2073,6 +2369,46 @@ class ReadAhead extends Notifier<void> {
 }
 
 final readAheadProvider = NotifierProvider<ReadAhead, void>(ReadAhead.new);
+
+/// Riempie le raccolte con regole man mano che la libreria e lo stato
+/// cambiano. Aspetta che la libreria sia letta: prima di allora non sa quali
+/// serie ci sono, e non deve scambiare «non so» per «non c'è».
+class CollectionAutoFill extends Notifier<void> {
+  Timer? _soon;
+
+  @override
+  void build() {
+    ref.listen(librarySignalsProvider, (_, _) => _schedule());
+    ref.listen(readingProvider, (_, _) => _schedule());
+    ref.onDispose(() => _soon?.cancel());
+  }
+
+  void _schedule() {
+    _soon?.cancel();
+    _soon = Timer(const Duration(seconds: 1), () => unawaited(_run()));
+  }
+
+  Future<void> _run() async {
+    if (ref.read(libraryIndexProvider).value == null) return;
+    final reading = ref.read(readingProvider).value;
+    if (reading == null) return;
+    final library = ref.read(librarySignalsProvider);
+    var changed = false;
+    final next = <Collection>[];
+    for (final collection in reading.collections) {
+      final synced = collection.rules.isEmpty && collection.autoKeys.isEmpty
+          ? collection
+          : syncAutoMembers(collection, library);
+      if (!identical(synced, collection)) changed = true;
+      next.add(synced);
+    }
+    if (!changed) return;
+    await ref.read(readingProvider.notifier).replaceCollectionsAuto(next);
+  }
+}
+
+final collectionAutoFillProvider =
+    NotifierProvider<CollectionAutoFill, void>(CollectionAutoFill.new);
 
 /// Il server che scarica al posto del telefono: il suo indirizzo. Sta fra
 /// le impostazioni del database, quindi viaggia con backup e account come la

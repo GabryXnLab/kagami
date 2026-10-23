@@ -115,7 +115,7 @@ flutter test
 (cd packages/kagami_archive && dart analyze && dart test)   # l'archiviatore, Dart puro
 (cd server && dart pub get && dart analyze && dart test)    # il server
 (cd server && dart compile exe bin/kagami_server.dart -o kagami-server)
-docker build -f server/Dockerfile --target test .   # i test del server con libvips, dentro l'immagine
+docker build -f server/Dockerfile --target test .   # i test del server con libvips (>10 min: in background)
 docker build -f server/Dockerfile -t kagami-server . # l'immagine; contesto la radice del repo
 flutter build apk --debug       # con google-services.json: account e Drive
 flutter build apk --release --dart-define=SENTRY_DSN=…   # Sentry facoltativo
@@ -153,7 +153,7 @@ Un `CLAUDE.md` annidato si carica da solo lavorando in quella cartella.
 | Kagami Server (identità, `KAGAMI_SETUP`, utenti, coda, aggiornatore) | `server/`, `lib/src/ui/archive_server.dart`, `lib/src/data/server_access.dart` | `server/CLAUDE.md` (annidato), `docs/server-api.md`, `docs/server.md` |
 | Archiviatore: pacchetto Dart puro, un file per sito | `packages/kagami_archive/` | `packages/kagami_archive/CLAUDE.md` (annidato), `docs/malf.md` |
 | Archiviare: cartella condivisa, schede manuali, indici su Drive | `lib/src/archive/`, `lib/src/ui/archive_*.dart` | `docs/archivio.md` |
-| Libreria ibrida, indici, cancellazioni, capitoli nuovi e «Novità» | `lib/src/data/library*.dart`, `series_removal.dart`, `arrivals.dart`, `notifications.dart` | `docs/libreria.md`, `docs/malf.md` |
+| Libreria ibrida, indici, cancellazioni, capitoli nuovi e «Novità» | `lib/src/data/library*.dart`, `series_removal.dart`, `auto_cleanup.dart`, `arrivals.dart`, `notifications.dart` | `docs/libreria.md`, `docs/malf.md` |
 | Lettore: tavole, fasce, decodifica, posizione di lettura | `lib/src/ui/reader_*.dart`, `page_bands.dart`, `lib/src/data/page_decoder.dart` | `docs/lettore.md` |
 | Dati personali, backup, account, grafici | `lib/src/data/db/`, `user_repository.dart`, `backup.dart`, `cloud.dart`, `statistics.dart` | `docs/dati.md` |
 | Drive, rete, cache, sincronizzazione della cartella | `lib/src/data/drive*.dart`, `network.dart`, `folder_sync*.dart`, `downloads.dart` | `docs/drive.md` |
@@ -185,7 +185,7 @@ poi la sezione; `docs/malf.md` e `docs/server-api.md` (15 KB ciascuno) solo per 
 
 ## Strumenti per gli agenti
 
-Workflow degli agenti: ricetta ottimizza-claude rev. 2026-10-15.2. Gli strumenti stanno in
+Workflow degli agenti: ricetta ottimizza-claude rev. 2026-10-20.3. Gli strumenti stanno in
 `scripts/agent/` e `.claude/` (non vanno nel repo pubblico).
 
 | Cosa | Dove |
@@ -195,11 +195,15 @@ Workflow degli agenti: ricetta ottimizza-claude rev. 2026-10-15.2. Gli strumenti
 | `dart analyze` dei file toccati a fine turno (hook Stop; esce se `stop_hook_active`) | `scripts/agent/stop-check.sh` |
 | output di `flutter test`/`dart test` su file: a Claude arrivano errori, coda ed exit code veri (`--full-output` per averlo intero; log in `.claude/.cache/`) | `scripts/agent/filtra-output.sh` (hook PreToolUse con `if`) |
 | guardie: `dart format`, npm/yarn, segreti in `git add`, build senza timeout; edit a mano di `*.g.dart` e `app_localizations*.dart` | `scripts/agent/guard-bash.sh`, `guard-edit.sh` |
+| firme Dart (classi, provider, metodi pubblici) in `file:riga`, al posto di `rg -A60` e `sed -n` a tentoni | `scripts/agent/api.sh <file\|cartella> [-- <filtro>]` |
 | brief comune dei subagenti che scrivono codice | `scripts/agent/brief-subagente.md` — il prompt non lo ricopia |
 | agenti di progetto: `correttore` (sonnet, 1-3 difetti dalla causa al test), `collaudatore` (haiku, collaudo a schermo sull'emulatore della macchina di prova, descritta nelle note locali) | `.claude/agents/` |
 | skill di progetto: `riprendi`, `chiudi-sessione`, `piano` (handoff in `handoff/<feature>/`) | `.claude/skills/` |
 
-Lettura: `rg -n` e poi `Read` con offset/limit; un file oltre ~400 righe non si legge intero.
+Lettura: `api.sh` per le firme, `rg -n` e poi `Read` con offset/limit; un file oltre ~400 righe non
+si legge intero. Oltre ~5 letture d'apertura (o una voce che tocca più di ~5 file) la mappa
+`file:riga` la fa un `esploratore`. Job oltre i 10 minuti (`docker build --target test`, attesa di
+una CI): un solo `run_in_background`, mai `sleep`/`until` né `gh run watch` in primo piano.
 Nessun subagente senza modello deciso (haiku per cercare e collaudare, sonnet per implementare con
 un contratto chiaro, opus solo per causa ignota). Un subagente = 1-3 voci coese.
 

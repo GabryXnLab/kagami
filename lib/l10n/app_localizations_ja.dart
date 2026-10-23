@@ -2513,7 +2513,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get homeUpdates => '更新';
 
   @override
-  String get homeUpdatesSubtitle => '同期済みでまだ読んでいない話';
+  String get homeUpdatesSubtitle => '最後に読んだ話以降の新しい話';
 
   @override
   String homeLatestChapter(String number) {
@@ -3948,4 +3948,148 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => '自動クリーンアップ';
+
+  @override
+  String get settingsAutoCleanupRead => '既読の章を削除';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      '端末と Drive（ゴミ箱へ）から自動で削除します。読書位置と既読の記録は残ります';
+
+  @override
+  String get settingsAutoCleanupIdle => '放置したシリーズの章を削除';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+    );
+    return '$_temp0読まれていないシリーズは、未読の章も削除します';
+  }
+
+  @override
+  String get settingsAutoCleanupPause => '放置したシリーズを一時停止';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+    );
+    return '$_temp0読まれていない「読書中」のシリーズは「一時停止」になります';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => '放置とみなす期間';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly =>
+      'Drive への書き込みが許可されていないため、章は端末からのみ削除されます';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return 'もっと見る（$count）';
+  }
+
+  @override
+  String get homeUpdatesLess => '表示を減らす';
+
+  @override
+  String get settingsHomeUpdates => 'ホームの更新';
+
+  @override
+  String get settingsHomeUpdatesShown => '表示する作品数';
+
+  @override
+  String get settingsHomeUpdatesShownNote => '残りは「もっと見る」で表示されます';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    return '$count作品';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => '新しい話の上限';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote =>
+      '最後に読んだ話以降に読む話がこれより多い作品は更新に含めません';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    return '$count話';
+  }
+
+  @override
+  String get collectionPropsTitle => 'コレクションのプロパティ';
+
+  @override
+  String get collectionPropsEntry => 'プロパティ';
+
+  @override
+  String get collectionsHasProps => '有効なプロパティあり';
+
+  @override
+  String get collectionPropsAutoTitle => '自動追加';
+
+  @override
+  String get collectionPropsAutoNote => 'すべてのルールに合う作品は自動で入ります。手動で外した作品は戻りません。';
+
+  @override
+  String get collectionPropsTypes => '種類';
+
+  @override
+  String get collectionPropsTags => 'ジャンルとタグ(すべて必須)';
+
+  @override
+  String get collectionPropsTagSearch => 'タグを検索';
+
+  @override
+  String get collectionPropsShelf => '読書の状態';
+
+  @override
+  String get collectionPropsRelease => '連載状況';
+
+  @override
+  String get collectionPropsProviders => 'サイト';
+
+  @override
+  String get collectionPropsMinRating => '最低評価';
+
+  @override
+  String get collectionPropsFavorite => 'お気に入りのみ';
+
+  @override
+  String get collectionPropsTraitsTitle => 'コレクション内のすべての作品に適用';
+
+  @override
+  String get collectionPropsMuted => '新着を通知しない';
+
+  @override
+  String get collectionPropsKeepChapters => '自動クリーンアップから除外';
+
+  @override
+  String get collectionPropsNoAutoPause => '自動一時停止から除外';
+
+  @override
+  String get collectionPropsNoRatingInvite => '評価を求めない';
+
+  @override
+  String get collectionPropsApply => '適用';
 }

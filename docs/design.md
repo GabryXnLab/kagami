@@ -139,6 +139,29 @@ L'equivalente delle playlist: una serie può stare in più raccolte, l'ordine è
 scelto dall'utente, ogni raccolta ha un nome e un colore. Sono il modo per dare
 struttura a una libreria che cresce da sola.
 
+Una raccolta ha anche delle **proprietà** che valgono per tutte le sue serie
+(`CollectionTraits`: niente notifiche, fuori dalla pulizia automatica dei
+capitoli, fuori dalla pausa automatica, niente invito al voto) e può avere
+delle **regole** (`CollectionRules`: tipo, tag, stato sul ripiano, stato di
+pubblicazione, sito, preferiti, voto minimo) con cui si riempie da sola. Una
+serie in più raccolte ha le proprietà di tutte (OR): nessuna raccolta toglie
+ciò che un'altra dà. Le serie messe dalle regole sono `autoKeys`; una tolta a
+mano pur combaciando va in `skipped` e le regole non la rimettono, una
+aggiunta a mano diventa manuale. Senza regole non c'è autoinserimento.
+
+Regole e proprietà si impostano nel foglio «Proprietà della raccolta»
+(`widgets/collection_properties_sheet.dart`, scorrevole): dal menu della
+raccolta e, in bozza, dal foglio di creazione. Tipi, siti e tag/generi da
+scegliere vengono dalla libreria (`LibraryFacets`); una raccolta con proprietà
+attive porta un segno (zap) nella sua riga.
+
+L'autoinserimento (`syncAutoMembers`, `CollectionAutoFill`) rifà i conti a
+ogni cambio di libreria o di stato, dopo un secondo, e salva solo se qualcosa
+cambia. Toglie una serie automatica solo se la libreria la contiene e non
+combacia più: una serie assente (lettura fallita, Drive non raggiunto) non è
+«non combacia», e non si svuota una raccolta per un errore di rete. Finché
+l'indice non è caricato non fa niente.
+
 Accanto a quelle create a mano, raccolte automatiche non modificabili: *In
 lettura*, *Novità*, *Preferiti*, *Da iniziare*, *Finiti*.
 
@@ -164,13 +187,13 @@ capitoli: chiede solo il numero, e vuoto lo toglie. Una scheda manuale senza
 capitoli mostra un vuoto suo («Scheda senza capitoli») invece di «Nessun
 indice», che è l'avviso di una serie la cui libreria non ha scritto gli indici.
 
-Una serie senza voto, aprendo la scheda, mostra sotto il ripiano una card in
-linea che invita a votare: «Vota» apre il foglio del voto, «Ignora» la nasconde
-finché la scheda resta aperta, «Non chiedere più» spegne l'invito ovunque
+Una serie senza voto, aprendo la scheda, propone di votarla con un foglio dal
+basso (`offerRating`): «Vota» apre il foglio del voto, «Ignora» (o chiuderlo) lo
+rimanda alla prossima apertura, «Non chiedere più» spegne l'invito ovunque
 (`rating.quiet` fra le impostazioni del database, quindi nel backup; si
-riaccende da Impostazioni → Lettura). È una card e non un foglio perché
-aprendo la scheda può già comparire quello di «Libera spazio». Non compare
-mentre si selezionano capitoli.
+riaccende da Impostazioni → Lettura). Se all'ingresso c'è anche il foglio di
+«Libera spazio», prima compare quello e, alla sua chiusura, l'invito a votare:
+mai uno sopra l'altro.
 
 Una serie che ha un link al sito (`source`) mostra sotto «Riprendi» le azioni
 verso di esso. «Apri sul sito» c'è sempre, anche per una scheda manuale col
@@ -289,6 +312,15 @@ Da questi dati si ricava la home — *riprendi*, *aggiornamenti*, *da iniziare*,
 il rovescio della scheda: lì si guarda una serie e si cerca il capitolo, qui si
 guarda il tempo e si ritrova la serie. Esiste anche una lettura in incognito,
 che non registra nulla.
+
+Gli *aggiornamenti* sono le serie cominciate con capitoli da leggere dopo
+l'ultimo letto (per una scheda, quelli usciti sul sito), e solo se sono pochi:
+chi ha appena scaricato cento capitoli, o è fermo al decimo di cento, ha una
+serie da leggere, non un aggiornamento. Il tetto (10 di partenza) e quante
+serie si vedono prima di «Altro» (5) si scelgono in Impostazioni → Libreria
+(`HomeUpdatesSettings`, impostazione `home.updates`, quindi nel backup). Il
+conto è quello degli archiviati non letti, senza leggere l'indice di ogni
+serie: per chi legge in ordine coincide coi capitoli dopo l'ultimo letto.
 
 ### Statistiche
 
@@ -722,8 +754,8 @@ incompleto si apre per le pagine che ci sono; un indice più vecchio dei file si
 rilegge alla prossima apertura. Un capitolo che l'indice dice leggibile ma la
 cui cartella non c'è si legge da Drive, o si mostra come non scaricato: la
 cartella dei capitoli si elenca una volta per serie. L'app non cancella niente
-dalla libreria se non glielo chiede l'utente, dal foglio «Libera spazio» o
-eliminando una serie.
+dalla libreria se non glielo chiede l'utente, dal foglio «Libera spazio»,
+eliminando una serie o accendendo la pulizia automatica.
 
 ### Eliminare una serie
 
@@ -751,7 +783,10 @@ nella cartella scelta, nello spazio dell'app, nella cache di Drive — un
 foglio propone di toglierli, dicendo quanti sono e quanto occupano, con una
 voce per ciascun posto e «Non chiedere più per questa serie», che sta fra le
 impostazioni e quindi nel backup. La stessa proposta resta sotto la ricerca
-dei capitoli, «Libera spazio», finché c'è qualcosa da togliere.
+dei capitoli, «Libera spazio», finché c'è qualcosa da togliere. Dove
+«Togli i capitoli letti» della pulizia automatica è acceso il foglio non si
+apre da solo (li toglie già lei: `shouldOfferCleanup`), ma il pulsante resta; il
+foglio tornerà per le serie che le raccolte escluderanno dalla pulizia.
 
 Nel foglio c'è anche Drive stesso: «Capitoli su Drive» sposta nel cestino
 i capitoli letti che vi stanno ancora. È spento di partenza, perché è
@@ -776,6 +811,44 @@ dice anche se la serie non è su Drive — i capitoli tolti non si rileggono
 finché la sincronizzazione non li riporta. Lo spazio si stima dai `bytes` dell'indice:
 sommare i file di cento capitoli a ogni apertura della scheda sarebbe
 migliaia di letture.
+
+### Pulizia automatica
+
+Nelle impostazioni della libreria due interruttori, spenti di partenza,
+fanno da soli quello che il foglio fa a richiesta, senza chiedere: «Togli i
+capitoli letti» e «Togli i capitoli delle serie lasciate», che toglie anche
+quelli da leggere di una serie in cui non si legge niente da un tempo scelto
+(due settimane di partenza). Valgono allo stesso modo ovunque stia la
+libreria: cartella scelta, spazio dell'app e Drive, dove i capitoli vanno nel
+cestino come con «Capitoli su Drive» — il permesso di scrivere si chiede
+accendendo una regola, e senza si toglie solo dal telefono. Dove si è
+arrivati, la posizione dentro un capitolo e i capitoli letti stanno nel
+database, che non si tocca. Un capitolo arrivato da meno del tempo scelto
+resta, anche se la serie è lasciata: lo si è appena voluto. Su Drive la
+seconda regola tocca solo le serie già cominciate: lì c'è tutto l'archivio, e
+una serie messa da parte per dopo lo perderebbe intero.
+
+Contano il tempo, quindi valgono anche ad app chiusa: l'app scrive un piano
+con ogni capitolo sul telefono e il momento da cui si toglie, e un lavoro
+programmato alla prima scadenza toglie ciò che è scaduto; riaprendo l'app,
+ciò che è scaduto nel frattempo si toglie subito. Il capitolo che si sta
+leggendo resta finché non si esce dal lettore. «Man mano» smette di
+riscaricare i capitoli di una serie lasciata, che altrimenti scenderebbero e
+sparirebbero a ogni giro, e riparte quando la si torna a leggere.
+
+Un terzo interruttore, «Metti in pausa le serie lasciate», condivide il tempo
+della seconda regola ma non tocca i file: porta a «in pausa» le serie «in
+lettura» senza letture né gesti sulla scheda (lo stato cambiato a mano conta)
+da quel tempo. Gira solo nell'app, perché lo stato sta nel database, e non
+sulle serie aperte nel lettore. Leggere riporta «in lettura» una serie senza
+stato, da leggere, in pausa o abbandonata; una completata resta com'è.
+
+Le raccolte possono escludere le loro serie (`CollectionTraits`, l'OR fra le
+raccolte che le contengono): «tieni i capitoli» le toglie da entrambe le regole
+e dal «man mano» che le lascerebbe, e la scheda propone di nuovo «Libera
+spazio»; «niente pausa» le salta nella pausa automatica; «niente notifiche»
+si somma al silenzio della serie, anche nel controllo ad app chiusa; «niente
+invito al voto» evita il foglio all'apertura della scheda.
 
 ### Scaricare dai siti
 
@@ -912,7 +985,10 @@ Finché non sono arrivati, con l'app aperta, torna a guardare la coda ogni
 poco e rilegge la libreria appena uno è pronto: si continua a leggere
 mentre scendono, senza aprire «Scarica un manga».
 I capitoli prima del primo che si ha non arrivano da soli: chi parte dal 40
-non vuole i primi trentanove. Arrivati in fondo all'elenco che si
+non vuole i primi trentanove, e confermando «man mano» da un capitolo di inizio
+li segna letti come stimati (senza far arretrare «arrivato a»). Dalla scheda di
+una serie salvata solo come scheda, «Inizia a scaricare» apre «man mano» già dal
+primo capitolo da leggere, dopo l'ultimo letto o l'«arrivato a»; si cambia a mano. Arrivati in fondo all'elenco che si
 conosceva, i capitoli nuovi li porta il controllo delle serie seguite, solo
 quanti ne servono, e una serie man mano resta seguita anche conclusa,
 finché non si smette. Quando scarica il server (sotto, «Chi scarica e

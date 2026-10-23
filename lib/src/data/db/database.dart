@@ -172,6 +172,10 @@ class CollectionRows extends Table {
   IntColumn get position => integer().withDefault(const Constant(0))();
   DateTimeColumn get updatedAt => dateTime()();
 
+  /// JSON con regole, proprietà, serie automatiche e saltate
+  /// (`Collection.propertiesJson`); vuota per una raccolta semplice.
+  TextColumn get properties => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -274,7 +278,7 @@ class KagamiDatabase extends _$KagamiDatabase {
   KagamiDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -328,6 +332,9 @@ class KagamiDatabase extends _$KagamiDatabase {
           }
           if (from < 9) {
             await migrator.addColumn(seriesArrivals, seriesArrivals.onSite);
+          }
+          if (from < 10) {
+            await migrator.addColumn(collectionRows, collectionRows.properties);
           }
         },
         beforeOpen: (details) async {

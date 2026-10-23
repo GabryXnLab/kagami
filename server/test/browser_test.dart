@@ -8,8 +8,21 @@ void main() {
   // Dove Chromium non c'è (la CI senza browser) i test si saltano.
   final missing = Platform.environment['KAGAMI_CHROMIUM'] == null && !_onPath() ? 'Chromium non c\'è' : false;
   late HttpServer site;
-  late Directory profile;
   String? chromium;
+  final logged = <String>[];
+
+  // Ogni test ha il suo profilo e il suo Chromium: nessun blocco o processo
+  // di un test può toccare il seguente. Il log resta per dire, a un fallimento,
+  // cosa ha visto il browser.
+  Future<HeadlessBrowser> newBrowser(Duration timeout, [Directory? dir]) async {
+    final profile = dir ?? await Directory.systemTemp.createTemp('kagami-browser-');
+    addTearDown(() => profile.delete(recursive: true));
+    final browser = HeadlessBrowser(chromium!, profile, timeout: timeout, log: logged.add);
+    addTearDown(browser.close);
+    return browser;
+  }
+
+  setUp(logged.clear);
 
   setUpAll(() async {
     chromium = await HeadlessBrowser.find();
@@ -26,43 +39,38 @@ void main() {
             '</script></body></html>')
         ..close();
     });
-    profile = await Directory.systemTemp.createTemp('kagami-browser-');
   });
 
   tearDownAll(() async {
     await site.close(force: true);
-    await profile.delete(recursive: true);
   });
 
   const gate = BrowserGate(hosts: ['127.0.0.1'], seriesReady: "!!document.getElementById('chaptersList')", searchReady: 'true');
 
   test('aspetta la pagina vera e la restituisce, senza dire che è senza schermo', () async {
-    final browser = HeadlessBrowser(chromium!, profile, timeout: const Duration(seconds: 20), log: (_) {});
-    addTearDown(browser.close);
+    final browser = await newBrowser(const Duration(seconds: 60));
     final html = await browser.seriesPage('http://127.0.0.1:${site.port}/serie', gate);
-    expect(html, contains('chaptersList'));
+    expect(html, contains('chaptersList'), reason: logged.join('\n'));
     expect(html, isNot(contains('HeadlessChrome')));
     expect(html, contains('Chrome/'));
-  }, skip: missing, timeout: const Timeout(Duration(minutes: 2)));
+  }, skip: missing, timeout: const Timeout(Duration(minutes: 4)));
 
   test('il blocco lasciato dal contenitore di prima non ferma Chromium', () async {
     // Come dopo un aggiornamento: il profilo è bloccato a nome di una
     // macchina che non c'è più.
     final stale = await Directory.systemTemp.createTemp('kagami-browser-');
-    addTearDown(() => stale.delete(recursive: true));
     await Link('${stale.path}/SingletonLock').create('98116193a76f-104169');
     await Link('${stale.path}/SingletonSocket').create('/tmp/org.chromium.Chromium.sparito/SingletonSocket');
-    final browser = HeadlessBrowser(chromium!, stale, timeout: const Duration(seconds: 20), log: (_) {});
-    addTearDown(browser.close);
-    expect(await browser.seriesPage('http://127.0.0.1:${site.port}/serie', gate), contains('chaptersList'));
-  }, skip: missing, timeout: const Timeout(Duration(minutes: 2)));
+    final browser = await newBrowser(const Duration(seconds: 60), stale);
+    expect(await browser.seriesPage('http://127.0.0.1:${site.port}/serie', gate), contains('chaptersList'),
+        reason: logged.join('\n'));
+  }, skip: missing, timeout: const Timeout(Duration(minutes: 4)));
 
   test('una verifica che non passa dà null', () async {
-    final browser = HeadlessBrowser(chromium!, profile, timeout: const Duration(seconds: 3), log: (_) {});
-    addTearDown(browser.close);
+    final browser = await newBrowser(const Duration(seconds: 3));
     const never = BrowserGate(hosts: ['127.0.0.1'], seriesReady: 'false', searchReady: 'true');
     expect(await browser.seriesPage('http://127.0.0.1:${site.port}/serie', never), isNull);
-  }, skip: missing, timeout: const Timeout(Duration(minutes: 2)));
+  }, skip: missing, timeout: const Timeout(Duration(minutes: 4)));
 }
 
 bool _onPath() => (Platform.environment['PATH'] ?? '').split(':').any((dir) =>

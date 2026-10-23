@@ -3336,9 +3336,9 @@
   "@homeUpdates": {
     "description": "Home: titolo dell'elenco delle serie con capitoli arrivati"
   },
-  "homeUpdatesSubtitle": "Capitoli sincronizzati e non ancora letti",
+  "homeUpdatesSubtitle": "Capitoli nuovi dopo l'ultimo letto",
   "@homeUpdatesSubtitle": {
-    "description": "Home: sottotitolo dell'elenco degli aggiornamenti"
+    "description": "Home: sottotitolo dell'elenco degli aggiornamenti, le serie cominciate con capitoli nuovi dopo l'ultimo letto"
   },
   "homeLatestChapter": "cap. {number}",
   "@homeLatestChapter": {
@@ -5225,5 +5225,187 @@
         "type": "int"
       }
     }
+  },
+  "settingsAutoCleanup": "Pulizia automatica",
+  "@settingsAutoCleanup": {
+    "description": "Titolo della sezione nelle impostazioni della libreria con le due regole che tolgono da sole i capitoli dal telefono"
+  },
+  "settingsAutoCleanupRead": "Togli i capitoli letti",
+  "@settingsAutoCleanupRead": {
+    "description": "Interruttore: toglie da solo dal telefono i capitoli già letti"
+  },
+  "settingsAutoCleanupReadNote": "Dal telefono e da Drive, nel cestino, da soli. Dove si è arrivati e i capitoli letti restano",
+  "@settingsAutoCleanupReadNote": {
+    "description": "Sottotitolo dell'interruttore dei capitoli letti: dove li toglie, e che lo stato di lettura resta"
+  },
+  "settingsAutoCleanupIdle": "Togli i capitoli delle serie lasciate",
+  "@settingsAutoCleanupIdle": {
+    "description": "Interruttore: toglie dal telefono anche i capitoli da leggere delle serie che non si leggono da un po'"
+  },
+  "settingsAutoCleanupIdleNote": "Anche quelli da leggere, quando una serie non si legge da {count, plural, =1{1 giorno} other{{count} giorni}}",
+  "@settingsAutoCleanupIdleNote": {
+    "description": "Sottotitolo dell'interruttore delle serie lasciate; {count} è il numero di giorni scelto",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoCleanupPause": "Metti in pausa le serie lasciate",
+  "@settingsAutoCleanupPause": {
+    "description": "Interruttore: mette in pausa le serie in lettura che non si leggono da un po'; usa lo stesso tempo della regola delle serie lasciate"
+  },
+  "settingsAutoCleanupPauseNote": "Le serie «in lettura» passano a «in pausa» quando non si leggono da {count, plural, =1{1 giorno} other{{count} giorni}}",
+  "@settingsAutoCleanupPauseNote": {
+    "description": "Sottotitolo dell'interruttore della pausa automatica; {count} è il numero di giorni scelto",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoCleanupIdleAfter": "Senza letture da",
+  "@settingsAutoCleanupIdleAfter": {
+    "description": "Riga che apre la scelta di quanti giorni senza letture rendono una serie lasciata; a destra il valore"
+  },
+  "settingsAutoCleanupDays": "{count, plural, =1{1 giorno} other{{count} giorni}}",
+  "@settingsAutoCleanupDays": {
+    "description": "Un numero di giorni, nella scelta del tempo e come valore della riga",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAutoCleanupPhoneOnly": "Senza il permesso di scrivere su Drive, i capitoli si tolgono solo dal telefono",
+  "@settingsAutoCleanupPhoneOnly": {
+    "description": "Avviso dopo aver acceso una regola della pulizia automatica, se l'utente non dà il permesso di scrivere su Drive"
+  },
+  "homeUpdatesMore": "Altro ({count})",
+  "@homeUpdatesMore": {
+    "description": "Home: pulsante sotto gli aggiornamenti che mostra tutte le serie; {count} è quante sono nascoste",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeUpdatesLess": "Mostra meno",
+  "@homeUpdatesLess": {
+    "description": "Home: pulsante sotto gli aggiornamenti aperti che torna a mostrarne solo le prime"
+  },
+  "settingsHomeUpdates": "Aggiornamenti in home",
+  "@settingsHomeUpdates": {
+    "description": "Impostazioni → Libreria: titolo della sezione sugli aggiornamenti della home"
+  },
+  "settingsHomeUpdatesShown": "Serie mostrate",
+  "@settingsHomeUpdatesShown": {
+    "description": "Impostazioni → Libreria: riga per scegliere quante serie mostrano gli aggiornamenti della home prima di «Altro»"
+  },
+  "settingsHomeUpdatesShownNote": "Le altre compaiono toccando «Altro»",
+  "@settingsHomeUpdatesShownNote": {
+    "description": "Impostazioni → Libreria: spiegazione sotto «Serie mostrate»"
+  },
+  "settingsHomeUpdatesSeries": "{count, plural, =1{1 serie} other{{count} serie}}",
+  "@settingsHomeUpdatesSeries": {
+    "description": "Un numero di serie, nella scelta di quante mostrarne e come valore della riga",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsHomeUpdatesMaxPending": "Capitoli nuovi al massimo",
+  "@settingsHomeUpdatesMaxPending": {
+    "description": "Impostazioni → Libreria: riga per scegliere quanti capitoli da leggere al massimo può avere una serie per entrare negli aggiornamenti della home"
+  },
+  "settingsHomeUpdatesMaxPendingNote": "Una serie con più capitoli da leggere dopo l'ultimo letto non è un aggiornamento",
+  "@settingsHomeUpdatesMaxPendingNote": {
+    "description": "Impostazioni → Libreria: spiegazione sotto «Capitoli nuovi al massimo»"
+  },
+  "settingsHomeUpdatesChapters": "{count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@settingsHomeUpdatesChapters": {
+    "description": "Un numero di capitoli, nella scelta del massimo e come valore della riga",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionPropsTitle": "Proprietà della raccolta",
+  "@collectionPropsTitle": {
+    "description": "Titolo del foglio delle proprietà di una raccolta"
+  },
+  "collectionPropsEntry": "Proprietà",
+  "@collectionPropsEntry": {
+    "description": "Voce che apre le proprietà di una raccolta (menu della raccolta e foglio di creazione)"
+  },
+  "collectionsHasProps": "Ha proprietà attive",
+  "@collectionsHasProps": {
+    "description": "Descrizione dell'icona sulla riga di una raccolta che ha regole o caratteristiche attive"
+  },
+  "collectionPropsAutoTitle": "Aggiunta automatica",
+  "@collectionPropsAutoTitle": {
+    "description": "Titolo della sezione delle regole di aggiunta automatica, nel foglio delle proprietà"
+  },
+  "collectionPropsAutoNote": "Le serie che combaciano con tutte le regole entrano da sole. Se ne togli una a mano, non rientra.",
+  "@collectionPropsAutoNote": {
+    "description": "Nota sotto il titolo dell'aggiunta automatica"
+  },
+  "collectionPropsTypes": "Tipo",
+  "@collectionPropsTypes": {
+    "description": "Gruppo di scelta: tipo della serie (manga, manhwa...)"
+  },
+  "collectionPropsTags": "Generi e tag (devono esserci tutti)",
+  "@collectionPropsTags": {
+    "description": "Gruppo di scelta: generi e tag che la serie deve avere tutti"
+  },
+  "collectionPropsTagSearch": "Cerca un tag",
+  "@collectionPropsTagSearch": {
+    "description": "Segnaposto della ricerca fra i tag"
+  },
+  "collectionPropsShelf": "Stato di lettura",
+  "@collectionPropsShelf": {
+    "description": "Gruppo di scelta: stato di lettura della serie"
+  },
+  "collectionPropsRelease": "Pubblicazione",
+  "@collectionPropsRelease": {
+    "description": "Gruppo di scelta: stato di pubblicazione"
+  },
+  "collectionPropsProviders": "Sito",
+  "@collectionPropsProviders": {
+    "description": "Gruppo di scelta: sito di provenienza"
+  },
+  "collectionPropsMinRating": "Voto minimo",
+  "@collectionPropsMinRating": {
+    "description": "Gruppo di scelta: voto minimo"
+  },
+  "collectionPropsFavorite": "Solo preferiti",
+  "@collectionPropsFavorite": {
+    "description": "Interruttore: solo serie preferite"
+  },
+  "collectionPropsTraitsTitle": "Per tutte le serie della raccolta",
+  "@collectionPropsTraitsTitle": {
+    "description": "Titolo della sezione delle caratteristiche che valgono per tutte le serie della raccolta"
+  },
+  "collectionPropsMuted": "Silenzia le novità",
+  "@collectionPropsMuted": {
+    "description": "Interruttore: niente notifiche né novità"
+  },
+  "collectionPropsKeepChapters": "Escludi dalla pulizia automatica",
+  "@collectionPropsKeepChapters": {
+    "description": "Interruttore: la pulizia automatica dei capitoli salta le serie della raccolta"
+  },
+  "collectionPropsNoAutoPause": "Escludi dalla pausa automatica",
+  "@collectionPropsNoAutoPause": {
+    "description": "Interruttore: la pausa automatica salta le serie della raccolta"
+  },
+  "collectionPropsNoRatingInvite": "Non chiedere il voto",
+  "@collectionPropsNoRatingInvite": {
+    "description": "Interruttore: non chiedere il voto a fine lettura"
+  },
+  "collectionPropsApply": "Applica",
+  "@collectionPropsApply": {
+    "description": "Pulsante che conferma le proprietà"
   }
 }

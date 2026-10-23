@@ -202,6 +202,74 @@ void main() {
     expect(signals.isNew, isFalse);
   });
 
+  group('gli aggiornamenti della home', () {
+    Set<String> read(int count) => {for (var i = 1; i <= count; i++) '$i'};
+
+    test('una serie appena scaricata e mai cominciata non è un aggiornamento',
+        () {
+      final signals =
+          SeriesSignals.of(entry(key: 'a', archived: 100, latest: giugno), const SeriesState());
+      expect(signals.pendingChapters, 0);
+      expect(homeUpdates([signals], const HomeUpdatesSettings()), isEmpty);
+    });
+
+    test('ci entrano le serie con pochi capitoli dopo l\'ultimo letto', () {
+      final near = SeriesSignals.of(
+        entry(key: 'near', archived: 100, latest: gennaio),
+        SeriesState(readChapters: read(97)),
+      );
+      final far = SeriesSignals.of(
+        entry(key: 'far', archived: 100, latest: giugno),
+        SeriesState(readChapters: read(10)),
+      );
+      final done = SeriesSignals.of(
+        entry(key: 'done', archived: 10, latest: giugno),
+        SeriesState(readChapters: read(10)),
+      );
+      final fresh = SeriesSignals.of(
+        entry(key: 'fresh', archived: 12, latest: giugno),
+        SeriesState(readChapters: read(10)),
+      );
+      expect(near.pendingChapters, 3);
+      expect(far.pendingChapters, 90);
+      expect(
+        homeUpdates([near, far, done, fresh], const HomeUpdatesSettings())
+            .map((s) => s.entry.key),
+        ['fresh', 'near'],
+      );
+      expect(
+        homeUpdates([near, far, fresh], const HomeUpdatesSettings(maxPending: 2))
+            .map((s) => s.entry.key),
+        ['fresh'],
+      );
+      expect(
+        homeUpdates([near, far, fresh], const HomeUpdatesSettings(maxPending: 90))
+            .map((s) => s.entry.key),
+        unorderedEquals(['fresh', 'far', 'near']),
+      );
+    });
+
+    test('una scheda ci entra con i capitoli usciti sul sito', () {
+      final signals = SeriesSignals.of(
+        entry(key: 'b', chapters: 42, archived: 0, added: giugno),
+        SeriesState(status: ShelfStatus.reading, lastOpenedAt: gennaio),
+        seenChapters: 40,
+      );
+      expect(signals.pendingChapters, 2);
+      expect(homeUpdates([signals], const HomeUpdatesSettings()), [signals]);
+      expect(homeUpdates([signals], const HomeUpdatesSettings(maxPending: 1)), isEmpty);
+    });
+
+    test('le impostazioni tornano indietro e scartano i valori senza senso', () {
+      const settings = HomeUpdatesSettings(shown: 3, maxPending: 20);
+      expect(HomeUpdatesSettings.fromJson(settings.toJson()), settings);
+      expect(
+        HomeUpdatesSettings.fromJson({'shown': 0, 'maxPending': 'x'}),
+        const HomeUpdatesSettings(),
+      );
+    });
+  });
+
   test('la ricerca prende anche gli autori', () {
     final all = [
       SeriesSignals.of(

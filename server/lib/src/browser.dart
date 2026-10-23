@@ -133,7 +133,10 @@ class _Chromium {
       if (!endpoint.isCompleted) endpoint.completeError(StateError('Chromium è uscito subito ($code)'));
     }));
     try {
-      final socket = await WebSocket.connect(await endpoint.future.timeout(const Duration(seconds: 30)));
+      // Il primo avvio con un profilo nuovo, su un computer carico, supera i 30 s:
+      // chi scade qui lascia la serie con il suo errore senza che Chromium
+      // abbia sbagliato niente.
+      final socket = await WebSocket.connect(await endpoint.future.timeout(const Duration(seconds: 90)));
       final chromium = _Chromium._(process, socket, '');
       final version = await chromium._send('Browser.getVersion');
       // L'user agent di un Chromium senza schermo lo dice: è la prima cosa
@@ -142,7 +145,13 @@ class _Chromium {
       log('Browser: ${version['product']}.');
       return chromium;
     } on Object {
+      // Si aspetta l'uscita: il profilo resta bloccato finché il processo vive,
+      // e l'avvio successivo lo troverebbe in uso.
       process.kill();
+      await process.exitCode.timeout(const Duration(seconds: 10), onTimeout: () {
+        process.kill(ProcessSignal.sigkill);
+        return -1;
+      });
       rethrow;
     }
   }

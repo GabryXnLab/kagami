@@ -16,6 +16,7 @@ import '../providers.dart';
 import 'app_shell.dart';
 import 'library_screen.dart';
 import 'theme.dart';
+import 'widgets/collection_properties_sheet.dart';
 import 'widgets/collection_sheet.dart';
 import 'widgets/kit.dart';
 import 'widgets/series_cover.dart';
@@ -151,10 +152,20 @@ class _CollectionTile extends ConsumerWidget {
                 builder: (_) => CollectionScreen(collectionId: collection.id),
               ),
             ),
-            trailing: IconButton(
-              tooltip: context.l10n.collectionsEdit,
-              onPressed: () => _menu(context, ref),
-              icon: const Icon(LucideIcons.ellipsisVertical, size: 18),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!collection.rules.isEmpty || !collection.traits.isEmpty)
+                  Tooltip(
+                    message: context.l10n.collectionsHasProps,
+                    child: Icon(LucideIcons.zap, size: 16, color: context.tokens.muted),
+                  ),
+                IconButton(
+                  tooltip: context.l10n.collectionsEdit,
+                  onPressed: () => _menu(context, ref),
+                  icon: const Icon(LucideIcons.ellipsisVertical, size: 18),
+                ),
+              ],
             ),
           ),
         ),
@@ -181,6 +192,28 @@ class _CollectionTile extends ConsumerWidget {
                     name: collection.name,
                     color: collection.color,
                   );
+                },
+              ),
+              KTile(
+                icon: LucideIcons.slidersHorizontal,
+                title: context.l10n.collectionPropsEntry,
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final reading = ref.read(readingProvider.notifier);
+                  navigator.pop();
+                  final picked = await showCollectionProperties(
+                    navigator.context,
+                    ref,
+                    rules: collection.rules,
+                    traits: collection.traits,
+                  );
+                  if (picked != null) {
+                    await reading.editCollection(
+                      collection.id,
+                      rules: picked.$1,
+                      traits: picked.$2,
+                    );
+                  }
                 },
               ),
               KTile(

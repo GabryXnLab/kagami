@@ -24,7 +24,8 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   servire. Un capitolo locale conta solo se la sua cartella c'è davvero
   (una lettura di `chapters/` per serie), altrimenti si legge da Drive o si
   mostra come non scaricato. L'icona d'origine compare solo quando Drive c'è.
-- **L'app cancella solo quando lo chiede l'utente**: eliminando una serie
+- **L'app cancella solo quando lo chiede l'utente**, o quando ha acceso la
+  pulizia automatica (sotto): eliminando una serie
   (`data/series_removal.dart`: cartelle sul telefono, su Drive nel cestino
   con la sua riga di `library.json`, coda e serie seguite; le serie tolte
   restano nascoste per firma in `library.removed`, perché una copia locale
@@ -37,6 +38,25 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   (`sync/released.json`), che al giro seguente non lo riporta e non lo toglie
   dall'altra parte, e mentre un giro è in corso aspetta. Con FolderSync,
   che l'app non vede, può solo avvisare.
+- **La pulizia automatica** (`data/auto_cleanup.dart`, Impostazioni →
+  Libreria, `cleanup.auto` nel backup, spenta di partenza) toglie da ogni
+  posto della libreria — cartella scelta, spazio dell'app e Drive, nel
+  cestino; mai lo stato di lettura — i capitoli letti e, con la seconda
+  regola, anche quelli da leggere di una serie in cui non si legge niente da
+  N giorni (14 di partenza; contano le posizioni salvate e i capitoli finiti
+  non stimati, e un capitolo arrivato da meno non si tocca). Su Drive la
+  seconda regola vale solo per le serie già cominciate e per i capitoli con
+  `archivedAt`: lì c'è l'archivio intero. Il permesso di scrivere su Drive si
+  chiede accendendo una regola; senza, si toglie solo dal telefono. Il lavoro ad app chiusa (`AutoCleanupWorker.kt`, WorkManager alla
+  prossima scadenza, motore Dart senza schermo) non ha database né libreria:
+  l'app gli lascia `cleanup/plan.json`, ogni capitolo con la sua scadenza e la
+  cartella di Drive, rifatto a ogni stato pubblicato; Drive lo apre con
+  `DriveRepository.withdrawPaths`, e `withdrawn.json` l'app lo rilegge quando
+  cambia sul disco. Le serie aperte nel lettore
+  aspettano, le cartelle sincronizzate si annotano come nel foglio e con un
+  giro in corso aspettano; «man mano» lascia stare le serie che la seconda
+  regola svuota, finché non le si riprende. Limite: i capitoli scesi ad app
+  chiusa entrano nel piano solo alla riapertura.
 - **Un capitolo tolto da Drive resta nel suo indice** finché il server non
   lo riscrive: `DriveRepository` lo ricorda (`withdrawn.json`) e non lo
   serve (`LibraryShelf.withdrawnChapters`), finché un elenco nuovo della

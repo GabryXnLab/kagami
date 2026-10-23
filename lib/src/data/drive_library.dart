@@ -462,12 +462,22 @@ class DriveRepository implements LibraryShelf {
   /// il lettore proverebbe a leggerli da lì. Sta su disco perché il server
   /// può metterci giorni.
   Map<String, Set<String>>? _withdrawn;
+  DateTime? _withdrawnAt;
 
   File get _withdrawnFile => File(p.join(_state.path, 'withdrawn.json'));
 
   Future<Map<String, Set<String>>> _loadWithdrawn() async {
+    // Lo scrive anche la pulizia automatica ad app chiusa, da un altro
+    // motore: se il file è cambiato si rilegge.
+    DateTime? stamp;
+    try {
+      stamp = await _withdrawnFile.lastModified();
+    } on FileSystemException {
+      stamp = null;
+    }
     final memo = _withdrawn;
-    if (memo != null) return memo;
+    if (memo != null && stamp == _withdrawnAt) return memo;
+    _withdrawnAt = stamp;
     final result = <String, Set<String>>{};
     try {
       final json = jsonDecode(await _withdrawnFile.readAsString());
@@ -487,13 +497,14 @@ class DriveRepository implements LibraryShelf {
 
   Future<void> _saveWithdrawn() async {
     final rows = {
-      for (final MapEntry(:key, :value) in (await _loadWithdrawn()).entries)
+      for (final MapEntry(:key, :value) in (_withdrawn ?? const {}).entries)
         if (value.isNotEmpty) key: value.toList(),
     };
     await _withdrawnFile.parent.create(recursive: true);
     final temporary = File('${_withdrawnFile.path}.tmp');
     await temporary.writeAsString(jsonEncode(rows));
     await temporary.rename(_withdrawnFile.path);
+    _withdrawnAt = await _withdrawnFile.lastModified();
   }
 
   /// I capitoli tolti di una serie. Se il server li ha rimessi — rclone li
@@ -535,10 +546,22 @@ class DriveRepository implements LibraryShelf {
     SeriesEntry entry,
     Iterable<String> paths,
     DriveClient writer,
+  ) =>
+      withdrawPaths(entry.path, paths, writer);
+
+  /// [withdrawChapters] con la sola cartella della serie: la pulizia
+  /// automatica ad app chiusa non ha l'indice della libreria.
+  Future<void> withdrawPaths(
+    String seriesPath,
+    Iterable<String> paths,
+    DriveClient writer,
   ) async {
-    final marks = (await _loadWithdrawn()).putIfAbsent(entry.path, () => {});
+    // Ad app chiusa la libreria non è stata letta: per trovare le cartelle
+    // basta l'elenco della radice.
+    if (_root.isEmpty) _root = {for (final item in await client.children(folderId)) item.name: item};
+    final marks = (await _loadWithdrawn()).putIfAbsent(seriesPath, () => {});
     for (final path in paths.map(p.posix.normalize)) {
-      final item = await resolve('${entry.path}/$path');
+      final item = await resolve('$seriesPath/$path');
       if (item != null) {
         await writer.trash(item.id);
         await _forgetItem(item);

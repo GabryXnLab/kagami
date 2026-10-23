@@ -2590,7 +2590,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get homeUpdates => 'अपडेट';
 
   @override
-  String get homeUpdatesSubtitle => 'सिंक हुए और अभी न पढ़े गए अध्याय';
+  String get homeUpdatesSubtitle => 'आख़िरी पढ़े गए के बाद के नए अध्याय';
 
   @override
   String homeLatestChapter(String number) {
@@ -4071,4 +4071,164 @@ class AppLocalizationsHi extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => 'स्वचालित सफ़ाई';
+
+  @override
+  String get settingsAutoCleanupRead => 'पढ़े हुए अध्याय हटाएँ';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      'फ़ोन से और Drive से (ट्रैश में), अपने-आप। पढ़ने की जगह और पढ़े हुए अध्याय बने रहते हैं';
+
+  @override
+  String get settingsAutoCleanupIdle => 'छोड़ी गई सीरीज़ के अध्याय हटाएँ';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count दिन',
+      one: '1 दिन',
+    );
+    return 'बिना पढ़े अध्याय भी, जब किसी सीरीज़ को $_temp0 से नहीं पढ़ा गया हो';
+  }
+
+  @override
+  String get settingsAutoCleanupPause => 'छोड़ी गई सीरीज़ को रोक दें';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count दिन',
+      one: '1 दिन',
+    );
+    return '«पढ़ रहे हैं» वाली सीरीज़ $_temp0 से न पढ़ी जाएँ तो «रुकी हुई» हो जाती हैं';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => 'कितने समय बाद';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count दिन',
+      one: '1 दिन',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly =>
+      'Drive पर लिखने की अनुमति के बिना, अध्याय केवल फ़ोन से हटाए जाते हैं';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return 'और ($count)';
+  }
+
+  @override
+  String get homeUpdatesLess => 'कम दिखाएँ';
+
+  @override
+  String get settingsHomeUpdates => 'होम पर अपडेट';
+
+  @override
+  String get settingsHomeUpdatesShown => 'दिखाई जाने वाली सीरीज़';
+
+  @override
+  String get settingsHomeUpdatesShownNote => 'बाक़ी «और» छूने पर दिखती हैं';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़',
+      one: '1 सीरीज़',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => 'अधिकतम नए अध्याय';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote =>
+      'आख़िरी पढ़े गए के बाद इससे ज़्यादा अध्याय वाली सीरीज़ अपडेट नहीं मानी जाती';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय',
+      one: '1 अध्याय',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionPropsTitle => 'संग्रह के गुण';
+
+  @override
+  String get collectionPropsEntry => 'गुण';
+
+  @override
+  String get collectionsHasProps => 'सक्रिय गुण हैं';
+
+  @override
+  String get collectionPropsAutoTitle => 'स्वचालित जोड़';
+
+  @override
+  String get collectionPropsAutoNote =>
+      'सभी नियमों पर खरी उतरने वाली सीरीज़ अपने आप जुड़ जाती हैं। हाथ से हटाई गई सीरीज़ वापस नहीं आती।';
+
+  @override
+  String get collectionPropsTypes => 'प्रकार';
+
+  @override
+  String get collectionPropsTags => 'शैलियाँ और टैग (सभी ज़रूरी)';
+
+  @override
+  String get collectionPropsTagSearch => 'टैग खोजें';
+
+  @override
+  String get collectionPropsShelf => 'पढ़ने की स्थिति';
+
+  @override
+  String get collectionPropsRelease => 'प्रकाशन';
+
+  @override
+  String get collectionPropsProviders => 'साइट';
+
+  @override
+  String get collectionPropsMinRating => 'न्यूनतम रेटिंग';
+
+  @override
+  String get collectionPropsFavorite => 'केवल पसंदीदा';
+
+  @override
+  String get collectionPropsTraitsTitle => 'संग्रह की सभी सीरीज़ के लिए';
+
+  @override
+  String get collectionPropsMuted => 'अपडेट म्यूट करें';
+
+  @override
+  String get collectionPropsKeepChapters => 'स्वचालित सफ़ाई से बाहर रखें';
+
+  @override
+  String get collectionPropsNoAutoPause => 'स्वचालित विराम से बाहर रखें';
+
+  @override
+  String get collectionPropsNoRatingInvite => 'रेटिंग न माँगें';
+
+  @override
+  String get collectionPropsApply => 'लागू करें';
 }

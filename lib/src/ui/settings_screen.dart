@@ -16,9 +16,11 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../data/auto_cleanup.dart';
 import '../data/backup.dart';
 import '../data/cloud.dart';
 import '../data/folder_sync.dart';
+import '../data/library_view.dart' show HomeUpdatesSettings;
 import '../data/page_decoder.dart';
 import '../data/reader_probe.dart';
 import '../data/reader_settings.dart';
@@ -31,6 +33,7 @@ import 'history_screen.dart';
 import 'statistics_screen.dart';
 import 'sync_screen.dart';
 import 'theme.dart';
+import 'widgets/cleanup_sheet.dart';
 import 'widgets/kit.dart';
 
 String _themeLabel(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
@@ -464,11 +467,141 @@ class _LibraryPage extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: 26),
+        KSection(l10n.settingsHomeUpdates),
+        const _HomeUpdates(),
+        const SizedBox(height: 26),
+        KSection(l10n.settingsAutoCleanup),
+        const _AutoCleanup(),
         if (cloudAvailable) ...[
           const SizedBox(height: 26),
           KSection(l10n.settingsGoogleDrive),
           const _Drive(),
         ],
+      ],
+    );
+  }
+}
+
+/// Quanti aggiornamenti mostra la home e quali serie ci entrano.
+class _HomeUpdates extends ConsumerWidget {
+  const _HomeUpdates();
+
+  static const List<int> _shown = [3, 5, 10, 15, 20];
+  static const List<int> _maxPending = [1, 3, 5, 10, 20, 50];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final settings = ref.watch(homeUpdatesSettingsProvider).value ?? const HomeUpdatesSettings();
+    final notifier = ref.read(homeUpdatesSettingsProvider.notifier);
+    return KGroup(
+      children: [
+        KTile(
+          icon: LucideIcons.listOrdered,
+          title: l10n.settingsHomeUpdatesShown,
+          subtitle: l10n.settingsHomeUpdatesShownNote,
+          trailing: _Value(l10n.settingsHomeUpdatesSeries(settings.shown)),
+          onTap: () => _choose<int>(
+            context,
+            title: l10n.settingsHomeUpdatesShown,
+            current: settings.shown,
+            values: {..._shown, settings.shown}.toList()..sort(),
+            label: l10n.settingsHomeUpdatesSeries,
+            onChosen: (shown) => notifier.change((current) => current.copyWith(shown: shown)),
+          ),
+        ),
+        KTile(
+          icon: LucideIcons.bookPlus,
+          title: l10n.settingsHomeUpdatesMaxPending,
+          subtitle: l10n.settingsHomeUpdatesMaxPendingNote,
+          trailing: _Value(l10n.settingsHomeUpdatesChapters(settings.maxPending)),
+          onTap: () => _choose<int>(
+            context,
+            title: l10n.settingsHomeUpdatesMaxPending,
+            current: settings.maxPending,
+            values: {..._maxPending, settings.maxPending}.toList()..sort(),
+            label: l10n.settingsHomeUpdatesChapters,
+            onChosen: (maxPending) => notifier.change((current) => current.copyWith(maxPending: maxPending)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Le due regole che tolgono da sole i capitoli dal telefono.
+class _AutoCleanup extends ConsumerWidget {
+  const _AutoCleanup();
+
+  static const List<int> _days = [3, 7, 14, 21, 30, 60, 90];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final settings = ref.watch(autoCleanupSettingsProvider).value ?? const AutoCleanupSettings();
+    final notifier = ref.read(autoCleanupSettingsProvider.notifier);
+    // Con Drive le regole tolgono anche da lì: il permesso di scrivere si
+    // chiede ora, con l'utente davanti, perché il lavoro ad app chiusa non lo
+    // può chiedere.
+    Future<void> allowDrive() async {
+      if (ref.read(driveRepositoryProvider) == null) return;
+      final messenger = ScaffoldMessenger.of(context);
+      final writer = await driveWriter(ref, messenger, l10n);
+      writer?.close();
+      if (writer == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsAutoCleanupPhoneOnly)));
+      }
+    }
+
+    void read(bool on) {
+      notifier.change((current) => current.copyWith(read: on));
+      if (on) allowDrive();
+    }
+
+    void idle(bool on) {
+      notifier.change((current) => current.copyWith(idle: on));
+      if (on) allowDrive();
+    }
+
+    void pause(bool on) => notifier.change((current) => current.copyWith(pause: on));
+    return KGroup(
+      children: [
+        KTile(
+          icon: LucideIcons.bookCheck,
+          title: l10n.settingsAutoCleanupRead,
+          subtitle: l10n.settingsAutoCleanupReadNote,
+          onTap: () => read(!settings.read),
+          trailing: Switch(value: settings.read, onChanged: read),
+        ),
+        KTile(
+          icon: LucideIcons.hourglass,
+          title: l10n.settingsAutoCleanupIdle,
+          subtitle: l10n.settingsAutoCleanupIdleNote(settings.idleDays),
+          onTap: () => idle(!settings.idle),
+          trailing: Switch(value: settings.idle, onChanged: idle),
+        ),
+        KTile(
+          icon: LucideIcons.pause,
+          title: l10n.settingsAutoCleanupPause,
+          subtitle: l10n.settingsAutoCleanupPauseNote(settings.idleDays),
+          onTap: () => pause(!settings.pause),
+          trailing: Switch(value: settings.pause, onChanged: pause),
+        ),
+        if (settings.idle || settings.pause)
+          KTile(
+            icon: LucideIcons.calendarClock,
+            title: l10n.settingsAutoCleanupIdleAfter,
+            trailing: _Value(l10n.settingsAutoCleanupDays(settings.idleDays)),
+            onTap: () => _choose<int>(
+              context,
+              title: l10n.settingsAutoCleanupIdleAfter,
+              current: settings.idleDays,
+              values: {..._days, settings.idleDays}.toList()..sort(),
+              label: l10n.settingsAutoCleanupDays,
+              onChosen: (days) => notifier.change((current) => current.copyWith(idleDays: days)),
+            ),
+          ),
       ],
     );
   }

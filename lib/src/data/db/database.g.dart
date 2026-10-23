@@ -2343,6 +2343,17 @@ class $CollectionRowsTable extends CollectionRows
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _propertiesMeta = const VerificationMeta(
+    'properties',
+  );
+  @override
+  late final GeneratedColumn<String> properties = GeneratedColumn<String>(
+    'properties',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2351,6 +2362,7 @@ class $CollectionRowsTable extends CollectionRows
     color,
     position,
     updatedAt,
+    properties,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2405,6 +2417,12 @@ class $CollectionRowsTable extends CollectionRows
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('properties')) {
+      context.handle(
+        _propertiesMeta,
+        properties.isAcceptableOrUnknown(data['properties']!, _propertiesMeta),
+      );
+    }
     return context;
   }
 
@@ -2438,6 +2456,10 @@ class $CollectionRowsTable extends CollectionRows
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      properties: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}properties'],
+      ),
     );
   }
 
@@ -2454,6 +2476,10 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
   final int? color;
   final int position;
   final DateTime updatedAt;
+
+  /// JSON con regole, proprietà, serie automatiche e saltate
+  /// (`Collection.propertiesJson`); vuota per una raccolta semplice.
+  final String? properties;
   const CollectionRow({
     required this.id,
     required this.profileId,
@@ -2461,6 +2487,7 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
     this.color,
     required this.position,
     required this.updatedAt,
+    this.properties,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2473,6 +2500,9 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
     }
     map['position'] = Variable<int>(position);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || properties != null) {
+      map['properties'] = Variable<String>(properties);
+    }
     return map;
   }
 
@@ -2486,6 +2516,9 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
           : Value(color),
       position: Value(position),
       updatedAt: Value(updatedAt),
+      properties: properties == null && nullToAbsent
+          ? const Value.absent()
+          : Value(properties),
     );
   }
 
@@ -2501,6 +2534,7 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
       color: serializer.fromJson<int?>(json['color']),
       position: serializer.fromJson<int>(json['position']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      properties: serializer.fromJson<String?>(json['properties']),
     );
   }
   @override
@@ -2513,6 +2547,7 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
       'color': serializer.toJson<int?>(color),
       'position': serializer.toJson<int>(position),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'properties': serializer.toJson<String?>(properties),
     };
   }
 
@@ -2523,6 +2558,7 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
     Value<int?> color = const Value.absent(),
     int? position,
     DateTime? updatedAt,
+    Value<String?> properties = const Value.absent(),
   }) => CollectionRow(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -2530,6 +2566,7 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
     color: color.present ? color.value : this.color,
     position: position ?? this.position,
     updatedAt: updatedAt ?? this.updatedAt,
+    properties: properties.present ? properties.value : this.properties,
   );
   CollectionRow copyWithCompanion(CollectionRowsCompanion data) {
     return CollectionRow(
@@ -2539,6 +2576,9 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
       color: data.color.present ? data.color.value : this.color,
       position: data.position.present ? data.position.value : this.position,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      properties: data.properties.present
+          ? data.properties.value
+          : this.properties,
     );
   }
 
@@ -2550,14 +2590,15 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
           ..write('name: $name, ')
           ..write('color: $color, ')
           ..write('position: $position, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('properties: $properties')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, profileId, name, color, position, updatedAt);
+      Object.hash(id, profileId, name, color, position, updatedAt, properties);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2567,7 +2608,8 @@ class CollectionRow extends DataClass implements Insertable<CollectionRow> {
           other.name == this.name &&
           other.color == this.color &&
           other.position == this.position &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.properties == this.properties);
 }
 
 class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
@@ -2577,6 +2619,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
   final Value<int?> color;
   final Value<int> position;
   final Value<DateTime> updatedAt;
+  final Value<String?> properties;
   final Value<int> rowid;
   const CollectionRowsCompanion({
     this.id = const Value.absent(),
@@ -2585,6 +2628,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
     this.color = const Value.absent(),
     this.position = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.properties = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CollectionRowsCompanion.insert({
@@ -2594,6 +2638,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
     this.color = const Value.absent(),
     this.position = const Value.absent(),
     required DateTime updatedAt,
+    this.properties = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        profileId = Value(profileId),
@@ -2606,6 +2651,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
     Expression<int>? color,
     Expression<int>? position,
     Expression<DateTime>? updatedAt,
+    Expression<String>? properties,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2615,6 +2661,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
       if (color != null) 'color': color,
       if (position != null) 'position': position,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (properties != null) 'properties': properties,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2626,6 +2673,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
     Value<int?>? color,
     Value<int>? position,
     Value<DateTime>? updatedAt,
+    Value<String?>? properties,
     Value<int>? rowid,
   }) {
     return CollectionRowsCompanion(
@@ -2635,6 +2683,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
       color: color ?? this.color,
       position: position ?? this.position,
       updatedAt: updatedAt ?? this.updatedAt,
+      properties: properties ?? this.properties,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2660,6 +2709,9 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (properties.present) {
+      map['properties'] = Variable<String>(properties.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2675,6 +2727,7 @@ class CollectionRowsCompanion extends UpdateCompanion<CollectionRow> {
           ..write('color: $color, ')
           ..write('position: $position, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('properties: $properties, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6151,6 +6204,7 @@ typedef $$CollectionRowsTableCreateCompanionBuilder =
       Value<int?> color,
       Value<int> position,
       required DateTime updatedAt,
+      Value<String?> properties,
       Value<int> rowid,
     });
 typedef $$CollectionRowsTableUpdateCompanionBuilder =
@@ -6161,6 +6215,7 @@ typedef $$CollectionRowsTableUpdateCompanionBuilder =
       Value<int?> color,
       Value<int> position,
       Value<DateTime> updatedAt,
+      Value<String?> properties,
       Value<int> rowid,
     });
 
@@ -6234,6 +6289,11 @@ class $$CollectionRowsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> collectionItemsRefs(
     Expression<bool> Function($$CollectionItemsTableFilterComposer f) f,
   ) {
@@ -6298,6 +6358,11 @@ class $$CollectionRowsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CollectionRowsTableAnnotationComposer
@@ -6326,6 +6391,11 @@ class $$CollectionRowsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get properties => $composableBuilder(
+    column: $table.properties,
+    builder: (column) => column,
+  );
 
   Expression<T> collectionItemsRefs<T extends Object>(
     Expression<T> Function($$CollectionItemsTableAnnotationComposer a) f,
@@ -6389,6 +6459,7 @@ class $$CollectionRowsTableTableManager
                 Value<int?> color = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> properties = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CollectionRowsCompanion(
                 id: id,
@@ -6397,6 +6468,7 @@ class $$CollectionRowsTableTableManager
                 color: color,
                 position: position,
                 updatedAt: updatedAt,
+                properties: properties,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6407,6 +6479,7 @@ class $$CollectionRowsTableTableManager
                 Value<int?> color = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 required DateTime updatedAt,
+                Value<String?> properties = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CollectionRowsCompanion.insert(
                 id: id,
@@ -6415,6 +6488,7 @@ class $$CollectionRowsTableTableManager
                 color: color,
                 position: position,
                 updatedAt: updatedAt,
+                properties: properties,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

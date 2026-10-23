@@ -2589,7 +2589,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeUpdates => 'Updates';
 
   @override
-  String get homeUpdatesSubtitle => 'Synced chapters not yet read';
+  String get homeUpdatesSubtitle => 'New chapters after the last one read';
 
   @override
   String homeLatestChapter(String number) {
@@ -4074,4 +4074,165 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsAutoCleanup => 'Automatic cleanup';
+
+  @override
+  String get settingsAutoCleanupRead => 'Remove read chapters';
+
+  @override
+  String get settingsAutoCleanupReadNote =>
+      'From the phone and from Drive, to the trash, automatically. Progress and read chapters are kept';
+
+  @override
+  String get settingsAutoCleanupIdle => 'Remove chapters of idle series';
+
+  @override
+  String settingsAutoCleanupIdleNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return 'Unread ones too, when a series hasn\'t been read for $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPause => 'Pause idle series';
+
+  @override
+  String settingsAutoCleanupPauseNote(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return 'Series marked as reading move to paused when not read for $_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupIdleAfter => 'Idle after';
+
+  @override
+  String settingsAutoCleanupDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsAutoCleanupPhoneOnly =>
+      'Without permission to write to Drive, chapters are removed from the phone only';
+
+  @override
+  String homeUpdatesMore(int count) {
+    return 'More ($count)';
+  }
+
+  @override
+  String get homeUpdatesLess => 'Show less';
+
+  @override
+  String get settingsHomeUpdates => 'Updates on Home';
+
+  @override
+  String get settingsHomeUpdatesShown => 'Series shown';
+
+  @override
+  String get settingsHomeUpdatesShownNote =>
+      'The rest appear when you tap «More»';
+
+  @override
+  String settingsHomeUpdatesSeries(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count series',
+      one: '1 series',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get settingsHomeUpdatesMaxPending => 'Maximum new chapters';
+
+  @override
+  String get settingsHomeUpdatesMaxPendingNote =>
+      'A series with more chapters to read after the last one read isn\'t an update';
+
+  @override
+  String settingsHomeUpdatesChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count chapters',
+      one: '1 chapter',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionPropsTitle => 'Collection properties';
+
+  @override
+  String get collectionPropsEntry => 'Properties';
+
+  @override
+  String get collectionsHasProps => 'Has active properties';
+
+  @override
+  String get collectionPropsAutoTitle => 'Automatic adding';
+
+  @override
+  String get collectionPropsAutoNote =>
+      'Series matching all the rules join by themselves. If you remove one by hand, it does not come back.';
+
+  @override
+  String get collectionPropsTypes => 'Type';
+
+  @override
+  String get collectionPropsTags => 'Genres and tags (all required)';
+
+  @override
+  String get collectionPropsTagSearch => 'Search tags';
+
+  @override
+  String get collectionPropsShelf => 'Reading status';
+
+  @override
+  String get collectionPropsRelease => 'Publication';
+
+  @override
+  String get collectionPropsProviders => 'Site';
+
+  @override
+  String get collectionPropsMinRating => 'Minimum rating';
+
+  @override
+  String get collectionPropsFavorite => 'Favorites only';
+
+  @override
+  String get collectionPropsTraitsTitle => 'For every series in the collection';
+
+  @override
+  String get collectionPropsMuted => 'Mute updates';
+
+  @override
+  String get collectionPropsKeepChapters => 'Exclude from automatic cleanup';
+
+  @override
+  String get collectionPropsNoAutoPause => 'Exclude from automatic pause';
+
+  @override
+  String get collectionPropsNoRatingInvite => 'Do not ask for a rating';
+
+  @override
+  String get collectionPropsApply => 'Apply';
 }

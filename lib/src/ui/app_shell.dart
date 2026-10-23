@@ -199,6 +199,11 @@ class _AppShellState extends ConsumerState<AppShell>
     // Le serie scaricate man mano chiedono il capitolo seguente uscendo dal
     // lettore, qualunque destinazione sia aperta.
     ref.listen(readAheadProvider, (_, _) {});
+    // La pulizia automatica rifà il piano a ogni stato pubblicato, qualunque
+    // destinazione sia aperta.
+    ref.listen(autoCleanupProvider, (_, _) {});
+    // Le raccolte con regole si riempiono da sole quando la libreria cambia.
+    ref.listen(collectionAutoFillProvider, (_, _) {});
     // Chi controlla le serie seguite va scritto dove lo legge il giro ad app
     // chiusa, e con lui la catena del controllo quotidiano.
     ref.listen(archiveEngineSyncProvider, (_, _) {});

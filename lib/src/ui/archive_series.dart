@@ -170,6 +170,31 @@ int reachedChapterIndex(
   });
 }
 
+/// Da dove parte «man mano» se non lo si è scelto: il primo capitolo dopo
+/// l'ultimo letto, o dopo quello dichiarato con la scheda ([reachedNumber])
+/// quando i letti non li sa; il primo se non si sa niente o è tutto letto.
+String? aheadStartId(List<Chapter> chapters, {Set<String> read = const {}, String? reachedNumber}) {
+  if (chapters.isEmpty) return null;
+  final last = reachedChapterIndex(chapters, read: read, reachedNumber: reachedNumber);
+  return last + 1 < chapters.length ? chapters[last + 1].id : chapters.first.id;
+}
+
+/// Il capitolo fino a cui segnare letti quando si conferma «man mano» da un
+/// capitolo d'inizio: quello subito prima del primo scaricato ([ids]). `null`
+/// se l'inizio è il primo capitolo o se si è già più avanti di così (un
+/// inizio scelto più indietro non deve far arretrare «arrivato a»).
+Chapter? chapterBeforeAhead(
+  List<Chapter> chapters,
+  Set<String> ids, {
+  Set<String> read = const {},
+  String? reachedNumber,
+}) {
+  final start = chapters.indexWhere((chapter) => ids.contains(chapter.id));
+  if (start <= 0) return null;
+  final reached = reachedChapterIndex(chapters, read: read, reachedNumber: reachedNumber);
+  return reached >= start - 1 ? null : chapters[start - 1];
+}
+
 class ArchiveSeriesPage extends ConsumerStatefulWidget {
   const ArchiveSeriesPage({
     required this.series,
@@ -361,10 +386,8 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
   /// letto, o se non se ne sa niente dal primo che manca.
   String? _defaultStart(ArchiveMode mode, Set<String> have) {
     if (mode == ArchiveMode.ahead) {
-      final read = ref.read(seriesStateProvider(widget.stateKey ?? widget.series.key)).readChapters;
-      final last = _chapters.lastIndexWhere((chapter) => read.contains(chapter.id));
-      if (last + 1 < _chapters.length) return _chapters[last + 1].id;
-      return _chapters.first.id;
+      final state = ref.read(seriesStateProvider(widget.stateKey ?? widget.series.key));
+      return aheadStartId(_chapters, read: state.readChapters, reachedNumber: state.reachedChapter);
     }
     final reached = _reachedIndex();
     if (reached >= 0 && reached + 1 < _chapters.length) return _chapters[reached + 1].id;

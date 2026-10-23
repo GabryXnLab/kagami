@@ -51,4 +51,27 @@ void main() {
     expect(reachedChapterIndex(named, reachedNumber: 'Extra'), 6);
     expect(reachedChapterIndex(named, reachedNumber: 'Prologo'), -1);
   });
+
+  group('man mano', () {
+    test('da un capitolo di inizio segna letti i precedenti', () {
+      expect(chapterBeforeAhead(chapters, {'c53', 'c53.5'})?.id, 'c51');
+    });
+
+    test('dal primo capitolo non segna niente', () {
+      expect(chapterBeforeAhead(chapters, {'c50', 'c51'}), isNull);
+    });
+
+    test('già più avanti: non fa arretrare l\'arrivato a', () {
+      expect(chapterBeforeAhead(chapters, {'c53'}, read: {'c51'}), isNull);
+      expect(chapterBeforeAhead(chapters, {'c54'}, reachedNumber: '53.5'), isNull);
+      expect(chapterBeforeAhead(chapters, {'c54'}, read: {'c50'})?.id, 'c53.5');
+    });
+
+    test('l\'inizio predefinito è il primo da leggere, anche dal solo numero dichiarato', () {
+      expect(aheadStartId(chapters, read: {'c50', 'c51'}), 'c53');
+      expect(aheadStartId(chapters, reachedNumber: '53'), 'c53.5');
+      expect(aheadStartId(chapters), 'c50');
+      expect(aheadStartId(chapters, read: {for (final c in chapters) c.id}), 'c50');
+    });
+  });
 }

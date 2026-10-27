@@ -105,7 +105,13 @@ void main() {
             {
               'name': 'Solo Leveling', 'url': '/solo-leveling',
               'cover': 'https://rx.resmk.org/covers/c8ccb9d017d6.webp',
-              'status': 'completed', 'stats': {'chapters_count': 201},
+              'status': 'completed', 'stats': {'chapters_count': 265},
+              // Il `number` è il posto nell'elenco, gli avvisi non hanno numero.
+              'latest_chapters': [
+                {'name': 'Chapter 201', 'number': 269},
+                {'name': 'Chapter 202', 'number': 270},
+                {'name': 'Chapter : Notice (official translation)', 'number': 268},
+              ],
             },
             {'name': 'Capitolo', 'url': '/solo-leveling/chapter-1'},
             {'name': 'Altrove', 'url': '/altrove', 'cover': 'https://example.com/x.webp'},
@@ -117,7 +123,7 @@ void main() {
       expect(Uri.parse(http.requests.single).queryParameters, {'q': 'solo lev', 'limit': '$searchLimit'});
       expect(results.map((r) => r.url), ['https://mangak.io/solo-leveling', 'https://mangak.io/altrove']);
       expect(results.first.title, 'Solo Leveling');
-      expect(results.first.chapters, 201);
+      expect(results.first.latestChapter, '202');
       expect(results.first.releaseStatus, 'completed');
       expect(results.first.coverUrl, 'https://rx.resmk.org/covers/c8ccb9d017d6.webp');
       expect(results.last.coverUrl, isNull);
@@ -254,8 +260,10 @@ void main() {
       expect(results.map((r) => r.title), ['Disfarming', 'Other One']);
       expect(results.first.coverUrl, 'https://mancover.xyz/cover/2026/02/disfarming.webp');
       expect(results.first.releaseStatus, 'completed');
+      expect(results.first.latestChapter, '12');
       expect(results.last.coverUrl, isNull);
       expect(results.last.releaseStatus, 'unknown');
+      expect(results.last.latestChapter, isNull);
     });
 
     test('la ricerca senza risultati, e dietro Cloudflare', () async {
@@ -352,6 +360,11 @@ void main() {
             'id': 2017, 'slug': 'nano-machine', 'title': 'Nano Machine', 'type': 'manhwa',
             'cover': 'https://cdn.asurascans.com/asura-images/covers/nano-machine.e31bdb.webp',
             'status': 'ongoing', 'chapter_count': 332, 'public_url': '/comics/nano-machine-bd5bdaf8',
+            // Il capitolo 0 fa contare un capitolo in più dell'ultimo.
+            'latest_chapters': [
+              {'number': 331, 'slug': 'chapter-331'},
+              {'number': 330.5, 'slug': 'chapter-330-5'},
+            ],
           },
           {'id': 9, 'slug': 'black-badger', 'title': 'Black Badger', 'type': 'novel'},
           {'id': 1933, 'slug': 'my-path', 'title': 'My Path', 'status': 'dropped', 'cover': 'https://example.com/c.webp'},
@@ -362,7 +375,8 @@ void main() {
       expect(Uri.parse(http.requests.single).queryParameters, {'q': 'nano'});
       expect(results.map((r) => r.url),
           ['https://asurascans.com/comics/nano-machine', 'https://asurascans.com/comics/my-path']);
-      expect((results.first.chapters, results.first.releaseStatus), (332, 'ongoing'));
+      expect((results.first.latestChapter, results.first.releaseStatus), ('331', 'ongoing'));
+      expect(results.last.latestChapter, isNull);
       expect(results.first.coverUrl, 'https://cdn.asurascans.com/asura-images/covers/nano-machine.e31bdb.webp');
       expect((results.last.coverUrl, results.last.releaseStatus), (null, 'cancelled'));
     });
@@ -465,6 +479,7 @@ void main() {
         ('Psycho Eyes', 'https://coffeemanga.net/manga/psycho-eyes/', 'completed'),
       ]);
       expect(results.first.coverUrl, 'https://coffeemanga.net/wp-content/uploads/2026/09/merry-psycho-cover.jpg');
+      expect(results.map((r) => r.latestChapter), ['78', null]);
       expect(results.last.coverUrl, isNull);
       expect(await provider.search('zzz', SearchHttp(page: '<p>No matches found.</p>')), isEmpty);
     });

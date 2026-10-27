@@ -39,6 +39,11 @@ class ServerNetwork implements NetworkState {
   Future<bool> check() async => true;
 }
 
+/// Quante richieste insieme verso Drive: il tempo di un capitolo è la latenza
+/// per file (~2 s) divisa per le corsie, e Drive non ha mai risposto 429 fino
+/// a 64 in parallelo. Il telefono resta a 8.
+const int driveLanes = 32;
+
 /// Dove scrive il server: solo nella cartella di Drive della libreria. Le
 /// tavole passano dalla cartella di preparazione e la lasciano appena Drive
 /// le ha, come per la destinazione «Drive» del telefono.
@@ -52,6 +57,7 @@ ArchiveEnvironment serverEnvironment(ArchiveFiles files, DriveClient client, Dir
           remote: DriveSyncRemote(client),
           folderId: folderId,
           staging: files.staging(folderId).path,
+          uploads: driveLanes,
         );
       },
     );

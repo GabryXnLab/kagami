@@ -178,6 +178,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   /// in `dispose` il `ref` non è più utilizzabile, ed è lì che la posizione
   /// diventa pubblica.
   late Reading _reading;
+  late ReadAhead _readAhead;
+
+  /// Il capitolo per cui si è già avvisato il «man mano».
+  String? _aheadChapter;
 
   /// L'ultima posizione vista, in attesa di arrivare su disco.
   ReadingSpot? _pending;
@@ -195,6 +199,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _repository = ref.read(userRepositoryProvider);
     _settingsStore = ref.read(readerSettingsProvider);
     _reading = ref.read(readingProvider.notifier);
+    _readAhead = ref.read(readAheadProvider.notifier);
     AutoCleanup.holding.add(widget.seriesKey);
     _loadSettings();
     _hideSystemBars();
@@ -560,6 +565,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     // Scritta una volta, non si riscrive: uscendo dal lettore si ripassa di
     // qui, e la stessa riga due volte è una scrittura per niente.
     _pending = null;
+    final opened = chapterId != _aheadChapter;
+    _aheadChapter = chapterId;
     unawaited(
       _reading.noteProgress(
         widget.seriesKey,
@@ -569,13 +576,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         pageCount: _pendingCount,
       ),
     );
+    if (opened) _readAhead.nudge();
   }
 
   /// Fine del capitolo: si segna letto e si precarica l'inizio del seguente,
   /// perché il gesto che arriva dopo è quasi sempre "avanti".
   void _finish(String chapterId, String? nextId) {
     if (!_incognito) {
-      unawaited(_reading.noteChapterRead(widget.seriesKey, chapterId));
+      unawaited(_reading
+          .noteChapterRead(widget.seriesKey, chapterId)
+          .then((_) => _readAhead.nudge()));
       unawaited(_offerEarlier(chapterId));
     }
     if (nextId != null) _preload(nextId);

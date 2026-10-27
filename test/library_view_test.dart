@@ -132,7 +132,8 @@ void main() {
       const SeriesState(readChapters: {'1', '2', '3', '4', '5'}),
     );
     expect(signals.unreadCount, 0);
-    expect(signals.fraction, 1);
+    // L'avanzamento invece è su tutti i capitoli, scaricati o no.
+    expect(signals.fraction, closeTo(5 / 20, 1e-9));
     expect(signals.entry.missingChapterCount, 15);
   });
 

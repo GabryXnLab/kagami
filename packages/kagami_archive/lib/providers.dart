@@ -171,7 +171,7 @@ class SearchResult {
     required this.title,
     required this.url,
     this.coverUrl,
-    this.chapters,
+    this.latestChapter,
     this.releaseStatus = 'unknown',
   });
 
@@ -179,7 +179,10 @@ class SearchResult {
   final String title;
   final String url;
   final String? coverUrl;
-  final int? chapters;
+
+  /// Il numero dell'ultimo capitolo uscito ([chapterNumber]), non quanti
+  /// sono: con un 70.5 o un prologo i due non coincidono.
+  final String? latestChapter;
 
   /// Uno di [releaseStatuses].
   final String releaseStatus;
@@ -204,6 +207,19 @@ String? chapterNumber(String title) {
   final found = chapterNumberPattern.firstMatch(title);
   if (found == null) return null;
   return '${int.parse(found[1]!)}${found[2] != null ? '.${found[2]}' : ''}';
+}
+
+/// Il più alto fra i numeri di capitolo di [titles]: i siti danno gli ultimi
+/// capitoli in un ordine loro, e fra quelli ci sono avvisi senza numero.
+String? latestChapterNumber(Iterable<String> titles) {
+  String? latest;
+  for (final title in titles) {
+    final number = chapterNumber(title);
+    if (number != null && (latest == null || double.parse(number) > double.parse(latest))) {
+      latest = number;
+    }
+  }
+  return latest;
 }
 
 /// Un link che nessun sito registrato riconosce: l'app lo distingue dagli

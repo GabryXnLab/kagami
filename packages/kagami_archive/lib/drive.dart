@@ -128,7 +128,10 @@ abstract interface class NetworkState {
   Future<bool> check();
 }
 
-/// Le chiamate a Drive.
+/// Le chiamate a Drive. [connections] sono le connessioni insieme verso
+/// Drive: 8 bastano al telefono, su una rete mobile non se ne sono misurate
+/// di più; un server su una rete fissa ne regge molte di più, e il tempo di
+/// un capitolo è la latenza per file divisa per le corsie.
 class DriveClient {
   DriveClient(
     this._token, {
@@ -138,6 +141,7 @@ class DriveClient {
     @visibleForTesting this.stall = const Duration(seconds: 20),
     @visibleForTesting this.answer = const Duration(seconds: 20),
     @visibleForTesting this.multipartLimit = 5 * 1024 * 1024,
+    int connections = 8,
   })  : _endpoint = endpoint ?? _drive,
         _http = HttpClient() {
     _http
@@ -145,7 +149,7 @@ class DriveClient {
       // Le tavole si scaricano in parallelo: con la stessa connessione si
       // risparmiano le strette di mano TLS, che su una rete mobile sono la
       // parte lenta.
-      ..maxConnectionsPerHost = 8
+      ..maxConnectionsPerHost = connections
       ..idleTimeout = const Duration(seconds: 30);
   }
 

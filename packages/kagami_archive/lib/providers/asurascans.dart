@@ -151,13 +151,15 @@ class AsuraScans extends Provider {
       final url = '$home/comics/${item['slug']}';
       if (!accepts(url)) continue;
       final cover = item['cover'] ?? item['cover_url'];
-      final count = item['chapter_count'];
+      final latest = item['latest_chapters'];
       results.add(SearchResult(
         provider: id,
         title: item['title'] as String,
         url: url,
         coverUrl: isText(cover) && allows(cover as String) ? cover : null,
-        chapters: count is int ? count : null,
+        latestChapter: latest is List
+            ? latestChapterNumber([for (final chapter in latest) if (chapter is Map && chapter['number'] is num) 'Chapter ${chapter['number']}'])
+            : null,
         releaseStatus: releaseStatus(item['status']),
       ));
       if (results.length == searchLimit) break;

@@ -983,6 +983,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return 'الأحدث: الفصل $number';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return 'التحقق من $site';
   }
@@ -4370,4 +4375,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get collectionPropsApply => 'تطبيق';
+
+  @override
+  String get settingsReadAhead => 'التنزيل أثناء القراءة';
+
+  @override
+  String get settingsReadAheadWindow => 'الفصول الجاهزة';
+
+  @override
+  String get settingsReadAheadWindowNote =>
+      'عدد الفصول المنزّلة التي تبقى أمام الفصل الذي تقرؤه، في كل السلاسل التي تُنزَّل أثناء القراءة';
 }

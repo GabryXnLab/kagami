@@ -413,12 +413,14 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
     });
   }
 
+  int get _window => ref.read(readAheadWindowProvider).value ?? readAheadWindow;
+
   int get _count {
     final start = _startIndex;
     return switch (_mode) {
       ArchiveMode.all => _chapters.length,
       ArchiveMode.from => start < 0 ? 0 : _chapters.length - start,
-      ArchiveMode.ahead => start < 0 ? 0 : math.min(readAheadWindow, _chapters.length - start),
+      ArchiveMode.ahead => start < 0 ? 0 : math.min(_window, _chapters.length - start),
       ArchiveMode.pick => _picked.length,
       ArchiveMode.card => 0,
     };
@@ -501,8 +503,8 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
         choice = ArchiveChoice(
           where: _where,
           delayMs: _delayMs,
-          ids: {for (final chapter in _chapters.skip(index).take(readAheadWindow)) chapter.id},
-          ahead: readAheadWindow,
+          ids: {for (final chapter in _chapters.skip(index).take(_window)) chapter.id},
+          ahead: _window,
           collection: _collection,
         );
       case ArchiveMode.pick:
@@ -526,6 +528,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(readAheadWindowProvider);
     final l10n = context.l10n;
     final have = _have();
     final visible = _mode == ArchiveMode.all ? const <Chapter>[] : _visible();
@@ -543,6 +546,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                 KSection(l10n.archiveWhatSection),
                 _Modes(
                   mode: _mode,
+                  window: _window,
                   aheadPossible: _aheadPossible,
                   onChanged: (mode) => _choose(mode, have),
                 ),
@@ -553,7 +557,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                     switch (_mode) {
                       ArchiveMode.all => l10n.archiveModeAllHint,
                       ArchiveMode.from => l10n.archiveModeFromHint,
-                      ArchiveMode.ahead => l10n.archiveModeAheadHint(readAheadWindow),
+                      ArchiveMode.ahead => l10n.archiveModeAheadHint(_window),
                       ArchiveMode.pick => l10n.archiveModePickHint,
                       ArchiveMode.card => l10n.archiveModeCardHint,
                     },
@@ -714,7 +718,7 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
           ? _Mark.none
           : index == start
               ? _Mark.start
-              : index < start + readAheadWindow
+              : index < start + _window
                   ? _Mark.included
                   : _Mark.later,
     };
@@ -979,9 +983,10 @@ class _Header extends StatelessWidget {
 /// Le cinque scelte in tre file: si vedono tutte insieme, con quello che
 /// fanno scritto sotto il nome.
 class _Modes extends StatelessWidget {
-  const _Modes({required this.mode, required this.aheadPossible, required this.onChanged});
+  const _Modes({required this.mode, required this.window, required this.aheadPossible, required this.onChanged});
 
   final ArchiveMode mode;
+  final int window;
   final bool aheadPossible;
   final ValueChanged<ArchiveMode> onChanged;
 
@@ -1007,7 +1012,7 @@ class _Modes extends StatelessWidget {
               card(ArchiveMode.all, LucideIcons.library, l10n.archiveModeAll, l10n.archiveModeAllLine),
               const SizedBox(width: 10),
               card(ArchiveMode.ahead, LucideIcons.sparkles, l10n.archiveModeAhead,
-                  l10n.archiveModeAheadLine(readAheadWindow),
+                  l10n.archiveModeAheadLine(window),
                   enabled: aheadPossible),
             ],
           ),

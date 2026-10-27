@@ -247,6 +247,7 @@ class DriveStore extends ArchiveStore {
     required this.folderId,
     required this.staging,
     this.mirror,
+    this.uploads = 8,
   });
 
   final SyncRemote remote;
@@ -398,8 +399,9 @@ class DriveStore extends ArchiveStore {
   /// Quanti file di un capitolo salgono insieme. Uno alla volta, un
   /// capitolo di un manhwa — decine di tavole, ognuna con le sue tessere —
   /// erano minuti di richieste in fila. Il limite vero lo dà Drive: quando
-  /// rallenta, il client fa aspettare tutte le corsie insieme.
-  static const int _uploads = 8;
+  /// rallenta, il client fa aspettare tutte le corsie insieme. Il server ne
+  /// usa di più del telefono.
+  final int uploads;
 
   @override
   Future<void> commitChapter(String chapterPath, Directory work, List<String> files) async {
@@ -414,7 +416,7 @@ class DriveStore extends ArchiveStore {
       }
     }
 
-    await Future.wait([for (var i = 0; i < _uploads; i++) lane()]);
+    await Future.wait([for (var i = 0; i < uploads; i++) lane()]);
     if (files.contains(chapterManifestFile)) {
       final manifest = File(p.join(work.path, chapterManifestFile));
       await _put(p.posix.join(chapterPath, chapterManifestFile), manifest);
@@ -439,9 +441,9 @@ class DriveStore extends ArchiveStore {
 
   @override
   Future<void> writeSeriesFiles(String folder, Map<String, Uint8List> files) async {
-    for (final MapEntry(key: name, value: bytes) in files.entries) {
-      await _putBytes(p.posix.join(folder, name), bytes);
-    }
+    await Future.wait([
+      for (final MapEntry(key: name, value: bytes) in files.entries) _putBytes(p.posix.join(folder, name), bytes),
+    ]);
     await mirror?.writeSeriesFiles(folder, files);
   }
 

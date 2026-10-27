@@ -401,6 +401,10 @@ class ManhwaRead extends Provider {
         title: title,
         url: url,
         coverUrl: cover,
+        latestChapter: latestChapterNumber([
+          for (final node in nodes)
+            if (_classes(node).contains('chapter-item')) _text(node),
+        ]),
         releaseStatus: releaseStatus(status),
       ));
       if (results.length == searchLimit) break;

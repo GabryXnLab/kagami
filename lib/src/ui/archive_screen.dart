@@ -657,7 +657,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
               inLibrary: inLibrary(result),
               details: [
                 if (inLibrary(result)) l10n.archiveInLibrary,
-                if (result.chapters case final count?) l10n.archiveChaptersCount(count),
+                if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
                 if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
               ].join(' · '),
               onTap: _busy ? null : () => _pick(result),

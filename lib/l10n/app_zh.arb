@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{下载 1 个章节} other{下载 {count} 个章节}}",
   "archiveNoResults": "在 {site} 上没有结果。",
   "archiveChaptersCount": "{count, plural, =1{1 个章节} other{{count} 个章节}}",
+  "archiveLatestChapter": "最新：第 {number} 章",
   "archiveVerifySite": "验证 {site}",
   "archiveVerifySiteHint": "网站需要确认你是真人：点按打开验证，然后在那里也搜索一下",
   "archiveStatusOngoing": "连载中",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "排除出自动清理",
   "collectionPropsNoAutoPause": "排除出自动暂停",
   "collectionPropsNoRatingInvite": "不询问评分",
-  "collectionPropsApply": "应用"
+  "collectionPropsApply": "应用",
+  "settingsReadAhead": "边读边下载",
+  "settingsReadAheadWindow": "预先准备的章节",
+  "settingsReadAheadWindowNote": "在所有边读边下载的作品中，正在阅读的章节之后保持已下载的章节数"
 }

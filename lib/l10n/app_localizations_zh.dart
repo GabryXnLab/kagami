@@ -910,6 +910,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return '最新：第 $number 章';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return '验证 $site';
   }
@@ -4074,4 +4079,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get collectionPropsApply => '应用';
+
+  @override
+  String get settingsReadAhead => '边读边下载';
+
+  @override
+  String get settingsReadAheadWindow => '预先准备的章节';
+
+  @override
+  String get settingsReadAheadWindowNote => '在所有边读边下载的作品中，正在阅读的章节之后保持已下载的章节数';
 }

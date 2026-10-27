@@ -56,6 +56,9 @@ class FakeDrive implements SyncRemote {
   /// Il caricamento che fallisce, per nome.
   String? failUpload;
 
+  /// Quanto dura in più il caricamento di un file, per nome.
+  final Map<String, Duration> slow = {};
+
   DriveItem _put(DriveItem item) => items[item.id] = item;
 
   String folder(String path) {
@@ -122,6 +125,8 @@ class FakeDrive implements SyncRemote {
     mostAtOnce = _active > mostAtOnce ? _active : mostAtOnce;
     // Un caricamento vero dura: gli altri devono potersi sovrapporre.
     await Future<void>.delayed(const Duration(milliseconds: 5));
+    final extra = slow[name ?? previous!.name];
+    if (extra != null) await Future<void>.delayed(extra);
     _active--;
     uploads++;
     uploaded.add(name ?? previous!.name);
@@ -215,6 +220,36 @@ void main() {
       final third = await archiver.download(series);
       expect((third.pagesDownloaded, third.pagesSkipped), (1, 2));
       expect(damaged.readAsBytesSync(), http.images[http.urls[1]![1]]);
+    });
+
+    test('un capitolo finito è già negli indici, prima della fine del giro', () async {
+      final seen = <List<Object?>>[];
+      String? folder;
+      await Archiver(
+        provider: provider,
+        http: http,
+        store: LocalStore(libraryPath()),
+        scratch: Directory(p.join(temporary.path, 'scratch')),
+        images: images,
+        delay: Duration.zero,
+        onEvent: (event) {
+          if (event is! ChapterFinished) return;
+          folder ??= Directory(libraryPath())
+              .listSync()
+              .whereType<Directory>()
+              .firstWhere((dir) => p.basename(dir.path).startsWith('Test Series'))
+              .path;
+          final index = readJson(File(p.join(folder!, 'index.json')));
+          seen.add([
+            for (final entry in (index['chapters'] as List).cast<Map>())
+              if (entry['complete'] == true) entry['number'],
+          ]);
+        },
+      ).download(series);
+      expect(seen, [
+        ['1'],
+        ['1', '2'],
+      ]);
     });
 
     test('gli indici descrivono serie e pagine, e la libreria resta del server', () async {
@@ -497,6 +532,26 @@ void main() {
       expect(drive.uploaded.indexOf('0002.webp'), lessThan(chapter));
     });
 
+    test('le corsie di caricamento sono un parametro: 8 di base, di più sul server', () async {
+      Future<int> mostWith(int? uploads) async {
+        final fake = FakeDrive();
+        final drive = uploads == null
+            ? DriveStore(remote: fake, folderId: FakeDrive.root, staging: p.join(temporary.path, 'lanes'))
+            : DriveStore(
+                remote: fake, folderId: FakeDrive.root, staging: p.join(temporary.path, 'lanes'), uploads: uploads);
+        final work = await drive.workspace('S/chapters/1');
+        final names = [for (var i = 0; i < 40; i++) '$i.webp'];
+        for (final name in names) {
+          File(p.join(work.path, name)).writeAsBytesSync([1]);
+        }
+        await drive.commitChapter('S/chapters/1', work, names);
+        return fake.mostAtOnce;
+      }
+
+      expect(await mostWith(null), 8);
+      expect(await mostWith(32), 32);
+    });
+
     test('il capitolo seguente scende mentre il precedente sale', () async {
       http.imageDelay = const Duration(milliseconds: 20);
       final timeline = <String>[];
@@ -507,6 +562,38 @@ void main() {
       // c.webp è del capitolo 2: parte prima che il capitolo 1 abbia
       // consegnato la sua ricevuta.
       expect(timeline.indexOf('giù ${http.urls[2]!.single}'), lessThan(timeline.indexOf('su chapter.json')));
+    });
+
+    test('gli indici di un capitolo non fermano il caricamento del seguente', () async {
+      drive.slow['index.json'] = const Duration(milliseconds: 150);
+      final timeline = <String>[];
+      drive.onUpload = (name) => timeline.add('su $name');
+      final events = <String>[];
+      final result = await Archiver(
+        provider: provider,
+        http: http,
+        store: store(),
+        scratch: Directory(p.join(temporary.path, 'scratch')),
+        images: images,
+        delay: Duration.zero,
+        onEvent: (event) {
+          if (event is ChapterFinished) events.add('fine ${event.index}');
+          timeline.add('evento ${event.runtimeType}');
+        },
+      ).download(series);
+      expect(result.failed, isEmpty);
+      // La ricevuta del capitolo 2 sale prima che il giro degli indici del 1
+      // abbia finito, e il capitolo 1 è dato per finito solo dopo i suoi.
+      final firstIndex = timeline.indexOf('su index.json');
+      final secondReceipt = timeline.lastIndexOf('su chapter.json');
+      expect(secondReceipt, lessThan(firstIndex));
+      expect(timeline.indexOf('evento ChapterFinished'), greaterThan(firstIndex));
+      expect(events, ['fine 1', 'fine 2']);
+    });
+
+    test('la rete che cade durante gli indici ferma comunque il giro', () async {
+      drive.failUpload = 'index.json';
+      await expectLater(local(store: store()).download(series), throwsA(isA<DriveOffline>()));
     });
 
     test('un capitolo già su Drive non si riscarica, e non si ricarica', () async {

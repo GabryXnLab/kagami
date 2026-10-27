@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/library.dart';
+import 'package:kagami/src/data/read_ahead.dart';
 import 'package:kagami/src/providers.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -18,7 +19,29 @@ class _Reading extends Reading {
   Future<ReadingData> build() async => const ReadingData();
 }
 
+/// I giri vanno a tempo (pausa di 2 s, ripasso ogni 100 ms): con la suite
+/// intera in parallelo un'attesa fissa a volte non basta.
+Future<void> until(bool Function() done) async {
+  final limit = DateTime.now().add(const Duration(seconds: 20));
+  while (!done() && DateTime.now().isBefore(limit)) {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
+  test('i capitoli da tenere pronti si scelgono e restano', () async {
+    final database = KagamiDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    ProviderContainer open() => ProviderContainer(overrides: [databaseProvider.overrideWithValue(database)]);
+    final first = open();
+    expect(await first.read(readAheadWindowProvider.future), readAheadWindow);
+    await first.read(readAheadWindowProvider.notifier).change(12);
+    first.dispose();
+    final second = open();
+    addTearDown(second.dispose);
+    expect(await second.read(readAheadWindowProvider.future), 12);
+  });
+
   testWidgets('un capitolo finito in coda fa rileggere la libreria da solo', (tester) async {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.runAsync(() async {
@@ -72,8 +95,19 @@ void main() {
       // Il giro scarica il capitolo: la coda si svuota, la cronologia cresce.
       await files.remove(job.id);
       await files.remember(ArchiveOutcome(title: 'A', ok: true, message: '', finishedAt: DateTime.utc(2026, 1, 2)));
-      await Future<void>.delayed(const Duration(seconds: 3));
+      await until(() => loads > before);
       expect(loads, greaterThan(before));
+
+      // Un lavoro di più capitoli: il primo pronto si legge già, senza
+      // aspettare la fine del lavoro.
+      await files.enqueue(const ArchiveJob(
+          id: 'ahead-b', url: url, title: 'A', target: target, ids: {'c2', 'c3'}, automatic: true, ahead: 5));
+      await files.writeStatus(const ArchiveStatus(state: ArchiveState.running, jobId: 'ahead-b', total: 2));
+      await Future<void>.delayed(const Duration(seconds: 3));
+      final running = loads;
+      await files.writeStatus(const ArchiveStatus(state: ArchiveState.running, jobId: 'ahead-b', total: 2, done: 1));
+      await until(() => loads > running);
+      expect(loads, greaterThan(running));
     });
   });
 }

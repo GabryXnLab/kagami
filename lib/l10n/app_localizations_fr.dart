@@ -939,6 +939,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return 'dernier : ch. $number';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return 'Vérifier $site';
   }
@@ -4267,4 +4272,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get collectionPropsApply => 'Appliquer';
+
+  @override
+  String get settingsReadAhead => 'Télécharger au fil de la lecture';
+
+  @override
+  String get settingsReadAheadWindow => 'Chapitres à garder prêts';
+
+  @override
+  String get settingsReadAheadWindowNote =>
+      'Combien de chapitres téléchargés restent devant celui que vous lisez, dans toutes les séries téléchargées au fil de la lecture';
 }

@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{Baixar 1 capítulo} other{Baixar {count} capítulos}}",
   "archiveNoResults": "Nenhum resultado em {site}.",
   "archiveChaptersCount": "{count, plural, =1{1 capítulo} other{{count} capítulos}}",
+  "archiveLatestChapter": "último: cap. {number}",
   "archiveVerifySite": "Verificar {site}",
   "archiveVerifySiteHint": "O site quer saber se você é uma pessoa: ao tocar, a verificação abre e depois a busca é feita lá também",
   "archiveStatusOngoing": "em andamento",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "Excluir da limpeza automática",
   "collectionPropsNoAutoPause": "Excluir da pausa automática",
   "collectionPropsNoRatingInvite": "Não pedir a nota",
-  "collectionPropsApply": "Aplicar"
+  "collectionPropsApply": "Aplicar",
+  "settingsReadAhead": "Baixar conforme lê",
+  "settingsReadAheadWindow": "Capítulos prontos",
+  "settingsReadAheadWindowNote": "Quantos capítulos baixados ficam à frente do que você está lendo, em todas as séries baixadas conforme lê"
 }

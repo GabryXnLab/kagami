@@ -117,9 +117,15 @@ class SeriesSignals {
       state.status == ShelfStatus.completed ||
       (entry.archivedChapterCount > 0 && unreadCount == 0);
 
-  double get fraction => readCount + unreadCount == 0
-      ? 0
-      : readCount / (readCount + unreadCount);
+  /// I letti su tutti i capitoli della serie, scaricati o no: è quanto della
+  /// serie si è letto, non quanto dell'archiviato.
+  double get fraction {
+    final total = math.max(
+      readCount,
+      math.max(entry.chapterCount, entry.archivedChapterCount),
+    );
+    return total == 0 ? 0 : readCount / total;
+  }
 
   /// Una serie che l'utente segue: ci ha messo mano — stato, voto,
   /// preferito, capitoli letti — e non l'ha abbandonata. Su una serie mai

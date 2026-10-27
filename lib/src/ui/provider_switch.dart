@@ -317,7 +317,7 @@ class _ProviderSwitchPageState extends State<ProviderSwitchPage> {
                   result: result,
                   referer: provider.home,
                   details: [
-                    if (result.chapters case final count?) l10n.archiveChaptersCount(count),
+                    if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
                     if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
                   ].join(' · '),
                   onTap: () => Navigator.of(context).pop(result.url),

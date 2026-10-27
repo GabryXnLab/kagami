@@ -1158,6 +1158,15 @@
       }
     }
   },
+  "archiveLatestChapter": "ultimo: cap. {number}",
+  "@archiveLatestChapter": {
+    "description": "Numero dell'ultimo capitolo uscito di un risultato di ricerca (non quanti capitoli sono); {number} è il numero, anche con decimali come 70.5",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
   "archiveVerifySite": "Verifica {site}",
   "@archiveVerifySite": {
     "description": "Titolo della riga che apre la verifica anti-robot del sito",
@@ -5407,5 +5416,17 @@
   "collectionPropsApply": "Applica",
   "@collectionPropsApply": {
     "description": "Pulsante che conferma le proprietà"
+  },
+  "settingsReadAhead": "Scaricare man mano",
+  "@settingsReadAhead": {
+    "description": "Impostazioni → Libreria: titolo della sezione sul download man mano"
+  },
+  "settingsReadAheadWindow": "Capitoli da tenere pronti",
+  "@settingsReadAheadWindow": {
+    "description": "Impostazioni → Libreria: voce che sceglie quanti capitoli tenere scaricati davanti al lettore"
+  },
+  "settingsReadAheadWindowNote": "Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano",
+  "@settingsReadAheadWindowNote": {
+    "description": "Impostazioni → Libreria: spiegazione sotto «Capitoli da tenere pronti»"
   }
 }

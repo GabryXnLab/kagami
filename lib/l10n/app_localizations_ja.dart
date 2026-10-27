@@ -910,6 +910,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return '最新: 第$number話';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return '$siteを認証';
   }
@@ -4092,4 +4097,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get collectionPropsApply => '適用';
+
+  @override
+  String get settingsReadAhead => '読みながらダウンロード';
+
+  @override
+  String get settingsReadAheadWindow => '準備しておく話数';
+
+  @override
+  String get settingsReadAheadWindowNote =>
+      '読みながらダウンロードするすべての作品で、読んでいる話の先にダウンロード済みで置いておく話数';
 }

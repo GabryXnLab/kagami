@@ -2143,7 +2143,8 @@ final archiveProvider =
     NotifierProvider.autoDispose<ArchiveController, ArchiveView>(ArchiveController.new);
 
 /// Le serie scaricate «man mano»: a ogni stato di lettura pubblicato —
-/// uscendo dal lettore — e a ogni libreria riletta si guarda se davanti al
+/// uscendo dal lettore —, a ogni capitolo aperto o finito ([nudge]) e a ogni
+/// libreria riletta si guarda se davanti al
 /// lettore mancano capitoli, e si mettono in coda. Vive accanto alla shell,
 /// come [arrivalsProvider], perché si legge da ogni destinazione.
 ///
@@ -2172,11 +2173,12 @@ class ReadAhead extends Notifier<void> {
   /// server, lo mette dopo).
   DateTime? _askedAt;
 
-  /// L'ultimo download finito visto qui, dal telefono e dal server: uno più
-  /// recente vuol dire capitoli che la libreria in memoria non conosce
-  /// ancora, e che altrimenti si rimetterebbero in coda.
-  DateTime? _seenLocal;
-  DateTime? _seenServer;
+  /// L'ultimo download finito visto qui, dal telefono e dal server, con i
+  /// capitoli già pronti del lavoro in corso ([_progress]): uno più recente
+  /// vuol dire capitoli che la libreria in memoria non conosce ancora, e che
+  /// altrimenti si rimetterebbero in coda o non si potrebbero aprire.
+  String? _seenLocal;
+  String? _seenServer;
 
   /// Il controllo sul sito per una serie arrivata in fondo: non a ogni
   /// uscita dal lettore, che in fondo alla serie sono tutte uguali.
@@ -2188,6 +2190,7 @@ class ReadAhead extends Notifier<void> {
   void build() {
     ref.listen(readingProvider, (_, _) => _schedule());
     ref.listen(libraryCatalogProvider, (_, _) => _schedule());
+    ref.listen(readAheadWindowProvider, (_, _) => _schedule());
     // Tornando in primo piano la libreria non sempre si rilegge: il giro
     // fermato in background riparte da qui.
     final lifecycle = AppLifecycleListener(onResume: _schedule);
@@ -2208,6 +2211,11 @@ class ReadAhead extends Notifier<void> {
     _follow = Timer(followEvery, _schedule);
   }
 
+  /// Il lettore ha aperto o finito un capitolo. Dentro il lettore lo stato
+  /// non si pubblica ([Reading.noteProgress]), quindi [build] non lo sente:
+  /// senza questo i capitoli davanti partivano solo all'uscita.
+  void nudge() => _schedule();
+
   /// Pubblicare lo stato e rileggere la libreria arrivano spesso insieme.
   void _schedule() {
     _soon?.cancel();
@@ -2218,7 +2226,7 @@ class ReadAhead extends Notifier<void> {
 
   /// Il catalogo è più vecchio dell'ultimo download finito: lo si rilegge,
   /// e il catalogo nuovo fa ripartire il giro.
-  bool _stale(DateTime? latest, DateTime? seen) {
+  bool _stale(String? latest, String? seen) {
     if (seen == null || latest == null || latest == seen) return false;
     ref.read(driveRepositoryProvider)?.refresh();
     ref.invalidate(libraryCatalogProvider);
@@ -2251,25 +2259,32 @@ class ReadAhead extends Notifier<void> {
     if (chapters == null) return null;
     return planAhead(
       chapters: chapters.index.chapters,
-      state: reading.of(key),
+      // Anche quello scritto in silenzio dal lettore ancora aperto.
+      state: ref.read(readingProvider.notifier).peek(key),
       pending: pending,
       window: window,
     );
   }
+
+  /// Un capitolo conta in `done` quando gli indici lo elencano già
+  /// (`Archiver.download`): leggibile anche se il lavoro ne ha altri.
+  static String _progress(ArchiveOutcome? last, ArchiveStatus status) =>
+      '${last?.finishedAt.toIso8601String()} ${status.jobId} ${status.done}';
 
   static bool _due(DateTime? checked) => checked == null || DateTime.now().difference(checked) > _recheck;
 
   /// «Man mano» lo fa tutto chi l'utente ha scelto ([archiveEngineProvider]):
   /// le serie seguite dall'altro restano ferme finché non si torna a lui.
   Future<void> _plan() async {
+    final window = await ref.read(readAheadWindowProvider.future);
     if (ref.read(archiveEngineProvider) == ArchiveEngine.server) {
-      await _planServer();
+      await _planServer(window);
     } else {
-      await _planPhone();
+      await _planPhone(window);
     }
   }
 
-  Future<void> _planServer() async {
+  Future<void> _planServer(int window) async {
     final link = ref.read(serverLinkProvider).value;
     if (link == null) return;
     final client = serverClient(ref, link);
@@ -2281,19 +2296,19 @@ class ReadAhead extends Notifier<void> {
       final urls = {for (final series in smart) series.url};
       pending = queue.jobs.any((job) => urls.contains(job.url));
       final seen = _seenServer;
-      _seenServer = queue.history.firstOrNull?.finishedAt;
+      _seenServer = _progress(queue.history.firstOrNull, queue.status);
       if (_stale(_seenServer, seen)) return;
       for (final series in smart) {
         final same = [for (final job in queue.jobs) if (job.url == series.url) job];
         if (same.any((job) => job.ids == null)) continue;
-        final plan = await _planOf(series.key, series.ahead!, {for (final job in same) ...?job.ids});
+        final plan = await _planOf(series.key, window, {for (final job in same) ...?job.ids});
         if (plan == null) continue;
         if (plan.enqueue.isNotEmpty) {
           await client.enqueue(
             url: series.url,
             title: series.title,
             ids: plan.enqueue.toSet(),
-            ahead: series.ahead,
+            ahead: window,
             automatic: true,
           );
           _askedAt = DateTime.now();
@@ -2314,7 +2329,7 @@ class ReadAhead extends Notifier<void> {
     }
   }
 
-  Future<void> _planPhone() async {
+  Future<void> _planPhone(int window) async {
     final files = ref.read(archiveFilesProvider);
     final tracking = Tracking(files.ongoing);
     final smart = [for (final entry in await tracking.load()) if (entry.ahead != null) entry];
@@ -2323,7 +2338,7 @@ class ReadAhead extends Notifier<void> {
     final urls = {for (final entry in smart) entry.url};
     _followUp(jobs.any((job) => urls.contains(job.url)));
     final seen = _seenLocal;
-    _seenLocal = (await files.history()).firstOrNull?.finishedAt;
+    _seenLocal = _progress((await files.history()).firstOrNull, await files.status());
     if (_stale(_seenLocal, seen)) return;
     var queued = false;
     final check = <String>{};
@@ -2332,7 +2347,7 @@ class ReadAhead extends Notifier<void> {
       // Una serie che scende per intero, o da un capitolo in poi, porta già
       // tutto quello che si potrebbe chiedere.
       if (same.any((job) => job.ids == null)) continue;
-      final plan = await _planOf(entry.key, entry.ahead!, {for (final job in same) ...?job.ids});
+      final plan = await _planOf(entry.key, window, {for (final job in same) ...?job.ids});
       if (plan == null) continue;
       if (plan.enqueue.isNotEmpty) {
         await files.enqueue(ArchiveJob(
@@ -2342,7 +2357,7 @@ class ReadAhead extends Notifier<void> {
           target: entry.target,
           ids: plan.enqueue.toSet(),
           automatic: true,
-          ahead: entry.ahead,
+          ahead: window,
         ));
         queued = true;
         _askedAt = DateTime.now();
@@ -2369,6 +2384,29 @@ class ReadAhead extends Notifier<void> {
 }
 
 final readAheadProvider = NotifierProvider<ReadAhead, void>(ReadAhead.new);
+
+/// Quanti capitoli tenere pronti davanti al lettore, per tutte le serie man
+/// mano: vale anche per quelle già seguite, che ne avevano chiesti altri.
+class ReadAheadWindowNotifier extends AsyncNotifier<int> {
+  static const String _key = 'archive.ahead';
+
+  /// Lo stesso limite del server (`ahead`, `docs/server-api.md`).
+  static const int max = 50;
+
+  @override
+  Future<int> build() async {
+    final value = int.tryParse(await ref.watch(userRepositoryProvider).readSetting(_key) ?? '');
+    return value == null ? readAheadWindow : value.clamp(1, max);
+  }
+
+  Future<void> change(int window) async {
+    state = AsyncData(window);
+    await ref.read(userRepositoryProvider).writeSetting(_key, '$window');
+  }
+}
+
+final readAheadWindowProvider =
+    AsyncNotifierProvider<ReadAheadWindowNotifier, int>(ReadAheadWindowNotifier.new);
 
 /// Riempie le raccolte con regole man mano che la libreria e lo stato
 /// cambiano. Aspetta che la libreria sia letta: prima di allora non sa quali

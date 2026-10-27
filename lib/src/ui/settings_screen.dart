@@ -25,6 +25,7 @@ import '../data/page_decoder.dart';
 import '../data/reader_probe.dart';
 import '../data/reader_settings.dart';
 import '../l10n.dart';
+import '../data/read_ahead.dart';
 import '../providers.dart';
 import 'app_shell.dart';
 import 'archive_screen.dart';
@@ -471,6 +472,9 @@ class _LibraryPage extends ConsumerWidget {
         KSection(l10n.settingsHomeUpdates),
         const _HomeUpdates(),
         const SizedBox(height: 26),
+        KSection(l10n.settingsReadAhead),
+        const _ReadAheadWindow(),
+        const SizedBox(height: 26),
         KSection(l10n.settingsAutoCleanup),
         const _AutoCleanup(),
         if (cloudAvailable) ...[
@@ -478,6 +482,35 @@ class _LibraryPage extends ConsumerWidget {
           KSection(l10n.settingsGoogleDrive),
           const _Drive(),
         ],
+      ],
+    );
+  }
+}
+
+/// Quanti capitoli scaricati tenere davanti al lettore nelle serie man mano.
+class _ReadAheadWindow extends ConsumerWidget {
+  const _ReadAheadWindow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final window = ref.watch(readAheadWindowProvider).value ?? readAheadWindow;
+    return KGroup(
+      children: [
+        KTile(
+          icon: LucideIcons.sparkles,
+          title: l10n.settingsReadAheadWindow,
+          subtitle: l10n.settingsReadAheadWindowNote,
+          trailing: _Value(l10n.settingsHomeUpdatesChapters(window)),
+          onTap: () => _choose<int>(
+            context,
+            title: l10n.settingsReadAheadWindow,
+            current: window,
+            values: [for (var count = 1; count <= ReadAheadWindowNotifier.max; count++) count],
+            label: l10n.settingsHomeUpdatesChapters,
+            onChosen: ref.read(readAheadWindowProvider.notifier).change,
+          ),
+        ),
       ],
     );
   }

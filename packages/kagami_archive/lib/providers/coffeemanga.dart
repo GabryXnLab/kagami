@@ -184,6 +184,7 @@ class CoffeeManga extends Provider {
         title: title,
         url: canonical(href),
         coverUrl: isText(cover) && allows(cover!) ? cover : null,
+        latestChapter: latestChapterNumber([for (final node in card.querySelectorAll('.ac-ch')) _text(node)]),
         releaseStatus: releaseStatus(_text(card.querySelector('.ac-status'))),
       ));
       if (results.length == searchLimit) break;

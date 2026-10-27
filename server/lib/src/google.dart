@@ -59,7 +59,7 @@ class UserDrive implements DriveSetup {
   String? _access;
   DateTime _expires = DateTime.fromMillisecondsSinceEpoch(0);
 
-  late final DriveClient drive = DriveClient(token, network: const ServerNetwork());
+  late final DriveClient drive = DriveClient(token, network: const ServerNetwork(), connections: driveLanes);
 
   Future<void> load() async {
     final json = await readJsonFile(file) ?? const {};

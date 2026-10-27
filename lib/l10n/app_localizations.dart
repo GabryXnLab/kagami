@@ -1510,6 +1510,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 capitolo} other{{count} capitoli}}'**
   String archiveChaptersCount(int count);
 
+  /// Numero dell'ultimo capitolo uscito di un risultato di ricerca (non quanti capitoli sono); {number} è il numero, anche con decimali come 70.5
+  ///
+  /// In it, this message translates to:
+  /// **'ultimo: cap. {number}'**
+  String archiveLatestChapter(String number);
+
   /// Titolo della riga che apre la verifica anti-robot del sito
   ///
   /// In it, this message translates to:
@@ -6354,6 +6360,24 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Applica'**
   String get collectionPropsApply;
+
+  /// Impostazioni → Libreria: titolo della sezione sul download man mano
+  ///
+  /// In it, this message translates to:
+  /// **'Scaricare man mano'**
+  String get settingsReadAhead;
+
+  /// Impostazioni → Libreria: voce che sceglie quanti capitoli tenere scaricati davanti al lettore
+  ///
+  /// In it, this message translates to:
+  /// **'Capitoli da tenere pronti'**
+  String get settingsReadAheadWindow;
+
+  /// Impostazioni → Libreria: spiegazione sotto «Capitoli da tenere pronti»
+  ///
+  /// In it, this message translates to:
+  /// **'Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano'**
+  String get settingsReadAheadWindowNote;
 }
 
 class _AppLocalizationsDelegate

@@ -146,15 +146,17 @@ class MangaK extends Provider {
       final url = 'https://mangak.io${item['url']}';
       if (!accepts(url)) continue;
       final cover = item['cover'];
-      final stats = item['stats'];
-      // L'API risponde in snake_case; è il sito a passare al camelCase.
-      final count = stats is Map ? stats['chapters_count'] ?? stats['chaptersCount'] : null;
+      // Il `number` dei capitoli è il posto nell'elenco: il numero vero è
+      // nel nome.
+      final latest = item['latest_chapters'];
       results.add(SearchResult(
         provider: id,
         title: item['name'] as String,
         url: url,
         coverUrl: isText(cover) && allows(cover as String) ? cover : null,
-        chapters: count is int ? count : null,
+        latestChapter: latest is List
+            ? latestChapterNumber([for (final chapter in latest) if (chapter is Map && chapter['name'] is String) chapter['name'] as String])
+            : null,
         releaseStatus: releaseStatus(item['status']),
       ));
     }

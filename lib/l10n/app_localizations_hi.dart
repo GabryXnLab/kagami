@@ -934,6 +934,11 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return 'नवीनतम: अध्याय $number';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return '$site की जाँच करें';
   }
@@ -4231,4 +4236,14 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get collectionPropsApply => 'लागू करें';
+
+  @override
+  String get settingsReadAhead => 'पढ़ते-पढ़ते डाउनलोड';
+
+  @override
+  String get settingsReadAheadWindow => 'तैयार रखने वाले अध्याय';
+
+  @override
+  String get settingsReadAheadWindowNote =>
+      'पढ़ते-पढ़ते डाउनलोड होने वाली सभी सीरीज़ में, जो अध्याय आप पढ़ रहे हैं उसके आगे कितने डाउनलोड किए हुए अध्याय रहें';
 }

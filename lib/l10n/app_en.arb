@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{Download 1 chapter} other{Download {count} chapters}}",
   "archiveNoResults": "No results on {site}.",
   "archiveChaptersCount": "{count, plural, =1{1 chapter} other{{count} chapters}}",
+  "archiveLatestChapter": "latest: ch. {number}",
   "archiveVerifySite": "Verify {site}",
   "archiveVerifySiteHint": "The site wants to know you're a person: tap to open the check, then search there too",
   "archiveStatusOngoing": "ongoing",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "Exclude from automatic cleanup",
   "collectionPropsNoAutoPause": "Exclude from automatic pause",
   "collectionPropsNoRatingInvite": "Do not ask for a rating",
-  "collectionPropsApply": "Apply"
+  "collectionPropsApply": "Apply",
+  "settingsReadAhead": "Download as you read",
+  "settingsReadAheadWindow": "Chapters to keep ready",
+  "settingsReadAheadWindowNote": "How many downloaded chapters stay ahead of the one you're reading, in every series downloaded as you read"
 }

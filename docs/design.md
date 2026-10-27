@@ -979,11 +979,15 @@ dell'ultimo letto come lo scrive l'autore, `status` uno fra `planned`,
 
 **Man mano** scarica cinque capitoli dal capitolo scelto (di partenza il
 primo non letto) e poi tiene sempre cinque capitoli da leggere davanti
-all'ultimo letto o aperto: uscendo dal lettore, o quando la libreria si
-rilegge, l'app mette in coda quelli che mancano (`data/read_ahead.dart`).
-Finché non sono arrivati, con l'app aperta, torna a guardare la coda ogni
-poco e rilegge la libreria appena uno è pronto: si continua a leggere
-mentre scendono, senza aprire «Scarica un manga».
+all'ultimo letto o aperto; il numero si cambia in Impostazioni → Libreria
+(da 1 a 50, il limite del server) e vale per tutte le serie man mano, anche
+quelle già seguite: a ogni capitolo aperto o finito nel lettore,
+uscendo, o quando la libreria si rilegge, l'app mette in coda quelli che
+mancano (`data/read_ahead.dart`). Finché non sono arrivati, con l'app
+aperta, torna a guardare la coda ogni poco e rilegge la libreria appena un
+capitolo è pronto, anche se il suo lavoro ne porta altri: chi scarica
+riscrive gli indici dopo ognuno dei primi capitoli di un giro. Si continua
+a leggere mentre scendono, senza uscire dal lettore.
 I capitoli prima del primo che si ha non arrivano da soli: chi parte dal 40
 non vuole i primi trentanove, e confermando «man mano» da un capitolo di inizio
 li segna letti come stimati (senza far arretrare «arrivato a»). Dalla scheda di
@@ -1004,8 +1008,12 @@ La pausa è un ritmo, non una fila: le tavole di un capitolo scendono su più
 corsie, e la pausa separa l'inizio di una richiesta dal seguente. Quando il
 sito o Drive rispondono «troppe richieste», aspettano tutte le corsie
 insieme, quanto chiede `Retry-After` o con un'attesa che raddoppia. Su Drive
-il capitolo finito sale mentre il seguente scende, i file piccoli in una
-richiesta sola (multipart), perché Drive conta le richieste e non i byte.
+il capitolo finito sale mentre il seguente scende, e il giro degli indici
+non aspetta né fa aspettare nessuno dei due (un giro alla volta; il
+capitolo è «finito» solo dopo quello che lo include). I file piccoli vanno
+in una richiesta sola (multipart), perché Drive conta le richieste e non i
+byte. Le corsie verso Drive sono 8 sul telefono e 32 sul server: il tempo di
+un capitolo è la latenza per file divisa per le corsie.
 
 Il download finisce in una coda che continua a schermo spento, con la
 notifica che dice a che punto è. La schermata tiene separato ciò che si

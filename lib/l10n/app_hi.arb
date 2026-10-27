@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{1 अध्याय डाउनलोड करें} other{{count} अध्याय डाउनलोड करें}}",
   "archiveNoResults": "{site} पर कोई नतीजा नहीं।",
   "archiveChaptersCount": "{count, plural, =1{1 अध्याय} other{{count} अध्याय}}",
+  "archiveLatestChapter": "नवीनतम: अध्याय {number}",
   "archiveVerifySite": "{site} की जाँच करें",
   "archiveVerifySiteHint": "साइट जानना चाहती है कि आप इंसान हैं: टैप करने पर जाँच खुलती है, फिर वहीं खोज भी की जाती है",
   "archiveStatusOngoing": "जारी है",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "स्वचालित सफ़ाई से बाहर रखें",
   "collectionPropsNoAutoPause": "स्वचालित विराम से बाहर रखें",
   "collectionPropsNoRatingInvite": "रेटिंग न माँगें",
-  "collectionPropsApply": "लागू करें"
+  "collectionPropsApply": "लागू करें",
+  "settingsReadAhead": "पढ़ते-पढ़ते डाउनलोड",
+  "settingsReadAheadWindow": "तैयार रखने वाले अध्याय",
+  "settingsReadAheadWindowNote": "पढ़ते-पढ़ते डाउनलोड होने वाली सभी सीरीज़ में, जो अध्याय आप पढ़ रहे हैं उसके आगे कितने डाउनलोड किए हुए अध्याय रहें"
 }

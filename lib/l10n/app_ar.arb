@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{تنزيل فصل واحد} two{تنزيل فصلين} few{تنزيل {count} فصول} many{تنزيل {count} فصلًا} other{تنزيل {count} فصل}}",
   "archiveNoResults": "لا توجد نتائج في {site}.",
   "archiveChaptersCount": "{count, plural, =1{فصل واحد} two{فصلان} few{{count} فصول} many{{count} فصلًا} other{{count} فصل}}",
+  "archiveLatestChapter": "الأحدث: الفصل {number}",
   "archiveVerifySite": "التحقق من {site}",
   "archiveVerifySiteHint": "يريد الموقع التأكد أنك إنسان: المس لفتح التحقق، ثم يُبحث هناك أيضًا",
   "archiveStatusOngoing": "مستمرة",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "استثناء من التنظيف التلقائي",
   "collectionPropsNoAutoPause": "استثناء من الإيقاف المؤقت التلقائي",
   "collectionPropsNoRatingInvite": "لا تطلب التقييم",
-  "collectionPropsApply": "تطبيق"
+  "collectionPropsApply": "تطبيق",
+  "settingsReadAhead": "التنزيل أثناء القراءة",
+  "settingsReadAheadWindow": "الفصول الجاهزة",
+  "settingsReadAheadWindowNote": "عدد الفصول المنزّلة التي تبقى أمام الفصل الذي تقرؤه، في كل السلاسل التي تُنزَّل أثناء القراءة"
 }

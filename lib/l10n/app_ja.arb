@@ -207,6 +207,7 @@
   "archiveDownloadPicked": "{count, plural, =1{1話をダウンロード} other{{count}話をダウンロード}}",
   "archiveNoResults": "{site}では見つかりませんでした。",
   "archiveChaptersCount": "{count, plural, =1{1話} other{{count}話}}",
+  "archiveLatestChapter": "最新: 第{number}話",
   "archiveVerifySite": "{site}を認証",
   "archiveVerifySiteHint": "サイトが人間かどうかを確認しようとしています。タップすると認証を開き、その後そこでも検索します",
   "archiveStatusOngoing": "連載中",
@@ -1036,5 +1037,8 @@
   "collectionPropsKeepChapters": "自動クリーンアップから除外",
   "collectionPropsNoAutoPause": "自動一時停止から除外",
   "collectionPropsNoRatingInvite": "評価を求めない",
-  "collectionPropsApply": "適用"
+  "collectionPropsApply": "適用",
+  "settingsReadAhead": "読みながらダウンロード",
+  "settingsReadAheadWindow": "準備しておく話数",
+  "settingsReadAheadWindowNote": "読みながらダウンロードするすべての作品で、読んでいる話の先にダウンロード済みで置いておく話数"
 }

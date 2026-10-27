@@ -935,6 +935,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String archiveLatestChapter(String number) {
+    return 'ultimo: cap. $number';
+  }
+
+  @override
   String archiveVerifySite(String site) {
     return 'Verifica $site';
   }
@@ -4241,4 +4246,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get collectionPropsApply => 'Applica';
+
+  @override
+  String get settingsReadAhead => 'Scaricare man mano';
+
+  @override
+  String get settingsReadAheadWindow => 'Capitoli da tenere pronti';
+
+  @override
+  String get settingsReadAheadWindowNote =>
+      'Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano';
 }

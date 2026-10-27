@@ -233,9 +233,54 @@ class Archiver {
     // seguente. Uno solo alla volta: i capitoli arrivano su Drive in ordine,
     // e le tavole in attesa sul telefono sono al più due capitoli.
     Future<void>? uploading;
+    // Il giro degli indici, fuori dal percorso critico: su Drive sono più
+    // richieste in fila, e il capitolo seguente non deve aspettarle. Uno
+    // solo alla volta; i capitoli in coda condividono lo stesso giro, che
+    // parte dopo il commit di tutti loro.
+    var waiting = <({bool refresh, void Function() done})>[];
+    Future<void>? refreshing;
+    var draining = false;
+    Object? refreshError;
+    StackTrace? refreshTrace;
+    Future<void> drain() async {
+      draining = true;
+      try {
+        while (waiting.isNotEmpty) {
+          final batch = waiting;
+          waiting = [];
+          if (batch.any((entry) => entry.refresh)) await _refreshQuietly(result, folder, manifest);
+          for (final entry in batch) {
+            entry.done();
+          }
+        }
+      } on Object catch (error, trace) {
+        refreshError = error;
+        refreshTrace = trace;
+        waiting = [];
+      } finally {
+        // Senza await fra l'ultimo controllo della coda e qui: un capitolo
+        // che arriva dopo avvia un giro nuovo invece di restare in coda.
+        draining = false;
+      }
+    }
+
+    // Un capitolo che non chiede gli indici passa dalla stessa coda se ce
+    // n'è una, così i `ChapterFinished` escono nell'ordine dei capitoli.
+    void finished({required bool refresh, required void Function() done}) {
+      if (!refresh && !draining) return done();
+      waiting.add((refresh: refresh, done: done));
+      if (!draining) refreshing = drain();
+    }
+
+    void checkRefresh() {
+      final error = refreshError;
+      if (error != null) Error.throwWithStackTrace(error, refreshTrace!);
+    }
+
     try {
       for (var index = 0; index < selected.length; index++) {
         _check();
+        checkRefresh();
         final chapter = selected[index];
         _emit(ChapterStarted(index + 1, selected.length, chapter.title));
         final counts = [0, 0];
@@ -256,26 +301,45 @@ class Archiver {
           if (!await _guard(result, index, selected.length, chapter, ready)) return;
           result.completed++;
           result.settled.add(chapter.id);
-          _emit(ChapterFinished(index + 1, selected.length, chapter.title));
-          // Ogni tanto gli indici si riscrivono anche a metà: una serie lunga
-          // compare nella libreria mentre scende, e un giro interrotto lascia
-          // leggibile ciò che ha già portato.
-          if (++sinceIndex >= 10) {
+          // Gli indici si riscrivono anche a metà: un capitolo si legge
+          // appena è salito, una serie lunga compare nella libreria mentre
+          // scende, e un giro interrotto lascia leggibile ciò che ha portato.
+          // I primi capitoli di un giro sono quelli che si aspettano col
+          // lettore aperto (man mano ne chiede pochi): uno per uno; poi ogni
+          // dieci, perché su Drive ogni giro di indici sono più richieste.
+          var refresh = false;
+          if (index < _eagerIndexes || ++sinceIndex >= 10) {
             sinceIndex = 0;
-            await refreshIndexes(folder, manifest);
+            refresh = true;
           }
+          // Dopo gli indici: chi conta i capitoli finiti li trova leggibili.
+          finished(
+            refresh: refresh,
+            done: () => _emit(ChapterFinished(index + 1, selected.length, chapter.title)),
+          );
         }();
         // Un errore che arriva prima che qualcuno lo aspetti non deve
         // finire fra quelli non gestiti: lo raccoglie il giro seguente.
         uploading.ignore();
       }
       await uploading;
+      await refreshing;
+      checkRefresh();
     } on Object {
       // Un errore che ferma il giro non deve lasciare a metà, senza nessuno
-      // che lo aspetti, il caricamento del capitolo precedente.
+      // che lo aspetti, il caricamento del capitolo precedente né gli indici.
       await uploading?.catchError((Object _) {});
+      await refreshing;
       rethrow;
     }
+    await _refreshQuietly(result, folder, manifest);
+    return result;
+  }
+
+  /// I capitoli di un giro che, saliti, si rendono subito leggibili.
+  static const int _eagerIndexes = 10;
+
+  Future<void> _refreshQuietly(ArchiveResult result, String folder, Map<String, Object?> manifest) async {
     try {
       await refreshIndexes(folder, manifest);
     } on DriveOffline {
@@ -285,7 +349,6 @@ class Archiver {
       // di perdere il lavoro dei capitoli già saliti.
       result.failed.add(ArchiveFailure('indici di lettura', '$error'));
     }
-    return result;
   }
 
   /// Fa [step] per un capitolo: un errore del capitolo lo segna fallito e

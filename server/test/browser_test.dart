@@ -16,7 +16,7 @@ void main() {
   // cosa ha visto il browser.
   Future<HeadlessBrowser> newBrowser(Duration timeout, [Directory? dir]) async {
     final profile = dir ?? await Directory.systemTemp.createTemp('kagami-browser-');
-    addTearDown(() => profile.delete(recursive: true));
+    addTearDown(() => _deleteProfileEventually(profile));
     final browser = HeadlessBrowser(chromium!, profile, timeout: timeout, log: logged.add);
     addTearDown(browser.close);
     return browser;
@@ -77,3 +77,15 @@ bool _onPath() => (Platform.environment['PATH'] ?? '').split(':').any((dir) =>
     dir.isNotEmpty &&
     const ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable']
         .any((name) => File('$dir/$name').existsSync()));
+
+Future<void> _deleteProfileEventually(Directory profile) async {
+  for (var attempt = 0; attempt < 6; attempt++) {
+    try {
+      if (await profile.exists()) await profile.delete(recursive: true);
+      return;
+    } on FileSystemException {
+      if (attempt == 5) rethrow;
+      await Future<void>.delayed(Duration(milliseconds: 200 * (attempt + 1)));
+    }
+  }
+}

@@ -14,6 +14,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import 'health.dart';
 import 'stores.dart';
 
 /// Dove finisce ciò che si scarica.
@@ -270,6 +271,7 @@ class ArchiveOutcome {
     this.seriesKey,
     this.url,
     this.card = false,
+    this.repair,
   });
 
   factory ArchiveOutcome.fromJson(Map<String, Object?> json) => ArchiveOutcome(
@@ -280,6 +282,7 @@ class ArchiveOutcome {
         seriesKey: json['key'] as String?,
         url: json['url'] as String?,
         card: json['card'] == true,
+        repair: json['repair'] as Map<String, Object?>?,
       );
 
   final String title;
@@ -294,6 +297,9 @@ class ArchiveOutcome {
   /// Era solo la scheda ([ArchiveJob.cardOnly]): l'app la mostra come tale.
   final bool card;
 
+  /// L'esito di una riparazione (`RepairOutcome.toJson`); `null` negli altri.
+  final Map<String, Object?>? repair;
+
   Map<String, Object?> toJson() => {
         'title': title,
         'ok': ok,
@@ -302,6 +308,7 @@ class ArchiveOutcome {
         'key': ?seriesKey,
         'url': ?url,
         if (card) 'card': true,
+        'repair': ?repair,
       };
 }
 
@@ -390,6 +397,9 @@ class ArchiveFiles {
   File get ongoing => File(p.join(directory.path, 'ongoing.json'));
   File get _scope => File(p.join(directory.path, 'check-scope.json'));
   File get _gated => File(p.join(directory.path, 'gated.json'));
+
+  /// Quali siti non funzionano più per intero, dagli ultimi giri.
+  HealthLog get health => HealthLog(File(p.join(directory.path, 'health.json')));
 
   /// Cosa controlla il telefono, come l'ha scritto l'app: lo legge anche il
   /// controllo ad app chiusa, che il database non lo apre.

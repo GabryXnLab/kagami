@@ -89,7 +89,7 @@ class AsuraScans extends Provider {
     if (!_slugPattern.hasMatch(slug)) throw const ProviderError('Serie Asura Scans non valida.');
     final listing = await http.json('$_api/series/$slug/chapters');
     final raw = listing['data'];
-    if (raw is! List) throw const ProviderError('Elenco dei capitoli Asura Scans non disponibile.');
+    if (raw is! List) throw const ProviderChanged('Elenco dei capitoli Asura Scans non disponibile.');
     final chapters = <Chapter>[];
     for (final item in raw.reversed) {
       if (item is! Map<String, Object?> ||
@@ -97,7 +97,7 @@ class AsuraScans extends Provider {
           item['number'] is! num ||
           !isText(item['slug']) ||
           !_slugPattern.hasMatch(item['slug'] as String)) {
-        throw const ProviderError('Capitolo Asura Scans incompleto.');
+        throw const ProviderChanged('Capitolo Asura Scans incompleto.');
       }
       // Un capitolo in accesso anticipato non ha tavole per chi non paga:
       // resta fuori finché non si libera, e allora arriva come capitolo nuovo.
@@ -142,7 +142,7 @@ class AsuraScans extends Provider {
       'q': query.trim(),
     }).toString());
     final items = response['data'];
-    if (items is! List) throw const ProviderError('Risposta della ricerca Asura Scans cambiata.');
+    if (items is! List) throw const ProviderChanged('Risposta della ricerca Asura Scans cambiata.');
     final results = <SearchResult>[];
     for (final item in items) {
       if (item is! Map<String, Object?> || !isText(item['title']) || !isText(item['slug'])) continue;
@@ -172,25 +172,25 @@ class AsuraScans extends Provider {
     final series = chapter.metadata['series_slug'];
     final slug = chapter.metadata['slug'];
     if (!isText(series) || !isText(slug)) {
-      throw ProviderError('Capitolo Asura Scans senza indirizzo: ${chapter.title}.');
+      throw ProviderChanged('Capitolo Asura Scans senza indirizzo: ${chapter.title}.');
     }
     final response = await http.json('$_api/series/$series/chapters/$slug');
     final data = response['data'];
     final raw = data is Map<String, Object?> ? data['chapter'] : null;
     if (raw is! Map<String, Object?> || '${raw['id']}' != chapter.id) {
-      throw ProviderError('Capitolo non corrispondente: ${chapter.title}.');
+      throw ProviderChanged('Capitolo non corrispondente: ${chapter.title}.');
     }
     if (data is Map && data['is_locked'] == true) {
       throw ProviderError('Capitolo riservato agli abbonati di Asura Scans: ${chapter.title}.');
     }
     final images = raw['pages'];
     if (images is! List || images.isEmpty) {
-      throw ProviderError('Elenco immagini incompleto: ${chapter.title}.');
+      throw ProviderChanged('Elenco immagini incompleto: ${chapter.title}.');
     }
     final pages = <Page>[];
     for (final image in images) {
       final url = image is Map ? image['url'] : null;
-      if (url is! String) throw ProviderError('Pagina non coerente: ${chapter.title}.');
+      if (url is! String) throw ProviderChanged('Pagina non coerente: ${chapter.title}.');
       validateUrl(url);
       pages.add(Page(
         url,

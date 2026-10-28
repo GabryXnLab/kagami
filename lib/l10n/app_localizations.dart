@@ -790,6 +790,12 @@ abstract class AppLocalizations {
   /// **'Non scaricato'**
   String get seriesChapterNotDownloaded;
 
+  /// Riga sotto il titolo di un capitolo archiviato e leggibile che il sito non elenca più
+  ///
+  /// In it, this message translates to:
+  /// **'Non più sul sito'**
+  String get seriesChapterUnlisted;
+
   /// Riga sotto il titolo di un capitolo: numero di pagine (tavole)
   ///
   /// In it, this message translates to:
@@ -1773,6 +1779,138 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Controlla adesso'**
   String get archiveCheckNow;
+
+  /// Archivio (serie seguite) e menu della serie: voce che lancia la riparazione delle serie archiviate
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara le serie archiviate'**
+  String get archiveRepair;
+
+  /// Sotto la voce di riparazione: cosa fa
+  ///
+  /// In it, this message translates to:
+  /// **'Rilegge ogni serie dal suo sito e corregge titolo, copertina e capitoli'**
+  String get archiveRepairHint;
+
+  /// Foglio della riparazione: ripara tutta la libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta la libreria'**
+  String get archiveRepairAll;
+
+  /// Foglio della riparazione: ripara solo le serie di un sito; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le serie di {site}'**
+  String archiveRepairSite(String site);
+
+  /// Scheda della serie: pulsante che ripara questa serie
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara la serie'**
+  String get archiveRepairSeries;
+
+  /// Avanzamento della riparazione sul telefono; done e total sono numeri di serie, title il titolo della serie in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Riparo {done} di {total}: {title}'**
+  String archiveRepairRunning(int done, int total, String title);
+
+  /// Messaggio dopo aver lanciato la riparazione sul server
+  ///
+  /// In it, this message translates to:
+  /// **'Riparazione avviata sul server: gli esiti compaiono nella cronologia.'**
+  String get archiveRepairQueued;
+
+  /// Messaggio a riparazione finita sul telefono; count è quante serie sono state lette
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna serie da riparare.} =1{Riparata 1 serie.} other{Riparate {count} serie.}}'**
+  String archiveRepairFinished(int count);
+
+  /// Riparazione: non c'è né la cartella di Drive né quella del telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Non c\'è una libreria da riparare: scegli la cartella di Drive o del telefono.'**
+  String get archiveRepairNoLibrary;
+
+  /// Riparazione: il server collegato non conosce la riparazione
+  ///
+  /// In it, this message translates to:
+  /// **'Il server non sa ancora riparare le serie: va aggiornato.'**
+  String get archiveRepairNoServer;
+
+  /// Riparazione non riuscita; error è il motivo
+  ///
+  /// In it, this message translates to:
+  /// **'Riparazione non riuscita: {error}'**
+  String archiveRepairFailed(String error);
+
+  /// Riparazione: se ne chiede una mentre un'altra è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono sta già riparando o scaricando: riprova fra poco.'**
+  String get archiveRepairBusy;
+
+  /// Proposta quando un sito rotto torna a funzionare; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Il sito {site} funziona di nuovo: ripara le sue serie'**
+  String archiveRepairRecovered(String site);
+
+  /// Azione della proposta di riparazione: lancia la riparazione del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara'**
+  String get archiveRepairRecoveredAction;
+
+  /// Azione della proposta di riparazione: la scarta
+  ///
+  /// In it, this message translates to:
+  /// **'Ignora'**
+  String get archiveRepairDismiss;
+
+  /// Cronologia: esito di una riparazione che non ha cambiato niente
+  ///
+  /// In it, this message translates to:
+  /// **'Niente da riparare'**
+  String get archiveRepairNothing;
+
+  /// Cronologia, esito di riparazione: la serie ha adottato una nuova chiave (il sito ha cambiato identità)
+  ///
+  /// In it, this message translates to:
+  /// **'nuova chiave adottata'**
+  String get archiveRepairAdopted;
+
+  /// Cronologia, esito di riparazione: il titolo è cambiato
+  ///
+  /// In it, this message translates to:
+  /// **'titolo aggiornato'**
+  String get archiveRepairRetitled;
+
+  /// Cronologia, esito di riparazione: la copertina è cambiata
+  ///
+  /// In it, this message translates to:
+  /// **'copertina aggiornata'**
+  String get archiveRepairCover;
+
+  /// Cronologia, esito di riparazione: capitoli che il sito elenca e l'archivio non aveva; count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo nuovo} other{{count} capitoli nuovi}}'**
+  String archiveRepairAdded(int count);
+
+  /// Cronologia, esito di riparazione: capitoli archiviati che il sito non elenca più (restano archiviati); count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo non più elencato} other{{count} capitoli non più elencati}}'**
+  String archiveRepairUnlisted(int count);
+
+  /// Cronologia, esito di riparazione: la serie non si è potuta riparare; error è il motivo
+  ///
+  /// In it, this message translates to:
+  /// **'Non riparata: {error}'**
+  String archiveRepairError(String error);
 
   /// Sotto «Serie seguite» quando non ce n'è nessuna
   ///
@@ -6378,6 +6516,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano'**
   String get settingsReadAheadWindowNote;
+
+  /// Scarica un manga, serie seguite, scheda della serie e ricerca: il sito intero non funziona perché è cambiato; sotto compare il messaggio tecnico; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Il sito {site} non funziona: è cambiato e Kagami va aggiornato.'**
+  String archiveSiteBroken(String site);
 }
 
 class _AppLocalizationsDelegate

@@ -41,6 +41,9 @@ class ApiError implements Exception {
 /// Quante serie escluse dal controllo accetta `PUT /v2/check`.
 const int maxUnfollowed = 5000;
 
+/// Quante chiavi al più chiede una riparazione.
+const int maxRepairKeys = 5000;
+
 /// Quante pagine accetta `POST /v2/check/pages` in una volta.
 const int maxPages = 50;
 
@@ -134,6 +137,7 @@ class ServerApi {
       ('GET', ['jobs']) => (HttpStatus.ok, await _jobs(me)),
       ('POST', ['jobs']) => (HttpStatus.created, await _enqueue(me, await _body(request))),
       ('DELETE', ['jobs', final id]) => await _cancel(me, id),
+      ('POST', ['repair']) => (HttpStatus.accepted, await _repair(me, await _body(request))),
       ('DELETE', ['history']) => await _clearHistory(me),
       ('GET', ['ongoing']) => (HttpStatus.ok, await _ongoing(me)),
       ('DELETE', ['ongoing', final key]) => await _forget(me, key),
@@ -201,10 +205,11 @@ class ServerApi {
         'images': images,
         // Ciò che questo server sa fare oltre alla v2 di partenza: l'app
         // offre una funzione solo a un server che la elenca.
-        'features': ['ahead', 'unfollowed', 'verify', if (browser) 'browser'],
+        'features': ['ahead', 'unfollowed', 'verify', 'sites', 'repair', if (browser) 'browser'],
         'check': {
           ..._checkJson(await me.jobs.checkSettings()),
           'gated': [for (final entry in await me.jobs.gated()) entry.toJson()],
+          'sites': {for (final MapEntry(:key, :value) in (await me.jobs.sites()).entries) key: value.toJson()},
         },
         'me': {'email': email, 'owner': email == accounts.owner, 'drive': await _drive(me.drive)},
       };
@@ -385,6 +390,30 @@ class ServerApi {
         'queued': settings.queued,
         'failed': settings.failed,
       };
+
+  Future<Map<String, Object?>> _repair(UserSpace me, Map<String, Object?> body) async {
+    final site = body['site'];
+    final keys = body['keys'];
+    if (site != null && keys != null) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«site» e «keys» non vanno insieme.');
+    }
+    if (site != null && (site is! String || !providers.any((provider) => provider.id == site))) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«site» è l\'id di uno dei siti del server.');
+    }
+    if (keys != null &&
+        (keys is! List || keys.isEmpty || keys.length > maxRepairKeys || keys.any((key) => key is! String))) {
+      throw const ApiError(
+          HttpStatus.badRequest, 'bad_request', '«keys» è un elenco di chiavi di serie, da 1 a $maxRepairKeys.');
+    }
+    if (!await me.drive.authorized || me.drive.folderId == null) {
+      throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
+          'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    me.jobs.repair(site: site as String?, keys: keys == null ? null : {for (final key in keys as List) key as String});
+    return {
+      'repair': {'queued': true},
+    };
+  }
 
   Future<Map<String, Object?>> _configureCheck(UserSpace me, Map<String, Object?> body) async {
     final enabled = body['enabled'];

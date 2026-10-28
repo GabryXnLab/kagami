@@ -21,8 +21,8 @@ import 'phone_check.dart';
 /// Il lucchetto del giro: un file ritoccato ogni tanto, come quello della
 /// sincronizzazione. I motori stanno nello stesso processo, e un lucchetto
 /// del sistema li vedrebbe come la stessa persona.
-class _RunLock {
-  _RunLock(this.file);
+class RunLock {
+  RunLock(this.file);
 
   final File file;
   Timer? _beat;
@@ -58,7 +58,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
   // giro finito.
   var gated = const <GatedSeries>[];
   DriveClient? client;
-  _RunLock? lock;
+  RunLock? lock;
   try {
     final directories = await AppDirectories.resolve();
     final files = ArchiveFiles(directories.support);
@@ -90,7 +90,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
     if (end == RunEnd.done && await files.running()) {
       end = RunEnd.retry;
     } else if (end == RunEnd.done) {
-      lock = _RunLock(files.runLock);
+      lock = RunLock(files.runLock);
       await lock.acquire();
       var lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
       end = await ArchiveRunner(

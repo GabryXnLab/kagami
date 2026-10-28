@@ -33,6 +33,13 @@ SeriesState state({Set<int> read = const {}, int? reading}) => SeriesState(
     );
 
 void main() {
+  test('il man mano lascia in pace una serie con un problema o di un sito rotto', () {
+    expect(aheadHeldBack(key: 'coffeemanga:a', problem: 'Serie non trovata.', brokenSites: const {}), isTrue);
+    expect(aheadHeldBack(key: 'coffeemanga:a', brokenSites: const {'coffeemanga'}), isTrue);
+    expect(aheadHeldBack(key: 'mangak:a', brokenSites: const {'coffeemanga'}), isFalse);
+    expect(aheadHeldBack(key: 'mangak:a', brokenSites: const {}), isFalse);
+  });
+
   test('con cinque capitoli pronti non serve niente', () {
     final plan = planAhead(chapters: chapters({10, 11, 12, 13, 14}), state: state(), pending: const {});
     expect(plan.enqueue, isEmpty);

@@ -225,7 +225,7 @@ class SiteHttp implements ProviderHttp {
   Future<Map<String, Object?>> json(String url) async {
     final result = await get(url);
     if (result.contentType != 'application/json') {
-      throw const ProviderError('Risposta JSON non valida.');
+      throw const ProviderChanged('Risposta JSON non valida.');
     }
     return decodeJsonObject(result.body);
   }
@@ -236,10 +236,10 @@ Map<String, Object?> decodeJsonObject(Uint8List body) {
   try {
     value = jsonDecode(utf8.decode(body));
   } on FormatException {
-    throw const ProviderError('JSON del provider non valido.');
+    throw const ProviderChanged('JSON del provider non valido.');
   }
   if (value is! Map<String, Object?>) {
-    throw const ProviderError('JSON del provider non valido.');
+    throw const ProviderChanged('JSON del provider non valido.');
   }
   return value;
 }

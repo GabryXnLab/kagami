@@ -8,6 +8,7 @@
 /// così verifica, permessi e destinazioni restano uguali dappertutto.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,8 +20,10 @@ import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers.dart';
 import 'package:kagami_archive/remote.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
+import '../archive/repair.dart';
 import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../format/malf.dart';
@@ -30,6 +33,8 @@ import '../providers.dart';
 import 'archive_series.dart';
 import 'browser_check_page.dart';
 import 'drive_ui.dart';
+import 'theme.dart';
+import 'widgets/kit.dart';
 
 /// La serie letta dal sito, con ciò che serve a scaricarla uguale dopo.
 class InspectedSeries {
@@ -56,8 +61,151 @@ class ArchiveVerifyIncomplete extends ProviderError {
 }
 
 /// Il testo da mostrare per un errore di [inspectArchiveLink].
-String archiveErrorText(ProviderError error) =>
-    error is ProviderOffline ? currentL10n().archiveErrOffline : error.message;
+String archiveErrorText(ProviderError error, {String? url}) {
+  if (error is ProviderOffline) return currentL10n().archiveErrOffline;
+  if (error is ProviderChanged && url != null) return siteBrokenText(siteNameOf(url), error.message);
+  return error.message;
+}
+
+/// «Il sito X non funziona…», con sotto il messaggio tecnico.
+String siteBrokenText(String site, String message) =>
+    '${currentL10n().archiveSiteBroken(site)}\n$message';
+
+/// Il nome di un sito dal suo id (`mangak`), o l'id stesso se non lo conosce.
+String siteNameById(String id) => providers.where((provider) => provider.id == id).firstOrNull?.name ?? id;
+
+/// Il nome del sito di un link, o il suo host se nessun provider lo riconosce.
+String siteNameOf(String url) {
+  try {
+    return selectProvider(url).name;
+  } on ProviderError {
+    return Uri.tryParse(url)?.host ?? url;
+  }
+}
+
+/// Una riga per ogni sito rotto: dove si mostrano gli errori delle serie, un
+/// sito cambiato si dice una volta sola, non serie per serie.
+class BrokenSitesCard extends ConsumerWidget {
+  const BrokenSitesCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final broken = ref.watch(brokenSitesProvider).value ?? const {};
+    if (broken.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: KCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final MapEntry(:key, :value) in broken.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(LucideIcons.triangleAlert, size: 18, color: context.tokens.danger),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.archiveSiteBroken(siteNameById(key)),
+                            style: KagamiType.title(14.5, color: context.colors.onSurface),
+                          ),
+                          if (value.message.isNotEmpty)
+                            Text(value.message, style: KagamiType.body(12.5, height: 1.45, color: context.tokens.muted)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lancia la riparazione (di [site], di [keys] o di tutta la libreria) e dice
+/// com'è andata. Dopo, la proposta del sito non serve più.
+Future<void> startRepair(BuildContext context, WidgetRef ref, {String? site, Set<String>? keys}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = currentL10n();
+  if (site != null) unawaited(ref.read(siteRecoveryProvider.notifier).dismiss(site));
+  final result = await ref.read(repairProvider.notifier).start(site: site, keys: keys);
+  final error = ref.read(repairProvider).error;
+  final text = switch (result) {
+    RepairStart.server => l10n.archiveRepairQueued,
+    RepairStart.phone => null,
+    RepairStart.busy => l10n.archiveRepairBusy,
+    RepairStart.unavailable => error,
+    RepairStart.failed => error == null ? null : l10n.archiveRepairFailed(error),
+  };
+  if (text != null) messenger.showSnackBar(SnackBar(content: Text(text)));
+}
+
+/// Una riga per ogni sito tornato sano: propone di ripararne le serie.
+/// Ignorabile, e ciascuno compare una volta sola per ritorno.
+class SiteRecoveryCard extends ConsumerWidget {
+  const SiteRecoveryCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offers = ref.watch(siteRecoveryProvider).value ?? const <String>{};
+    if (offers.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: KCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final site in offers)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(LucideIcons.wrench, size: 18, color: context.colors.primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            l10n.archiveRepairRecovered(siteNameById(site)),
+                            style: KagamiType.title(14.5, color: context.colors.onSurface),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => ref.read(siteRecoveryProvider.notifier).dismiss(site),
+                          child: Text(l10n.archiveRepairDismiss),
+                        ),
+                        TextButton(
+                          onPressed: () => startRepair(context, ref, site: site),
+                          child: Text(l10n.archiveRepairRecoveredAction),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Legge dal sito la serie di [url], il link di una serie o di un suo
 /// capitolo (`resolveLink`); per un capitolo, la serie è quella a cui

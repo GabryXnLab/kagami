@@ -556,6 +556,16 @@ class DriveClient {
     return _item(response);
   }
 
+  /// Cambia il nome di un file o di una cartella, lasciandolo dov'è.
+  Future<DriveItem> rename(String id, String name) => _json(
+        'PATCH',
+        _endpoint('/drive/v3/files/${Uri.encodeComponent(id)}', {
+          'fields': _itemFields,
+          'supportsAllDrives': 'true',
+        }),
+        {'name': name},
+      );
+
   /// Sposta nel cestino: da lì si recupera per trenta giorni, ed è l'unico
   /// modo in cui l'app toglie qualcosa da Drive.
   Future<void> trash(String id) async {
@@ -616,6 +626,8 @@ abstract interface class SyncRemote {
   Future<DriveItem> createFolder(String name, String parentId);
 
   Future<void> trash(String id);
+
+  Future<DriveItem> rename(String id, String name);
 }
 
 /// [SyncRemote] con il client vero.
@@ -656,4 +668,7 @@ class DriveSyncRemote implements SyncRemote {
 
   @override
   Future<void> trash(String id) => client.trash(id);
+
+  @override
+  Future<DriveItem> rename(String id, String name) => client.rename(id, name);
 }

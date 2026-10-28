@@ -56,6 +56,19 @@ Future<Map<String, Object?>?> readJsonFile(File file) async {
   }
 }
 
+/// La cartella con il nome che si voleva dare a un'altra c'è già: su Drive
+/// due cartelle con lo stesso nome spezzerebbero la libreria.
+class FolderConflict implements Exception {
+  const FolderConflict(this.path);
+  final String path;
+
+  @override
+  String toString() => 'C’è già una cartella «$path».';
+}
+
+/// Il suffisso `[provider-id]` di una cartella di serie, o `null`.
+String? folderSuffix(String name) => RegExp(r'\[([^\[\]]+)\]$').firstMatch(name)?[1];
+
 /// Un file già nella destinazione, come la destinazione lo conosce.
 typedef StoredFile = ({int? size, String? md5});
 
@@ -94,6 +107,15 @@ abstract class ArchiveStore {
   /// Toglie la serie [key], che sta in [folder]: la cartella e la sua riga.
   /// Quello che non c'è già più non è un errore.
   Future<void> removeSeries(String folder, String key);
+
+  /// Dà alla cartella [relative] il nome [name], nella stessa cartella madre.
+  /// Se c'è già solo quella col nome nuovo la rinomina è fatta (una
+  /// riparazione interrotta che riprende); se ci sono tutte e due,
+  /// [FolderConflict].
+  Future<void> renameFolder(String relative, String name);
+
+  /// Riscrive il `chapter.json` di un capitolo già consegnato.
+  Future<void> writeChapterManifest(String chapterPath, Map<String, Object?> manifest);
 }
 
 /// L'id del capitolo nel nome della sua cartella: `… [id]`.
@@ -134,6 +156,14 @@ class LocalStore extends ArchiveStore {
       for (final row in rows.whereType<Map>()) {
         if (row['key'] == series.key && row['path'] is String) return row['path'] as String;
       }
+    }
+    // Come su Drive: una serie la cui riga non c'è, o porta ancora il
+    // percorso di prima di una rinomina, si riconosce dal suffisso.
+    final directory = Directory(root);
+    if (!await directory.exists()) return null;
+    await for (final entity in directory.list()) {
+      final name = p.basename(entity.path);
+      if (entity is Directory && folderSuffix(name) == '${series.provider}-${series.id}') return name;
     }
     return null;
   }
@@ -198,9 +228,10 @@ class LocalStore extends ArchiveStore {
   @override
   Future<void> writeLibraryRow(Map<String, Object?> row) async {
     final previous = await readJsonFile(_downloads);
+    final replaced = replacedKeys(row);
     final rows = [
       for (final entry in (previous?['series'] as List? ?? const []).whereType<Map<String, Object?>>())
-        if (entry['key'] != row['key']) entry,
+        if (!replaced.contains(entry['key'])) entry,
       row,
     ];
     await writeAtomically(
@@ -231,6 +262,27 @@ class LocalStore extends ArchiveStore {
         'series': [for (final row in rows) if (row['key'] != key) row],
       })),
     );
+  }
+
+  @override
+  Future<void> renameFolder(String relative, String name) async {
+    final from = _directory(relative);
+    final to = Directory(p.join(from.parent.path, name));
+    if (from.path == to.path) return;
+    final exists = await from.exists();
+    if (await to.exists()) {
+      if (exists) throw FolderConflict(p.posix.join(p.posix.dirname(relative), name));
+      return;
+    }
+    if (exists) await from.rename(to.path);
+  }
+
+  /// Solo se il capitolo è qui: una copia di Drive a cui manca non deve
+  /// ritrovarsi una ricevuta senza tavole.
+  @override
+  Future<void> writeChapterManifest(String chapterPath, Map<String, Object?> manifest) async {
+    if (!await _directory(chapterPath).exists()) return;
+    await writeAtomically(_file(p.posix.join(chapterPath, chapterManifestFile)), utf8.encode(prettyJson(manifest)));
   }
 }
 
@@ -358,12 +410,8 @@ class DriveStore extends ArchiveStore {
     }
     // Una serie del server la cui riga si è persa si riconosce dal nome: la
     // cartella finisce sempre con `[provider-id]`.
-    final suffix = RegExp(r'\[([^\[\]]+)\]$');
     for (final item in (await _list('')).values) {
-      final match = suffix.firstMatch(item.name);
-      if (item.folder && match != null && match[1] == '${series.provider}-${series.id}') {
-        return item.name;
-      }
+      if (item.folder && folderSuffix(item.name) == '${series.provider}-${series.id}') return item.name;
     }
     return null;
   }
@@ -519,6 +567,36 @@ class DriveStore extends ArchiveStore {
       await _putBytes(libraryFile, Uint8List.fromList(utf8.encode(prettyJson(libraryWithout(previous, key)))));
     }
     await mirror?.removeSeries(folder, key);
+  }
+
+  @override
+  Future<void> renameFolder(String relative, String name) async {
+    final parent = _parentPath(relative);
+    final target = parent.isEmpty ? name : p.posix.join(parent, name);
+    if (target == relative) return;
+    final item = await _item(relative);
+    if (await _item(target) != null) {
+      if (item != null) throw FolderConflict(target);
+    } else if (item != null) {
+      final renamed = await remote.rename(item.id, name);
+      final siblings = await _list(parent);
+      siblings.remove(p.posix.basename(relative));
+      siblings[name] = renamed;
+      // Gli elenchi sotto il percorso vecchio non valgono più: si rileggono
+      // col nome nuovo alla prima richiesta.
+      bool under(String key) => key == relative || key.startsWith('$relative/');
+      _listings.removeWhere((key, _) => under(key));
+      _folders.removeWhere((key, _) => under(key));
+      _creating.removeWhere((key, _) => under(key));
+      _committed.removeWhere((key, _) => under(key));
+    }
+    await mirror?.renameFolder(relative, name);
+  }
+
+  @override
+  Future<void> writeChapterManifest(String chapterPath, Map<String, Object?> manifest) async {
+    await _putBytes(p.posix.join(chapterPath, chapterManifestFile), Uint8List.fromList(utf8.encode(prettyJson(manifest))));
+    await mirror?.writeChapterManifest(chapterPath, manifest);
   }
 
   /// Dimentica gli elenchi: al giro seguente si rileggono da Drive.

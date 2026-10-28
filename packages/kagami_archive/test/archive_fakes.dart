@@ -3,11 +3,16 @@
 // `mangaarchive/tests` sul server e, per Asura e Coffee Manga, risposte del
 // sito vero ridotte all'osso.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/http.dart';
+import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/providers/coffeemanga.dart';
+import 'package:path/path.dart' as p;
 
 /// Un WebP senza perdita di [width]×[height] con un corpo che dipende da
 /// [payload]: basta agli header, e due tavole diverse hanno impronte diverse.
@@ -312,7 +317,14 @@ class FakeAsuraScans implements ProviderHttp {
   Future<bool> imageExists(String url, {required String referer}) => throw UnimplementedError();
 }
 
-/// Coffee Manga: le pagine vere ridotte a ciò che il provider legge.
+/// Una pagina dell'app Inertia di Coffee Manga: lo stato sta in `data-page`.
+String coffeePage(String component, Map<String, Object?> props, {String head = ''}) =>
+    '<html><head>$head</head><body><div id="app"><script data-page="app" type="application/json">'
+    '${jsonEncode({'component': component, 'props': props, 'url': '/', 'version': 'x'})}'
+    '</script></div></body></html>';
+
+/// Coffee Manga: le pagine vere ridotte a ciò che il provider legge, con il
+/// manifest cifrato come lo fa il sito (chiave dal bundle, HMAC a blocchi).
 class FakeCoffeeManga implements ProviderHttp {
   FakeCoffeeManga() {
     for (final pages in chapterPages.values) {
@@ -323,74 +335,168 @@ class FakeCoffeeManga implements ProviderHttp {
     images[cover] = webp(80, 120, 'cover');
   }
 
-  static const String url = 'https://coffeemanga.net/manga/the-house-without-time/';
-  static const String cover = 'https://coffeemanga.net/wp-content/uploads/2025/12/The-House-Without-Time-193x278-1.jpg';
-  static const String _data = 'https://coffeemanga.net/wp-content/uploads/WP-manga/data/manga_694020ff1c5c2';
+  static const String host = 'https://coffeemanga.net';
+  static const String slug = 'the-house-without-time';
+  static const String url = '$host/manga/$slug/';
+  static const String cover = '$host/img/COVERBIG/rs:fill:772:1112/g:sm/Y292ZXI';
+  static const String bundleUrl = '$host/build/assets/g2/app-TEST.js';
 
-  /// Dal più recente, come le dà il sito; il 3 è riservato ai VIP.
-  final List<Map<String, Object?>> items = [
-    {'id': 418312, 'num': '3', 'name': 'Chapter 3', 'url': '${url}chapter-3/', 'ago': 'June 18, 2026', 'st': 'locked', 'lk': 1, 'rd': 0, 'rg': 0, 'nw': 1},
-    {'id': 217610, 'num': '1.5', 'name': 'Chapter 1.5', 'url': '${url}chapter-1-5/', 'ago': 'December 16, 2025', 'st': 'free', 'lk': 0, 'rd': 0, 'rg': 0, 'nw': 0},
-    {'id': 217607, 'num': '1', 'name': 'Chapter 1', 'url': '${url}chapter-1/', 'ago': 'December 15, 2025', 'st': 'free', 'lk': 0, 'rd': 0, 'rg': 0, 'nw': 0},
+  /// Dal più recente, come li dà il sito; il 3 è riservato ai VIP.
+  /// `(slug, numero, id nella pagina del capitolo, riservato)`.
+  final List<(String, String, int, bool)> chapters = [
+    ('chapter-3', '3', 183003, true),
+    ('chapter-1-5', '1.5', 183002, false),
+    ('chapter-1', '1', 183001, false),
   ];
+  static const int perPage = 2;
+
+  /// Il `v` del manifest di ogni capitolo: quale forma di risposta e quale
+  /// codifica dei dati.
+  final Map<String, int> versions = {'chapter-1': 1, 'chapter-1-5': 5};
 
   /// Quanti capitoli dichiara la pagina; `null` per quelli dell'elenco.
   int? declared;
 
-  final Map<int, List<String>> chapterPages = {
-    217607: ['$_data/chapter-1/001.jpg', '$_data/chapter-1/002.jpg', '$_data/chapter-1/003.jpg'],
-    217610: ['$_data/chapter-1-5/001.jpg'],
+  /// Il testo del bundle: la vera `TE()` con il suo array, in mezzo ad altro.
+  String bundle = 'var a=1;${File('test/fixtures/coffeemanga_key.js').readAsStringSync()}const OE=new Uint32Array([1]);';
+
+  /// Le richieste al manifest rispondono 428, come quando serve Turnstile.
+  bool turnstile = false;
+
+  final Map<String, List<String>> chapterPages = {
+    'chapter-1': [for (final n in [1, 2, 3]) '$host/img/SIG$n/raw:1/MDAx$n'],
+    // L'ultima striscia di un capitolo, di pochi pixel, non ha la variante `raw`.
+    'chapter-1-5': ['$host/img/SIG9/rs:fit:600:0/MDAx9'],
   };
 
   final Map<String, Uint8List> images = {};
   final List<String> requests = [];
 
-  String get _series => '''
-<html><head>
-<meta property="og:image" content="$cover"/>
-</head><body class="single-wp-manga postid-7743">
-<div class="hero"><div class="hposter"><div class="hposter__card">
-<img width="193" height="278" src="$cover" class="attachment-300x450 wp-post-image" alt="The House Without Time">
-</div></div>
-<div class="hcol">
-<h1 class="htitle">
-The House Without Time			</h1>
-<div class="htags"><span class="htag htag--status is-on-going">OnGoing</span></div>
-<div class="hchips hchips--genres"><span class="hchips-label">Genres</span><a class="chip" href="https://coffeemanga.net/manga-genre/action/">Action</a><a class="chip" href="https://coffeemanga.net/manga-genre/fantasy/">Fantasy</a></div>
-<div class="hchips hchips--tags"><span class="hchips-label">Tags</span><a class="chip chip--tag" href="https://coffeemanga.net/manga-tag/fantasy-adventure/">fantasy-adventure</a></div>
-<div class="ratecard"><div class="rc-score"><div class="rc-num">4.0</div></div></div>
-<div class="syn clamp" id="syn"><p>A broken girl<br>meets an old man.</p><p>Time stands still.</p>
-</div>
-<div class="sinfo" id="sinfo"><div class="sinfo-grid" id="sinfoGrid">
-<div class="sir"><span class="l">Status</span><span class="v">OnGoing</span></div>
-<div class="sir sir--wide"><span class="l">Alternative</span><span class="v">Shard of Time / 시간이 머문 집</span></div>
-<div class="sir"><span class="l">Author(s)</span><span class="v">Writer, Other Writer</span></div>
-<div class="sir"><span class="l">Chapters</span><span class="v">${declared ?? items.length}</span></div>
-</div></div>
-</div></div>
-<div class="mk-chapters" id="mkChapters">
-<div class="stitle">Chapters <span class="cnt">${declared ?? items.length}</span></div>
-<div class="clist list" id="clist" aria-live="polite"></div>
-</div>
-<script id="mk-chapters-data" type="application/json">${jsonEncode({'mangaId': 7743, 'pageSize': 30, 'logged': 0, 'items': items}).replaceAll('/', r'\/')}</script>
-</body></html>''';
+  List<Map<String, Object?>> _items(List<(String, String, int, bool)> source) => [
+        for (final (chapterSlug, number, _, locked) in source)
+          {
+            'slug': chapterSlug,
+            'label': 'Chapter $number',
+            'url': '/manga/$slug/$chapterSlug/',
+            'published_at': '2026-06-18T15:32:17+00:00',
+            'access': locked ? 'vip' : 'free',
+            'locked': locked,
+            'number': number,
+            'title': null,
+            'pages': 14,
+          },
+      ];
 
-  String _chapter(int id) {
-    final pages = [
-      for (final (i, page) in (chapterPages[id] ?? const <String>[]).indexed)
-        // Le prime tavole hanno `src` e le misure, le altre `data-src`.
-        i == 0
-            ? '<div class="page-break no-gaps"><img id="image-$i" src="$page"\n'
-                ' class="wp-manga-chapter-img img-responsive" width="720" height="692"></div>'
-            : '<div class="page-break no-gaps"><img id="image-$i" data-src="$page"\n'
-                ' class="wp-manga-chapter-img img-responsive lazyload effect-fade"></div>',
-    ];
-    final locked = chapterPages.containsKey(id)
-        ? ''
-        : '<div class="wp-manga-chapter-permissions-msg"><a href="#">Unlock</a></div>';
-    return '<html><body><div class="reading-content dynr-reading">'
-        '<input type="hidden" id="wp-manga-current-chap" data-id="$id" value="chapter"/>'
-        '${pages.join('\n')}</div>$locked</body></html>';
+  List<(String, String, int, bool)> _slice(int page) =>
+      chapters.skip((page - 1) * perPage).take(perPage).toList();
+
+  Map<String, Object?> _pagination() => {
+        'page': 1,
+        'last': (chapters.length / perPage).ceil(),
+        'total': declared ?? chapters.length,
+        'per_page': perPage,
+        'json': '/manga/$slug/chapters/__PAGE__.json',
+      };
+
+  String _series() => coffeePage('Catalog/Series', {
+        'rating': {'avg': 4.43, 'count': 7},
+        'series': {
+          'slug': slug,
+          'url': '/manga/$slug/',
+          'title': 'The House Without Time',
+          'type': 'manhwa',
+          'status': 'ongoing',
+          'cover': '$host/img/COVERSMALL/rs:fill:193:278/g:sm/Y292ZXI',
+          'cover_lg': '$host/img/COVERMID/rs:fill:386:556/g:sm/Y292ZXI',
+          'cover_canonical': cover,
+          'alt_titles': ['Shard of Time / 시간이 머문 집'],
+          'synopsis': 'A broken girl meets an old man.',
+          'release_year': 2025,
+          'genres': [
+            {'slug': 'fantasy', 'name': 'Fantasy', 'url': '/manga-genre/fantasy/'},
+            {'slug': 'action', 'name': 'Action', 'url': '/manga-genre/action/'},
+          ],
+          'tags': [{'slug': 'fantasy-adventure', 'name': 'fantasy-adventure', 'url': '/manga-tag/fantasy-adventure/'}],
+          'authors': [{'slug': 'writer', 'name': 'Writer'}, 'Other Writer'],
+          'artists': [],
+          'chapter_count': chapters.length,
+        },
+        'chapters': _items(_slice(1)),
+        'chapters_pagination': _pagination(),
+        'locked_count': chapters.where((c) => c.$4).length,
+      });
+
+  Map<String, Object?> _tavola(String raw, int n) => {
+        'n': n,
+        'src': null,
+        'srcset': raw.contains('/raw:1/')
+            ? '${raw.replaceFirst('/raw:1/', '/rs:fit:520:0/')} 520w, $raw 709w'
+            : '${raw.replaceFirst('/rs:fit:600:0/', '/rs:fit:520:0/')} 520w, $raw 600w',
+        'width': 709,
+        'height': 1000 + n,
+      };
+
+  Uint8List _key() => coffeeMangaKey(bundle);
+
+  Uint8List _hmac(List<int> key, String message) =>
+      Uint8List.fromList(Hmac(sha256, key).convert(utf8.encode(message)).bytes);
+
+  String _q(String chapterSlug) => 'q-$chapterSlug';
+
+  String _chapter(String chapterSlug) {
+    final (_, number, id, locked) = chapters.firstWhere((c) => c.$1 == chapterSlug);
+    final raw = chapterPages[chapterSlug] ?? const <String>[];
+    final manifest = utf8.encode(jsonEncode({
+      'e': 'meaqclptin',
+      'p': ['pa', 'pb', 'pc'],
+      'v': versions[chapterSlug] ?? 1,
+      'k': 'd0c5bcb3134cb9fe8dc6913211696ed8',
+      'c': 'x-262bcfe4',
+      'q': _q(chapterSlug),
+      'n': null,
+    }));
+    final secret = _hmac(_key(), 'rk|coffeemanga.net|$id');
+    final cipher = Uint8List.fromList(manifest);
+    for (var block = 0, offset = 0; offset < cipher.length; block++, offset += 32) {
+      final mask = _hmac(secret, 'ks|$block');
+      for (var i = 0; i < 32 && offset + i < cipher.length; i++) {
+        cipher[offset + i] ^= mask[i];
+      }
+    }
+    return coffeePage(
+      'Reader/Chapter',
+      {
+        'series': {'slug': slug, 'title': 'The House Without Time'},
+        'chapter': {'slug': chapterSlug, 'id': id, 'locked': locked, 'number': '$number.000'},
+        'pages': [if (raw.isNotEmpty) _tavola(raw.first, 1)],
+        'dims': [for (final n in List.generate(raw.length, (i) => i + 1).skip(1)) [709, 1000 + n]],
+        'total': raw.length,
+        'reader': {'x': base64Url.encode(cipher).replaceAll('=', '')},
+      },
+      head: '<script type="module" src="$bundleUrl"></script>',
+    );
+  }
+
+  HttpResult _json(Object? value) =>
+      (body: Uint8List.fromList(utf8.encode(jsonEncode(value))), contentType: 'application/json');
+
+  HttpResult _manifest(String chapterSlug, int id) {
+    final v = versions[chapterSlug] ?? 1;
+    final data = jsonEncode([
+      for (final (i, raw) in (chapterPages[chapterSlug] ?? const <String>[]).indexed) _tavola(raw, i + 1),
+    ]);
+    final mask = [for (var i = 0; i < 32; i += 2) int.parse('d0c5bcb3134cb9fe8dc6913211696ed8'.substring(i, i + 2), radix: 16)];
+    final d = switch (v % 3) {
+      0 => data,
+      1 => base64.encode(utf8.encode(data)),
+      _ => base64.encode([for (final (i, b) in utf8.encode(data).indexed) b ^ mask[i % mask.length]]),
+    };
+    final envelope = {'c': id, 'e': 1793216018, 'd': d, 's': 'sig'};
+    return _json(switch (v ~/ 3) {
+      0 => envelope,
+      1 => [envelope['c'], envelope['e'], envelope['d'], envelope['s']],
+      _ => {'r': envelope},
+    });
   }
 
   @override
@@ -398,9 +504,16 @@ The House Without Time			</h1>
     requests.add(url);
     final image = images[url];
     if (image != null) return _image(image);
-    if (url == FakeCoffeeManga.url) return _html(_series);
-    for (final item in items) {
-      if (url == item['url']) return _html(_chapter(item['id'] as int));
+    if (url == FakeCoffeeManga.url) return _html(_series());
+    if (url == bundleUrl) return (body: Uint8List.fromList(utf8.encode(bundle)), contentType: 'text/javascript');
+    final more = RegExp('^$host/manga/$slug/chapters/(\\d+)\\.json\$').firstMatch(url);
+    if (more != null) return _json({'items': _items(_slice(int.parse(more[1]!)))});
+    for (final (chapterSlug, _, id, _) in chapters) {
+      if (url == '$host/manga/$slug/$chapterSlug/') return _html(_chapter(chapterSlug));
+      if (url == '$host/meaqclptin/$id?pa=$slug&pc=${_q(chapterSlug)}') {
+        if (turnstile) throw HttpStatusError(428);
+        return _manifest(chapterSlug, id);
+      }
     }
     throw HttpStatusError(404);
   }
@@ -461,5 +574,135 @@ class SearchHttp extends ChallengedHttp {
     requests.add(url);
     if (error case final error?) throw error;
     return _html(page);
+  }
+}
+
+/// Come il Kotlin: una miniatura e tessere che dipendono dalla tavola.
+class FakeImageTools implements ImageTools {
+  int tilesMade = 0;
+
+  @override
+  Future<Uint8List?> thumbnail(File cover) async =>
+      Uint8List.fromList(utf8.encode('thumb:${cover.lengthSync()}'));
+
+  @override
+  Future<List<Uint8List>?> tiles(File page, List<int> heights) async {
+    tilesMade++;
+    final digest = sha256.convert(page.readAsBytesSync()).toString();
+    return [for (var i = 0; i < heights.length; i++) Uint8List.fromList(utf8.encode('$digest-$i'))];
+  }
+}
+
+/// Drive in memoria, con i byte e l'MD5 che il vero restituisce.
+class FakeDrive implements SyncRemote {
+  static const String root = 'ROOT';
+
+  final Map<String, DriveItem> items = {};
+  final Map<String, Uint8List> contents = {};
+  var _next = 0;
+  int uploads = 0;
+
+  /// I nomi caricati, nell'ordine in cui sono arrivati, e quanti insieme al
+  /// massimo.
+  final List<String> uploaded = [];
+  int _active = 0;
+  int mostAtOnce = 0;
+  void Function(String name)? onUpload;
+
+  /// Il caricamento che fallisce, per nome.
+  String? failUpload;
+
+  /// Quanto dura in più il caricamento di un file, per nome.
+  final Map<String, Duration> slow = {};
+
+  DriveItem _put(DriveItem item) => items[item.id] = item;
+
+  String folder(String path) {
+    var parent = root;
+    for (final name in path.split('/').where((part) => part.isNotEmpty)) {
+      final found = items.values.where((i) => i.folder && i.name == name && i.parents.contains(parent));
+      parent = found.isNotEmpty
+          ? found.first.id
+          : _put(DriveItem(id: 'f${_next++}', name: name, folder: true, parents: [parent])).id;
+    }
+    return parent;
+  }
+
+  /// Un file messo da un altro, il server.
+  void place(String path, List<int> bytes) {
+    final parent = folder(p.posix.dirname(path) == '.' ? '' : p.posix.dirname(path));
+    // Un file che c'è già si riscrive al suo posto, come farebbe Drive.
+    final id = find(path)?.id ?? 'x${_next++}';
+    _put(DriveItem(id: id, name: p.posix.basename(path), size: bytes.length, md5: md5.convert(bytes).toString(), parents: [parent]));
+    contents[id] = Uint8List.fromList(bytes);
+  }
+
+  DriveItem? find(String path) {
+    var parent = root;
+    final parts = path.split('/');
+    for (var i = 0; i < parts.length; i++) {
+      final found = items.values.where((item) => item.name == parts[i] && item.parents.contains(parent)).toList();
+      if (found.isEmpty) return null;
+      if (i == parts.length - 1) return found.first;
+      parent = found.first.id;
+    }
+    return null;
+  }
+
+  Uint8List? read(String path) => contents[find(path)?.id];
+
+  List<String> namesIn(String path) => [
+        for (final item in items.values)
+          if (item.parents.contains(path.isEmpty ? root : find(path)!.id)) item.name,
+      ]..sort();
+
+  @override
+  Future<List<DriveItem>> childrenOf(List<String> folderIds) async =>
+      [for (final item in items.values) if (item.parents.any(folderIds.contains)) item];
+
+  @override
+  Future<DriveItem> createFolder(String name, String parentId) async =>
+      _put(DriveItem(id: 'f${_next++}', name: name, folder: true, parents: [parentId]));
+
+  @override
+  Future<void> download(String id, File target) async {
+    await target.writeAsBytes(contents[id]!);
+  }
+
+  @override
+  Future<void> trash(String id) async => items.remove(id);
+
+  int renames = 0;
+
+  @override
+  Future<DriveItem> rename(String id, String name) async {
+    renames++;
+    return _put(DriveItem(id: id, name: name, folder: items[id]!.folder, size: items[id]!.size, md5: items[id]!.md5, parents: items[id]!.parents));
+  }
+
+  @override
+  Future<DriveItem> upload(File file, {String? id, String? name, String? parentId, DateTime? modified}) async {
+    final bytes = await file.readAsBytes();
+    final previous = id == null ? null : items[id];
+    if ((name ?? previous?.name) == failUpload) throw const DriveOffline();
+    _active++;
+    mostAtOnce = _active > mostAtOnce ? _active : mostAtOnce;
+    // Un caricamento vero dura: gli altri devono potersi sovrapporre.
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    final extra = slow[name ?? previous!.name];
+    if (extra != null) await Future<void>.delayed(extra);
+    _active--;
+    uploads++;
+    uploaded.add(name ?? previous!.name);
+    onUpload?.call(name ?? previous!.name);
+    final item = _put(DriveItem(
+      id: id ?? 'u${_next++}',
+      name: name ?? previous!.name,
+      size: bytes.length,
+      md5: md5.convert(bytes).toString(),
+      parents: previous?.parents ?? [parentId!],
+    ));
+    contents[item.id] = bytes;
+    return item;
   }
 }

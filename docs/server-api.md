@@ -128,12 +128,14 @@ il controllo di salute di Docker.
                 {"id": "asurascans", "name": "Asura Scans"},
                 {"id": "coffeemanga", "name": "Coffee Manga"}],
   "images": true,
-  "features": ["ahead", "unfollowed", "verify", "browser"],
+  "features": ["ahead", "unfollowed", "verify", "sites", "browser"],
   "check": {"minutes": 240, "time": 240, "enabled": true, "library": true,
             "unfollowed": ["mangak:A1"],
             "checkedAt": "…", "checked": 12, "queued": 2, "failed": 1,
             "gated": [{"key": "manhwaread:disfarming", "title": "Disfarming",
-                       "url": "https://manhwaread.com/manhwa/disfarming/"}]},
+                       "url": "https://manhwaread.com/manhwa/disfarming/"}],
+            "sites": {"coffeemanga": {"broken": true, "message": "Serie Coffee Manga non trovata.",
+                                      "since": "…", "checkedAt": "…"}}},
   "me": {
     "email": "amico@gmail.com", "owner": false,
     "drive": {"authorized": true, "folderId": "1XyZ…", "folderName": "Manga"}
@@ -154,7 +156,8 @@ il controllo di salute di Docker.
   server ha un Chromium e il controllo legge anche i siti dietro la
   verifica del browser, quando la verifica si risolve da sola; senza, li
   salta. `verify`: dice quali serie sono ferme alla verifica (`gated` in
-  `check`) e ne accetta le pagine (`POST /v2/check/pages`).
+  `check`) e ne accetta le pagine (`POST /v2/check/pages`). `repair`:
+  ripara la libreria (`POST /v2/repair`).
 - `check` è il controllo quotidiano di chi chiama (`PUT /v2/check`):
   `time` l'ora, in minuti dalla mezzanotte del server; `minutes` la stessa
   ora, `null` se è spento (`enabled`), come per i client di prima;
@@ -164,7 +167,14 @@ il controllo di salute di Docker.
   nuovi, con errori. `gated` sono le serie che il controllo non ha letto
   perché il sito voleva una verifica che nessun browser senza persone
   passa (la casella «Verify you are human»): restano lì finché un
-  controllo non le legge.
+  controllo non le legge. `sites` è la salute dei siti per id del provider
+  (`broken`, `message`, `since`, `checkedAt`): un sito è rotto quando la sua
+  pagina non ha più la forma attesa (`ProviderChanged`, in coda, nel
+  controllo o nel man mano) o quando nello stesso controllo tutte le sue
+  serie (almeno due) falliscono con un errore del sito; torna sano al primo
+  successo. I lavori automatici di un sito rotto restano in coda senza
+  essere tentati e quelli chiesti a mano partono; il client non rimette in
+  coda le serie di un sito rotto. Un provider senza voce è sano.
 
 ### `PUT /v2/me/drive` — dà al server il permesso sul proprio Drive
 
@@ -341,6 +351,48 @@ finito:
 
 `gated` sono le serie mandate che restano ferme (una pagina che non era
 quella della serie).
+
+### `POST /v2/repair` → `202` — ripara la libreria
+
+```json
+{"site": "coffeemanga"}
+```
+
+Rilegge dal sito le serie della libreria nella propria cartella di Drive e
+ne corregge i dati (MALF, «Cambi d'identità e riparazione»): titolo,
+metadati, copertina, capitoli, e la chiave nuova se il sito ha cambiato
+identità alla serie. Senza campi tutta la libreria; con `site` (id di
+`providers`) solo le serie di quel sito; con `keys` (da 1 a 5000 chiavi) solo
+quelle. Non tutti e due. Solo con la `repair` fra le `features`; senza
+permesso o cartella, `409 drive_not_ready`.
+
+Risponde prima di finire, `{"repair": {"queued": true}}`. Una riparazione
+alla volta per utente: se ce n'è già una, la nuova si somma a quella che
+aspetta (tutta la libreria vince sul resto). La richiesta in attesa sta in
+`repair.json` nella cartella dell'utente e sopravvive a un riavvio del server;
+si cancella solo quando la riparazione finisce (se si ferma per rete o Drive
+resta), e `kagami-server repair --user …` la scrive dal terminale. Non gira mentre il giro scarica:
+il lavoro in corso si ferma fra un capitolo e l'altro e riprende dopo.
+Mentre ripara, `GET /v2/jobs` ha `status.state` `running` con `jobId`
+`repair` e `message` la serie a cui è. Le serie seguite (`GET /v2/ongoing`)
+prendono la chiave adottata e perdono il `problem`; i capitoli archiviati a
+metà tornano in coda come lavori `automatic`; un sito che risponde torna
+sano in `check.sites`.
+
+Ogni serie letta lascia un esito in `history`, con `repair` (assente negli
+altri esiti):
+
+```json
+{"title": "Fog Land", "ok": true, "message": "…", "finishedAt": "…", "key": "coffeemanga:fog-land",
+ "repair": {"key": "coffeemanga:fog-land", "title": "Fog Land", "adoptedFrom": "coffeemanga:7743",
+            "renamed": {"88812": "chapter-1"}, "added": ["chapter-40"], "written": true}}
+```
+
+Campi di `repair`: `key`, `title`, `adoptedFrom`, `titleChanged`,
+`coverChanged`, `seriesChanged`, `added`, `unlisted` (archiviati che il sito
+non elenca più: restano), `renamed` (id vecchio → nuovo), `incomplete`
+(rimessi in coda), `problems`, `error`, `written`. `ok` è `false` se c'è
+`error`. Una serie senza cambiamenti lascia un esito senza `written`.
 
 ## Utenti — solo il proprietario
 

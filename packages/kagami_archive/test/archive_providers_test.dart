@@ -2,6 +2,7 @@
 // di `mangaarchive` sul server, perché i due lati devono leggere i siti allo
 // stesso modo.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
@@ -403,29 +404,30 @@ void main() {
       expect(() => provider.validateUrl('https://example.com/x.jpg'), throwsA(isA<ProviderError>()));
     });
 
-    test('serie dalla pagina, capitoli dal JSON e senza quelli VIP', () async {
+    test('serie dalla pagina, capitoli da tutte le pagine dell\'elenco e senza quelli VIP', () async {
       final http = FakeCoffeeManga();
       final series = await provider.fetchSeries(url, http);
-      expect(http.requests, [url]);
-      expect((series.key, series.title, series.url), ('coffeemanga:7743', 'The House Without Time', url));
+      expect(http.requests, [url, '${FakeCoffeeManga.host}/manga/the-house-without-time/chapters/2.json']);
+      expect((series.key, series.title, series.url), ('coffeemanga:the-house-without-time', 'The House Without Time', url));
       expect(series.coverUrl, FakeCoffeeManga.cover);
       expect(series.chapters.map((c) => (c.id, c.number, c.title)), [
-        ('217607', '1', 'Chapter 1'),
-        ('217610', '1.5', 'Chapter 1.5'),
+        ('chapter-1', '1', 'Chapter 1'),
+        ('chapter-1-5', '1.5', 'Chapter 1.5'),
       ]);
       expect(series.chapters.first.url, '${url}chapter-1/');
-      expect(series.chapters.first.metadata.containsKey('rd'), isFalse);
-      expect(chapterFolderName(series.chapters.last), '0001.5 - Chapter 1.5 [217610]');
+      expect(chapterFolderName(series.chapters.last), '0001.5 - Chapter 1.5 [chapter-1-5]');
       final metadata = normalizeMetadata(series.metadata);
-      expect(metadata['description'], 'A broken girl\nmeets an old man.\n\nTime stands still.');
-      expect(metadata['genres'], ['Action', 'Fantasy']);
+      expect(metadata['description'], 'A broken girl meets an old man.');
+      expect(metadata['genres'], ['Fantasy', 'Action']);
       expect(metadata['tags'], ['fantasy-adventure']);
       expect(metadata['authors'], ['Writer', 'Other Writer']);
       expect(metadata['alternativeTitles'], ['Shard of Time', '시간이 머문 집']);
       expect(metadata['releaseStatus'], 'ongoing');
+      expect(series.metadata['rating'], '4.43');
+      expect(series.metadata['publishedAt'], '2025');
     });
 
-    test('un elenco più corto di quanto la pagina dichiara si ferma', () async {
+    test('un elenco che non torna col totale della pagina si ferma', () async {
       final http = FakeCoffeeManga()..declared = 5;
       await expectLater(
         provider.fetchSeries(url, http),
@@ -433,55 +435,108 @@ void main() {
       );
     });
 
-    test('tavole da src e data-src, con le misure quando ci sono', () async {
-      final http = FakeCoffeeManga();
-      final series = await provider.fetchSeries(url, http);
-      final content = await provider.fetchPages(series.chapters.first, http);
-      expect(http.requests.last, '${url}chapter-1/');
-      expect(content.pages.map((page) => (page.url, page.width, page.height)), [
-        (http.chapterPages[217607]![0], 720, 692),
-        (http.chapterPages[217607]![1], null, null),
-        (http.chapterPages[217607]![2], null, null),
-      ]);
+    test('una pagina che non è più quella di una serie', () async {
+      final http = SearchHttp(page: '<p>Not found</p>');
+      await expectLater(
+        provider.fetchSeries(url, http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('Coffee Manga cambiato'))),
+      );
     });
 
-    test('un capitolo chiuso o di un\'altra pagina non passa per vuoto', () async {
+    test('tavole dal manifest cifrato in ogni forma, alla risoluzione originale', () async {
+      for (var version = 0; version < 9; version++) {
+        final http = FakeCoffeeManga()..versions['chapter-1'] = version;
+        final series = await CoffeeManga().fetchSeries(url, http);
+        final content = await CoffeeManga().fetchPages(series.chapters.first, http);
+        expect(content.pages.map((page) => (page.url, page.width, page.height)), [
+          for (final (i, page) in http.chapterPages['chapter-1']!.indexed) (page, 709, 1001 + i),
+        ], reason: 'v=$version');
+        expect(http.requests.last, '${FakeCoffeeManga.host}/meaqclptin/183001?pa=the-house-without-time&pc=q-chapter-1');
+      }
+    });
+
+    test('la chiave si legge una volta per bundle, e si rilegge se il bundle cambia', () async {
       final http = FakeCoffeeManga();
+      final other = CoffeeManga();
+      final series = await other.fetchSeries(url, http);
+      await other.fetchPages(series.chapters.first, http);
+      await other.fetchPages(series.chapters.last, http);
+      expect(http.requests.where((request) => request == FakeCoffeeManga.bundleUrl), hasLength(1));
+      // Stesso indirizzo, altra chiave: la prima decifratura fallisce.
+      http.bundle = http.bundle.replaceFirst('33747,47843', '33747,47844');
+      final content = await other.fetchPages(series.chapters.first, http);
+      expect(content.pages, hasLength(3));
+      expect((await other.fetchPages(series.chapters.last, http)).pages.single.url, http.chapterPages['chapter-1-5']!.single);
+      expect(http.requests.where((request) => request == FakeCoffeeManga.bundleUrl), hasLength(2));
+    });
+
+    test('Turnstile e capitoli di un\'altra pagina non passano per vuoti', () async {
+      final http = FakeCoffeeManga()..turnstile = true;
+      final series = await provider.fetchSeries(url, http);
       await expectLater(
-        provider.fetchPages(Chapter('418312', 'Chapter 3', '3', '${url}chapter-3/'), http),
-        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('VIP'))),
+        provider.fetchPages(series.chapters.first, http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('Turnstile'))),
       );
       await expectLater(
-        provider.fetchPages(Chapter('1', 'Chapter 1', '1', '${url}chapter-1/'), http),
+        provider.fetchPages(Chapter('chapter-9', 'Chapter 9', '9', '${url}chapter-1/'), http),
         throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('non corrispondente'))),
       );
+      await expectLater(
+        provider.fetchPages(Chapter('chapter-3', 'Chapter 3', '3', '${url}chapter-3/'), http),
+        throwsA(isA<ProviderError>().having((e) => e.message, 'message', contains('VIP'))),
+      );
+    });
+
+    test('TE() del bundle vero dà la chiave vera', () {
+      final bundle = File('test/fixtures/coffeemanga_key.js').readAsStringSync();
+      expect(
+        coffeeMangaKey('var a;$bundle').map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
+        '143d17cc4fbf2e4e9441e493c4765c915ce55d6d0f7bf1b45af32f5d76a7699c',
+      );
+      // La precedenza è quella di JS: `+` prima di `&`, `^` prima di `|`.
+      String key(String expression) => coffeeMangaKey(
+            'const ue=[5,6];function T(){const l=new Uint8Array(32),r=document.documentElement.tagName;return '
+            '${[for (var i = 0; i < 32; i++) 'l[$i]=${i == 0 ? expression : '0'}'].join(',')},l}',
+          ).first.toString();
+      expect(key('ue[0]+ue[1]&6'), '${(5 + 6) & 6}');
+      expect(key('1|2^3&4'), '${1 | (2 ^ (3 & 4))}');
+      expect(key('(1|2)^r.charCodeAt(1)'), '${3 ^ 'T'.codeUnitAt(0)}');
+      expect(() => key('ue[0]*2'), throwsA(isA<ProviderError>()));
     });
 
     test('la ricerca è la pagina dei risultati del sito', () async {
-      final http = SearchHttp(page: '''
-<div class="agrid" id="mkAgrid">
-<a class="acard" href="https://coffeemanga.net/manga/ocveobera7alg81/" title="Merry Psycho">
-  <div class="ac-img"><div class="ac-status st-on-going"><span class="dot"></span>OnGoing</div>
-  <img width="275" height="400" src="https://coffeemanga.net/wp-content/uploads/2026/09/merry-psycho-cover.jpg" class="ac-cover wp-post-image">
-  <div class="ac-ch">Chapter 78</div></div>
-  <div class="ac-t">Merry Psycho</div>
-</a>
-<a class="acard" href="https://coffeemanga.net/manga/psycho-eyes/" title="Psycho Eyes">
-  <div class="ac-img"><div class="ac-status st-completed">Completed</div>
-  <img src="https://cdn.example.com/c.jpg" class="ac-cover"></div>
-</a>
-<a class="acard" href="https://coffeemanga.net/aviso/news/" title="News"></a>
-</div>''');
+      final http = SearchHttp(page: coffeePage('Catalog/Search', {
+        'q': 'psycho',
+        'series': [
+          {
+            'slug': 'ocveobera7alg81',
+            'url': '/manga/ocveobera7alg81/',
+            'title': 'Merry Psycho',
+            'status': 'ongoing',
+            'cover': 'https://i.coffeemanga.net/img/X/rs:fill:193:278/Y',
+            'chapters': [{'label': 'Chapter 78'}],
+          },
+          {
+            'slug': 'psycho-eyes',
+            'url': '/manga/psycho-eyes/',
+            'title': 'Psycho Eyes',
+            'status': 'completed',
+            'cover': 'https://cdn.example.com/c.jpg',
+            'chapters': [],
+          },
+          {'slug': 'news', 'url': '/aviso/news/', 'title': 'News', 'chapters': []},
+        ],
+        'pagination': {'page': 1, 'last': 1, 'total': 3},
+      }));
       final results = await provider.search(' psycho ', http);
-      expect(Uri.parse(http.requests.single).queryParameters, {'s': 'psycho', 'post_type': 'wp-manga'});
+      expect(http.requests.single, 'https://coffeemanga.net/search?q=psycho');
       expect(results.map((r) => (r.title, r.url, r.releaseStatus)), [
         ('Merry Psycho', 'https://coffeemanga.net/manga/ocveobera7alg81/', 'ongoing'),
         ('Psycho Eyes', 'https://coffeemanga.net/manga/psycho-eyes/', 'completed'),
       ]);
-      expect(results.first.coverUrl, 'https://coffeemanga.net/wp-content/uploads/2026/09/merry-psycho-cover.jpg');
+      expect(results.first.coverUrl, 'https://i.coffeemanga.net/img/X/rs:fill:193:278/Y');
       expect(results.map((r) => r.latestChapter), ['78', null]);
       expect(results.last.coverUrl, isNull);
-      expect(await provider.search('zzz', SearchHttp(page: '<p>No matches found.</p>')), isEmpty);
     });
   });
 

@@ -109,6 +109,8 @@ scrivere sul proprio Drive: l'app lo dice prima di chiederlo.
 docker logs kagami-server                          # avvio, proprietario, errori
 docker exec kagami-server kagami-server users      # account ammessi e chi ha collegato il Drive
 docker exec kagami-server kagami-server status     # per ogni account: lavoro, coda, esiti
+docker exec kagami-server kagami-server repair --user <email> [--site <id> | --keys k1,k2]
+                                                   # mette in attesa la riparazione della libreria (repair.json)
 docker logs kagami-updater                         # controlli e aggiornamenti
 ```
 

@@ -241,6 +241,12 @@ class Library {
     Map<LibraryShelf, LibraryIndex> indexes, [
     List<Object> notices = const [],
   ]) {
+    // Una riga con la chiave nei `formerKeys` di un'altra è un avanzo di chi
+    // non conosce l'adozione (sul telefono `library.json` resta com'era).
+    final adopted = {
+      for (final index in indexes.values)
+        for (final entry in index.series) ...entry.formerKeys,
+    };
     final rows = <String, SeriesEntry>{};
     final holders = <String, List<LibraryShelf>>{};
     final localCount = <String, int>{};
@@ -248,6 +254,7 @@ class Library {
     for (final MapEntry(key: shelf, value: index) in indexes.entries) {
       final drive = shelf.origin == LibraryOrigin.drive;
       for (final entry in index.series) {
+        if (adopted.contains(entry.key)) continue;
         holders.putIfAbsent(entry.key, () => []).add(shelf);
         // La riga di Drive vince: è quella che l'archivio ha scritto per
         // ultima, mentre una copia locale può essere indietro di giorni.
@@ -355,6 +362,8 @@ class Library {
           path: chapter.path,
           publishedAt: chapter.publishedAt,
           archivedAt: chapter.archivedAt,
+          formerIds: chapter.formerIds,
+          listed: chapter.listed,
         );
       }
     }
@@ -370,6 +379,7 @@ class Library {
         releaseStatus: head.releaseStatus,
         signature: head.signature,
         chapters: chapters.values.sortedBy<num>((chapter) => chapter.order),
+        formerKeys: head.formerKeys,
       ),
       servedBy: servedBy,
     );

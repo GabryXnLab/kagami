@@ -1290,6 +1290,14 @@ prima, e ricomincia da dove era.
     della prima tavola di un capitolo mai aperto e la durata dell'autorizzazione
     con l'app in stato *Testing*.
 
+14. **Siti che cambiano** — in corso: un sito rotto si dichiara per intero
+    e non ferma gli altri, riparazione dei metadati di tutte le serie col
+    provider aggiornato (con adozione di un cambio d'identità), stessa serie
+    cercata e confrontata su più siti. Piano in `handoff/siti-che-cambiano/`.
+15. **Provider degli utenti** — **priorità**, in una sessione apposita: chi
+    usa l'app scrive e aggiunge il suo provider senza ricompilarla. Punti da
+    decidere nello stesso handoff, fase F5.
+
 **Resta l'icona dell'app**, che è il solo punto aperto del percorso, e il
 ritaglio automatico dei bordi bianchi delle tavole, che richiede di guardare i
 pixel di ogni pagina e va deciso su un telefono vero.

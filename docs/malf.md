@@ -104,6 +104,87 @@ stesso modo da tutti quelli che scrivono (`chapterNumber` in Kagami,
 Il provider `manual` non è un sito: è quello delle schede manuali (vedi
 [Schede](#schede)), con chiave `manual:<id>`.
 
+### Cambi d'identità e riparazione
+
+Un sito può rifarsi e smettere di dare gli id di prima (Coffee Manga, 2026:
+la serie `7743` è diventata `the-house-without-time`, i capitoli `217607` …
+sono diventati `chapter-1` …). La serie archiviata resta la stessa: stesso
+`source`, stessi capitoli, stesse tavole. Chi archivia la **adotta** — prende
+la chiave nuova e tiene memoria di quella vecchia — invece di farne una
+seconda accanto alla prima, così chi legge sposta i dati personali invece di
+perderli.
+
+**Campi.** Tutti facoltativi; un client che non li conosce li ignora e vede
+una serie nuova.
+
+- `formerKeys` — in `series.json`, `index.json` e nella riga di
+  `library.json`: le chiavi che la serie ha avuto, dalla più vecchia, senza
+  doppioni e mai la chiave attuale. Una catena A → B → C dà `["A", "B"]` in C.
+  Sta anche nella riga perché è lì che il lettore guarda a ogni giro: trova
+  l'adozione senza aprire l'indice di ogni serie.
+- `formerIds` — nella voce del capitolo in `series.json` e in `index.json`: gli
+  id che il capitolo ha avuto, con le stesse regole. Non in `chapter.json`,
+  che porta solo l'id attuale: è la ricevuta del capitolo, e chi la confronta
+  (la ripresa di un download) deve trovarci l'id che il sito dà adesso.
+- `listed: false` — nella voce del capitolo in `series.json` e in
+  `index.json`: un capitolo archiviato che il sito non elenca più. Resta
+  nell'elenco, subito dopo il capitolo che lo precedeva, con il suo id, e conta
+  in `chapterCount` come gli altri: è un capitolo della serie che si può
+  leggere. Un capitolo non archiviato che il sito non elenca più esce
+  dall'elenco, perché non c'è niente da perdere.
+
+**Chi legge.** Trovando una serie con `formerKeys`, porta i dati personali di
+ogni chiave vecchia sulla nuova, una volta sola: dopo lo spostamento la chiave
+vecchia non ha più dati, quindi rileggere la stessa riga non sposta niente.
+Se anche la chiave nuova ha dati (la serie è stata aperta prima della
+riparazione) si fondono come in un ripristino: vince il record con
+`updatedAt` più recente e i capitoli letti si uniscono. I capitoli con
+`formerIds` traducono letti, posizioni e segnalibri dall'id vecchio al nuovo.
+Una riga di `library.json` con una chiave che compare nei `formerKeys` di
+un'altra è un avanzo di un archiviatore che non conosce questi campi: si
+ignora.
+
+**Chi scrive.** Adozione, non sovrascrittura.
+
+- Si adotta solo rileggendo la serie dal suo `source` archiviato e ottenendo
+  dal provider un id diverso: è la stessa pagina, quindi la stessa serie. Un
+  provider che legge un altro sito non adotta niente: quello è il cambio di
+  sito, che fa il client.
+- I capitoli si abbinano prima per link (lo stesso sito tiene spesso i link
+  anche quando cambia gli id), poi per numero e, senza numero, per titolo
+  (`matchChapters`). Ogni capitolo del sito prende al più un capitolo vecchio,
+  il primo.
+- Una lettura fallita — rete, sito rotto o cambiato, verifica del browser,
+  Drive che non risponde, un `series.json` che non si legge — non è «la serie
+  non esiste più»: la riparazione di quella serie si ferma prima di scrivere e
+  le altre vanno avanti.
+- Non si cancellano capitoli né cartelle perché il sito non li elenca più:
+  restano con `listed: false`. Chi riscrive `series.json` più tardi (un
+  download) tiene le voci con `listed: false` che il sito continua a non
+  elencare, e i `formerKeys` e `formerIds` che trova.
+- Le cartelle si rinominano, non si copiano: la cartella della serie prende il
+  suffisso `[provider-id]` nuovo (`seriesFolderName`), quelle dei capitoli il
+  nome di `chapterFolderName`, e il `chapter.json` di ogni capitolo l'id, il
+  numero, il titolo e il link nuovi; le tavole non si toccano e non si
+  riscaricano. Se il nome nuovo è già preso da un'altra cartella la serie non
+  si tocca: due cartelle con lo stesso nome su Drive spezzano la libreria.
+  Un cambio del solo titolo non rinomina la cartella della serie (vedi «Chi
+  scrive»), ma quella di un capitolo sì: un download la cercherebbe col nome
+  nuovo e ne farebbe una seconda.
+- L'ordine delle scritture fa riprendere una riparazione interrotta: prima la
+  cartella della serie, poi i capitoli, poi `series.json`, infine indici e riga.
+  Una cartella che ha già il nome nuovo è una rinomina fatta; una serie che non
+  si trova più al percorso della riga si cerca per il suffisso nuovo.
+- La riga nuova di `library.json` prende il posto delle righe con le chiavi
+  di `formerKeys`.
+- Una riparazione che non trova niente da cambiare non scrive niente: né
+  `series.json` (`fetchedAt` resta quello di prima), né gli indici, né la riga.
+
+Una riparazione fa anche il resto del lavoro di manutenzione di una serie:
+riscrive titolo, metadati, `releaseStatus`, copertina (riscaricata se cambia
+la sorgente o il file manca), elenco, ordine, conteggi e firma, e indica i
+capitoli archiviati a metà perché tornino in coda.
+
 ## `library.json`
 
 Una riga per serie, con quanto basta a disegnare la griglia e a filtrare:
@@ -277,6 +358,12 @@ una libreria senza tessere è una libreria MALF 1 valida, come una con le
 tessere solo su una parte dei capitoli. Lo stesso vale per le schede e per il
 provider `manual`: sono serie MALF 1 con zero capitoli archiviati, o zero
 capitoli, che un lettore vecchio mostra come tali.
+
+`formerKeys`, `formerIds` e `listed` (vedi [Cambi d'identità e
+riparazione](#cambi-didentità-e-riparazione)) sono campi in più dello stesso
+tipo: un lettore vecchio vede la serie adottata come una serie nuova, con i
+dati personali rimasti sulla chiave di prima, e un capitolo con `listed: false`
+come un capitolo qualunque.
 
 `schemaVersion` 3 dei manifest e MALF 1 arrivano insieme. Le librerie scritte
 con lo schema 2 restano leggibili: non hanno gli indici né le miniature finché

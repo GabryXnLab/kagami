@@ -109,6 +109,25 @@ List<({ArchiveOutcome outcome, int runs})> recentOutcomes(List<ArchiveOutcome> h
   return recent.values.toList();
 }
 
+/// Il testo di un esito: quello del lavoro o, per una riparazione, cosa ha
+/// cambiato (`RepairOutcome.toJson`), nella lingua dell'app — il messaggio
+/// del motore è sempre in italiano.
+String archiveOutcomeText(AppLocalizations l10n, ArchiveOutcome outcome) {
+  final repair = outcome.repair;
+  if (repair == null) return outcome.message;
+  int count(String name) => (repair[name] as List?)?.length ?? 0;
+  final error = repair['error'];
+  if (error is String) return l10n.archiveRepairError(error);
+  final parts = [
+    if (repair['adoptedFrom'] != null) l10n.archiveRepairAdopted,
+    if (repair['titleChanged'] == true) l10n.archiveRepairRetitled,
+    if (repair['coverChanged'] == true) l10n.archiveRepairCover,
+    if (count('added') > 0) l10n.archiveRepairAdded(count('added')),
+    if (count('unlisted') > 0) l10n.archiveRepairUnlisted(count('unlisted')),
+  ];
+  return parts.isEmpty ? l10n.archiveRepairNothing : parts.join(l10n.archiveCheckSeparator);
+}
+
 /// Una serie scaricata da poco: la copertina se è già in libreria, com'è
 /// andata l'ultima volta, e il tocco che la apre — o la riprova, se è
 /// andata male.
@@ -128,8 +147,8 @@ class ArchiveRecentTile extends ConsumerWidget {
     final entry = key == null ? null : ref.watch(seriesEntryProvider(key));
     final when = archiveWhen(outcome.finishedAt);
     final line = runs > 1
-        ? l10n.archiveRecentLineRuns(when, runs, outcome.message)
-        : l10n.archiveHistoryLine(when, outcome.message);
+        ? l10n.archiveRecentLineRuns(when, runs, archiveOutcomeText(l10n, outcome))
+        : l10n.archiveHistoryLine(when, archiveOutcomeText(l10n, outcome));
     return KPress(
       onTap: entry != null ? () => openSeries(context, entry.key) : onRetry,
       child: Padding(

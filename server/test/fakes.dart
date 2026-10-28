@@ -2,6 +2,7 @@
 import 'dart:io';
 
 import 'package:kagami_archive/drive.dart';
+import 'package:kagami_archive/health.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:kagami_server/kagami_server.dart';
@@ -50,11 +51,19 @@ class FakeJobs implements JobControl {
   Future<ServerCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed}) async =>
       check = check.copyWith(enabled: enabled, minutes: minutes, library: library, unfollowed: unfollowed);
 
+  final List<({String? site, Set<String>? keys})> repairs = [];
+
+  @override
+  void repair({String? site, Set<String>? keys}) => repairs.add((site: site, keys: keys));
+
   List<GatedSeries> blocked = const [];
   final List<Map<String, String>> pages = [];
 
   @override
   Future<List<GatedSeries>> gated() async => blocked;
+
+  @override
+  Future<Map<String, SiteHealth>> sites() => files.health.load();
 
   @override
   Future<CheckReport> checkPages(Map<String, String> pages) async {

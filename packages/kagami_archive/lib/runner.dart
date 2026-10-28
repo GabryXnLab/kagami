@@ -109,7 +109,7 @@ class ArchiveRunner {
     try {
       while (true) {
         if (cancelled?.call() ?? false) return RunEnd.stopped;
-        final job = await files.next();
+        final job = await _next();
         if (job == null) return RunEnd.done;
         final end = await _one(job);
         if (end != null) return end;
@@ -119,6 +119,26 @@ class ArchiveRunner {
         _status.state == ArchiveState.running ? _status.copyWith(state: ArchiveState.idle) : _status,
         now: true,
       );
+    }
+  }
+
+  /// Il prossimo lavoro da eseguire. I lavori automatici di un sito rotto
+  /// restano in coda senza essere tentati: ripartono quando un successo lo
+  /// dichiara sano, e quelli chiesti dall'utente sono il modo di riprovare.
+  Future<ArchiveJob?> _next() async {
+    final health = await files.health.load();
+    for (final job in await files.jobs()) {
+      if (job.automatic && health[_site(job.url)]?.broken == true) continue;
+      return job;
+    }
+    return null;
+  }
+
+  static String? _site(String url) {
+    try {
+      return selectProvider(url).id;
+    } on ProviderError {
+      return null;
     }
   }
 
@@ -132,8 +152,10 @@ class ArchiveRunner {
     );
     await _publish(_status, now: true);
     ProviderHttp? http;
+    String? site;
     try {
       final provider = selectProvider(job.url);
+      site = provider.id;
       http = environment.httpFor(provider, userAgent: job.userAgent, cookies: job.cookies);
       var reader = http;
       final snapshot = job.snapshot;
@@ -141,6 +163,7 @@ class ArchiveRunner {
         reader = SnapshotHttp(http, provider.canonical(job.url), await File(snapshot).readAsBytes());
       }
       final series = await provider.fetchSeries(job.url, reader);
+      await files.health.markHealthy(provider.id);
       final store = environment.storeFor(job.target);
       final result = await Archiver(
         provider: provider,
@@ -152,6 +175,8 @@ class ArchiveRunner {
         onEvent: _onEvent,
         cancelled: cancelled,
       ).download(series, ids: job.ids, start: job.start);
+      final changed = result.failed.where((failure) => failure.changed).firstOrNull;
+      if (changed != null) await files.health.markBroken(provider.id, changed.error);
       await Tracking(files.ongoing).record(
         series,
         job.target,
@@ -183,6 +208,9 @@ class ArchiveRunner {
     } on DriveAuthRequired {
       await _finish(job, _failure(job, 'Serve il permesso di scrivere su Drive: '
           'aprilo da «Scarica un manga».'));
+    } on ProviderChanged catch (error) {
+      if (site != null) await files.health.markBroken(site, error.message);
+      await _finish(job, _failure(job, '$error'));
     } on ProviderError catch (error) {
       await _finish(job, _failure(job, '$error'));
     } on DriveException catch (error) {

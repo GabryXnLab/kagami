@@ -477,6 +477,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get seriesChapterNotDownloaded => 'غير منزَّل';
 
   @override
+  String get seriesChapterUnlisted => 'لم يعد على الموقع';
+
+  @override
   String seriesChapterPages(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1155,6 +1158,112 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get archiveCheckNow => 'افحص الآن';
+
+  @override
+  String get archiveRepair => 'إصلاح المسلسلات المؤرشفة';
+
+  @override
+  String get archiveRepairHint =>
+      'يعيد قراءة كل مسلسل من موقعه ويصحح العنوان والغلاف والفصول';
+
+  @override
+  String get archiveRepairAll => 'المكتبة كلها';
+
+  @override
+  String archiveRepairSite(String site) {
+    return 'مسلسلات $site فقط';
+  }
+
+  @override
+  String get archiveRepairSeries => 'إصلاح المسلسل';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return 'إصلاح $done من $total: $title';
+  }
+
+  @override
+  String get archiveRepairQueued =>
+      'بدأ الإصلاح على الخادم: تظهر النتائج في السجل.';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم إصلاح $count مسلسلات.',
+      one: 'تم إصلاح مسلسل واحد.',
+      zero: 'لا توجد مسلسلات لإصلاحها.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      'لا توجد مكتبة لإصلاحها: اختر مجلد Drive أو مجلد الهاتف.';
+
+  @override
+  String get archiveRepairNoServer =>
+      'الخادم لا يدعم إصلاح المسلسلات بعد: يلزم تحديثه.';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return 'فشل الإصلاح: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'الهاتف يُصلح أو يُنزّل بالفعل: حاول مرة أخرى بعد قليل.';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return 'موقع $site يعمل من جديد: أصلح مسلسلاته';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => 'إصلاح';
+
+  @override
+  String get archiveRepairDismiss => 'تجاهل';
+
+  @override
+  String get archiveRepairNothing => 'لا شيء لإصلاحه';
+
+  @override
+  String get archiveRepairAdopted => 'تم اعتماد مفتاح جديد';
+
+  @override
+  String get archiveRepairRetitled => 'تم تحديث العنوان';
+
+  @override
+  String get archiveRepairCover => 'تم تحديث الغلاف';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول جديدة',
+      one: 'فصل جديد واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول لم تعد مدرجة',
+      one: 'فصل واحد لم يعد مدرجًا',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return 'لم يتم الإصلاح: $error';
+  }
 
   @override
   String get archiveNoTracked => 'لا توجد سلاسل للمتابعة حاليًا';
@@ -4385,4 +4494,9 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       'عدد الفصول المنزّلة التي تبقى أمام الفصل الذي تقرؤه، في كل السلاسل التي تُنزَّل أثناء القراءة';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'موقع $site لا يعمل: لقد تغيّر ويحتاج Kagami إلى تحديث.';
+  }
 }

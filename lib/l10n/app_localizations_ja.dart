@@ -440,6 +440,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get seriesChapterNotDownloaded => '未ダウンロード';
 
   @override
+  String get seriesChapterUnlisted => 'サイトから削除済み';
+
+  @override
   String seriesChapterPages(int count) {
     return '$countページ';
   }
@@ -1079,6 +1082,106 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveCheckNow => '今すぐ確認';
+
+  @override
+  String get archiveRepair => 'アーカイブ済みシリーズを修復';
+
+  @override
+  String get archiveRepairHint => '各シリーズをサイトから読み直し、タイトル、表紙、話数を修正します';
+
+  @override
+  String get archiveRepairAll => 'ライブラリ全体';
+
+  @override
+  String archiveRepairSite(String site) {
+    return '$site のシリーズのみ';
+  }
+
+  @override
+  String get archiveRepairSeries => 'シリーズを修復';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return '修復中 $done/$total: $title';
+  }
+
+  @override
+  String get archiveRepairQueued => 'サーバーで修復を開始しました。結果は履歴に表示されます。';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のシリーズを修復しました。',
+      zero: '修復するシリーズはありません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      '修復するライブラリがありません。Drive またはスマートフォンのフォルダを選んでください。';
+
+  @override
+  String get archiveRepairNoServer => 'サーバーはまだシリーズの修復に対応していません。更新が必要です。';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return '修復に失敗しました: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'スマートフォンはすでに修復中またはダウンロード中です。しばらくしてからもう一度お試しください。';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return '$site が再び動作しています。このサイトのシリーズを修復しましょう';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => '修復';
+
+  @override
+  String get archiveRepairDismiss => '無視';
+
+  @override
+  String get archiveRepairNothing => '修復するものはありません';
+
+  @override
+  String get archiveRepairAdopted => '新しいキーを採用';
+
+  @override
+  String get archiveRepairRetitled => 'タイトルを更新';
+
+  @override
+  String get archiveRepairCover => '表紙を更新';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '新しい話 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '一覧から消えた話 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return '修復できませんでした: $error';
+  }
 
   @override
   String get archiveNoTracked => '追跡中の作品はまだありません';
@@ -4107,4 +4210,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       '読みながらダウンロードするすべての作品で、読んでいる話の先にダウンロード済みで置いておく話数';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'サイト $site が動作していません。サイトが変更されたため、Kagami の更新が必要です。';
+  }
 }

@@ -17,6 +17,7 @@ import 'package:kagami_archive/manual.dart' show manualProvider, normalizeLink;
 import 'package:kagami_archive/providers.dart' as site;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../archive/repair.dart' show repairAvailableProvider;
 import '../data/auto_cleanup.dart' show shouldOfferCleanup;
 import '../data/cleanup.dart';
 import '../data/downloads.dart';
@@ -270,6 +271,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                           ? null
                           : () => _switchProvider(signals.entry),
                       onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
+                      onRepair: signals.entry.provider == manualProvider || !(ref.watch(repairAvailableProvider).value ?? false)
+                          ? null
+                          : () => startRepair(context, ref, keys: {signals.entry.key}),
                       onMore: siteSource == null || offerStart || missing.isEmpty
                           ? null
                           : () => _startDownload(siteSource),
@@ -536,7 +540,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       try {
         inspected = await inspectArchiveLink(context, link);
       } on ProviderError catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: link))));
         return;
       }
       if (!mounted) return;
@@ -617,7 +621,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       try {
         inspected = await inspectArchiveLink(context, link);
       } on ProviderError catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: link))));
         return;
       }
       if (!mounted) return;
@@ -729,7 +733,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       if (identical(_inspected, pending)) _inspected = null;
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+            .showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: source))));
       }
       return null;
     }
@@ -1397,6 +1401,7 @@ class _SiteActions extends StatelessWidget {
     required this.onMore,
     this.onLink,
     this.onSwitch,
+    this.onRepair,
   });
 
   final bool busy;
@@ -1409,6 +1414,10 @@ class _SiteActions extends StatelessWidget {
 
   /// Per le altre: riscaricarla da un altro provider.
   final VoidCallback? onSwitch;
+
+  /// Rileggerla dal suo sito e correggere ciò che è cambiato; `null` dove il
+  /// motore di adesso non può.
+  final VoidCallback? onRepair;
 
   /// `null` se Kagami non sa leggere quel sito.
   final VoidCallback? onRefresh;
@@ -1436,6 +1445,12 @@ class _SiteActions extends StatelessWidget {
               label: context.l10n.seriesSwitchProvider,
               icon: LucideIcons.arrowLeftRight,
               onTap: busy ? null : onSwitch,
+            ),
+          if (onRepair != null)
+            KChip(
+              label: context.l10n.archiveRepairSeries,
+              icon: LucideIcons.wrench,
+              onTap: busy ? null : onRepair,
             ),
           if (onMore != null)
             KChip(
@@ -2531,6 +2546,7 @@ class _ChapterTile extends StatelessWidget {
     final l10n = context.l10n;
     final subtitle = <String>[
       if (!available) l10n.seriesChapterNotDownloaded,
+      if (!chapter.listed) l10n.seriesChapterUnlisted,
       if (fromDrive) l10n.seriesPlaceDrive,
       if (chapter.archivedAt != null)
         _shortDate(l10n, chapter.archivedAt!),

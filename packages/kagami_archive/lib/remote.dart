@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'google_token.dart';
+import 'health.dart';
 import 'jobs.dart';
 
 export 'google_token.dart' show GoogleClient;
@@ -294,6 +295,9 @@ class ServerInfo {
   /// Il controllo legge anche i siti dietro la verifica del browser.
   bool get browser => features.contains('browser');
 
+  /// Ripara la libreria su Drive ([ServerClient.repair]).
+  bool get repair => features.contains('repair');
+
   /// Dice quali serie sono ferme alla verifica del sito
   /// ([RemoteCheck.gated]) e ne accetta le pagine aperte sul telefono
   /// ([ServerClient.checkPages]).
@@ -352,6 +356,7 @@ class RemoteCheck {
     this.queued = 0,
     this.failed = 0,
     this.gated = const [],
+    this.sites = const {},
   });
 
   /// Un server di prima dà solo `minutes`, `null` se è spento, e guarda solo
@@ -371,6 +376,11 @@ class RemoteCheck {
         for (final row in (json['gated'] as List? ?? const []).whereType<Map<String, Object?>>())
           if (row['key'] is String && row['url'] is String) GatedSeries.fromJson(row),
       ],
+      sites: {
+        if (json['sites'] case final Map sites)
+          for (final MapEntry(:key, :value) in sites.entries)
+            if (key is String && value is Map<String, Object?>) key: SiteHealth.fromJson(value),
+      },
     );
   }
 
@@ -387,6 +397,9 @@ class RemoteCheck {
 
   /// Le serie che il controllo ha trovato ferme alla verifica del sito.
   final List<GatedSeries> gated;
+
+  /// La salute dei siti, per id del provider (`sites` fra le `features`).
+  final Map<String, SiteHealth> sites;
 }
 
 class RemoteJob {
@@ -577,6 +590,13 @@ class ServerClient {
       _call('PUT', '/v$serverApi/ongoing/${Uri.encodeComponent(key)}', body: {'wanted': count});
 
   Future<void> check() => _call('POST', '/v$serverApi/check');
+
+  /// Ripara la libreria su Drive: tutta, le serie di [site] o quelle di
+  /// [keys]. Gli esiti arrivano in `history`, con `repair`.
+  Future<void> repair({String? site, Set<String>? keys}) => _call('POST', '/v$serverApi/repair', body: {
+        'site': ?site,
+        if (keys != null) 'keys': [...keys],
+      });
 
   Future<RemoteCheck> configureCheck({bool? enabled, int? minutes, bool? library, Set<String>? unfollowed}) async =>
       RemoteCheck.fromJson((await _call('PUT', '/v$serverApi/check', body: {

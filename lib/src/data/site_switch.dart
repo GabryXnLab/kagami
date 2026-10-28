@@ -8,32 +8,17 @@
 library;
 
 import 'package:kagami_archive/model.dart';
-import 'package:kagami_archive/providers.dart' show SearchResult, chapterNumber;
+import 'package:kagami_archive/providers.dart' show SearchResult;
+import 'package:kagami_archive/repair.dart' as archive show matchChapters;
 
 import '../format/malf.dart';
 
-/// Gli id di [old] tradotti in quelli di [fresh], abbinati per numero di
-/// capitolo («1.50» è l'1.5) e, per i capitoli senza numero («Prologue»),
-/// per nome. Un capitolo che il sito nuovo non ha resta fuori; se il sito
-/// nuovo ripete un numero, vale il primo.
-Map<String, String> matchChapters(Iterable<ChapterEntry> old, Iterable<Chapter> fresh) {
-  final byKey = <String, String>{};
-  for (final chapter in fresh) {
-    final key = _key(chapter.number, chapter.title);
-    if (key.isNotEmpty) byKey.putIfAbsent(key, () => chapter.id);
-  }
-  return {
-    for (final chapter in old) chapter.id: ?byKey[_key(chapter.number, chapter.title)],
-  };
-}
-
-String _key(String? number, String? title) {
-  for (final candidate in [number, chapterNumber(title ?? '')]) {
-    final value = double.tryParse(candidate?.trim().replaceAll(',', '.') ?? '');
-    if (value != null) return '#$value';
-  }
-  return (title ?? number ?? '').trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-}
+/// Gli id di [old] tradotti in quelli di [fresh], con le regole di
+/// `matchChapters` del pacchetto, che le usa anche la riparazione.
+Map<String, String> matchChapters(Iterable<ChapterEntry> old, Iterable<Chapter> fresh) => archive.matchChapters(
+      [for (final chapter in old) (id: chapter.id, number: chapter.number, title: chapter.title)],
+      fresh,
+    );
 
 /// Un titolo nella forma in cui due siti lo scrivono uguale: senza
 /// maiuscole, spazi e punteggiatura («The House Without Time» e

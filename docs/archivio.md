@@ -47,6 +47,17 @@ Fatti d'area spostati dal `CLAUDE.md` di root. Codice: `packages/kagami_archive/
   scelta, e il suo controllo non si spegne; l'altro lato non controlla
   niente. `ArchiveEngineSync` porta tutto in `archive/check-scope.json`,
   letto ad app chiusa, nella catena del controllo e sul server.
+- **Riparare le serie archiviate si lancia da chi lavora, mai da tutti e due.**
+  Per una serie (scheda della serie), per un sito o per tutta la libreria
+  (Scarica un manga, sotto «Serie seguite»): con il motore server è
+  `POST /v2/repair`, offerto solo se `ServerInfo.repair`; con il telefono è
+  `repairLibrary` in primo piano sulla libreria di Drive — mai sulla copia
+  sincronizzata, che rinominerebbe — o, senza Drive, sulla cartella scelta
+  (`lib/src/archive/repair.dart`). Gli esiti vanno nella cronologia con
+  `ArchiveOutcome.repair`, letti da `archiveOutcomeText`. Quando un sito passa
+  da rotto a sano (`siteHealthProvider`: file del telefono o `check.sites` del
+  server; una lettura fallita non conta come «sano») `SiteRecoveryNotifier` lo
+  propone una volta per ritorno, fra le impostazioni (`archive.siteRecovery`).
 - **Una scheda è una serie MALF senza capitoli, non un dato dell'app.**
   Salvare un manga letto altrove (Scarica un manga → «Solo la scheda»,
   scheda manuale, Importa più link, Condividi) scrive `series.json`,

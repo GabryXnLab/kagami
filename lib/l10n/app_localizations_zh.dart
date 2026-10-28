@@ -443,6 +443,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seriesChapterNotDownloaded => '未下载';
 
   @override
+  String get seriesChapterUnlisted => '已从网站移除';
+
+  @override
   String seriesChapterPages(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1078,6 +1081,104 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get archiveCheckNow => '立即检查';
+
+  @override
+  String get archiveRepair => '修复已归档的系列';
+
+  @override
+  String get archiveRepairHint => '从站点重新读取每个系列，并修正标题、封面和章节';
+
+  @override
+  String get archiveRepairAll => '整个书库';
+
+  @override
+  String archiveRepairSite(String site) {
+    return '仅 $site 的系列';
+  }
+
+  @override
+  String get archiveRepairSeries => '修复该系列';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return '正在修复 $done/$total：$title';
+  }
+
+  @override
+  String get archiveRepairQueued => '已在服务器上开始修复，结果会显示在历史记录中。';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已修复 $count 个系列。',
+      zero: '没有需要修复的系列。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary => '没有可修复的书库：请选择 Drive 或手机上的文件夹。';
+
+  @override
+  String get archiveRepairNoServer => '服务器还不支持修复系列，需要更新。';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return '修复失败：$error';
+  }
+
+  @override
+  String get archiveRepairBusy => '手机正在修复或下载，请稍后再试。';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return '$site 又能用了：修复它的系列';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => '修复';
+
+  @override
+  String get archiveRepairDismiss => '忽略';
+
+  @override
+  String get archiveRepairNothing => '无需修复';
+
+  @override
+  String get archiveRepairAdopted => '已采用新标识';
+
+  @override
+  String get archiveRepairRetitled => '标题已更新';
+
+  @override
+  String get archiveRepairCover => '封面已更新';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个新章节',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个章节已不在列表中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return '未能修复：$error';
+  }
 
   @override
   String get archiveNoTracked => '暂时没有要跟进的作品';
@@ -4088,4 +4189,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsReadAheadWindowNote => '在所有边读边下载的作品中，正在阅读的章节之后保持已下载的章节数';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return '网站 $site 无法使用：它已更改，需要更新 Kagami。';
+  }
 }

@@ -12,10 +12,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/bulk_import.dart';
+import '../archive/repair.dart' show siteRecoveryProvider;
 import '../data/notifications.dart';
 import '../data/share_intake.dart';
 import '../l10n.dart';
 import '../providers.dart';
+import 'archive_flow.dart' show siteNameById, startRepair;
 import 'archive_screen.dart';
 import 'collections_screen.dart';
 import 'home_screen.dart';
@@ -204,9 +206,28 @@ class _AppShellState extends ConsumerState<AppShell>
     ref.listen(autoCleanupProvider, (_, _) {});
     // Le raccolte con regole si riempiono da sole quando la libreria cambia.
     ref.listen(collectionAutoFillProvider, (_, _) {});
+    // I dati personali seguono una serie adottata con un'altra chiave.
+    ref.listen(identityAdoptionProvider, (_, _) {});
     // Chi controlla le serie seguite va scritto dove lo legge il giro ad app
     // chiusa, e con lui la catena del controllo quotidiano.
     ref.listen(archiveEngineSyncProvider, (_, _) {});
+    // Un sito rotto che torna sano si dice una volta, con l'azione che ne
+    // ripara le serie; la scheda in «Scarica un manga» resta finché non si
+    // risolve.
+    ref.listen(siteRecoveryProvider, (previous, next) {
+      final before = previous?.value;
+      final fresh = before == null ? const <String>{} : (next.value ?? const <String>{}).difference(before);
+      final site = fresh.firstOrNull;
+      if (site == null) return;
+      final l10n = currentL10n();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n.archiveRepairRecovered(siteNameById(site))),
+        action: SnackBarAction(
+          label: l10n.archiveRepairRecoveredAction,
+          onPressed: () => startRepair(context, ref, site: site),
+        ),
+      ));
+    });
     // Le cartelle cambiate vanno scritte dove le legge il giro programmato,
     // anche se nessuno apre la schermata della sincronizzazione.
     ref.listen(folderSyncSettingsProvider, (_, _) {});

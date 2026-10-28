@@ -116,6 +116,10 @@ class LibraryRepository implements LibraryShelf {
     return _withDownloads(await compute(_parseLibrary, source), downloaded);
   }
 
+  /// Le serie scaricate qui da Drive o dal sito, come le ricorda
+  /// `reading/downloads.json`.
+  Future<List<SeriesEntry>> downloadedSeries() => _loadDownloads();
+
   Future<List<SeriesEntry>> _loadDownloads() async {
     if (!await downloads.exists()) return const [];
     try {

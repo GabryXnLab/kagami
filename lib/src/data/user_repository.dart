@@ -295,6 +295,28 @@ class UserRepository {
         });
       });
 
+  /// Le chiavi di serie per cui esiste qualcosa di personale. Dice se una
+  /// chiave vecchia ha ancora da spostare, senza aprire la serie.
+  Future<Set<String>> keysWithData() async {
+    final parts = [
+      for (final table in <TableInfo<Table, dynamic>>[
+        db.seriesStates,
+        db.chapterReads,
+        db.progresses,
+        db.readingSessions,
+        db.bookmarks,
+        db.readerSettingsRows,
+      ])
+        'SELECT series_key FROM ${table.actualTableName} WHERE profile_id = ?',
+      'SELECT series_key FROM collection_items',
+    ];
+    final rows = await db.customSelect(
+      parts.join(' UNION '),
+      variables: [for (var i = 0; i < parts.length - 1; i++) Variable(profileId)],
+    ).get();
+    return {for (final row in rows) row.read<String>('series_key')};
+  }
+
   /// Porta ciò che l'utente ha della serie [from] su [to]: stato, voto, nota,
   /// date, silenzio, punto di lettura, capitoli letti, posizioni, cronologia,
   /// segnalibri, raccolte (nella stessa posizione) e impostazioni di lettura.

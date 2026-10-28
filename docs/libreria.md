@@ -24,6 +24,19 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   servire. Un capitolo locale conta solo se la sua cartella c'è davvero
   (una lettura di `chapters/` per serie), altrimenti si legge da Drive o si
   mostra come non scaricato. L'icona d'origine compare solo quando Drive c'è.
+- **Una serie adottata cambia chiave, non identità.** Una riga con la chiave
+  nei `formerKeys` di un'altra si ignora nell'unione delle sorgenti
+  (`LibraryCatalog.merge`), sia locale sia di Drive: sul telefono la riga
+  vecchia di `library.json` resta finché non la riscrive chi l'ha scritta. I
+  dati personali la seguono con `adoptFormerKeys` (`data/adoption.dart`,
+  agganciato da `IdentityAdoption` a ogni catalogo ricaricato): solo se la
+  chiave vecchia ha ancora dati, con la mappa id vecchio → nuovo dai
+  `formerIds`. Le copie scaricate sul telefono (`reading/downloads.json`) con
+  una chiave vecchia prendono cartelle, id e riga nuovi prima dello
+  spostamento, senza rete (`adoptCopy` del pacchetto, da
+  `adoptDownloadedCopies`): i capitoli già scaricati restano scaricati. Se il
+  `series.json` di Drive non si legge, la copia resta com'è e si riprova. Un capitolo
+  `listed: false` resta leggibile e porta «Non più sul sito» nella scheda.
 - **L'app cancella solo quando lo chiede l'utente**, o quando ha acceso la
   pulizia automatica (sotto): eliminando una serie
   (`data/series_removal.dart`: cartelle sul telefono, su Drive nel cestino

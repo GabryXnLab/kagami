@@ -84,9 +84,18 @@ void main() {
     });
     expect(body['check'], {
       'minutes': 240, 'time': 240, 'enabled': true, 'library': true, 'unfollowed': <Object?>[],
-      'checked': 0, 'queued': 0, 'failed': 0, 'gated': <Object?>[],
+      'checked': 0, 'queued': 0, 'failed': 0, 'gated': <Object?>[], 'sites': <String, Object?>{},
     });
-    expect(body['features'], containsAll(['ahead', 'unfollowed', 'verify']));
+    expect(body['features'], containsAll(['ahead', 'unfollowed', 'verify', 'sites']));
+  });
+
+  test('un sito rotto compare in check.sites', () async {
+    await files.health.markBroken('coffeemanga', 'Formato cambiato.');
+    final (_, body) = await call('GET', '/v2/server');
+    final site = ((body!['check'] as Map)['sites'] as Map)['coffeemanga'] as Map;
+    expect(site['broken'], true);
+    expect(site['message'], 'Formato cambiato.');
+    expect(site['since'], isA<String>());
   });
 
   test('gli utenti sono del proprietario: gli altri ricevono owner_only', () async {
@@ -312,5 +321,36 @@ void main() {
     final body = jsonDecode(await utf8.decodeStream(response)) as Map<String, Object?>;
     expect((response.statusCode, code(body)), (503, 'not_configured'));
     await bare.close(force: true);
+  });
+
+  test('POST /v2/repair mette in attesa la riparazione, e la dichiara fra le features', () async {
+    final (_, about) = await call('GET', '/v2/server');
+    expect(about!['features'], contains('repair'));
+    drive.ready = false;
+    expect((await call('POST', '/v2/repair', body: {})).$1, 409);
+    drive.ready = true;
+    drive.folderId = 'root';
+    final (status, body) = await call('POST', '/v2/repair', body: {'site': 'mangak'});
+    expect(status, 202);
+    expect(body, {'repair': {'queued': true}});
+    expect((await call('POST', '/v2/repair', body: {'keys': ['mangak:A1']})).$1, 202);
+    expect((await call('POST', '/v2/repair', body: {})).$1, 202);
+    expect([for (final r in jobs.repairs) r.site], ['mangak', null, null]);
+    expect([for (final r in jobs.repairs) r.keys?.toList()], [null, ['mangak:A1'], null]);
+
+    for (final bad in <Object?>[
+      {'site': 'mangak', 'keys': ['mangak:A1']},
+      {'site': 'sconosciuto'},
+      {'site': 1},
+      {'keys': <Object?>[]},
+      {'keys': 'mangak:A1'},
+      {'keys': [1]},
+      {'keys': [for (var i = 0; i <= maxRepairKeys; i++) 'mangak:$i']},
+    ]) {
+      final (rejected, error) = await call('POST', '/v2/repair', body: bad);
+      expect(rejected, 400, reason: '$bad');
+      expect(code(error), 'bad_request');
+    }
+    expect(jobs.repairs, hasLength(3));
   });
 }

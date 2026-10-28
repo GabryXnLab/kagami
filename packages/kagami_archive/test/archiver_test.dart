@@ -8,7 +8,6 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 import 'package:kagami_archive/archiver.dart';
-import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/indexes.dart';
 import 'package:kagami_archive/manual.dart';
 import 'package:kagami_archive/model.dart';
@@ -20,128 +19,6 @@ import 'package:kagami_archive/drive.dart';
 import 'package:path/path.dart' as p;
 
 import 'archive_fakes.dart';
-
-/// Come il Kotlin: una miniatura e tessere che dipendono dalla tavola.
-class FakeImageTools implements ImageTools {
-  int tilesMade = 0;
-
-  @override
-  Future<Uint8List?> thumbnail(File cover) async =>
-      Uint8List.fromList(utf8.encode('thumb:${cover.lengthSync()}'));
-
-  @override
-  Future<List<Uint8List>?> tiles(File page, List<int> heights) async {
-    tilesMade++;
-    final digest = sha256.convert(page.readAsBytesSync()).toString();
-    return [for (var i = 0; i < heights.length; i++) Uint8List.fromList(utf8.encode('$digest-$i'))];
-  }
-}
-
-/// Drive in memoria, con i byte e l'MD5 che il vero restituisce.
-class FakeDrive implements SyncRemote {
-  static const String root = 'ROOT';
-
-  final Map<String, DriveItem> items = {};
-  final Map<String, Uint8List> contents = {};
-  var _next = 0;
-  int uploads = 0;
-
-  /// I nomi caricati, nell'ordine in cui sono arrivati, e quanti insieme al
-  /// massimo.
-  final List<String> uploaded = [];
-  int _active = 0;
-  int mostAtOnce = 0;
-  void Function(String name)? onUpload;
-
-  /// Il caricamento che fallisce, per nome.
-  String? failUpload;
-
-  /// Quanto dura in più il caricamento di un file, per nome.
-  final Map<String, Duration> slow = {};
-
-  DriveItem _put(DriveItem item) => items[item.id] = item;
-
-  String folder(String path) {
-    var parent = root;
-    for (final name in path.split('/').where((part) => part.isNotEmpty)) {
-      final found = items.values.where((i) => i.folder && i.name == name && i.parents.contains(parent));
-      parent = found.isNotEmpty
-          ? found.first.id
-          : _put(DriveItem(id: 'f${_next++}', name: name, folder: true, parents: [parent])).id;
-    }
-    return parent;
-  }
-
-  /// Un file messo da un altro, il server.
-  void place(String path, List<int> bytes) {
-    final parent = folder(p.posix.dirname(path) == '.' ? '' : p.posix.dirname(path));
-    // Un file che c'è già si riscrive al suo posto, come farebbe Drive.
-    final id = find(path)?.id ?? 'x${_next++}';
-    _put(DriveItem(id: id, name: p.posix.basename(path), size: bytes.length, md5: md5.convert(bytes).toString(), parents: [parent]));
-    contents[id] = Uint8List.fromList(bytes);
-  }
-
-  DriveItem? find(String path) {
-    var parent = root;
-    final parts = path.split('/');
-    for (var i = 0; i < parts.length; i++) {
-      final found = items.values.where((item) => item.name == parts[i] && item.parents.contains(parent)).toList();
-      if (found.isEmpty) return null;
-      if (i == parts.length - 1) return found.first;
-      parent = found.first.id;
-    }
-    return null;
-  }
-
-  Uint8List? read(String path) => contents[find(path)?.id];
-
-  List<String> namesIn(String path) => [
-        for (final item in items.values)
-          if (item.parents.contains(path.isEmpty ? root : find(path)!.id)) item.name,
-      ]..sort();
-
-  @override
-  Future<List<DriveItem>> childrenOf(List<String> folderIds) async =>
-      [for (final item in items.values) if (item.parents.any(folderIds.contains)) item];
-
-  @override
-  Future<DriveItem> createFolder(String name, String parentId) async =>
-      _put(DriveItem(id: 'f${_next++}', name: name, folder: true, parents: [parentId]));
-
-  @override
-  Future<void> download(String id, File target) async {
-    await target.writeAsBytes(contents[id]!);
-  }
-
-  @override
-  Future<void> trash(String id) async => items.remove(id);
-
-  @override
-  Future<DriveItem> upload(File file, {String? id, String? name, String? parentId, DateTime? modified}) async {
-    final bytes = await file.readAsBytes();
-    final previous = id == null ? null : items[id];
-    if ((name ?? previous?.name) == failUpload) throw const DriveOffline();
-    _active++;
-    mostAtOnce = _active > mostAtOnce ? _active : mostAtOnce;
-    // Un caricamento vero dura: gli altri devono potersi sovrapporre.
-    await Future<void>.delayed(const Duration(milliseconds: 5));
-    final extra = slow[name ?? previous!.name];
-    if (extra != null) await Future<void>.delayed(extra);
-    _active--;
-    uploads++;
-    uploaded.add(name ?? previous!.name);
-    onUpload?.call(name ?? previous!.name);
-    final item = _put(DriveItem(
-      id: id ?? 'u${_next++}',
-      name: name ?? previous!.name,
-      size: bytes.length,
-      md5: md5.convert(bytes).toString(),
-      parents: previous?.parents ?? [parentId!],
-    ));
-    contents[item.id] = bytes;
-    return item;
-  }
-}
 
 Map<String, Object?> readJson(File file) => jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
 
@@ -493,9 +370,9 @@ void main() {
     expect((result.completed, result.pagesDownloaded), (2, 4));
     expect(result.failed, isEmpty);
     final folder = p.join(libraryPath(), result.folder);
-    expect(p.basename(folder), 'The House Without Time [coffeemanga-7743]');
+    expect(p.basename(folder), 'The House Without Time [coffeemanga-the-house-without-time]');
     final chapters = Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)).toList()..sort();
-    expect(chapters, ['0001 - Chapter 1 [217607]', '0001.5 - Chapter 1.5 [217610]']);
+    expect(chapters, ['0001 - Chapter 1 [chapter-1]', '0001.5 - Chapter 1.5 [chapter-1-5]']);
   });
 
   group('direttamente su Drive', () {
@@ -543,6 +420,9 @@ void main() {
         final names = [for (var i = 0; i < 40; i++) '$i.webp'];
         for (final name in names) {
           File(p.join(work.path, name)).writeAsBytesSync([1]);
+          // Con i 5 ms del finto Drive, a suite carica le 32 corsie non
+          // facevano in tempo a partire tutte prima che finisse la prima.
+          fake.slow[name] = const Duration(milliseconds: 300);
         }
         await drive.commitChapter('S/chapters/1', work, names);
         return fake.mostAtOnce;

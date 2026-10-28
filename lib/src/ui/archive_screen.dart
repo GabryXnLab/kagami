@@ -26,6 +26,7 @@ import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/phone_check.dart' show gatedSites;
+import '../archive/repair.dart';
 import '../data/site_switch.dart' show titleKey;
 import '../format/malf.dart';
 import '../providers.dart';
@@ -277,7 +278,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on ProviderOffline {
       found = _Found.error(currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
-      found = _Found.error(error.message);
+      found = _Found.error(
+        error is ProviderChanged ? siteBrokenText(provider.name, error.message) : error.message,
+      );
     } finally {
       site?.close();
     }
@@ -341,7 +344,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on UnsupportedLink {
       if (mounted) setState(() => _unsupported = url);
     } on ProviderError catch (error) {
-      if (mounted) setState(() => _error = archiveErrorText(error));
+      if (mounted) setState(() => _error = archiveErrorText(error, url: url));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -847,6 +850,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           ],
         ),
       ..._gated(),
+      const BrokenSitesCard(),
+      const SiteRecoveryCard(),
+      ..._repair(),
       const SizedBox(height: 12),
       ArchiveFollowedTile(
         count: view.tracked.length,
@@ -854,6 +860,61 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         tiles: _followedTiles,
       ),
     ];
+  }
+
+  /// «Ripara le serie archiviate»: dove il motore di adesso può farlo, una
+  /// riga che apre la scelta fra tutta la libreria e un sito; mentre gira,
+  /// il suo avanzamento.
+  List<Widget> _repair() {
+    if (!(ref.watch(repairAvailableProvider).value ?? false)) return const [];
+    final l10n = context.l10n;
+    final view = ref.watch(repairProvider);
+    return [
+      const SizedBox(height: 12),
+      KGroup(
+        children: [
+          KTile(
+            icon: LucideIcons.wrench,
+            title: l10n.archiveRepair,
+            subtitle: view.running && view.total > 0
+                ? l10n.archiveRepairRunning(view.done + 1, view.total, view.title)
+                : l10n.archiveRepairHint,
+            trailing: view.running
+                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: view.running ? null : _chooseRepair,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _chooseRepair() async {
+    final l10n = context.l10n;
+    final site = await showKagamiSheet<String?>(
+      context,
+      title: l10n.archiveRepair,
+      builder: (sheet) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+        child: KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.library,
+              title: l10n.archiveRepairAll,
+              onTap: () => Navigator.of(sheet).pop(''),
+            ),
+            for (final provider in providers)
+              KTile(
+                icon: LucideIcons.globe,
+                title: l10n.archiveRepairSite(provider.name),
+                onTap: () => Navigator.of(sheet).pop(provider.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (site == null || !mounted) return;
+    await startRepair(context, ref, site: site.isEmpty ? null : site);
   }
 
   /// Le serie ferme alla verifica di un sito, da chi controlla: una scheda

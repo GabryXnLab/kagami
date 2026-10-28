@@ -546,6 +546,10 @@
   "@seriesChapterNotDownloaded": {
     "description": "Riga sotto il titolo di un capitolo annunciato ma non scaricato"
   },
+  "seriesChapterUnlisted": "Non più sul sito",
+  "@seriesChapterUnlisted": {
+    "description": "Riga sotto il titolo di un capitolo archiviato e leggibile che il sito non elenca più"
+  },
   "seriesChapterPages": "{count, plural, =1{1 tavola} other{{count} tavole}}",
   "@seriesChapterPages": {
     "description": "Riga sotto il titolo di un capitolo: numero di pagine (tavole)",
@@ -1413,6 +1417,140 @@
   "archiveCheckNow": "Controlla adesso",
   "@archiveCheckNow": {
     "description": "Riga che avvia subito il controllo delle serie in corso"
+  },
+  "archiveRepair": "Ripara le serie archiviate",
+  "@archiveRepair": {
+    "description": "Archivio (serie seguite) e menu della serie: voce che lancia la riparazione delle serie archiviate"
+  },
+  "archiveRepairHint": "Rilegge ogni serie dal suo sito e corregge titolo, copertina e capitoli",
+  "@archiveRepairHint": {
+    "description": "Sotto la voce di riparazione: cosa fa"
+  },
+  "archiveRepairAll": "Tutta la libreria",
+  "@archiveRepairAll": {
+    "description": "Foglio della riparazione: ripara tutta la libreria"
+  },
+  "archiveRepairSite": "Solo le serie di {site}",
+  "@archiveRepairSite": {
+    "description": "Foglio della riparazione: ripara solo le serie di un sito; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairSeries": "Ripara la serie",
+  "@archiveRepairSeries": {
+    "description": "Scheda della serie: pulsante che ripara questa serie"
+  },
+  "archiveRepairRunning": "Riparo {done} di {total}: {title}",
+  "@archiveRepairRunning": {
+    "description": "Avanzamento della riparazione sul telefono; done e total sono numeri di serie, title il titolo della serie in corso",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairQueued": "Riparazione avviata sul server: gli esiti compaiono nella cronologia.",
+  "@archiveRepairQueued": {
+    "description": "Messaggio dopo aver lanciato la riparazione sul server"
+  },
+  "archiveRepairFinished": "{count, plural, =0{Nessuna serie da riparare.} =1{Riparata 1 serie.} other{Riparate {count} serie.}}",
+  "@archiveRepairFinished": {
+    "description": "Messaggio a riparazione finita sul telefono; count è quante serie sono state lette",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairNoLibrary": "Non c'è una libreria da riparare: scegli la cartella di Drive o del telefono.",
+  "@archiveRepairNoLibrary": {
+    "description": "Riparazione: non c'è né la cartella di Drive né quella del telefono"
+  },
+  "archiveRepairNoServer": "Il server non sa ancora riparare le serie: va aggiornato.",
+  "@archiveRepairNoServer": {
+    "description": "Riparazione: il server collegato non conosce la riparazione"
+  },
+  "archiveRepairFailed": "Riparazione non riuscita: {error}",
+  "@archiveRepairFailed": {
+    "description": "Riparazione non riuscita; error è il motivo",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairBusy": "Il telefono sta già riparando o scaricando: riprova fra poco.",
+  "@archiveRepairBusy": {
+    "description": "Riparazione: se ne chiede una mentre un'altra è in corso"
+  },
+  "archiveRepairRecovered": "Il sito {site} funziona di nuovo: ripara le sue serie",
+  "@archiveRepairRecovered": {
+    "description": "Proposta quando un sito rotto torna a funzionare; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairRecoveredAction": "Ripara",
+  "@archiveRepairRecoveredAction": {
+    "description": "Azione della proposta di riparazione: lancia la riparazione del sito"
+  },
+  "archiveRepairDismiss": "Ignora",
+  "@archiveRepairDismiss": {
+    "description": "Azione della proposta di riparazione: la scarta"
+  },
+  "archiveRepairNothing": "Niente da riparare",
+  "@archiveRepairNothing": {
+    "description": "Cronologia: esito di una riparazione che non ha cambiato niente"
+  },
+  "archiveRepairAdopted": "nuova chiave adottata",
+  "@archiveRepairAdopted": {
+    "description": "Cronologia, esito di riparazione: la serie ha adottato una nuova chiave (il sito ha cambiato identità)"
+  },
+  "archiveRepairRetitled": "titolo aggiornato",
+  "@archiveRepairRetitled": {
+    "description": "Cronologia, esito di riparazione: il titolo è cambiato"
+  },
+  "archiveRepairCover": "copertina aggiornata",
+  "@archiveRepairCover": {
+    "description": "Cronologia, esito di riparazione: la copertina è cambiata"
+  },
+  "archiveRepairAdded": "{count, plural, =1{1 capitolo nuovo} other{{count} capitoli nuovi}}",
+  "@archiveRepairAdded": {
+    "description": "Cronologia, esito di riparazione: capitoli che il sito elenca e l'archivio non aveva; count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairUnlisted": "{count, plural, =1{1 capitolo non più elencato} other{{count} capitoli non più elencati}}",
+  "@archiveRepairUnlisted": {
+    "description": "Cronologia, esito di riparazione: capitoli archiviati che il sito non elenca più (restano archiviati); count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairError": "Non riparata: {error}",
+  "@archiveRepairError": {
+    "description": "Cronologia, esito di riparazione: la serie non si è potuta riparare; error è il motivo",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "archiveNoTracked": "Nessuna serie da seguire, per ora",
   "@archiveNoTracked": {
@@ -5428,5 +5566,14 @@
   "settingsReadAheadWindowNote": "Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano",
   "@settingsReadAheadWindowNote": {
     "description": "Impostazioni → Libreria: spiegazione sotto «Capitoli da tenere pronti»"
+  },
+  "archiveSiteBroken": "Il sito {site} non funziona: è cambiato e Kagami va aggiornato.",
+  "@archiveSiteBroken": {
+    "description": "Scarica un manga, serie seguite, scheda della serie e ricerca: il sito intero non funziona perché è cambiato; sotto compare il messaggio tecnico; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -11,14 +11,17 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:kagami_archive/health.dart' show SiteHealth;
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/providers.dart' show SuppliedPages;
 import 'package:kagami_archive/remote.dart';
+import 'package:kagami_archive/stores.dart' show LocalStore;
 import 'package:kagami_archive/tracking.dart';
 
 import 'archive/device.dart';
 import 'archive/phone_check.dart';
+import 'data/adoption.dart';
 import 'data/arrivals.dart';
 import 'data/auto_cleanup.dart';
 import 'data/backup.dart';
@@ -2292,6 +2295,8 @@ class ReadAhead extends Notifier<void> {
     try {
       final smart = [for (final series in await client.ongoing()) if (series.ahead != null) series];
       if (smart.isEmpty) return;
+      final sites = (await client.info()).check.sites;
+      final broken = {for (final MapEntry(:key, :value) in sites.entries) if (value.broken) key};
       final queue = await client.queue();
       final urls = {for (final series in smart) series.url};
       pending = queue.jobs.any((job) => urls.contains(job.url));
@@ -2299,6 +2304,7 @@ class ReadAhead extends Notifier<void> {
       _seenServer = _progress(queue.history.firstOrNull, queue.status);
       if (_stale(_seenServer, seen)) return;
       for (final series in smart) {
+        if (aheadHeldBack(key: series.key, problem: series.problem, brokenSites: broken)) continue;
         final same = [for (final job in queue.jobs) if (job.url == series.url) job];
         if (same.any((job) => job.ids == null)) continue;
         final plan = await _planOf(series.key, window, {for (final job in same) ...?job.ids});
@@ -2342,7 +2348,10 @@ class ReadAhead extends Notifier<void> {
     if (_stale(_seenLocal, seen)) return;
     var queued = false;
     final check = <String>{};
+    final health = await files.health.load();
+    final broken = {for (final MapEntry(:key, :value) in health.entries) if (value.broken) key};
     for (final entry in smart) {
+      if (aheadHeldBack(key: entry.key, problem: entry.problem, brokenSites: broken)) continue;
       final same = [for (final job in jobs) if (job.url == entry.url) job];
       // Una serie che scende per intero, o da un capitolo in poi, porta già
       // tutto quello che si potrebbe chiedere.
@@ -2447,6 +2456,66 @@ class CollectionAutoFill extends Notifier<void> {
 
 final collectionAutoFillProvider =
     NotifierProvider<CollectionAutoFill, void>(CollectionAutoFill.new);
+
+/// Porta i dati personali dalle chiavi vecchie di una serie adottata da chi
+/// archivia a quella nuova (`adoptFormerKeys`) ogni volta che la libreria si
+/// ricarica. Aspetta un catalogo senza avvisi: con una sorgente che non ha
+/// risposto la riga adottata potrebbe mancare, e «non so» non è «non c'è».
+class IdentityAdoption extends Notifier<void> {
+  Future<void> _work = Future.value();
+
+  @override
+  void build() {
+    ref.listen(libraryCatalogProvider, (_, next) {
+      final catalog = next.value;
+      if (catalog == null || catalog.notices.isNotEmpty) return;
+      _work = _work.then((_) => _run(catalog)).catchError((Object _) {});
+    }, fireImmediately: true);
+  }
+
+  Future<void> _run(LibraryCatalog catalog) async {
+    final library = ref.read(libraryProvider);
+    if (library == null) return;
+    // Prima i file sul telefono, poi i dati: le due cose non dipendono l'una
+    // dall'altra, ma un catalogo riletto deve trovare le copie già al loro posto.
+    final drive = library.shelves.whereType<DriveRepository>().firstOrNull;
+    var copies = 0;
+    if (drive != null) {
+      for (final phone in library.shelves.whereType<LibraryRepository>()) {
+        copies += await adoptDownloadedCopies(
+          series: catalog.index.series,
+          phone: phone,
+          storeOf: () => LocalStore(phone.root, hideFromGallery: !phone.private),
+          fresh: (entry) async {
+            try {
+              final text = await drive.seriesText(entry, 'series.json');
+              final data = text == null ? null : jsonDecode(text);
+              return data is Map<String, Object?> ? data : null;
+            } on Exception {
+              return null;
+            }
+          },
+        );
+      }
+    }
+    final repository = ref.read(userRepositoryProvider);
+    final moved = await adoptFormerKeys(
+      series: catalog.index.series,
+      keysWithData: repository.keysWithData,
+      loadIndex: (entry) async => (await library.loadSeries(
+        entry,
+        catalog.holders[entry.key] ?? const <LibraryShelf>[],
+      ))
+          ?.index,
+      move: (from, to, chapters) =>
+          ref.read(readingProvider.notifier).moveSeries(from, to, chapters: chapters),
+    );
+    if (moved > 0) ref.invalidate(seriesActivityProvider);
+    if (copies > 0) ref.invalidate(libraryCatalogProvider);
+  }
+}
+
+final identityAdoptionProvider = NotifierProvider<IdentityAdoption, void>(IdentityAdoption.new);
 
 /// Il server che scarica al posto del telefono: il suo indirizzo. Sta fra
 /// le impostazioni del database, quindi viaggia con backup e account come la
@@ -2644,6 +2713,35 @@ class ArchiveEngineSync extends Notifier<void> {
 }
 
 final archiveEngineSyncProvider = NotifierProvider<ArchiveEngineSync, void>(ArchiveEngineSync.new);
+
+/// La salute dei siti, da chi controlla: il file del telefono o la risposta
+/// del server. `null` se non si è potuto chiedere (server spento, senza
+/// rete): non è «tutti sani», e chi propone di riparare un sito tornato
+/// sano non deve scambiarlo per tale.
+final siteHealthProvider = FutureProvider.autoDispose<Map<String, SiteHealth>?>((ref) async {
+  if (ref.watch(archiveEngineProvider) == ArchiveEngine.phone) {
+    return ref.watch(archiveFilesProvider).health.load();
+  }
+  final link = ref.watch(serverLinkProvider).value;
+  if (link == null) return null;
+  final client = serverClient(ref, link);
+  try {
+    return (await client.info()).check.sites;
+  } on ServerException {
+    return null;
+  } on IOException {
+    return null;
+  } finally {
+    client.close();
+  }
+});
+
+/// I siti rotti (`ProviderChanged`, o tutte le serie che falliscono), da chi
+/// controlla.
+final brokenSitesProvider = FutureProvider.autoDispose<Map<String, SiteHealth>>((ref) async {
+  final sites = await ref.watch(siteHealthProvider.future) ?? const <String, SiteHealth>{};
+  return {for (final MapEntry(:key, :value) in sites.entries) if (value.broken) key: value};
+});
 
 /// Le serie che il controllo ha trovato ferme alla verifica di un sito, da
 /// chi controlla: il file del telefono o, con il server, la sua risposta.

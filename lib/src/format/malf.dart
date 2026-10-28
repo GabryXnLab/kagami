@@ -73,6 +73,7 @@ class SeriesEntry {
     this.latestChapterArchivedAt,
     this.archivedAt,
     this.source,
+    this.formerKeys = const [],
   });
 
   factory SeriesEntry.fromJson(Map<String, Object?> json) => SeriesEntry(
@@ -101,6 +102,7 @@ class SeriesEntry {
         latestChapterArchivedAt: _time(json['latestChapterArchivedAt']),
         archivedAt: _time(json['archivedAt']),
         source: json['source'] as String?,
+        formerKeys: _strings(json['formerKeys']),
       );
 
   /// La riga com'è in `library.json`. Serve a chi scarica una serie da Drive
@@ -132,6 +134,7 @@ class SeriesEntry {
         'latestChapterArchivedAt': ?latestChapterArchivedAt?.toIso8601String(),
         'archivedAt': ?archivedAt?.toIso8601String(),
         'source': ?source,
+        if (formerKeys.isNotEmpty) 'formerKeys': formerKeys,
       };
 
   SeriesEntry copyWith({int? archivedChapterCount}) => SeriesEntry(
@@ -160,6 +163,7 @@ class SeriesEntry {
         latestChapterArchivedAt: latestChapterArchivedAt,
         archivedAt: archivedAt,
         source: source,
+        formerKeys: formerKeys,
       );
 
   final String key;
@@ -190,6 +194,10 @@ class SeriesEntry {
   /// Il link della serie sul sito: è ciò che permette di scaricarne altri
   /// capitoli, o di aprirla, senza ricordarsi da dove veniva.
   final String? source;
+
+  /// Le chiavi che la serie ha avuto prima di quella attuale (cambio
+  /// d'identità adottato da chi archivia): i dati personali si spostano da lì.
+  final List<String> formerKeys;
 
   /// Capitoli pubblicati dal provider e non ancora presenti in locale.
   int get missingChapterCount =>
@@ -261,6 +269,8 @@ class ChapterEntry {
     this.path,
     this.publishedAt,
     this.archivedAt,
+    this.formerIds = const [],
+    this.listed = true,
   });
 
   factory ChapterEntry.fromJson(Map<String, Object?> json) => ChapterEntry(
@@ -276,6 +286,8 @@ class ChapterEntry {
         path: json['path'] as String?,
         publishedAt: _time(json['publishedAt']),
         archivedAt: _time(json['archivedAt']),
+        formerIds: _strings(json['formerIds']),
+        listed: json['listed'] != false,
       );
 
   final String id;
@@ -290,6 +302,12 @@ class ChapterEntry {
   final String? path;
   final DateTime? publishedAt;
   final DateTime? archivedAt;
+
+  /// Gli id che il capitolo ha avuto prima di quello attuale.
+  final List<String> formerIds;
+
+  /// `false`: archiviato e leggibile, ma il sito non lo elenca più.
+  final bool listed;
 
   /// Leggibile solo se i file ci sono: una serie in corso elenca anche
   /// capitoli annunciati dal provider e non ancora scaricati.
@@ -334,6 +352,7 @@ class SeriesIndex {
     required this.releaseStatus,
     required this.signature,
     required this.chapters,
+    this.formerKeys = const [],
   });
 
   factory SeriesIndex.fromJson(Map<String, Object?> json) => SeriesIndex(
@@ -346,6 +365,7 @@ class SeriesIndex {
             .where((row) => row['id'] is String)
             .map(ChapterEntry.fromJson)
             .toList(growable: false),
+        formerKeys: _strings(json['formerKeys']),
       );
 
   final String key;
@@ -353,6 +373,7 @@ class SeriesIndex {
   final ReleaseStatus releaseStatus;
   final String signature;
   final List<ChapterEntry> chapters;
+  final List<String> formerKeys;
 
   List<ChapterEntry> get readable =>
       chapters.where((chapter) => chapter.isReadable).toList(growable: false);

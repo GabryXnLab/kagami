@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/providers.dart' show SuppliedPages;
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -42,6 +45,19 @@ class _Challenged implements ProviderHttp {
 
   @override
   Future<Map<String, Object?>> json(String url) async => throw const CloudflareChallenge();
+}
+
+/// Un sito che risponde a tutto con la pagina della serie.
+class _Page implements ProviderHttp {
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async =>
+      (body: Uint8List.fromList(utf8.encode(_manhwaPage)), contentType: 'text/html');
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => true;
+
+  @override
+  Future<Map<String, Object?>> json(String url) async => throw const ProviderOffline();
 }
 
 /// Un sito che non risponde e non dà errore: la richiesta resta appesa.
@@ -98,6 +114,42 @@ void main() {
     }
     fail('la condizione non si è avverata');
   }
+
+  Future<(String, String)> seedLibrary() async {
+    final root = p.join(dir.path, 'libreria');
+    const folder = 'Disfarming [manhwaread-disfarming]';
+    await Directory(p.join(root, folder)).create(recursive: true);
+    await File(p.join(root, folder, 'series.json')).writeAsString(jsonEncode({
+      'schemaVersion': 3,
+      'provider': 'manhwaread',
+      'id': 'disfarming',
+      'title': 'Vecchio titolo',
+      'source': _manhwa,
+      'metadata': const {},
+      'chapters': const <Object?>[],
+    }));
+    await File(p.join(root, 'library.json')).writeAsString(jsonEncode({
+      'series': [
+        {'key': 'manhwaread:disfarming', 'path': folder, 'source': _manhwa, 'title': 'Vecchio titolo'},
+      ],
+    }));
+    return (root, folder);
+  }
+
+  ServerWorker repairWorker(String root, ProviderHttp http) => ServerWorker(
+        files,
+        ArchiveEnvironment(
+          scratch: Directory(p.join(dir.path, 'scratch')),
+          storeFor: (_) => LocalStore(root),
+          httpFor: (provider, {userAgent, cookies = const {}}) => http,
+        ),
+        blocked: () async => null,
+        folder: () => 'f',
+        browser: SuppliedPages(const {}),
+        repairWatch: const Duration(milliseconds: 30),
+        retryAfter: const Duration(hours: 1),
+        log: (_) {},
+      );
 
   test('il giro prende quello che arriva mentre dorme, e la coda si svuota', () async {
     final worker = ServerWorker(files, environment(), blocked: () async => null, log: (_) {});
@@ -275,5 +327,60 @@ void main() {
     await files.enqueue(job('uno', 'https://example.com/x'));
     await worker.cancel('uno');
     expect(await files.jobs(), isEmpty);
+  });
+
+  test('la riparazione rilegge la serie, lascia l\'esito in storia e viene prima del lavoro in coda', () async {
+    final (root, folder) = await seedLibrary();
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(root),
+        httpFor: (provider, {userAgent, cookies = const {}}) => _Page(),
+      ),
+      blocked: () async => null,
+      folder: () => 'f',
+      browser: SuppliedPages(const {}),
+      log: (_) {},
+    );
+    await files.enqueue(job('uno', 'https://example.com/non-un-sito'));
+    worker.repair(keys: {'manhwaread:disfarming'});
+    worker.repair(site: 'manhwaread');
+    worker.start();
+    await until(() async => (await files.history()).length == 2);
+    await worker.close();
+    final history = await files.history();
+    // Dal più recente: prima la riparazione, poi il lavoro.
+    final repaired = history.last;
+    expect(repaired.seriesKey, 'manhwaread:disfarming');
+    expect(repaired.repair?['titleChanged'], isTrue);
+    expect(history.first.title, 'uno');
+    expect(jsonDecode(await File(p.join(root, folder, 'series.json')).readAsString())['title'], 'Disfarming');
+  });
+
+  test('una riparazione scritta su file da un altro processo viene eseguita e il file sparisce', () async {
+    final (root, _) = await seedLibrary();
+    final worker = repairWorker(root, _Page())..start();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await queueRepair(files, RepairRequest(null, {'manhwaread:disfarming'}));
+    await until(() async => (await files.history()).length == 1);
+    await worker.close();
+    expect(File(p.join(files.directory.path, 'repair.json')).existsSync(), isFalse);
+  });
+
+  test('una riparazione fermata dalla rete resta nel file, e un worker nuovo la riprende', () async {
+    final (root, _) = await seedLibrary();
+    final file = File(p.join(files.directory.path, 'repair.json'));
+    var worker = repairWorker(root, _Offline());
+    worker.repair(site: 'manhwaread');
+    worker.start();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await worker.close();
+    expect(jsonDecode(await file.readAsString()), {'site': 'manhwaread'});
+
+    worker = repairWorker(root, _Page())..start();
+    await until(() async => (await files.history()).length == 1);
+    await worker.close();
+    expect(file.existsSync(), isFalse);
   });
 }

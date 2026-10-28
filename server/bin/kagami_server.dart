@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/providers.dart' show providers;
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:path/path.dart' as p;
@@ -16,6 +17,9 @@ Uso: kagami-server [--data <cartella>] <comando>
                                   è --setup o KAGAMI_SETUP, generata dall'app
   users                           gli account ammessi e chi ha già collegato il suo Drive
   status                          per ogni account: lavoro in corso, coda, ultimi esiti
+  repair --user <email> [--site <id> | --keys k1,k2]
+                                  mette in attesa la riparazione della libreria di un account (tutta,
+                                  un sito o alcune serie); il server acceso la raccoglie entro un minuto
   ping [--port P]                 esce con 0 se il server risponde (controllo di salute di Docker)
   idle                            esce con 0 se nessun account sta scaricando
   update [--every M] [--container C]
@@ -35,6 +39,7 @@ Future<void> main(List<String> arguments) async {
   parser.addCommand('status');
   parser.addCommand('ping', ArgParser()..addOption('port'));
   parser.addCommand('idle');
+  parser.addCommand('repair', ArgParser()..addOption('user')..addOption('site')..addOption('keys'));
   parser.addCommand(
     'update',
     ArgParser()
@@ -71,6 +76,8 @@ Future<void> main(List<String> arguments) async {
         await statusCommand(paths);
       case 'ping':
         await ping(paths, command.option('port'));
+      case 'repair':
+        await repairCommand(paths, command);
       case 'idle':
         await idleCommand(paths);
       case 'update':
@@ -125,6 +132,25 @@ Future<void> _status(ArchiveFiles files) async {
   for (final outcome in (await files.history()).take(5)) {
     stdout.writeln('${outcome.ok ? 'ok ' : 'err'} ${outcome.title}: ${outcome.message}');
   }
+}
+
+/// Scrive `repair.json` dell'account: il `serve` acceso lo raccoglie da sé.
+Future<void> repairCommand(ServerPaths paths, ArgResults command) async {
+  final email = command.option('user')?.trim().toLowerCase();
+  final site = command.option('site');
+  final keys = command.option('keys');
+  if (email == null || email.isEmpty) fail('Manca --user <email>.');
+  if (site != null && keys != null) fail('--site e --keys non vanno insieme.');
+  if (site != null && !providers.any((provider) => provider.id == site)) {
+    fail('--site è l\'id di uno dei siti: ${providers.map((provider) => provider.id).join(', ')}.');
+  }
+  final list = keys == null ? null : {for (final key in keys.split(',')) if (key.trim().isNotEmpty) key.trim()};
+  if (list != null && list.isEmpty) fail('--keys vuole le chiavi delle serie separate da virgole.');
+  final (_, members) = await _members(paths);
+  final member = members.where((member) => member.email.toLowerCase() == email).firstOrNull;
+  if (member == null) fail('$email non è fra gli account del server (kagami-server users).');
+  final merged = await queueRepair(ArchiveFiles(paths.user(member.email).path), RepairRequest(site, list));
+  stdout.writeln('In attesa per ${member.email}: ${merged.all ? 'tutta la libreria' : merged.site != null ? 'il sito ${merged.site}' : '${merged.keys!.length} serie'}.');
 }
 
 /// Per l'aggiornatore, che non ricrea il server a metà di un download.

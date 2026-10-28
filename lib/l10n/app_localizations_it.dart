@@ -449,6 +449,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get seriesChapterNotDownloaded => 'Non scaricato';
 
   @override
+  String get seriesChapterUnlisted => 'Non più sul sito';
+
+  @override
   String seriesChapterPages(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1110,6 +1113,112 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get archiveCheckNow => 'Controlla adesso';
+
+  @override
+  String get archiveRepair => 'Ripara le serie archiviate';
+
+  @override
+  String get archiveRepairHint =>
+      'Rilegge ogni serie dal suo sito e corregge titolo, copertina e capitoli';
+
+  @override
+  String get archiveRepairAll => 'Tutta la libreria';
+
+  @override
+  String archiveRepairSite(String site) {
+    return 'Solo le serie di $site';
+  }
+
+  @override
+  String get archiveRepairSeries => 'Ripara la serie';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return 'Riparo $done di $total: $title';
+  }
+
+  @override
+  String get archiveRepairQueued =>
+      'Riparazione avviata sul server: gli esiti compaiono nella cronologia.';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Riparate $count serie.',
+      one: 'Riparata 1 serie.',
+      zero: 'Nessuna serie da riparare.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      'Non c\'è una libreria da riparare: scegli la cartella di Drive o del telefono.';
+
+  @override
+  String get archiveRepairNoServer =>
+      'Il server non sa ancora riparare le serie: va aggiornato.';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return 'Riparazione non riuscita: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'Il telefono sta già riparando o scaricando: riprova fra poco.';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return 'Il sito $site funziona di nuovo: ripara le sue serie';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => 'Ripara';
+
+  @override
+  String get archiveRepairDismiss => 'Ignora';
+
+  @override
+  String get archiveRepairNothing => 'Niente da riparare';
+
+  @override
+  String get archiveRepairAdopted => 'nuova chiave adottata';
+
+  @override
+  String get archiveRepairRetitled => 'titolo aggiornato';
+
+  @override
+  String get archiveRepairCover => 'copertina aggiornata';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capitoli nuovi',
+      one: '1 capitolo nuovo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capitoli non più elencati',
+      one: '1 capitolo non più elencato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return 'Non riparata: $error';
+  }
 
   @override
   String get archiveNoTracked => 'Nessuna serie da seguire, per ora';
@@ -4256,4 +4365,9 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       'Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'Il sito $site non funziona: è cambiato e Kagami va aggiornato.';
+  }
 }

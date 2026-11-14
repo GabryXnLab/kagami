@@ -52,9 +52,6 @@ dependencies:
   package_info_plus: ^10.2.1
   lucide_icons_flutter: ^3.1.6
   google_sign_in: ^7.2.0
-  firebase_core: ^4.15.0
-  firebase_auth: ^6.7.0
-  cloud_firestore: ^6.10.0
   google_sign_in_platform_interface: ^3.1.0
   sentry_flutter: ^9.0.0
   html: ^0.15.7
@@ -63,6 +60,9 @@ dependencies:
   webview_flutter: ^4.14.1
   kagami_archive:
     path: packages/kagami_archive
+  supabase_flutter: ^2.18.3
+  flutter_secure_storage: ^11.2.0
+  dart_smb2: 0.4.0
 
 dev_dependencies:
   flutter_test:
@@ -92,6 +92,7 @@ flutter:
   generate: true
   assets:
     - assets/providers/
+    - assets/licenses/
 
   fonts:
     - family: Figtree

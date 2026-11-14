@@ -31,6 +31,7 @@ import 'package:path/path.dart' as p;
 import '../archive/bulk_import.dart';
 import '../archive/device.dart';
 import '../archive/manual_card.dart';
+import '../data/library_view.dart' show CollectionJoin;
 import '../format/reading.dart';
 import '../l10n.dart';
 import '../providers.dart';
@@ -39,7 +40,7 @@ import 'archive_manual.dart';
 import 'archive_series.dart';
 import 'browser_check_page.dart';
 import 'theme.dart';
-import 'widgets/collection_sheet.dart' show pickCollection;
+import 'widgets/collection_sheet.dart' show noticeBindingRefused, pickCollection;
 import 'widgets/kit.dart';
 
 enum _State { waiting, running, saved, manual, known, failed, check }
@@ -308,8 +309,11 @@ class _ArchiveImportPageState extends ConsumerState<ArchiveImportPage> {
     _keys.add(key);
     _savedAny = true;
     final collection = _collection;
-    if (collection != null && ref.read(collectionsProvider).any((row) => row.id == collection)) {
-      await ref.read(readingProvider.notifier).setSeriesInCollection(collection, key, true);
+    final target = ref.read(collectionsProvider).where((row) => row.id == collection).firstOrNull;
+    if (mounted && collection != null && target != null) {
+      final messenger = ScaffoldMessenger.of(context);
+      final outcome = await ref.read(readingProvider.notifier).setSeriesInCollection(collection, key, true);
+      if (outcome == CollectionJoin.refused) noticeBindingRefused(ref, messenger, target.name, [key]);
     }
   }
 

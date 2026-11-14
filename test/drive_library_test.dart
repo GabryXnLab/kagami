@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kagami/src/data/drive.dart';
+import 'package:kagami/src/data/download_origin.dart';
 import 'package:kagami/src/data/downloads.dart';
 import 'package:kagami/src/data/drive_library.dart';
 import 'package:kagami/src/data/library_repository.dart';
@@ -236,7 +237,7 @@ void main() {
     final entry = (await drive.loadLibrary()).series.single;
     final chapter = (await drive.loadSeries(entry))!.chapters.single;
     final destination = p.join(temp.path, 'manga');
-    final downloader = ChapterDownloader(drive, DriveFiles(drive));
+    final downloader = ChapterDownloader(DriveOrigin(drive, DriveFiles(drive)));
     final progress = <int>[];
     await downloader.download(
       destination: destination,
@@ -269,7 +270,7 @@ void main() {
     final chapter = (await drive.loadSeries(entry))!.chapters.single;
     final destination = p.join(temp.path, 'manga');
     await expectLater(
-      ChapterDownloader(drive, DriveFiles(drive)).download(
+      ChapterDownloader(DriveOrigin(drive, DriveFiles(drive))).download(
         destination: destination,
         entry: entry,
         chapter: chapter,

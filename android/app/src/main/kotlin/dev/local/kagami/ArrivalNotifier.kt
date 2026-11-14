@@ -84,6 +84,15 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 )
                 result.success(null)
             }
+            "shareInvite" -> {
+                shareInvite(
+                    context,
+                    call.argument<String>("key")!!,
+                    call.argument<String>("title")!!,
+                    call.argument<String>("text")!!,
+                )
+                result.success(null)
+            }
             "dismiss" -> {
                 context.getSystemService(NotificationManager::class.java)
                     .cancel(call.argument<String>("key")!!, NOTIFICATION_ID)
@@ -127,6 +136,7 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
         const val EXTRA_SERIES = "dev.local.kagami.series"
         private const val CHANNEL_ID = "arrivals"
         private const val INVITES_ID = "server-invites"
+        private const val SHARES_ID = "shared-libraries"
         private const val VERIFY_ID = "site-checks"
         const val VERIFY_KEY = "verify:"
         private const val GROUP = "dev.local.kagami.arrivals"
@@ -162,6 +172,22 @@ class ArrivalNotifier(messenger: BinaryMessenger, private val context: Context) 
                 )
             }
             notify(context, INVITES_ID, key, title, text, Notification.CATEGORY_SOCIAL, null)
+        }
+
+        fun shareInvite(context: Context, key: String, title: String, text: String) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        SHARES_ID,
+                        context.getString(R.string.channel_shares),
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply {
+                        description = context.getString(R.string.channel_shares_description)
+                    },
+                )
+            }
+            notify(context, SHARES_ID, key, title, text, Notification.CATEGORY_SOCIAL, null)
         }
 
         fun verify(context: Context, title: String, text: String) {

@@ -73,7 +73,15 @@ class FakeDocker {
       final config = jsonDecode(body) as Map<String, Object?>;
       final host = config.remove('HostConfig') as Map<String, Object?>;
       final image = images[config['Image']]!['Id'] as String;
-      answer = {'Id': add(request.uri.queryParameters['name']!, image, config, host)};
+      final networking = config.remove('NetworkingConfig') as Map<String, Object?>?;
+      final id = add(request.uri.queryParameters['name']!, image, config, host);
+      final networks = (containers[id]!['NetworkSettings'] as Map)['Networks'] as Map;
+      (networking?['EndpointsConfig'] as Map? ?? const {}).forEach((key, value) => networks[key] = value);
+      answer = {'Id': id};
+    } else if (segments.first == 'networks' && segments.last == 'connect') {
+      final connect = jsonDecode(body) as Map<String, Object?>;
+      final info = find(connect['Container'] as String)!;
+      ((info['NetworkSettings'] as Map)['Networks'] as Map)[segments[1]] = connect['EndpointConfig'];
     } else if (segments.first == 'containers') {
       final info = find(segments[1]);
       if (info == null) {
@@ -225,6 +233,73 @@ void main() {
       final again = fake.find('kagami-updater')!;
       expect(again['Image'], 'sha256:nuova');
       expect((again['Config'] as Map)['User'], '0');
+    });
+
+    test('il contenitore ricreato torna su tutte le reti del vecchio, prima di partire', () async {
+      final server = fake.find('kagami-server')!;
+      (server['HostConfig'] as Map)['NetworkMode'] = 'casa';
+      (server['NetworkSettings'] as Map)['Networks'] = {
+        'casa': {'Aliases': [(server['Id'] as String).substring(0, 12), 'kagami']},
+        'kagami-browser': {'Aliases': [(server['Id'] as String).substring(0, 12), 'kagami-server']},
+      };
+      fake.images[reference] = {'Id': 'sha256:nuova', 'Config': FakeDocker._imageConfig};
+      await recreate(docker, 'kagami-server');
+      final fresh = fake.find('kagami-server')!;
+      expect((fresh['NetworkSettings'] as Map)['Networks'], {
+        'casa': {'Aliases': ['kagami']},
+        'kagami-browser': {'Aliases': ['kagami-server']},
+      });
+      final create = fake.calls.indexOf('POST /containers/create');
+      final connect = fake.calls.indexOf('POST /networks/kagami-browser/connect');
+      final start = fake.calls.lastIndexOf('POST /containers/${(fresh['Id'] as String)}/start');
+      expect(create < connect && connect < start, isTrue, reason: '${fake.calls}');
+    });
+
+    test('il contenitore sulla rete di sempre ritrova anche quella del browser', () async {
+      final server = fake.find('kagami-server')!;
+      (server['HostConfig'] as Map)['NetworkMode'] = 'default';
+      (server['NetworkSettings'] as Map)['Networks'] = {
+        'bridge': {'Aliases': null},
+        'kagami-browser': {'Aliases': ['kagami-server']},
+      };
+      fake.images[reference] = {'Id': 'sha256:nuova', 'Config': FakeDocker._imageConfig};
+      await recreate(docker, 'kagami-server');
+      expect(((fake.find('kagami-server')!['NetworkSettings'] as Map)['Networks'] as Map).keys, ['kagami-browser']);
+    });
+
+    String addBrowser() => fake.add(
+          'kagami-browser',
+          'sha256:vecchia',
+          {'Image': reference, 'Cmd': ['browser']},
+          {'Binds': ['kagami-browser:/data'], 'NetworkMode': 'kagami-browser'},
+        );
+
+    test('un\'immagine nuova ricrea anche il contenitore del browser, fra il server e l\'aggiornatore', () async {
+      addBrowser();
+      await updater().check();
+      final browser = fake.find('kagami-browser')!;
+      expect(browser['Image'], 'sha256:nuova');
+      expect((browser['Config'] as Map)['Cmd'], ['browser']);
+      expect((browser['HostConfig'] as Map)['Binds'], ['kagami-browser:/data']);
+      expect((browser['State'] as Map)['Running'], isTrue);
+      expect(said.where((line) => line.endsWith(' aggiornato.')), ['kagami-server aggiornato.', 'kagami-browser aggiornato.']);
+      expect(said.indexOf('kagami-browser aggiornato.'), lessThan(said.indexWhere((line) => line.contains('mi ricreo'))));
+    });
+
+    test('il contenitore del browser non scarica: non si aspetta', () async {
+      addBrowser();
+      fake.find('kagami-server')!['Image'] = 'sha256:nuova';
+      fake.busy = true;
+      await updater().check();
+      expect(fake.find('kagami-browser')!['Image'], 'sha256:nuova');
+      expect(fake.calls.where((call) => call.endsWith('/exec')), isEmpty);
+    });
+
+    test('senza il contenitore del browser si va avanti', () async {
+      await updater().check();
+      expect(fake.find('kagami-server')!['Image'], 'sha256:nuova');
+      expect(said.where((line) => line.contains('kagami-browser')), isEmpty);
+      expect(said.last, contains('mi ricreo'));
     });
 
     test('mentre scarica si aspetta, oltre la pazienza no', () async {

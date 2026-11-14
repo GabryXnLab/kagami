@@ -162,6 +162,35 @@ combacia più: una serie assente (lettura fallita, Drive non raggiunto) non è
 «non combacia», e non si svuota una raccolta per un errore di rete. Finché
 l'indice non è caricato non fa niente.
 
+Una raccolta con regole può essere **vincolante** (`rules.binding`, attivo
+solo con almeno un criterio): una serie che non combacia non entra nemmeno a
+mano (`canJoin` → `refused`, con un avviso che lo dice) ed esce, anche se
+messa a mano, appena la libreria la contiene e non combacia più. Una serie
+assente dalla libreria non si tocca; una appena messa in coda da «Scarica un
+manga» entra e la giudica il primo giro (`pending`). Le `skipped` restano
+fuori: la vincolante limita chi entra, non obbliga a restare.
+
+Il criterio di tipo ragiona per **famiglie** (`format/kind.dart`, `kindOf`):
+`manga`, `manhwa`, `manhua`, `other`, ricavate in lettura dal `type` di MALF,
+che resta testo libero («Webtoon» e «Korean» sono manhwa, «Chinese» manhua,
+«Japanese» e «Doujin» manga, il resto e il tipo assente `other`). Un valore
+delle regole col nome di una famiglia combacia per famiglia, ogni altro col
+testo com'è: una regola già salvata con `manhwa` da allora prende anche
+`Webtoon`, ed è voluto.
+
+Una raccolta può essere **nascosta** (`traits.hidden`, interruttore «Nascondi»
+nelle proprietà): le sue serie spariscono da home, libreria (griglia, ricerca,
+pastiglie e conteggi), raccolte automatiche, grafici delle statistiche, «più
+lette», cronologia, «Simili» e «Su altri siti», e non danno notifiche né
+controlli ad app chiusa (implica «Silenzia le novità», che resta acceso e
+bloccato). Una serie è nascosta se sta in almeno una raccolta nascosta. Si vedono
+aprendo la raccolta, da cui scheda e lettore funzionano; la riga della raccolta
+resta nell'elenco, con l'occhio barrato al posto delle copertine. Restano
+fuori di proposito: i totali privati delle statistiche (le letture contano),
+la coda dei download e del server (gesti espliciti), «già in libreria» di
+«Scarica un manga», il backup. **Nascosto non è protetto**: nessun PIN, e il
+backup contiene tutto; serve a non vedere, non a non farsi vedere.
+
 Accanto a quelle create a mano, raccolte automatiche non modificabili: *In
 lettura*, *Novità*, *Preferiti*, *Da iniziare*, *Finiti*.
 
@@ -244,6 +273,23 @@ il sito nuovo non ha resta col suo id, quindi conta solo nella cronologia, e
 l'avviso finale dice quanti sono. La copia vecchia si toglie come la scheda
 manuale: cartelle, Drive nel cestino, coda e serie seguita, anche sul
 server. Tavole e metadati arrivano interi dal sito nuovo.
+
+Per scegliere *quale* sito, la scheda ha «Su altri siti»: per ogni altro sito
+registrato, se la serie c'è, quanti capitoli elenca, l'ultimo e quando è uscito,
+quanti capitoli è avanti o indietro rispetto al sito in uso (per numero
+dell'ultimo capitolo, non per conteggio), oppure che lì non c'è, che il sito è
+rotto, che vuole la verifica o che ha dato un errore — con i dati dell'ultima
+volta che c'era. «Passa a questo sito» su una riga trovata salta la ricerca di
+«Cambia provider» e prosegue dal link trovato, con lo stesso percorso. La ricerca
+(`findElsewhere`, nel pacchetto, con `sameSeries` sui titoli) la fa ogni giorno
+il server collegato che la sa fare (`elsewhere` fra le `features`, `GET
+/v2/elsewhere`), con limiti di richieste perché moltiplica il traffico verso i
+siti; l'app gliela chiede subito per una serie mai vista o vista da più di 20 ore.
+Senza server la fa il telefono, solo per la serie aperta, quando si apre la
+sezione e il dato ha più di 20 ore. Il risultato non sta in MALF: è ricavato e si
+rifà in un giorno; l'app ne tiene una copia nella cache, così la sezione si
+disegna subito. L'avviso di un sito rotto apre l'elenco delle sue serie con, per
+ciascuna, gli altri siti dove c'è.
 
 Ogni capitolo che non è né sul telefono né su Drive ha l'icona «Scarica dal
 sito», anche se letto o saltato, e la barra di selezione offre lo stesso per i
@@ -363,6 +409,10 @@ telefono, il resto da Drive.
   telefono con un tocco. Vanno nella cartella della libreria se c'è; se non
   c'è, l'app chiede una volta se sceglierne una, e chi preferisce di no li ha
   nello spazio dell'app, che però se ne va disinstallandola.
+- **Chi può leggere la mia libreria.** Impostazioni → Drive, con account e cartella scelta: il
+  foglio elenca chi può leggere la cartella e fino a quando, e permette di aggiungere (con la
+  durata), rinnovare e togliere. Dice il vero: anche le persone condivise a mano da Drive, e un
+  avviso se Drive non risponde (mai «nessuno»). Contratto in `docs/drive.md`.
 - **Senza rete** la libreria di Drive si apre com'era l'ultima volta, e i
   capitoli ancora in cache si leggono lo stesso: di sicuro il seguito di
   quelli lasciati a metà.
@@ -618,7 +668,7 @@ stato normale della catena, non un errore dell'app.
 ### L'account è il backup che va e torna da sé
 
 Quello che l'app manda in rete è esattamente il file che esporta: gli stessi
-byte compressi, in un `Blob` dentro `readers/{uid}` su Firestore, dove le
+byte compressi, in una riga di `readers` sul backend, dove le
 regole di sicurezza non lasciano nessuna strada verso il documento di
 qualcun altro. Non è pigrizia, è la conseguenza di una cosa già vera — le
 regole con cui due copie dei dati si fondono esistono, sono quelle del backup,
@@ -643,13 +693,13 @@ database del giorno prima, e la prima uscita dall'app, per concedere
 l'accesso ai file, lo mandava su sopra quello giusto.
 
 L'accesso passa dal token d'identità di Google, non dal browser: il sistema
-dice chi è l'utente, Firebase verifica la firma e apre la sessione. Per conto
+dice chi è l'utente, il backend verifica la firma e apre la sessione. Per conto
 di quale client OAuth chiedere il token lo dice `google-services.json`, che il
 plugin Gradle di Google trasforma in risorse dell'APK: nel codice non resta
 nessun identificativo da tenere aggiornato.
 
 Il permesso su Drive, riaprendo l'app, si chiede per l'indirizzo che
-Firebase ricorda, senza rifare l'accesso: `attemptLightweightAuthentication`
+l'app ricorda, senza rifare l'accesso: `attemptLightweightAuthentication`
 di `google_sign_in` passa da Credential Manager, che a ogni avvio mostrava il
 foglio «Accesso come…» o la scelta dell'account.
 
@@ -692,7 +742,7 @@ sincronizzato deve leggersi da Drive, non dire che manca.
 
 Lo scope chiesto è `drive.readonly`: le cartelle le scrive rclone dal server,
 quindi `drive.file` non le vedrebbe. È uno scope "restricted" e va dichiarato
-nella schermata di consenso del proprio progetto Firebase, insieme a quello
+nella schermata di consenso del proprio progetto Google Cloud, insieme a quello
 completo.
 Quello completo si chiede solo a chi sceglie una sincronizzazione che carica
 su Drive (sotto): chiederlo a tutti vorrebbe dire poter cancellare il Drive
@@ -1097,6 +1147,33 @@ nella pagina del capitolo con le loro misure. I capitoli VIP restano fuori
 come quelli in accesso anticipato di Asura Scans. La serie si riconosce
 dall'id del post e non dallo slug, che sul sito a volte è casuale.
 
+#### Siti degli utenti
+
+Un sito che l'app non conosce lo aggiunge chiunque, senza ricompilarla, con
+un file JSON che dice dove stanno serie, capitoli e tavole (formato in
+`docs/siti.md`). È la risposta a un sito che cambia forma: si aggiorna il suo
+file invece di aspettare una release, e un file con l'id di un sito incluso ne
+prende il posto finché resta installato.
+
+Impostazioni → Scarica un manga → **Siti** elenca i siti: prima quelli
+inclusi, poi quelli aggiunti, con nome, icona, versione e un segno per chi
+sostituisce un incluso o ha il file rovinato. **Aggiungi un sito** prende un
+link al file o il testo incollato; prima di installare mostra nome, versione,
+gli host a cui il sito chiederà le pagine (la sola cosa che conta per la
+fiducia: il file non contiene codice) e, se c'è, quale sito incluso
+sostituisce. Si può provare prima di installare, con una ricerca o il link di
+una serie: si vede il titolo e quanti capitoli trova. Toccando un sito
+aggiunto: aggiornalo ora (se ha un link di aggiornamento), toglilo. Togliere
+un sito non tocca le sue serie: restano in libreria, senza aggiornamenti
+finché il sito non torna.
+
+I file stanno in `providers/` della libreria, perché la libreria è ciò che
+sopravvive: li vedono il server, un altro telefono sulla stessa cartella e una
+reinstallazione. I siti con un link di aggiornamento si ricontrollano al più una
+volta al giorno; un aggiornamento che non si legge lascia il file di prima. Un
+server che non sa usare i siti degli utenti (`userProviders`) lascia al
+telefono i lavori di quei siti.
+
 ### Scaricare dal proprio server
 
 Una serie sono ore di download, e il telefono deve restare acceso e in rete
@@ -1108,13 +1185,13 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
   fa i passi che mancano — accesso con Google, cartella della libreria su
   Drive, permesso di scriverci — e ne esce un comando `docker run` solo, con
   l'immagine pubblicata dal progetto e tutto il resto in `KAGAMI_SETUP`:
-  progetto Firebase, client «Web» del progetto e permesso duraturo del
+  backend, client «Web» del progetto e permesso duraturo del
   proprietario sul suo Drive. Chi lo incolla su un computer con Docker ha
   finito; poi scrive nell'app l'indirizzo del computer. Il comando contiene
   un segreto, e l'app lo dice.
 - **Chi lo usa lo dice l'account Google**, non una chiave: ogni richiesta
-  porta il token d'identità di Firebase, che Firebase rinnova da sé, e il
-  server lo verifica con le chiavi pubbliche di Google. Il server ha un
+  porta il token della sessione del backend, che il backend rinnova da sé, e il
+  server lo verifica con le chiavi del backend (o di Firebase, per le app vecchie). Il server ha un
   proprietario (quello del comando) e un elenco di account ammessi; gli
   altri ricevono `403`. Il collegamento salvato è solo l'indirizzo, fra le
   impostazioni del database: viaggia con backup e account, e su un telefono
@@ -1125,7 +1202,7 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
   la coda di un altro. La cartella è quella che legge l'app; se non ce n'è
   una, collegando il server la si sceglie prima.
 - **Il permesso duraturo** è un refresh token per il client «Web» del
-  progetto Firebase: Android dà all'app un codice per quel client
+  progetto Google Cloud: Android dà all'app un codice per quel client
   (`serverAuthCode`) e l'app lo riscatta col segreto del client, che mette
   chi compila (`GOOGLE_SERVER_CLIENT_SECRET`). Senza, la build non può
   collegare server e lo dice. Il server rinnova i permessi con lo stesso
@@ -1135,10 +1212,10 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
 ### Server e utenti
 
 - **Il proprietario aggiunge gli account dall'app** (*Chi può usarlo*):
-  scrive un indirizzo, il server lo ammette, e l'app scrive un invito su
-  Firestore (`serverInvites`, un documento per server e indirizzo; le
+  scrive un indirizzo, il server lo ammette, e l'app scrive un invito sul
+  backend (`server_invites`, una riga per server e indirizzo; le
   regole lo lasciano scrivere solo a nome proprio e leggere solo a mittente
-  e destinatario). Il server non manda email e non conosce Firebase oltre
+  e destinatario). Il server non manda email e non conosce il backend oltre
   ai token: l'invito serve solo a dire all'altro dov'è il server.
 - **Chi è stato aggiunto lo scopre nell'app**: gli inviti per il suo
   indirizzo si ascoltano finché l'app è aperta, e ognuno dà una notifica
@@ -1150,6 +1227,15 @@ motore, e l'app gli parla con l'API di [server-api.md](server-api.md).
   suo lavoro e cancella dal server permesso, coda e serie seguite; ciò che è
   già sul suo Drive resta. **Scollegare** il server, per chi non è il
   proprietario, gli fa dimenticare il proprio permesso e la propria coda.
+- **Gli accessi possono scadere** (`expiry`): il selettore di durata
+  (`AccessDuration` e `AccessDurationPicker` nel kit, «un mese» proposto, lo
+  riusa chi dà accessi altrove) compare solo se il server lo elenca, e la
+  riga di ogni account dice «Scade il …» o «Scaduto» con *Rinnova*. Chi è
+  ammesso vede la sua scadenza nella sezione Server; tre giorni prima l'app,
+  se in quel momento legge il server, dà una notifica una sola volta (l'id sta
+  fra le impostazioni, `server.expiry.seen`, come per gli inviti: non c'è un
+  allarme ad app chiusa). Scaduto, resta «Accesso scaduto: chiedi a chi ha il
+  server di rinnovarlo» e *Scollega*.
 - **La destinazione «Server»** è l'unica quando si è scelto che scarichi
   lui, e scarica solo su Drive: il telefono gli manda il link con le stesse scelte (tutta, dal
   capitolo, i capitoli scelti, la pausa). Il telefono verifica la serie
@@ -1289,6 +1375,14 @@ prima, e ricomincia da dove era.
     cartella o nello spazio dell'app. Da verificare su telefono: la latenza
     della prima tavola di un capitolo mai aperto e la durata dell'autorizzazione
     con l'app in stato *Testing*.
+
+14. **Siti che cambiano** — in corso: un sito rotto si dichiara per intero
+    e non ferma gli altri, riparazione dei metadati di tutte le serie col
+    provider aggiornato (con adozione di un cambio d'identità), stessa serie
+    cercata e confrontata su più siti. Piano in `handoff/siti-che-cambiano/`.
+15. **Provider degli utenti** — **priorità**, in una sessione apposita: chi
+    usa l'app scrive e aggiunge il suo provider senza ricompilarla. Punti da
+    decidere nello stesso handoff, fase F5.
 
 **Resta l'icona dell'app**, che è il solo punto aperto del percorso, e il
 ritaglio automatico dei bordi bianchi delle tavole, che richiede di guardare i

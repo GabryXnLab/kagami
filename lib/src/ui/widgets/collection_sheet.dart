@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../l10n.dart';
 import '../../providers.dart';
 import '../theme.dart';
+import '../../data/library_view.dart' show CollectionJoin;
 import '../../format/reading.dart';
 import 'collection_properties_sheet.dart';
 import 'kit.dart';
@@ -22,6 +23,25 @@ const List<int> collectionColors = [
   0xFF8B5CF6,
   0xFF8A8F98,
 ];
+
+/// Dice con uno SnackBar che le serie [refused] non sono entrate in
+/// [collection] perché non rientrano nei criteri di una raccolta vincolante.
+void noticeBindingRefused(
+  WidgetRef ref,
+  ScaffoldMessengerState messenger,
+  String collection,
+  List<String> refused,
+) {
+  if (refused.isEmpty) return;
+  final l10n = currentL10n();
+  final text = refused.length == 1
+      ? l10n.collectionBindingRefused(
+          ref.read(seriesEntryProvider(refused.single))?.title ?? refused.single,
+          collection,
+        )
+      : l10n.collectionBindingRefusedMany(refused.length, collection);
+  messenger.showSnackBar(SnackBar(content: Text(text)));
+}
 
 /// Con più chiavi il foglio agisce su tutte insieme: la casella è piena solo
 /// se ci stanno già tutte, e un tocco le aggiunge o le toglie in blocco.
@@ -77,13 +97,17 @@ class _CollectionSheet extends ConsumerWidget {
                 title: collection.name,
                 subtitle: context.l10n.collectionSheetSeriesCount(collection.seriesKeys.length),
                 onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final refused = <String>[];
                   for (final key in seriesKeys) {
-                    await reading.setSeriesInCollection(
+                    final outcome = await reading.setSeriesInCollection(
                       collection.id,
                       key,
                       !inside,
                     );
+                    if (outcome == CollectionJoin.refused) refused.add(key);
                   }
+                  noticeBindingRefused(ref, messenger, collection.name, refused);
                 },
                 trailing: Icon(
                   inside ? LucideIcons.circleCheck : LucideIcons.circle,

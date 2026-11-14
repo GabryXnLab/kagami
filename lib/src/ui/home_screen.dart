@@ -36,7 +36,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final library = ref.watch(libraryProvider);
-    final all = ref.watch(librarySignalsProvider);
+    final all = ref.watch(shownSignalsProvider);
     final l10n = context.l10n;
     if (library == null) return const SizedBox.shrink();
 

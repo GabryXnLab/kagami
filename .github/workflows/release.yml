@@ -58,6 +58,9 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       GOOGLE_SERVER_CLIENT_SECRET: ${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      BACKEND_ANON_KEY: ${{ secrets.BACKEND_ANON_KEY }}
+      GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
 
   publish:
     name: Pubblica

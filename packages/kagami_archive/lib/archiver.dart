@@ -85,9 +85,12 @@ class ArchiveCancelled implements Exception {
 }
 
 class ArchiveFailure {
-  const ArchiveFailure(this.chapter, this.error);
+  const ArchiveFailure(this.chapter, this.error, {this.changed = false});
   final String chapter;
   final String error;
+
+  /// Il sito ha una forma che il provider non conosce ([ProviderChanged]).
+  final bool changed;
 }
 
 class ArchiveResult {
@@ -383,80 +386,80 @@ class Archiver {
   }
 
   void _fail(ArchiveResult result, int index, int total, Chapter chapter, Object error) {
-    result.failed.add(ArchiveFailure(chapter.title, '$error'));
+    result.failed.add(ArchiveFailure(chapter.title, '$error', changed: error is ProviderChanged));
     _emit(ChapterFinished(index + 1, total, chapter.title, error: '$error'));
   }
 
-  /// Copertina, miniatura e `series.json`.
+  /// Copertina, miniatura e `series.json`. Di quello di prima restano le
+  /// identità passate e i capitoli archiviati che il sito non elenca più.
   Future<Map<String, Object?>> _writeSeries(
     Series series,
     String folder,
     Map<String, Object?> metadata,
     ArchiveResult result,
   ) async {
-    final files = <String, Uint8List>{};
-    Map<String, Object?>? cover;
-    final coverUrl = series.coverUrl;
-    if (coverUrl != null) {
-      try {
-        final old = await store.readJson(p.posix.join(folder, seriesManifestFile));
-        final previous = old?['cover'] is Map<String, Object?> ? old!['cover'] as Map<String, Object?> : null;
-        final stored = await store.filesIn(folder);
-        final name = previous?['file'];
-        final kept = previous != null &&
-            name is String &&
-            previous['source'] == coverUrl &&
-            stored[name]?.size == previous['size'];
-        Uint8List? body;
-        if (kept) {
-          cover = previous;
-        } else {
-          final image = await _image(coverUrl, series.url);
-          body = image.body;
-          files['cover${image.extension}'] = body;
-          cover = _measured({
-            'file': 'cover${image.extension}',
-            'source': coverUrl,
-            'size': body.length,
-            'sha256': sha256.convert(body).toString(),
-          }, body);
-        }
-        const thumb = 'cover.thumb.webp';
-        if (cover['thumbnail'] != thumb || !stored.containsKey(thumb) || body != null) {
-          body ??= (await _image(coverUrl, series.url)).body;
-          final small = await _thumbnail(body);
-          if (small != null) files[thumb] = small;
-          cover = {...cover, 'thumbnail': small == null ? null : thumb};
-        }
-      } on ProviderError catch (error) {
-        if (error is ProviderOffline) rethrow;
-        result.failed.add(ArchiveFailure('copertina', '$error'));
-      }
-    }
-    final manifest = <String, Object?>{
-      'schemaVersion': archiveSchemaVersion,
-      'metadataSchemaVersion': metadataSchemaVersion,
-      'provider': series.provider,
-      'id': series.id,
-      'title': series.title,
-      'source': series.url,
-      'fetchedAt': isoNow(),
-      'metadata': metadata,
-      'cover': cover,
-      'chapters': [
-        for (final chapter in series.chapters)
-          {
-            'id': chapter.id,
-            'number': chapter.number,
-            'title': chapter.title,
-            'source': chapter.url,
-            'metadata': normalizeMetadata(chapter.metadata),
-          },
-      ],
-    };
+    final old = await store.readJson(p.posix.join(folder, seriesManifestFile));
+    final (:cover, :files, :failure) = await coverOf(series, folder, old);
+    if (failure != null) result.failed.add(failure);
+    final manifest = seriesManifest(
+      series,
+      metadata,
+      cover,
+      chapterEntries(series.chapters, old?['chapters']),
+      formerKeys: [...?(old?['formerKeys'] as List?)?.whereType<String>()],
+    );
     files[seriesManifestFile] = _utf8(prettyJson(manifest));
     await store.writeSeriesFiles(folder, files);
     return manifest;
+  }
+
+  /// La copertina di [series] in [folder], accanto al `series.json` [old]:
+  /// quella di prima se viene dalla stessa sorgente e il file c'è, intero;
+  /// se no riscaricata. [files] sono i file da scrivere, vuoto se non cambia
+  /// niente. Una copertina che non scende è un [failure], non un giro fermo.
+  Future<({Map<String, Object?>? cover, Map<String, Uint8List> files, ArchiveFailure? failure})> coverOf(
+    Series series,
+    String folder,
+    Map<String, Object?>? old,
+  ) async {
+    final files = <String, Uint8List>{};
+    Map<String, Object?>? cover;
+    final coverUrl = series.coverUrl;
+    if (coverUrl == null) return (cover: cover, files: files, failure: null);
+    try {
+      final previous = old?['cover'] is Map<String, Object?> ? old!['cover'] as Map<String, Object?> : null;
+      final stored = await store.filesIn(folder);
+      final name = previous?['file'];
+      final kept = previous != null &&
+          name is String &&
+          previous['source'] == coverUrl &&
+          stored[name]?.size == previous['size'];
+      Uint8List? body;
+      if (kept) {
+        cover = previous;
+      } else {
+        final image = await _image(coverUrl, series.url);
+        body = image.body;
+        files['cover${image.extension}'] = body;
+        cover = _measured({
+          'file': 'cover${image.extension}',
+          'source': coverUrl,
+          'size': body.length,
+          'sha256': sha256.convert(body).toString(),
+        }, body);
+      }
+      const thumb = 'cover.thumb.webp';
+      if (cover['thumbnail'] != thumb || !stored.containsKey(thumb) || body != null) {
+        body ??= (await _image(coverUrl, series.url)).body;
+        final small = await _thumbnail(body);
+        if (small != null) files[thumb] = small;
+        cover = {...cover, 'thumbnail': small == null ? null : thumb};
+      }
+      return (cover: cover, files: files, failure: null);
+    } on ProviderError catch (error) {
+      if (error is ProviderOffline) rethrow;
+      return (cover: null, files: <String, Uint8List>{}, failure: ArchiveFailure('copertina', '$error'));
+    }
   }
 
   Future<Uint8List?> _thumbnail(Uint8List cover) async {
@@ -712,3 +715,80 @@ class Archiver {
 }
 
 Uint8List _utf8(String text) => utf8.encode(text);
+
+/// Il `series.json` di [series]. [chapters] sono le voci di [chapterEntries].
+Map<String, Object?> seriesManifest(
+  Series series,
+  Map<String, Object?> metadata,
+  Map<String, Object?>? cover,
+  List<Map<String, Object?>> chapters, {
+  List<String> formerKeys = const [],
+}) {
+  final former = [for (final key in {...formerKeys}) if (key != series.key) key];
+  return {
+    'schemaVersion': archiveSchemaVersion,
+    'metadataSchemaVersion': metadataSchemaVersion,
+    'provider': series.provider,
+    'id': series.id,
+    if (former.isNotEmpty) 'formerKeys': former,
+    'title': series.title,
+    'source': series.url,
+    'fetchedAt': isoNow(),
+    'metadata': metadata,
+    'cover': cover,
+    'chapters': chapters,
+  };
+}
+
+/// Le voci dei capitoli di `series.json`: quelle del sito, con gli id che
+/// ogni capitolo ha avuto (`formerIds`), e i capitoli di [previous] — le voci
+/// del `series.json` di prima — che il sito non elenca più ma che restano,
+/// con `listed: false`, ognuno dopo il capitolo che lo precedeva.
+///
+/// [renamed] traduce gli id di [previous] in quelli del sito; restano quelli
+/// in [keep] e quelli che erano già `listed: false`.
+List<Map<String, Object?>> chapterEntries(
+  List<Chapter> site,
+  Object? previous, {
+  Map<String, String> renamed = const {},
+  Set<String> keep = const {},
+}) {
+  final old = [
+    for (final entry in (previous is List ? previous : const []).whereType<Map<String, Object?>>())
+      if (entry['id'] case final String id when id.isNotEmpty) (id: id, entry: entry),
+  ];
+  final listed = {for (final chapter in site) chapter.id};
+  final former = <String, List<String>>{};
+  for (final (:id, :entry) in old) {
+    final now = renamed[id] ?? id;
+    final ids = former.putIfAbsent(now, () => []);
+    for (final value in [...(entry['formerIds'] as List? ?? const []).whereType<String>(), id]) {
+      if (value != now && !ids.contains(value)) ids.add(value);
+    }
+  }
+  final result = [
+    for (final chapter in site)
+      <String, Object?>{
+        'id': chapter.id,
+        'number': chapter.number,
+        'title': chapter.title,
+        'source': chapter.url,
+        'metadata': normalizeMetadata(chapter.metadata),
+        if (former[chapter.id] case final ids? when ids.isNotEmpty) 'formerIds': ids,
+      },
+  ];
+  var anchor = -1;
+  for (final (:id, :entry) in old) {
+    final now = renamed[id] ?? id;
+    if (listed.contains(now)) {
+      anchor = result.indexWhere((item) => item['id'] == now);
+    } else if (keep.contains(id) || entry['listed'] == false) {
+      result.insert(++anchor, {
+        ...entry,
+        'listed': false,
+        if (former[id] case final ids? when ids.isNotEmpty) 'formerIds': ids,
+      });
+    }
+  }
+  return result;
+}

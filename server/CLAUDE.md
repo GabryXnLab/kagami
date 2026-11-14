@@ -9,24 +9,40 @@ Vincoli del server; il resto del progetto è nel `CLAUDE.md` di root. Protocollo
   `docs/server-api.md`, e si cambia prima lì. Vincoli:
   - sul server non si configura niente e non si fa nessun accesso: tutto
     arriva da `KAGAMI_SETUP`, che l'app genera per il proprietario dentro un
-    comando `docker run` (progetto Firebase, client «Web», permesso di Drive
-    e cartella del proprietario). Si applica quando cambia, per impronta:
+    comando `docker run` (backend, progetto Firebase, client «Web», permesso
+    di Drive e cartella del proprietario). Si applica quando cambia, per impronta:
     rilanciare lo stesso comando non rimette un permesso vecchio;
-  - chi chiama lo dice il **token d'identità di Firebase** (`Bearer`),
-    verificato con le chiavi pubbliche di Google (`identity.dart`, RS256
-    confrontando il blocco intero, senza dipendenze): `aud` il progetto,
-    accesso con Google, indirizzo verificato. Niente sessioni né chiavi su
-    disco; l'elenco degli account è del proprietario, che lo cambia
-    dall'app (`/v2/users`);
+  - chi chiama lo dice un **biglietto** (`Kagami-Ticket`, `ticket.dart`): lo rilascia il
+    backend per l'`id` di questo server (casuale, nel volume, dichiarato in `GET /`) e per
+    l'indirizzo a cui l'app parla, che il proprietario ha garantito (l'id è pubblico); il
+    server lo verifica con la sola chiave `anon` e l'email del proprietario; il token non gli arriva più
+    (`docs/server-api.md`, «Biglietto»). Il **token della sessione** (`Bearer`) resta
+    per le app di prima, smistato per
+    emittente (`TokenVerifier` in `identity.dart`): l'`access_token` del
+    backend compatibile Supabase di chi compila (`BackendVerifier`,
+    `backend` di `KAGAMI_SETUP` o `KAGAMI_BACKEND_URL`/`_ANON_KEY`) e, nel
+    passaggio, l'ID token di Firebase (`FirebaseVerifier`, solo con
+    `KAGAMI_FIREBASE_PROJECT` o con una configurazione senza `backend`, così
+    i server di prima non smettono di funzionare). Nessun segreto del backend
+    sul server: firma RS256 col JWKS dell'emittente, se lo pubblica, col
+    codice RSA di `identity.dart` (blocco confrontato intero, senza
+    dipendenze); altrimenti `GET /auth/v1/user`, in cache fino a `exp`. ES256
+    non si verifica in casa di proposito: servirebbe `pointycastle` o simile,
+    e `/user` lo copre con una richiesta per token. Decide solo
+    `app_metadata` (provider esattamente `["google"]`, non anonimo; con
+    `/user` anche `email_confirmed_at`, come `kagami_me()` del backend), mai
+    `user_metadata`. Chi non risponde è `IdentityUnavailable` (`503`), non
+    un token falso (`401`). Niente sessioni né chiavi su disco; l'elenco
+    degli account è del proprietario, che lo cambia dall'app (`/v2/users`);
   - ogni account ha il **suo** Drive: un refresh token per il client «Web»
     del progetto Firebase, riscattato dall'app dal `serverAuthCode` di
     Android col segreto del client, che mette chi compila
     (`--dart-define=GOOGLE_SERVER_CLIENT_SECRET`). Il telefono non può
     prestare il suo token, che dura un'ora. Con l'app OAuth in «Testing» i
     permessi scadono in sette giorni: `docs/server.md` lo dice;
-  - gli inviti sono documenti Firestore (`serverInvites`, regole in
-    `firestore.rules`): il server non manda email e di Firebase conosce solo
-    i token. La notifica dell'invito la dà l'app di chi lo riceve;
+  - gli inviti sono righe di `server_invites` sul backend (`invite_store.dart`
+    nell'app, regole in `backend/`): il server non manda email e non li
+    legge. La notifica dell'invito la dà l'app di chi lo riceve;
   - il server non fa TLS. L'HTTPS lo mette chi lo espone (Tailscale Funnel,
     reverse proxy); in chiaro va bene solo in casa o dentro Tailscale;
   - per ManhwaRead la pagina della serie da scaricare la manda il telefono

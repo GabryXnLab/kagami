@@ -919,7 +919,7 @@ class _Header extends StatelessWidget {
                       if (provider != null) ...[
                         ClipRRect(
                           borderRadius: BorderRadius.circular(5),
-                          child: Image.asset(provider.icon, width: 16, height: 16),
+                          child: SiteIcon(provider, size: 16),
                         ),
                         const SizedBox(width: 6),
                       ],

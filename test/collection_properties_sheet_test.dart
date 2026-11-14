@@ -9,6 +9,7 @@ import 'package:kagami/src/data/library_view.dart';
 import 'package:kagami/src/format/malf.dart';
 import 'package:kagami/src/format/reading.dart';
 import 'package:kagami/src/ui/theme.dart';
+import 'package:kagami/src/ui/widgets/kit.dart';
 import 'package:kagami/src/ui/widgets/collection_properties_sheet.dart';
 
 SeriesEntry entry(String key, {String? type, String provider = 'mangak', List<String> tags = const []}) =>
@@ -83,7 +84,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    await tap('manhwa');
+    await tap('Manhwa');
     await tap('Magia');
     await tap('In lettura');
     await tap('8');
@@ -102,5 +103,60 @@ void main() {
     expect(traits.noRatingInvite, isTrue);
     expect(traits.keepChapters, isFalse);
     expect(traits.noAutoPause, isFalse);
+  });
+
+  testWidgets('nascondi: acceso, Silenzia le novità resta acceso e bloccato', (tester) async {
+    CollectionProperties? result;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('it'),
+        theme: kagamiTheme(Brightness.dark),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await showModalBottomSheet<CollectionProperties>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => CollectionPropertiesForm(
+                    facets: LibraryFacets.of([entry('a')]),
+                    rules: const CollectionRules(),
+                    traits: const CollectionTraits(),
+                  ),
+                );
+              },
+              child: const Text('apri'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('apri'));
+    await tester.pumpAndSettle();
+
+    Switch muted() => tester.widget<Switch>(find.descendant(
+        of: find.ancestor(of: find.text('Silenzia le novità'), matching: find.byType(KTile)),
+        matching: find.byType(Switch)));
+    await tester.dragUntilVisible(
+        find.text('Silenzia le novità'), find.byType(Scrollable).last, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    Future<void> tap(String text) async {
+      final finder = find.text(text).first;
+      await tester.ensureVisible(finder);
+      await tester.tap(finder);
+      await tester.pumpAndSettle();
+    }
+
+    expect(muted().onChanged, isNotNull);
+    await tap('Nascondi');
+    expect(muted().value, isTrue);
+    expect(muted().onChanged, isNull);
+    await tap('Applica');
+
+    final (_, traits) = result!;
+    expect(traits.hidden, isTrue);
+    expect(traits.muted, isFalse);
   });
 }

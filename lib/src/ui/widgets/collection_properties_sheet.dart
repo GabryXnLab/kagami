@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/library_view.dart';
+import '../../format/kind.dart';
 import '../../format/reading.dart';
 import '../../l10n.dart';
 import '../../providers.dart';
@@ -23,8 +24,13 @@ Future<CollectionProperties?> showCollectionProperties(
   WidgetRef ref, {
   CollectionRules rules = const CollectionRules(),
   CollectionTraits traits = const CollectionTraits(),
+  Set<String> memberKeys = const {},
 }) {
   final facets = ref.read(libraryFacetsProvider);
+  final members = [
+    for (final s in ref.read(librarySignalsProvider))
+      if (memberKeys.contains(s.entry.key)) s,
+  ];
   return showKagamiSheet<CollectionProperties>(
     context,
     title: context.l10n.collectionPropsTitle,
@@ -33,6 +39,7 @@ Future<CollectionProperties?> showCollectionProperties(
       facets: facets,
       rules: rules,
       traits: traits,
+      members: members,
     ),
   );
 }
@@ -42,12 +49,17 @@ class CollectionPropertiesForm extends StatefulWidget {
     required this.facets,
     required this.rules,
     required this.traits,
+    this.members = const [],
     super.key,
   });
 
   final LibraryFacets facets;
   final CollectionRules rules;
   final CollectionTraits traits;
+
+  /// Le serie che la raccolta contiene adesso, per dire quante uscirebbero
+  /// se diventasse vincolante.
+  final List<SeriesSignals> members;
 
   @override
   State<CollectionPropertiesForm> createState() => _FormState();
@@ -72,12 +84,13 @@ class _FormState extends State<CollectionPropertiesForm> {
   Set<T> _toggle<T>(Set<T> set, T value) =>
       set.contains(value) ? ({...set}..remove(value)) : {...set, value};
 
-  void _setTraits({bool? muted, bool? keep, bool? pause, bool? rating}) =>
+  void _setTraits({bool? muted, bool? keep, bool? pause, bool? rating, bool? hidden}) =>
       setState(() => _traits = CollectionTraits(
             muted: muted ?? _traits.muted,
             keepChapters: keep ?? _traits.keepChapters,
             noAutoPause: pause ?? _traits.noAutoPause,
             noRatingInvite: rating ?? _traits.noRatingInvite,
+            hidden: hidden ?? _traits.hidden,
           ));
 
   Widget _group(String title, List<Widget> chips) => Padding(
@@ -91,19 +104,39 @@ class _FormState extends State<CollectionPropertiesForm> {
         ),
       );
 
-  Widget _switch(IconData icon, String title, bool value, ValueChanged<bool> onChanged) =>
+  Widget _switch(IconData icon, String title, bool value, ValueChanged<bool>? onChanged,
+          {String? subtitle}) =>
       KTile(
         icon: icon,
         title: title,
-        onTap: () => onChanged(!value),
+        subtitle: subtitle,
+        onTap: onChanged == null ? null : () => onChanged(!value),
         trailing: Switch(value: value, onChanged: onChanged),
       );
+
+  Widget _bindingNote(BuildContext context, String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+        child: Text(
+          text,
+          style: KagamiType.label(size: 13, color: context.tokens.muted),
+        ),
+      );
+
+  String _kindLabel(AppLocalizations l10n, SeriesKind kind) => switch (kind) {
+        SeriesKind.manga => l10n.seriesKindManga,
+        SeriesKind.manhwa => l10n.seriesKindManhwa,
+        SeriesKind.manhua => l10n.seriesKindManhua,
+        SeriesKind.other => l10n.seriesKindOther,
+      };
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final facets = widget.facets;
     final query = _query.trim().toLowerCase();
+    final leaving = _rules.isBinding
+        ? widget.members.where((s) => !collectionRulesMatch(_rules, s)).length
+        : 0;
     final tags = [
       ..._allTags.where(_rules.tags.contains),
       ..._allTags
@@ -124,17 +157,24 @@ class _FormState extends State<CollectionPropertiesForm> {
           style: KagamiType.label(size: 13, color: context.tokens.muted),
         ),
         const SizedBox(height: 16),
-        if (facets.types.isNotEmpty)
-          _group(l10n.collectionPropsTypes, [
-            for (final type in facets.types)
-              KChip(
-                label: type,
-                active: _rules.types.contains(type),
-                onTap: () => setState(
-                  () => _rules = _rules.copyWith(types: _toggle(_rules.types, type)),
-                ),
+        _group(l10n.collectionPropsTypes, [
+          for (final kind in SeriesKind.values)
+            KChip(
+              label: _kindLabel(l10n, kind),
+              active: _rules.types.contains(kind.name),
+              onTap: () => setState(
+                () => _rules = _rules.copyWith(types: _toggle(_rules.types, kind.name)),
               ),
-          ]),
+            ),
+          for (final type in facets.types.where((t) => kindNamed(t) == null))
+            KChip(
+              label: type,
+              active: _rules.types.contains(type),
+              onTap: () => setState(
+                () => _rules = _rules.copyWith(types: _toggle(_rules.types, type)),
+              ),
+            ),
+        ]),
         if (_allTags.isNotEmpty) ...[
           _group(l10n.collectionPropsTags, [
             for (final tag in tags)
@@ -208,14 +248,35 @@ class _FormState extends State<CollectionPropertiesForm> {
           _rules.favorite,
           (value) => setState(() => _rules = _rules.copyWith(favorite: value)),
         ),
+        _switch(
+          LucideIcons.lock,
+          l10n.collectionPropsBinding,
+          _rules.isBinding,
+          _rules.isEmpty
+              ? null
+              : (value) => setState(() => _rules = _rules.copyWith(binding: value)),
+        ),
+        if (_rules.isEmpty)
+          _bindingNote(context, l10n.collectionPropsBindingNote)
+        else if (leaving > 0)
+          _bindingNote(context, l10n.collectionBindingWillRemove(leaving)),
         const SizedBox(height: 22),
         Text(
           l10n.collectionPropsTraitsTitle,
           style: KagamiType.display(16),
         ),
         const SizedBox(height: 8),
-        _switch(LucideIcons.bellOff, l10n.collectionPropsMuted, _traits.muted,
-            (value) => _setTraits(muted: value)),
+        _switch(
+          LucideIcons.eyeOff,
+          l10n.collectionTraitHidden,
+          _traits.hidden,
+          (value) => _setTraits(hidden: value),
+          subtitle: l10n.collectionTraitHiddenHint,
+        ),
+        // Nascosta implica silenziata: l'interruttore resta acceso e bloccato.
+        _switch(LucideIcons.bellOff, l10n.collectionPropsMuted,
+            _traits.muted || _traits.hidden,
+            _traits.hidden ? null : (value) => _setTraits(muted: value)),
         _switch(LucideIcons.eraser, l10n.collectionPropsKeepChapters,
             _traits.keepChapters, (value) => _setTraits(keep: value)),
         _switch(LucideIcons.pause, l10n.collectionPropsNoAutoPause,

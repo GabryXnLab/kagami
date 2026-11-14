@@ -6,13 +6,14 @@
 /// server parla con internet. Ogni tanto l'aggiornatore scarica l'immagine
 /// del server; se è cambiata, aspetta che il server non stia scaricando e
 /// ricrea il contenitore con la stessa configurazione e l'immagine nuova —
-/// volume, porte e `KAGAMI_SETUP` restano. Poi fa lo stesso con sé stesso,
+/// volume, porte e `KAGAMI_SETUP` restano. Poi rifà `kagami-browser`, se
+/// c'è, senza aspettare, e infine sé stesso,
 /// da un contenitore di passaggio, perché un contenitore non può
 /// sostituirsi mentre gira.
 ///
 /// Niente Watchtower: è un progetto di altri, si è fermato, e con Docker 29
 /// ha smesso di parlare con il demone. L'API di Docker che serve qui sono
-/// sette chiamate.
+/// poche chiamate.
 library;
 
 import 'dart:async';
@@ -109,6 +110,16 @@ class DockerApi {
       ((await _call('POST', '/containers/create', query: {'name': name}, body: body)) as Map)['Id'] as String;
 
   Future<void> start(String id) => _call('POST', '/containers/$id/start');
+
+  /// Collega il contenitore [container] alla rete [network].
+  Future<void> connect(String network, String container, {List<Object?> aliases = const []}) => _call(
+        'POST',
+        '/networks/${Uri.encodeComponent(network)}/connect',
+        body: {
+          'Container': container,
+          'EndpointConfig': {'Aliases': aliases},
+        },
+      );
 
   Future<void> stop(String id, {int seconds = 60}) =>
       _call('POST', '/containers/$id/stop', query: {'t': '$seconds'}, timeout: Duration(seconds: seconds + 30));
@@ -208,16 +219,32 @@ Map<String, Object?> recreateBody(
   if (network is Map && !const {'default', 'bridge', 'host', 'none'}.contains(mode)) {
     body['NetworkingConfig'] = {
       'EndpointsConfig': {
-        mode: {
-          'Aliases': [
-            for (final alias in network['Aliases'] as List? ?? const [])
-              if (alias != id.substring(0, 12)) alias,
-          ],
-        },
+        mode: {'Aliases': _aliases(network, id)},
       },
     };
   }
   return body;
+}
+
+/// Gli alias del contenitore [id] su [network], senza il suo id corto, che
+/// il contenitore nuovo non ha.
+List<Object?> _aliases(Map network, String id) => [
+      for (final alias in network['Aliases'] as List? ?? const [])
+        if (alias != id.substring(0, 12)) alias,
+    ];
+
+/// Le reti di [info] oltre a quella di `NetworkMode`, che `create` non
+/// riattacca: per esempio `kagami-browser`, che il comando dell'app
+/// aggiunge al server con `docker network connect`. Nome e alias.
+Map<String, List<Object?>> otherNetworks(Map<String, Object?> info) {
+  final id = info['Id'] as String;
+  var mode = (info['HostConfig'] as Map?)?['NetworkMode'] as String? ?? 'default';
+  if (mode == 'default') mode = 'bridge';
+  final networks = (info['NetworkSettings'] as Map?)?['Networks'] as Map? ?? const {};
+  return {
+    for (final MapEntry(:key, :value) in networks.entries)
+      if (key != mode && value is Map) key as String: _aliases(value, id),
+  };
 }
 
 /// Rifà il contenitore [container] con l'immagine che porta il suo nome, la
@@ -237,6 +264,9 @@ Future<void> recreate(DockerApi docker, String container, {void Function(String)
   try {
     await docker.stop(id);
     fresh = await docker.create(name, body);
+    for (final MapEntry(key: network, value: aliases) in otherNetworks(info).entries) {
+      await docker.connect(network, fresh, aliases: aliases);
+    }
     await docker.start(fresh);
   } on Object {
     if (fresh != null) await docker.remove(fresh).catchError((Object _) {});
@@ -256,6 +286,7 @@ class Updater {
   Updater(
     this.docker, {
     this.server = 'kagami-server',
+    this.browser = 'kagami-browser',
     required this.self,
     this.patience = const Duration(hours: 6),
     void Function(String)? say,
@@ -265,6 +296,9 @@ class Updater {
 
   /// Il nome del contenitore del server.
   final String server;
+
+  /// Il nome del contenitore del Chromium del server, se c'è.
+  final String browser;
 
   /// Questo contenitore: il suo id corto è il nome della macchina.
   final String self;
@@ -302,6 +336,27 @@ class Updater {
       say('Immagine nuova per $server: lo ricreo.');
       await recreate(docker, server, say: say);
     }
+    await _updateBrowser(reference, latest);
+    await _updateSelf(reference, latest);
+  }
+
+  /// Il browser non scarica: non c'è da aspettare. Manca nei server creati
+  /// prima che avesse un contenitore suo.
+  Future<void> _updateBrowser(String reference, String latest) async {
+    final Map<String, Object?> info;
+    try {
+      info = await docker.container(browser);
+    } on DockerError catch (error) {
+      if (error.status == HttpStatus.notFound) return;
+      rethrow;
+    }
+    if (info['Image'] != latest && (info['Config'] as Map)['Image'] == reference) {
+      say('Immagine nuova per $browser: lo ricreo.');
+      await recreate(docker, browser, say: say);
+    }
+  }
+
+  Future<void> _updateSelf(String reference, String latest) async {
     final me = await docker.container(self);
     if (me['Image'] != latest && (me['Config'] as Map)['Image'] == reference) {
       // Il contenitore di passaggio rifà questo, e poi se ne va da solo.

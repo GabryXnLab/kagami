@@ -23,6 +23,7 @@ import 'package:path/path.dart' as p;
 import '../format/malf.dart';
 import 'drive.dart';
 import 'drive_library.dart';
+import 'drive_ownership.dart';
 import 'folder_sync.dart';
 import 'library.dart';
 import 'library_repository.dart';
@@ -92,6 +93,7 @@ Future<ReadLeftovers> findReadLeftovers({
   required List<LibraryShelf> holders,
   required Set<String> read,
   DriveFiles? drive,
+  bool? driveOwned,
 }) async {
   if (read.isEmpty) return ReadLeftovers.empty;
   final folders = <String, List<String>>{};
@@ -119,8 +121,10 @@ Future<ReadLeftovers> findReadLeftovers({
   final cached = await drive?.cachedOf(entry.key, read);
   final remote = <String, String>{};
   var remoteBytes = 0;
-  final repository = holders.whereType<DriveRepository>().firstOrNull;
-  if (repository != null) {
+  // Su Drive si propone di togliere solo dal Drive dell'account, e se la
+  // cartella è sua (FASE-5b §5).
+  final repository = ownDriveShelf(holders);
+  if (repository != null && driveOwned == true) {
     try {
       final index = await repository.loadSeries(entry);
       final withdrawn = await repository.withdrawnChapters(entry);

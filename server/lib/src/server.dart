@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:kagami_archive/drive.dart' show DriveSyncRemote;
 import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/jobs.dart';
@@ -13,16 +14,20 @@ import 'package:path/path.dart' as p;
 
 import 'api.dart';
 import 'browser.dart';
+import 'browser_container.dart';
 import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
+import 'ticket.dart';
 import 'images.dart';
+import 'shares.dart';
 import 'users.dart';
 import 'worker.dart';
 
 /// Lo spazio di un utente sul server: cartella, Drive e giro.
 class ServerSpace implements UserSpace {
-  ServerSpace._(this.directory, this.files, this.userDrive, this.worker);
+  ServerSpace._(this.directory, this.files, this.userDrive, this.worker)
+      : shares = ShareKeeper(File(p.join(directory.path, 'shares.json')));
 
   static Future<ServerSpace> open(
     Directory directory,
@@ -36,7 +41,8 @@ class ServerSpace implements UserSpace {
     await drive.load();
     final worker = ServerWorker(
       files,
-      serverEnvironment(files, drive.drive, Directory(p.join(directory.path, 'scratch')), images),
+      serverEnvironment(files, DriveSyncRemote(drive.drive), Directory(p.join(directory.path, 'scratch')), images,
+          owned: drive.ownedOf),
       blocked: drive.blocked,
       checkMinutes: checkMinutes,
       folder: () => drive.folderId,
@@ -50,6 +56,9 @@ class ServerSpace implements UserSpace {
   final ArchiveFiles files;
   final UserDrive userDrive;
   final ServerWorker worker;
+
+  @override
+  final ShareKeeper shares;
 
   @override
   JobControl get jobs => worker;
@@ -83,6 +92,7 @@ Future<AppliedSetup?> applySetup(ServerPaths paths, String? blob, {void Function
     project: setup.project,
     client: setup.client,
     owner: setup.owner,
+    backend: SetupBackend.fromBlob(blob),
     name: setup.name,
     hash: hash,
   );
@@ -91,6 +101,60 @@ Future<AppliedSetup?> applySetup(ServerPaths paths, String? blob, {void Function
   await drive.put(setup.refreshToken, setup.folderId, setup.folderName);
   say?.call('Configurazione applicata: proprietario ${setup.owner}.');
   return applied;
+}
+
+/// Di chi accettare i token: il backend di `KAGAMI_BACKEND_URL` e
+/// `KAGAMI_BACKEND_ANON_KEY`, altrimenti quello della configurazione;
+/// Firebase con `KAGAMI_FIREBASE_PROJECT`, o col `project` di una
+/// configurazione senza backend, perché un server installato prima del
+/// backend non smetta di funzionare aggiornandosi. `null` se nessuno dei due:
+/// le richieste rispondono `not_configured`.
+IdentityVerifier? identityFor(AppliedSetup applied, Map<String, String> env, {void Function(String)? say}) {
+  final url = environment(env, 'KAGAMI_BACKEND_URL');
+  final key = environment(env, 'KAGAMI_BACKEND_ANON_KEY');
+  final backend = backendFor(applied, env);
+  if ((url != null || key != null) && backend == null) {
+    say?.call('KAGAMI_BACKEND_URL e KAGAMI_BACKEND_ANON_KEY vanno date tutte e due, con un indirizzo completo: '
+        'il backend resta spento.');
+  }
+  final project = environment(env, 'KAGAMI_FIREBASE_PROJECT') ?? (applied.backend == null ? applied.project : null);
+  if (backend == null && project == null) {
+    say?.call('Né backend né progetto Firebase: nessun token è accettato. '
+        'Ricrea il server col comando dell\'app, o imposta KAGAMI_BACKEND_URL e KAGAMI_BACKEND_ANON_KEY.');
+    return null;
+  }
+  say?.call('Token accettati: ${[
+    if (backend != null) 'backend ${backend.url}',
+    if (project != null) 'Firebase, progetto $project',
+  ].join('; ')}.');
+  return TokenVerifier(
+    backend: backend == null ? null : BackendVerifier(backend.url, backend.anonKey),
+    firebase: project == null ? null : FirebaseVerifier(project),
+  );
+}
+
+/// Il backend di cui accettare token e biglietti: le variabili del server,
+/// altrimenti quello della configurazione.
+SetupBackend? backendFor(AppliedSetup applied, Map<String, String> env) {
+  final url = environment(env, 'KAGAMI_BACKEND_URL');
+  final key = environment(env, 'KAGAMI_BACKEND_ANON_KEY');
+  return url == null && key == null
+      ? applied.backend
+      : SetupBackend.fromJson({'url': url ?? '${applied.backend?.url ?? ''}', 'anonKey': key ?? applied.backend?.anonKey});
+}
+
+/// Il comando `browser`: Chromium nel contenitore `kagami-browser`, col
+/// profilo nella cartella dei dati di quel contenitore (non quella del
+/// server) e il proxy del server, `KAGAMI_BROWSER_PROXY`, come unica uscita.
+Future<int> browserCommand(ServerPaths paths) async {
+  final chromium = await HeadlessBrowser.find();
+  if (chromium == null) {
+    stderr.writeln('Manca Chromium: il comando browser gira nell\'immagine del server.');
+    return 1;
+  }
+  final proxy = environment(Platform.environment, 'KAGAMI_BROWSER_PROXY') ?? 'kagami-server:$browserProxyPort';
+  stdout.writeln('Chromium $chromium, DevTools sulla porta $browserDebugPort per il server, proxy $proxy.');
+  return runBrowser(chromium, paths.browser, proxy);
 }
 
 /// Accende il server e resta acceso finché non riceve SIGINT o SIGTERM.
@@ -102,8 +166,13 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
 
   final vips = await VipsImageTools.available();
   final ImageTools images = vips ? VipsImageTools(paths.scratch) : const NoImageTools();
-  final chromium = await HeadlessBrowser.find();
-  final browser = chromium == null ? null : HeadlessBrowser(chromium, paths.browser, log: out);
+  final remote = environment(Platform.environment, 'KAGAMI_BROWSER');
+  final chromium = remote == null ? await HeadlessBrowser.find() : null;
+  final browser = remote != null
+      ? HeadlessBrowser.remote(remote, log: out)
+      : chromium == null
+          ? null
+          : HeadlessBrowser(chromium, paths.browser, log: out);
   final spaces = <String, ServerSpace>{};
   final accounts = applied == null
       ? null
@@ -118,9 +187,13 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
             checkMinutes: config.checkMinutes,
           ),
         );
+  final id = await serverIdentity(paths);
+  final backend = applied == null ? null : backendFor(applied, Platform.environment);
   final api = ServerApi(
     name: config.name ?? applied?.name ?? 'Kagami Server',
-    identity: applied == null ? null : FirebaseVerifier(applied.project),
+    id: id,
+    tickets: backend == null ? null : TicketVerifier(backend.url, backend.anonKey, id, applied!.owner),
+    identity: applied == null ? null : identityFor(applied, Platform.environment, say: out),
     accounts: accounts,
     images: vips,
     browser: browser != null,
@@ -131,9 +204,18 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   out('Kagami Server $serverVersion in ascolto su ${server.address.address}:${server.port}');
   out('Dati in ${paths.root.path}');
   out(vips ? 'Miniature e tessere: libvips.' : 'Miniature e tessere: spente (manca «vips»).');
-  out(chromium != null
-      ? 'Siti dietro la verifica del browser: $chromium.'
-      : 'Siti dietro la verifica del browser: saltati nei controlli (manca Chromium).');
+  if (remote != null) {
+    out('Siti dietro la verifica del browser: Chromium nel contenitore «$remote», '
+        'DevTools sulla porta $browserDebugPort, proxy sulla $browserProxyPort.');
+  } else if (chromium != null) {
+    out('Siti dietro la verifica del browser: $chromium, nello stesso contenitore dei dati.');
+    if (await File('/.dockerenv').exists()) {
+      out('Consiglio: rilancia il server col comando nuovo dell\'app, che mette Chromium nel contenitore '
+          'separato kagami-browser (KAGAMI_BROWSER), lontano da drive.json (docs/server.md).');
+    }
+  } else {
+    out('Siti dietro la verifica del browser: saltati nei controlli (manca Chromium).');
+  }
   if (accounts == null) {
     out('Nessuna configurazione: avvia il server col comando che genera l\'app '
         '(Altro → Scarica un manga → Server → Crea il tuo server).');
@@ -161,6 +243,18 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
     }
   });
 
+  // Gli accessi scaduti: spazio chiuso, e tolto dopo trenta giorni. Le
+  // richieste lo controllano da sé; questa passata ferma i giri di chi non chiama.
+  final expiry = Timer.periodic(const Duration(hours: 1), (_) async {
+    try {
+      // Prima le condivisioni: quelle di un accesso scaduto restano all'app.
+      await accounts?.sweepShares(say: out);
+      await accounts?.sweep();
+    } on Object catch (error) {
+      out('Controllo delle scadenze fallito: $error');
+    }
+  });
+
   final stop = Completer<void>();
   final signals = [
     ProcessSignal.sigint.watch().listen((_) => stop.isCompleted ? null : stop.complete()),
@@ -168,6 +262,7 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   ];
   await stop.future;
   watchdog.cancel();
+  expiry.cancel();
   out('Chiusura: i lavori in corso si fermano e restano in coda.');
   for (final signal in signals) {
     await signal.cancel();

@@ -162,7 +162,7 @@ class _ProviderSwitchPageState extends State<ProviderSwitchPage> {
       }
       return provider.search(query, fetcher);
     }
-    final http = SiteHttp(provider.allowedHost);
+    final http = SiteHttp(provider.allowedHost, publicOnly: !provider.builtIn);
     try {
       return await provider.search(query, http);
     } finally {
@@ -224,7 +224,7 @@ class _ProviderSwitchPageState extends State<ProviderSwitchPage> {
         icon: LucideIcons.globe,
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(provider.icon, width: 36, height: 36),
+          child: SiteIcon(provider, size: 36),
         ),
         title: provider.name,
         subtitle: chosen ? context.l10n.seriesSwitchOther : Uri.parse(provider.home).host,

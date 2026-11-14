@@ -35,7 +35,7 @@ class CollectionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collections = ref.watch(collectionsProvider);
-    final all = ref.watch(librarySignalsProvider);
+    final all = ref.watch(shownSignalsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -143,7 +143,7 @@ class _CollectionTile extends ConsumerWidget {
         child: KCard(
           padding: EdgeInsets.zero,
           child: KTile(
-            icon: LucideIcons.bookmark,
+            icon: collection.traits.hidden ? LucideIcons.eyeOff : LucideIcons.bookmark,
             tint: collection.color == null ? null : Color(collection.color!),
             title: collection.name,
             subtitle: context.l10n.collectionsSeriesCount(collection.seriesKeys.length),
@@ -155,6 +155,11 @@ class _CollectionTile extends ConsumerWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (collection.rules.isBinding)
+                  Tooltip(
+                    message: context.l10n.collectionBindingLockTip,
+                    child: Icon(LucideIcons.lock, size: 16, color: context.tokens.muted),
+                  ),
                 if (!collection.rules.isEmpty || !collection.traits.isEmpty)
                   Tooltip(
                     message: context.l10n.collectionsHasProps,
@@ -206,6 +211,7 @@ class _CollectionTile extends ConsumerWidget {
                     ref,
                     rules: collection.rules,
                     traits: collection.traits,
+                    memberKeys: collection.seriesKeys.toSet(),
                   );
                   if (picked != null) {
                     await reading.editCollection(

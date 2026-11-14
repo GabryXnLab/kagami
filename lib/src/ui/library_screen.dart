@@ -767,7 +767,7 @@ class _ShelfStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(libraryFilterProvider);
     final notifier = ref.read(libraryFilterProvider.notifier);
-    final all = ref.watch(librarySignalsProvider);
+    final all = ref.watch(shownSignalsProvider);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: KChipBar(

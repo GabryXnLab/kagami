@@ -11,15 +11,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../archive/bulk_import.dart';
+import '../archive/repair.dart' show siteRecoveryProvider;
 import '../data/notifications.dart';
 import '../data/share_intake.dart';
+import '../data/user_sites.dart';
 import '../l10n.dart';
 import '../providers.dart';
+import '../providers_shares.dart';
+import '../providers_social.dart';
+import 'archive_flow.dart' show siteNameById, startRepair;
 import 'archive_screen.dart';
 import 'collections_screen.dart';
+import 'drive_received_sheet.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
+import 'social_messages.dart' show openConversation;
 import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'theme.dart';
@@ -46,6 +52,10 @@ class _AppShellState extends ConsumerState<AppShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // La passata delle condivisioni scadute: all'avvio, appena c'è chi condivide.
+    ref.listenManual(driveAccessProvider, (_, access) {
+      if (access != null) unawaited(ref.read(driveShareSweepProvider)());
+    }, fireImmediately: true);
     final notifications = ArrivalNotifications.instance;
     _notificationTaps = notifications.opened.listen(_openFromNotification);
     notifications.launched().then((key) {
@@ -75,6 +85,14 @@ class _AppShellState extends ConsumerState<AppShell>
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchiveScreen()));
       return;
     }
+    if (key.startsWith(messagePrefix)) {
+      await openConversation(context, key.substring(messagePrefix.length));
+      return;
+    }
+    if (key.startsWith(shareInvitePrefix)) {
+      await DriveReceivedSheet.open(context);
+      return;
+    }
     if (key == verifyNotificationKey) {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ArchiveScreen(verify: true)));
       return;
@@ -88,7 +106,7 @@ class _AppShellState extends ConsumerState<AppShell>
   /// lo si verifica come incollato lì, che propone scheda o download; più
   /// link, o un JSON con i campi per riga, vanno all'import in blocco.
   void _openShared(String text) {
-    final items = parseImportText(text);
+    final items = sharedLinks(text);
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.shareNoLinks)));
       return;
@@ -110,7 +128,9 @@ class _AppShellState extends ConsumerState<AppShell>
   Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.paused) {
       ref.read(arrivalsProvider.notifier).handOver();
+      unawaited(ref.read(driveShareSweepProvider)());
       await ref.read(cloudAccountProvider.notifier).pushNow();
+      unawaited(ref.read(socialControllerProvider.notifier).publish());
       return;
     }
     if (state != AppLifecycleState.resumed) return;
@@ -135,6 +155,9 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
+    // Le librerie che gli altri condividono con noi: righe lette, sorgenti
+    // che le seguono, inviti annunciati.
+    ref.watch(sharedLibraryWatcherProvider);
     // Gli inviti ai server degli altri arrivano mentre l'app è aperta, da
     // qualunque schermata.
     ref.listen(serverInvitesProvider, (_, next) {
@@ -146,6 +169,25 @@ class _AppShellState extends ConsumerState<AppShell>
         linked: ref.read(serverLinkProvider).value?.url.toString(),
       ));
     });
+    // I messaggi privati nuovi: una notifica per conversazione, ad app aperta.
+    ref.listen(socialConversationsProvider, (_, next) {
+      final conversations = next.value;
+      if (conversations == null || conversations.isEmpty) return;
+      unawaited(announceNewMessages(ref.container, conversations));
+    });
+    // Le note del dispositivo che copiano dati del database (cartelle,
+    // server, account) le legge il giro ad app chiusa: le riscrive ogni
+    // contenitore, anche con il primo avvio a schermo, perché dopo un cambio
+    // di account non resti quella dell'altro.
+    // La pulizia automatica rifà il piano a ogni stato pubblicato, qualunque
+    // destinazione sia aperta.
+    ref.listen(autoCleanupProvider, (_, _) {});
+    // Chi controlla le serie seguite, e con lui la catena del controllo
+    // quotidiano.
+    ref.listen(archiveEngineSyncProvider, (_, _) {});
+    // Le cartelle cambiate, anche se nessuno apre la schermata della
+    // sincronizzazione.
+    ref.listen(folderSyncSettingsProvider, (_, _) {});
     if (ref.watch(libraryProvider) == null) {
       // La cartella di Drive sta nel database e arriva un istante dopo: senza
       // aspettarla, chi legge solo da Drive vedrebbe lampeggiare il primo
@@ -193,23 +235,42 @@ class _AppShellState extends ConsumerState<AppShell>
     // E, se c'è un account, si va a vedere cosa è successo sull'altro
     // telefono: il segno di lettura deve essere già al suo posto.
     ref.watch(cloudSyncRunProvider);
+    // Il profilo della Comunità, se acceso, esce nello stesso momento.
+    ref.watch(socialSyncRunProvider);
     // I capitoli nuovi si contano a ogni lettura della libreria, qualunque
     // destinazione sia aperta: tenerli vivi qui non ricostruisce la shell.
     ref.listen(arrivalsProvider, (_, _) {});
     // Le serie scaricate man mano chiedono il capitolo seguente uscendo dal
     // lettore, qualunque destinazione sia aperta.
     ref.listen(readAheadProvider, (_, _) {});
-    // La pulizia automatica rifà il piano a ogni stato pubblicato, qualunque
-    // destinazione sia aperta.
-    ref.listen(autoCleanupProvider, (_, _) {});
     // Le raccolte con regole si riempiono da sole quando la libreria cambia.
     ref.listen(collectionAutoFillProvider, (_, _) {});
-    // Chi controlla le serie seguite va scritto dove lo legge il giro ad app
-    // chiusa, e con lui la catena del controllo quotidiano.
-    ref.listen(archiveEngineSyncProvider, (_, _) {});
-    // Le cartelle cambiate vanno scritte dove le legge il giro programmato,
-    // anche se nessuno apre la schermata della sincronizzazione.
-    ref.listen(folderSyncSettingsProvider, (_, _) {});
+    // I dati personali seguono una serie adottata con un'altra chiave.
+    ref.listen(identityAdoptionProvider, (_, _) {});
+    // I siti degli utenti si leggono dalla libreria e, letti la prima volta,
+    // si ricontrollano gli aggiornamenti (al più uno al giorno).
+    ref.listen(userSitesProvider, (previous, next) {
+      if (previous?.value == null && next.value?.hasLibrary == true) {
+        unawaited(ref.read(userSitesProvider.notifier).checkUpdates());
+      }
+    });
+    // Un sito rotto che torna sano si dice una volta, con l'azione che ne
+    // ripara le serie; la scheda in «Scarica un manga» resta finché non si
+    // risolve.
+    ref.listen(siteRecoveryProvider, (previous, next) {
+      final before = previous?.value;
+      final fresh = before == null ? const <String>{} : (next.value ?? const <String>{}).difference(before);
+      final site = fresh.firstOrNull;
+      if (site == null) return;
+      final l10n = currentL10n();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n.archiveRepairRecovered(siteNameById(site))),
+        action: SnackBarAction(
+          label: l10n.archiveRepairRecoveredAction,
+          onPressed: () => startRepair(context, ref, site: site),
+        ),
+      ));
+    });
 
     final tab = ref.watch(shellTabProvider);
     return Scaffold(

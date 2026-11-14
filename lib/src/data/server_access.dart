@@ -2,26 +2,26 @@
 /// che il server usa a telefono spento, e gli inviti fra proprietari e
 /// amici.
 ///
-/// Il server riconosce l'account dal token d'identità di Firebase
-/// (docs/server-api.md, «Chi chiama»), che Firebase rinnova da sé: nessuna
-/// chiave da copiare. Il permesso di Drive è un refresh token per il client
+/// Il server riconosce l'account da un biglietto che il backend rilascia per
+/// l'id di quel server e l'indirizzo a cui l'app gli parla, garantito dal
+/// proprietario (docs/server-api.md, «Biglietto»): il token della
+/// sessione, che varrebbe sul backend, va solo al server che l'app ha creato
+/// per questo account, e solo se lui o il backend non hanno i biglietti. Il permesso di Drive è un refresh token per il client
 /// «Web» del progetto, che solo un client col suo segreto può riscattare:
 /// il segreto lo mette chi compila (`--dart-define=GOOGLE_SERVER_CLIENT_SECRET`),
 /// accanto a `google-services.json` che dà l'id.
 ///
-/// Gli inviti stanno su Firestore (`serverInvites`): il proprietario ne
-/// scrive uno per l'indirizzo che ammette, e l'app di quell'account lo trova
-/// all'avvio e ne dà notizia. Il server non manda email e non conosce
-/// Firebase oltre ai token.
+/// Gli inviti stanno sul backend (`server_invites`, vedi `invite_store.dart`):
+/// il proprietario ne scrive uno per l'indirizzo che ammette, e l'app di
+/// quell'account lo trova all'avvio e ne dà notizia. Il server non manda
+/// email.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:kagami_archive/drive.dart';
@@ -29,6 +29,9 @@ import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/remote.dart';
 
 import '../l10n.dart';
+import 'backend.dart';
+import 'cloud.dart';
+import 'invite_store.dart';
 
 const String _clientSecret = String.fromEnvironment('GOOGLE_SERVER_CLIENT_SECRET');
 
@@ -57,13 +60,13 @@ class ServerInvite {
     this.fromName,
   });
 
-  factory ServerInvite.fromDoc(String id, Map<String, Object?> data) => ServerInvite(
-        id: id,
-        to: data['to'] as String? ?? '',
-        from: data['from'] as String? ?? '',
-        fromName: data['fromName'] as String?,
-        url: data['url'] as String? ?? '',
-        serverName: data['serverName'] as String? ?? 'Kagami Server',
+  factory ServerInvite.fromRow(Map<String, Object?> row) => ServerInvite(
+        id: row['id'] as String? ?? '',
+        to: row['to_email'] as String? ?? '',
+        from: row['from_email'] as String? ?? '',
+        fromName: row['from_name'] as String?,
+        url: row['url'] as String? ?? '',
+        serverName: row['server_name'] as String? ?? 'Kagami Server',
       );
 
   final String id;
@@ -78,30 +81,136 @@ class ServerInvite {
 }
 
 class ServerAccess {
-  const ServerAccess();
+  const ServerAccess({
+    this.invites = const SupabaseInviteStore(),
+    this.account,
+    this.session,
+    this.ticket,
+    this.vouch,
+  });
 
   static const MethodChannel _google = MethodChannel('kagami/google');
 
-  /// La raccolta degli inviti: uno per coppia server–indirizzo, così aggiungere
+  /// Dove stanno gli inviti: uno per coppia server–indirizzo, così aggiungere
   /// due volte lo stesso amico non ne scrive due.
-  static const String collection = 'serverInvites';
+  final InviteStore invites;
 
-  /// Il token d'identità dell'account, per il server.
-  Future<String> idToken({bool refresh = false}) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw ServerUnauthorized(currentL10n().serverSignInRequired);
+  /// Chi è dentro; di serie l'account della sessione del backend.
+  final CloudAccount? Function()? account;
+
+  /// Il token della sessione; di serie quello del backend ([sessionToken]).
+  final Future<String> Function({bool refresh})? session;
+
+  /// Un biglietto nuovo per il server con quell'id, a quell'indirizzo
+  /// ([originOf]); di serie `kagami_ticket`.
+  final Future<String> Function(String audience, String origin)? ticket;
+
+  /// Dice al backend che a quell'indirizzo risponde il proprio server con
+  /// quell'id; di serie `kagami_server_origin`.
+  final Future<void> Function(String audience, String origin)? vouch;
+
+  /// I biglietti già avuti, per account, server e indirizzo: valgono dieci
+  /// minuti, e se ne usa uno per nove.
+  static final Map<String, (String, DateTime)> _tickets = {};
+
+  /// Gli indirizzi garantiti da questo avvio dell'app, per account, e quando.
+  static final Map<String, DateTime> _vouched = {};
+
+  /// Ogni quanto si dichiara di nuovo un indirizzo già garantito: sul backend vale 90 giorni
+  /// dall'ultima dichiarazione (migrazione 0015), e qui se ne ripete una a settimana.
+  static const originRenewal = Duration(days: 7);
+
+  /// L'indirizzo per cui chiedere il biglietto: quello a cui l'app parla,
+  /// nella forma di [normalizeServerUrl]. Lo sceglie l'app, non il server:
+  /// l'id che il server dichiara è pubblico, e uno che si spaccia per un altro
+  /// riceverebbe un biglietto buono per l'altro.
+  static String originOf(Uri url) => '${normalizeServerUrl('$url') ?? url}';
+
+  /// Come presentarsi a [link] (`Authorization`, [ServerCredentials]): con un
+  /// biglietto per il suo id e il suo indirizzo se lo accetta (per il proprio
+  /// server, garantito prima l'indirizzo); col token della sessione solo se
+  /// il server è di questo account secondo il collegamento ([ServerLink.owner]),
+  /// mai secondo ciò che dichiara lui. A un server altrui senza biglietti
+  /// non si manda niente.
+  Future<String> idToken(ServerLink link, ServerHello hello, {bool refresh = false}) async {
+    final me = (account != null ? account!() : const CloudAuth().current)?.email.toLowerCase();
+    if (hello.tickets) {
+      final origin = originOf(link.url);
+      try {
+        if (me != null && me.isNotEmpty && link.owner == me) await _vouch(me, hello.id!, origin);
+        return 'Kagami-Ticket ${await _ticketFor('$me|${hello.id}|$origin', hello.id!, origin, refresh)}';
+      } on Object catch (error) {
+        // Un backend senza kagami_ticket o kagami_server_origin (0013): resta il
+        // token, se il server è il proprio.
+        if (backendFailure(error) != BackendFailure.unavailable) rethrow;
+      }
+    }
+    // Un collegamento di prima dei biglietti ([ServerLink.legacy]) ha già dato il
+    // token a questo server: gli si manda ancora, finché il primo contatto
+    // riuscito non lo adotta (`ServerLinkNotifier.adopt`).
+    if (me == null || me.isEmpty || (link.owner != me && !link.legacy)) {
+      throw ServerException(
+        hello.tickets
+            ? 'Il backend non rilascia biglietti per i server: a un server di altri non si manda il tuo accesso.'
+            : 'Questo server va aggiornato: finché non accetta i biglietti, non gli si manda il tuo accesso.',
+        code: hello.tickets ? 'tickets_unavailable' : 'update_server',
+      );
+    }
+    return 'Bearer ${await (session ?? sessionToken)(refresh: refresh)}';
+  }
+
+  Future<void> _vouch(String me, String audience, String origin) async {
+    final key = '$me|$audience|$origin';
+    final last = _vouched[key];
+    if (last != null && DateTime.now().difference(last) < originRenewal) return;
+    if (vouch != null) {
+      await vouch!(audience, origin);
+    } else {
+      await _rpc('kagami_server_origin', {'audience': audience, 'origin': origin});
+    }
+    _vouched[key] = DateTime.now();
+  }
+
+  Future<String> _ticketFor(String key, String audience, String origin, bool refresh) async {
+    final now = DateTime.now();
+    final kept = _tickets[key];
+    if (!refresh && kept != null && now.isBefore(kept.$2)) return kept.$1;
+    final fresh = ticket != null
+        ? await ticket!(audience, origin)
+        : '${await _rpc('kagami_ticket', {'audience': audience, 'origin': origin})}';
+    _tickets[key] = (fresh, now.add(const Duration(minutes: 9)));
+    return fresh;
+  }
+
+  static Future<Object?> _rpc(String function, Map<String, Object?> params) async {
+    final active = backend;
+    if (active == null || active.auth.currentSession == null) {
+      throw ServerUnauthorized(currentL10n().serverSignInRequired);
+    }
     try {
-      final token = await user.getIdToken(refresh);
-      if (token == null) throw const ServerUnauthorized();
-      return token;
-    } on FirebaseAuthException catch (error) {
-      if (error.code == 'network-request-failed') throw ServerOffline(currentL10n().serverNoConnection);
-      throw const ServerUnauthorized();
+      return await active.rpc<Object?>(function, params: params);
+    } on Exception catch (error) {
+      if (backendFailure(error) == BackendFailure.offline) throw ServerOffline(currentL10n().serverNoConnection);
+      rethrow;
     }
   }
 
-  /// Il progetto Firebase dell'app: il server accetta solo i suoi token.
-  String get project => Firebase.app().options.projectId;
+  /// Il token della sessione del backend, che il client rinnova da sé.
+  Future<String> sessionToken({bool refresh = false}) async {
+    final auth = backend?.auth;
+    final session = auth?.currentSession;
+    if (auth == null || session == null) throw ServerUnauthorized(currentL10n().serverSignInRequired);
+    if (!refresh && !session.isExpired) return session.accessToken;
+    try {
+      final token = (await auth.refreshSession()).session?.accessToken;
+      if (token == null) throw const ServerUnauthorized();
+      return token;
+    } on Exception catch (error) {
+      if (error is ServerUnauthorized) rethrow;
+      if (backendFailure(error) == BackendFailure.offline) throw ServerOffline(currentL10n().serverNoConnection);
+      throw const ServerUnauthorized();
+    }
+  }
 
   /// Un permesso duraturo sul Drive di [email], per il server. Mostra la
   /// finestra di Google col consenso a Drive: va chiamata da un gesto.
@@ -139,31 +248,92 @@ class ServerAccess {
     }
   }
 
-  CollectionReference<Map<String, Object?>> get _invites => FirebaseFirestore.instance.collection(collection);
+  /// L'id dell'invito: `sha256("<from>|<to>|<url>")`, i primi 32 caratteri, e il
+  /// backend lo controlla (0014). Col mittente dentro, chi scrive per primo
+  /// non occupa l'id dell'invito di un altro.
+  static String inviteId(String from, String to, Uri url) =>
+      sha256.convert(utf8.encode('$from|$to|$url')).toString().substring(0, 32);
 
-  static String _inviteId(String to, Uri url) => sha256.convert(utf8.encode('$to|$url')).toString().substring(0, 32);
+  /// L'id degli inviti di prima, senza mittente: restano, e si tolgono anche così.
+  static String _legacyInviteId(String to, Uri url) =>
+      sha256.convert(utf8.encode('$to|$url')).toString().substring(0, 32);
 
   /// Dice a [to] che può usare il server: lo trova la sua app.
   Future<void> invite({required String to, required Uri url, required String serverName}) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user?.email == null) throw const ServerUnauthorized();
-    await _invites.doc(_inviteId(to, url)).set({
-      'to': to,
-      'from': user!.email!.toLowerCase(),
-      'fromName': user.displayName,
-      'url': '$url',
-      'serverName': serverName,
-      'at': FieldValue.serverTimestamp(),
-    });
+    final me = account != null ? account!() : const CloudAuth().current;
+    if (me == null || me.email.isEmpty) throw const ServerUnauthorized();
+    final target = to.toLowerCase();
+    await invites.put(ServerInvite(
+      id: inviteId(me.email.toLowerCase(), target, url),
+      to: target,
+      from: me.email.toLowerCase(),
+      fromName: me.name,
+      url: '$url',
+      serverName: serverName,
+    ));
   }
 
   /// Toglie l'invito: il proprietario che toglie l'amico, o l'amico che lo
-  /// ha usato o non lo vuole.
-  Future<void> withdraw(String to, Uri url) => _invites.doc(_inviteId(to, url)).delete();
+  /// ha usato o non lo vuole. L'amico non sa il mittente, quindi toglie tutti
+  /// i suoi inviti a quell'indirizzo; quelli con l'id di prima si tolgono
+  /// comunque (il backend lascia toccare solo i propri).
+  Future<void> withdraw(String to, Uri url) async {
+    final me = (account != null ? account!() : const CloudAuth().current)?.email.toLowerCase();
+    final target = to.toLowerCase();
+    final ids = {
+      if (me != null && me.isNotEmpty) inviteId(me, target, url),
+      _legacyInviteId(target, url),
+      if (me == target)
+        for (final invite in await invites.listFor(target))
+          if (invite.url == '$url') invite.id,
+    };
+    for (final id in ids) {
+      await invites.remove(id);
+    }
+  }
 
-  /// Gli inviti per [email], come arrivano.
-  Stream<List<ServerInvite>> invitesFor(String email) => _invites
-      .where('to', isEqualTo: email.toLowerCase())
-      .snapshots()
-      .map((snapshot) => [for (final doc in snapshot.docs) ServerInvite.fromDoc(doc.id, doc.data())]);
+  /// Gli inviti per [email]. Una lettura fallita lancia: non è «nessun invito».
+  Future<List<ServerInvite>> invitesFor(String email) => invites.listFor(email);
+
+  /// Quando gli inviti per [email] possono essere cambiati.
+  Stream<void> inviteChanges(String email) => invites.changes(email);
+}
+
+/// Gli inviti per [email] nel tempo: letti subito, e riletti a ogni evento di
+/// [InviteStore.changes] e di [resumed] (l'app torna in primo piano). Una
+/// lettura fallita non emette niente, quindi l'elenco di prima resta; se il
+/// backend non ha la tabella (`unavailable`) la funzione non c'è e non si
+/// riprova.
+Stream<List<ServerInvite>> watchServerInvites(
+  ServerAccess access,
+  String email, {
+  Stream<void> resumed = const Stream.empty(),
+}) {
+  late final StreamController<List<ServerInvite>> controller;
+  final subscriptions = <StreamSubscription<void>>[];
+  var unavailable = false;
+  Future<void> load() async {
+    if (unavailable || controller.isClosed) return;
+    try {
+      final invites = await access.invitesFor(email);
+      if (!controller.isClosed) controller.add(invites);
+    } on Object catch (error) {
+      if (backendFailure(error) == BackendFailure.unavailable) unavailable = true;
+    }
+  }
+
+  controller = StreamController<List<ServerInvite>>(
+    onListen: () {
+      for (final source in [access.inviteChanges(email), resumed]) {
+        subscriptions.add(source.listen((_) => load(), onError: (Object _) {}));
+      }
+      unawaited(load());
+    },
+    onCancel: () async {
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+    },
+  );
+  return controller.stream;
 }

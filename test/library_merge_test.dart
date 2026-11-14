@@ -22,6 +22,9 @@ class FakeDrive implements LibraryShelf {
   LibraryOrigin get origin => LibraryOrigin.drive;
 
   @override
+  String get sourceId => 'drive';
+
+  @override
   Future<LibraryIndex> loadLibrary() async => library;
 
   @override
@@ -95,6 +98,25 @@ void main() {
     expect(hidden.places.keys, ['mangak:S2']);
     // Con un'altra firma la serie è stata riscaricata, e torna.
     expect(catalog.hiding({'mangak:S1': 'vecchia'}).index.series, hasLength(2));
+  });
+
+  test('una riga adottata da un\'altra si ignora, in qualunque sorgente stia', () {
+    final drive = FakeDrive();
+    final local = LibraryRepository('/non-esiste');
+    final fresh = SeriesEntry.fromJson({
+      ...entry('coffeemanga:the-house').toJson(),
+      'formerKeys': ['coffeemanga:7743'],
+    });
+    final catalog = Library.merge({
+      local: index([entry('coffeemanga:7743'), entry('mangak:S2')]),
+      drive: index([fresh]),
+    });
+    expect(
+      catalog.index.series.map((row) => row.key),
+      unorderedEquals(['mangak:S2', 'coffeemanga:the-house']),
+    );
+    expect(catalog.holders.keys, isNot(contains('coffeemanga:7743')));
+    expect(catalog.places.keys, isNot(contains('coffeemanga:7743')));
   });
 
   group('libreria unita', () {

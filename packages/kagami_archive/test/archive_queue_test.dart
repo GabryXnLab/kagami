@@ -251,6 +251,16 @@ void main() {
       expect((await check()).queued, ['Test / Series']);
     });
 
+    test('col server a controllare, il telefono guarda i siti che gli passa `where`', () async {
+      final series = await MangaK().fetchSeries('https://mangak.io/test-series', http);
+      const drive = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella');
+      await Tracking(files.ongoing).record(series, drive, settled: const ['C1'], metadata: const {'releaseStatus': 'ongoing'});
+      await files.writeScope(const CheckScope(toServer: true, userSitesOnPhone: true));
+      expect((await files.scope()).userSitesOnPhone, isTrue);
+      expect((await Tracking(files.ongoing).check(files, (provider) => http, where: (_) => false)).checked, 0);
+      expect((await Tracking(files.ongoing).check(files, (provider) => http, where: (_) => true)).queued, ['Test / Series']);
+    });
+
     test('senza capitoli nuovi non mette in coda niente', () async {
       await files.enqueue(job());
       await ArchiveRunner(files, environment()).run();

@@ -14,6 +14,7 @@ import 'package:path/path.dart' as p;
 import '../format/malf.dart';
 import '../l10n.dart';
 import 'library.dart';
+import 'sources/source.dart';
 
 /// Motivo per cui una cartella non è una libreria utilizzabile.
 enum LibraryProblem {
@@ -78,6 +79,10 @@ class LibraryRepository implements LibraryShelf {
   @override
   LibraryOrigin get origin => LibraryOrigin.local;
 
+  @override
+  String get sourceId =>
+      private ? SourceConfig.privateId : SourceConfig.folderId;
+
   File get _libraryFile => File(p.join(root, libraryIndexFile));
 
   File get downloads => File(p.join(root, readingDirectory, downloadsFile));
@@ -115,6 +120,10 @@ class LibraryRepository implements LibraryShelf {
     }
     return _withDownloads(await compute(_parseLibrary, source), downloaded);
   }
+
+  /// Le serie scaricate qui da Drive o dal sito, come le ricorda
+  /// `reading/downloads.json`.
+  Future<List<SeriesEntry>> downloadedSeries() => _loadDownloads();
 
   Future<List<SeriesEntry>> _loadDownloads() async {
     if (!await downloads.exists()) return const [];

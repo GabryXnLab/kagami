@@ -257,6 +257,7 @@ class CollectionRules {
     this.providers = const {},
     this.favorite = false,
     this.minRating,
+    this.binding = false,
   });
 
   factory CollectionRules.fromJson(Map<String, Object?> json) => CollectionRules(
@@ -273,6 +274,7 @@ class CollectionRules {
         providers: _stringSet(json['providers']),
         favorite: json['favorite'] == true,
         minRating: (json['minRating'] as num?)?.toInt(),
+        binding: json['binding'] == true,
       );
 
   final Set<String> types;
@@ -282,6 +284,13 @@ class CollectionRules {
   final Set<String> providers;
   final bool favorite;
   final int? minRating;
+
+  /// Raccolta vincolante: chi non combacia non entra nemmeno a mano, e chi
+  /// smette di combaciare esce. Non è un criterio: [isEmpty] lo ignora.
+  final bool binding;
+
+  /// Vincolante davvero: senza criteri non c'è niente da far rispettare.
+  bool get isBinding => binding && !isEmpty;
 
   bool get isEmpty =>
       types.isEmpty &&
@@ -301,6 +310,7 @@ class CollectionRules {
     bool? favorite,
     int? minRating,
     bool clearMinRating = false,
+    bool? binding,
   }) =>
       CollectionRules(
         types: types ?? this.types,
@@ -310,6 +320,7 @@ class CollectionRules {
         providers: providers ?? this.providers,
         favorite: favorite ?? this.favorite,
         minRating: clearMinRating ? null : minRating ?? this.minRating,
+        binding: binding ?? this.binding,
       );
 
   Map<String, Object?> toJson() => {
@@ -321,6 +332,7 @@ class CollectionRules {
         if (providers.isNotEmpty) 'providers': providers.toList()..sort(),
         if (favorite) 'favorite': true,
         if (minRating != null) 'minRating': minRating,
+        if (isBinding) 'binding': true,
       };
 
   @override
@@ -332,7 +344,8 @@ class CollectionRules {
       _sameSet(release, other.release) &&
       _sameSet(providers, other.providers) &&
       favorite == other.favorite &&
-      minRating == other.minRating;
+      minRating == other.minRating &&
+      binding == other.binding;
 
   @override
   int get hashCode => Object.hash(
@@ -343,6 +356,7 @@ class CollectionRules {
         Object.hashAllUnordered(providers),
         favorite,
         minRating,
+        binding,
       );
 }
 
@@ -355,6 +369,7 @@ class CollectionTraits {
     this.keepChapters = false,
     this.noAutoPause = false,
     this.noRatingInvite = false,
+    this.hidden = false,
   });
 
   factory CollectionTraits.fromJson(Map<String, Object?> json) =>
@@ -363,6 +378,7 @@ class CollectionTraits {
         keepChapters: json['keepChapters'] == true,
         noAutoPause: json['noAutoPause'] == true,
         noRatingInvite: json['noRatingInvite'] == true,
+        hidden: json['hidden'] == true,
       );
 
   /// Niente notifiche né novità segnalate.
@@ -377,13 +393,19 @@ class CollectionTraits {
   /// Non chiedere il voto.
   final bool noRatingInvite;
 
-  bool get isEmpty => !muted && !keepChapters && !noAutoPause && !noRatingInvite;
+  /// Le serie si vedono solo aprendo la raccolta: fuori da home, libreria,
+  /// statistiche e cronologia, e senza notifiche. Nascosto non è protetto.
+  final bool hidden;
+
+  bool get isEmpty =>
+      !muted && !keepChapters && !noAutoPause && !noRatingInvite && !hidden;
 
   CollectionTraits operator |(CollectionTraits other) => CollectionTraits(
         muted: muted || other.muted,
         keepChapters: keepChapters || other.keepChapters,
         noAutoPause: noAutoPause || other.noAutoPause,
         noRatingInvite: noRatingInvite || other.noRatingInvite,
+        hidden: hidden || other.hidden,
       );
 
   CollectionTraits copyWith({
@@ -391,12 +413,14 @@ class CollectionTraits {
     bool? keepChapters,
     bool? noAutoPause,
     bool? noRatingInvite,
+    bool? hidden,
   }) =>
       CollectionTraits(
         muted: muted ?? this.muted,
         keepChapters: keepChapters ?? this.keepChapters,
         noAutoPause: noAutoPause ?? this.noAutoPause,
         noRatingInvite: noRatingInvite ?? this.noRatingInvite,
+        hidden: hidden ?? this.hidden,
       );
 
   Map<String, Object?> toJson() => {
@@ -404,6 +428,7 @@ class CollectionTraits {
         if (keepChapters) 'keepChapters': true,
         if (noAutoPause) 'noAutoPause': true,
         if (noRatingInvite) 'noRatingInvite': true,
+        if (hidden) 'hidden': true,
       };
 
   @override
@@ -412,11 +437,12 @@ class CollectionTraits {
       muted == other.muted &&
       keepChapters == other.keepChapters &&
       noAutoPause == other.noAutoPause &&
-      noRatingInvite == other.noRatingInvite;
+      noRatingInvite == other.noRatingInvite &&
+      hidden == other.hidden;
 
   @override
   int get hashCode =>
-      Object.hash(muted, keepChapters, noAutoPause, noRatingInvite);
+      Object.hash(muted, keepChapters, noAutoPause, noRatingInvite, hidden);
 }
 
 /// Una raccolta di serie, l'equivalente della playlist di un lettore musicale.

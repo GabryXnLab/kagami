@@ -29,6 +29,7 @@ class ReadingStatistics {
     required this.perMonth,
     required this.topSeries,
     required this.firstRead,
+    this.excluding = const {},
   });
 
   static const ReadingStatistics empty = ReadingStatistics(
@@ -58,6 +59,11 @@ class ReadingStatistics {
 
   final List<(String seriesKey, int chapters)> topSeries;
   final DateTime? firstRead;
+
+  /// Le serie lasciate fuori da ogni numero qui dentro: vedi
+  /// [StatisticsRepository.load]. Chi pubblica questi numeri controlla che ci
+  /// siano tutte le nascoste, invece di fidarsi di chi li ha chiesti.
+  final Set<String> excluding;
 
   /// Giorni di fila fino a oggi. Ieri conta come oggi: una serie di giorni non
   /// si spezza perché non si è ancora letto stamattina.
@@ -106,23 +112,32 @@ class StatisticsRepository {
 
   /// [window] limita i giorni della serie storica: un anno basta a ogni
   /// grafico dell'app e tiene la query corta anche dopo anni di letture.
-  Future<ReadingStatistics> load({Duration window = const Duration(days: 365)}) async {
+  ///
+  /// [excluding] sono le serie che non devono contare in nessun numero, totali
+  /// compresi: le nascoste, per ciò che esce dal telefono (docs/social.md). Le
+  /// statistiche private non lo passano: lì le nascoste contano nei totali.
+  Future<ReadingStatistics> load({
+    Duration window = const Duration(days: 365),
+    Set<String> excluding = const {},
+  }) async {
     final since = DateTime.now().toUtc().subtract(window);
 
     final counted = await db.customSelect(
-      'SELECT COUNT(*) AS total FROM chapter_reads WHERE profile_id = ?',
+      'SELECT series_key, COUNT(*) AS total FROM chapter_reads WHERE profile_id = ? GROUP BY series_key',
       variables: [Variable<String>(profileId)],
       readsFrom: {db.chapterReads},
-    ).getSingle();
+    ).get();
 
-    final reads = await (db.select(db.chapterReads)
-          ..where((row) =>
-              row.profileId.equals(profileId) & row.estimated.equals(false)))
-        .get();
+    final reads = (await (db.select(db.chapterReads)
+              ..where((row) =>
+                  row.profileId.equals(profileId) & row.estimated.equals(false)))
+            .get())
+        .where((read) => !excluding.contains(read.seriesKey));
 
-    final sessions = await (db.select(db.readingSessions)
-          ..where((row) => row.profileId.equals(profileId)))
-        .get();
+    final sessions = (await (db.select(db.readingSessions)
+              ..where((row) => row.profileId.equals(profileId)))
+            .get())
+        .where((session) => !excluding.contains(session.seriesKey));
 
     final perDay = <DateTime, int>{};
     final perMonth = <DateTime, int>{};
@@ -143,7 +158,9 @@ class StatisticsRepository {
       ..sort((a, b) => b.$2.compareTo(a.$2));
 
     return ReadingStatistics(
-      chaptersRead: counted.read<int>('total'),
+      chaptersRead: counted
+          .where((row) => !excluding.contains(row.read<String>('series_key')))
+          .fold<int>(0, (sum, row) => sum + row.read<int>('total')),
       pagesRead:
           sessions.fold<int>(0, (sum, session) => sum + session.pagesRead),
       timeRead: sessions.fold<Duration>(
@@ -155,6 +172,7 @@ class StatisticsRepository {
       perMonth: perMonth,
       topSeries: top.take(10).toList(growable: false),
       firstRead: first,
+      excluding: excluding,
     );
   }
 }

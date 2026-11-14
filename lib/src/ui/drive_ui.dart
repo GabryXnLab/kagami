@@ -12,7 +12,10 @@ import '../data/library_repository.dart';
 import '../data/network.dart';
 import '../format/malf.dart';
 import '../l10n.dart';
+import '../data/sources/source.dart';
 import '../providers.dart';
+import '../providers_sources.dart';
+import 'drive_received_sheet.dart';
 import 'theme.dart';
 import 'widgets/kit.dart';
 
@@ -124,7 +127,18 @@ Future<void> downloadChapters(
 ) async {
   final ids = chapterIds.toList(growable: false);
   if (ids.isEmpty) return;
-  final destination = await downloadDestination(context, ref);
+  // Da una libreria condivisa la cartella la decide la sorgente: non si chiede.
+  final chapters = ref.read(seriesChaptersProvider(seriesKey)).value;
+  final imposed = {
+    for (final id in ids)
+      switch (chapters?.sourceOf(id)) {
+        final source? => ref.read(downloadOriginProvider(source))?.destination,
+        null => null,
+      },
+  };
+  final destination = imposed.length == 1 && imposed.single != null
+      ? imposed.single
+      : await downloadDestination(context, ref);
   if (destination == null) return;
   ref.read(downloadsProvider.notifier).enqueue(seriesKey, ids, destination);
 }
@@ -330,7 +344,11 @@ class LibraryNotices extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notices = ref.watch(libraryCatalogProvider).value?.notices ?? const [];
+    final notices = [
+      for (final notice in ref.watch(libraryCatalogProvider).value?.notices ?? const [])
+        // La lista delle sorgenti che si sta ancora leggendo passa da sola.
+        if (!(notice is SourceUnavailable && notice.sourceId == loadingSourcesId)) notice,
+    ];
     if (notices.isEmpty) return const SizedBox.shrink();
     final notice = notices.first;
     final (message, action, onPressed) = noticeOf(context, ref, notice);
@@ -381,6 +399,7 @@ class LibraryNotices extends ConsumerWidget {
           currentL10n().driveRetry,
           () => reloadLibrary(ref),
         ),
+      SourceUnavailable(:final sourceId, :final state) => _sourceNotice(context, ref, sourceId, state),
       LibraryException(:final problem) => (
           problem.message,
           currentL10n().driveRetry,
@@ -388,3 +407,27 @@ class LibraryNotices extends ConsumerWidget {
         ),
       _ => ('$notice', currentL10n().driveRetry, () => reloadLibrary(ref)),
     };
+
+(String, String, VoidCallback) _sourceNotice(
+  BuildContext context,
+  WidgetRef ref,
+  String sourceId,
+  SourceState state,
+) {
+  final l10n = currentL10n();
+  if (sourceId == unreadableSourcesId) {
+    return (l10n.driveNoticeSourcesUnreadable, l10n.driveRetry, () => ref.invalidate(librarySourcesProvider));
+  }
+  final source = ref.read(librarySourcesProvider).value?.byId(sourceId);
+  if (source == null || source.kind != SourceKind.driveShared) {
+    return ('${SourceUnavailable(sourceId, state)}', l10n.driveRetry, () => reloadLibrary(ref));
+  }
+  final name = sharedNameOf(source);
+  if (state == SourceState.otherAccount) {
+    return ('$name: ${l10n.sourcesStateOtherAccount}', l10n.driveReceivedManage, () => DriveReceivedSheet.open(context));
+  }
+  if (state == SourceState.expired) {
+    return (l10n.driveNoticeSharedExpired(name), l10n.driveReceivedManage, () => DriveReceivedSheet.open(context));
+  }
+  return (l10n.driveNoticeSharedUnavailable(name), l10n.driveRetry, () => reloadLibrary(ref));
+}

@@ -21,6 +21,11 @@ services:
       # Server → Crea il tuo server): progetto, client e il tuo Drive. Si
       # applica al primo avvio e quando cambia; poi può anche restare vuota.
       KAGAMI_SETUP: ${KAGAMI_SETUP:-}
+      # Facoltative, al posto di quelle di KAGAMI_SETUP (docs/server.md, «Il
+      # backend degli account»).
+      KAGAMI_BACKEND_URL: ${KAGAMI_BACKEND_URL:-}
+      KAGAMI_BACKEND_ANON_KEY: ${KAGAMI_BACKEND_ANON_KEY:-}
+      KAGAMI_FIREBASE_PROJECT: ${KAGAMI_FIREBASE_PROJECT:-}
     volumes:
       - kagami-data:/data
 

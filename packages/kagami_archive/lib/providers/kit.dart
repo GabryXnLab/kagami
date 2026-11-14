@@ -29,6 +29,7 @@ RegExpMatch? siteMatch(
   required Set<String> hosts,
   required RegExp path,
   bool plain = false,
+  int? maxPath,
 }) {
   final uri = Uri.tryParse(url);
   if (uri == null ||
@@ -39,7 +40,8 @@ RegExpMatch? siteMatch(
       (plain && (uri.hasQuery || uri.hasFragment))) {
     return null;
   }
-  return path.firstMatch(uri.path);
+  final text = uri.path;
+  return path.firstMatch(maxPath != null && text.length > maxPath ? text.substring(0, maxPath) : text);
 }
 
 /// Il link di un capitolo in una forma confrontabile: https, host senza
@@ -106,6 +108,6 @@ List<Chapter> oldestFirst(List<Chapter> chapters) {
 void requireUniqueIds(List<Chapter> chapters, String site) {
   final seen = <String>{};
   for (final chapter in chapters) {
-    if (!seen.add(chapter.id)) throw ProviderError('Elenco capitoli $site incoerente.');
+    if (!seen.add(chapter.id)) throw ProviderChanged('Elenco capitoli $site incoerente.');
   }
 }

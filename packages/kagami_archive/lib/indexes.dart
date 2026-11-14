@@ -155,6 +155,8 @@ SeriesIndexes? buildSeriesIndex(
       'publishedAt': chapterMetadata['publishedAt'],
       'updatedAt': chapterMetadata['updatedAt'],
       'archivedAt': stored?.archivedAt,
+      if (chapter['formerIds'] case final List formerIds when formerIds.isNotEmpty) 'formerIds': formerIds,
+      if (chapter['listed'] == false) 'listed': false,
     });
     if (stored != null && stored.pages.isNotEmpty) pages[chapterId] = stored.pages;
   }
@@ -166,6 +168,7 @@ SeriesIndexes? buildSeriesIndex(
     'key': key,
     'provider': provider,
     'id': id,
+    if (manifest['formerKeys'] case final List formerKeys when formerKeys.isNotEmpty) 'formerKeys': formerKeys,
     'title': manifest['title'],
     'source': manifest['source'],
     'releaseStatus': metadata['releaseStatus'] ?? 'unknown',
@@ -208,6 +211,7 @@ Map<String, Object?> summarize(
     'path': folder,
     'provider': index['provider'],
     'id': index['id'],
+    'formerKeys': ?index['formerKeys'],
     'title': index['title'],
     'source': index['source'],
     'cover': cover['file'],
@@ -239,18 +243,26 @@ Map<String, Object?> summarize(
 /// Le altre righe restano come sono: le ha scritte chi le ha scritte, server
 /// compreso, e una serie archiviata qui non deve costringere a rileggere le
 /// altre.
+///
+/// Una serie adottata (`formerKeys`, in `docs/malf.md`) prende anche il posto
+/// delle righe con le chiavi che ha avuto.
 Map<String, Object?> libraryWith(Map<String, Object?>? previous, Map<String, Object?> row) =>
-    _library(previous, '${row['key']}', row);
+    _library(previous, replacedKeys(row), row);
+
+/// Le chiavi che una riga di libreria sostituisce: la sua e quelle che la
+/// serie ha avuto.
+Set<Object?> replacedKeys(Map<String, Object?> row) =>
+    {row['key'], ...(row['formerKeys'] as List? ?? const [])};
 
 /// `library.json` senza la serie [key]: chi la toglie dalla libreria toglie
 /// la sua riga e lascia quelle degli altri.
 Map<String, Object?> libraryWithout(Map<String, Object?>? previous, String key) =>
-    _library(previous, key, null);
+    _library(previous, {key}, null);
 
-Map<String, Object?> _library(Map<String, Object?>? previous, String key, Map<String, Object?>? row) {
+Map<String, Object?> _library(Map<String, Object?>? previous, Set<Object?> keys, Map<String, Object?>? row) {
   final rows = [
     for (final entry in (previous?['series'] as List? ?? const []).whereType<Map<String, Object?>>())
-      if (entry['key'] != key) entry,
+      if (!keys.contains(entry['key'])) entry,
     ?row,
   ];
   // Stabile come `sorted` di Python: due titoli uguali restano nell'ordine

@@ -53,7 +53,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final statistics = ref.watch(statisticsProvider);
-    final library = ref.watch(librarySignalsProvider);
+    final library = ref.watch(shownSignalsProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.statsTitle)),
@@ -490,9 +490,14 @@ class _TopSeries extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (statistics.topSeries.isEmpty) return const SizedBox.shrink();
+    final hidden = ref.watch(hiddenSeriesKeysProvider);
+    final top = [
+      for (final row in statistics.topSeries)
+        if (!hidden.contains(row.$1)) row,
+    ];
+    if (top.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
-    final highest = statistics.topSeries.first.$2;
+    final highest = top.first.$2;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -501,7 +506,7 @@ class _TopSeries extends ConsumerWidget {
         children: [
           Text(context.l10n.statsTopSeries, style: theme.textTheme.titleSmall),
           const SizedBox(height: 10),
-          for (final (key, chapters) in statistics.topSeries)
+          for (final (key, chapters) in top)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Column(

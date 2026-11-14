@@ -32,6 +32,7 @@ import '../l10n.dart';
 import 'drive.dart';
 import 'library.dart';
 import 'network.dart';
+import 'sources/source.dart';
 
 LibraryIndex _parseLibrary(String source) =>
     LibraryIndex.fromJson(jsonDecode(source) as Map<String, Object?>);
@@ -74,6 +75,8 @@ class DriveRepository implements LibraryShelf {
     required this.folderId,
     required String stateDirectory,
     required this.files,
+    this.sourceId = SourceConfig.driveId,
+    this.origin = LibraryOrigin.drive,
   }) : _state = Directory(p.join(stateDirectory, folderId));
 
   final DriveClient client;
@@ -103,8 +106,22 @@ class DriveRepository implements LibraryShelf {
   /// un elenco vecchio si ricerca, in uno appena fatto no.
   final Set<String> _fresh = {};
 
+  /// [LibraryOrigin.drive] per il Drive dell'account; [LibraryOrigin.remote]
+  /// per la libreria di un altro, condivisa in sola lettura: niente scarico
+  /// sul telefono da qui, perché lo scarico passa dal Drive dell'account.
   @override
-  LibraryOrigin get origin => LibraryOrigin.drive;
+  final LibraryOrigin origin;
+
+  @override
+  final String sourceId;
+
+  /// Dove cominciano gli indirizzi dei file di questa libreria: `drive:` per
+  /// quella dell'account (sta nelle chiavi di cache di ogni telefono),
+  /// `remote:<id>/` per le altre.
+  String get addressPrefix =>
+      sourceId == SourceConfig.driveId ? remotePrefix : '$sourcePrefix$sourceId/';
+
+  bool get _shared => origin == LibraryOrigin.remote;
 
   bool get stale =>
       _loadedAt == null || DateTime.now().difference(_loadedAt!) > driveFreshness;
@@ -127,11 +144,15 @@ class DriveRepository implements LibraryShelf {
   /// più, e la libreria deve dirlo invece di mostrarsi come se niente fosse.
   bool _needsAuth = false;
 
+  /// Drive ha risposto 403 o 404 a una libreria condivisa: l'istantanea non
+  /// dice più il vero, e non si mostra come se niente fosse.
+  bool _gone = false;
+
   @override
   Future<LibraryIndex> loadLibrary() async {
     final memo = _library;
     if (memo != null && !stale) return memo;
-    if (memo == null && !_needsAuth) {
+    if (memo == null && !_needsAuth && !_gone) {
       // All'apertura si mostra la libreria dell'ultima volta, senza aspettare
       // la rete: le serie ci sono subito, le copertine arrivano dopo, e
       // [revalidate] rilegge Drive dietro alla griglia.
@@ -176,6 +197,7 @@ class DriveRepository implements LibraryShelf {
       _loadedAt = DateTime.now();
       fromSnapshot = false;
       _needsAuth = false;
+      _gone = false;
       // L'istantanea prima di rispondere: è ciò che apre la libreria senza
       // rete, e un'app chiusa subito dopo non deve perderla.
       await _save();
@@ -185,7 +207,12 @@ class DriveRepository implements LibraryShelf {
       _needsAuth = true;
       _library = null;
       rethrow;
-    } on DriveException {
+    } on DriveException catch (error) {
+      if (_shared && (error.status == 403 || error.status == 404)) {
+        _gone = true;
+        _library = null;
+        throw SourceUnavailable(sourceId, SourceState.missing);
+      }
       // Senza rete la libreria c'è ancora: quella dell'ultima volta.
       final restored = memo ?? await _restore();
       if (restored == null) rethrow;
@@ -211,6 +238,8 @@ class DriveRepository implements LibraryShelf {
     try {
       await loadLibrary();
     } on DriveAuthRequired {
+      return true;
+    } on SourceUnavailable {
       return true;
     } on DriveException {
       return false;
@@ -393,7 +422,7 @@ class DriveRepository implements LibraryShelf {
 
   @override
   String locate(SeriesEntry entry, String relative) =>
-      '$remotePrefix${entry.path}/$relative';
+      '$addressPrefix${entry.path}/$relative';
 
   /// Da un percorso relativo alla radice alla voce di Drive.
   Future<DriveItem?> resolve(String relative) async {
@@ -556,6 +585,12 @@ class DriveRepository implements LibraryShelf {
     Iterable<String> paths,
     DriveClient writer,
   ) async {
+    // Qui e non nei chiamanti, perché uno nuovo non la salti: si cancella
+    // solo nel Drive dell'account (FASE-5b §5). La proprietà della cartella
+    // la controlla chi chiama, con la risposta salvata o chiesta a Drive.
+    if (origin != LibraryOrigin.drive) {
+      throw StateError('Su uno scaffale non proprio non si cancella');
+    }
     // Ad app chiusa la libreria non è stata letta: per trovare le cartelle
     // basta l'elenco della radice.
     if (_root.isEmpty) _root = {for (final item in await client.children(folderId)) item.name: item};
@@ -706,7 +741,7 @@ class DriveFiles implements RemoteFiles {
   void rememberChapter(String series, String chapter, List<String> addresses) {
     final keys = [
       for (final address in addresses)
-        if (isRemote(address)) repository.cacheKeyOf(_relative(address)),
+        if (address.startsWith(repository.addressPrefix)) repository.cacheKeyOf(_relative(address)),
     ];
     if (keys.isEmpty) return;
     unawaited(_loadChapters().then((_) {
@@ -802,7 +837,7 @@ class DriveFiles implements RemoteFiles {
     return 3;
   }
 
-  String _relative(String address) => address.substring(remotePrefix.length);
+  String _relative(String address) => address.substring(repository.addressPrefix.length);
 
   @override
   String? peek(String address) =>
@@ -916,6 +951,10 @@ class DriveFiles implements RemoteFiles {
         final item = await repository.resolve(relative);
         if (item == null || item.folder) {
           throw DriveException(currentL10n().dataPageNotOnDrive);
+        }
+        final size = item.size;
+        if (size != null && size > cache.maxEntryBytes) {
+          throw OversizedFile(size, cache.maxEntryBytes);
         }
         final started = DateTime.now();
         var bytes = 0;

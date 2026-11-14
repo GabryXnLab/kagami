@@ -18,12 +18,99 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   annunciati e non scaricati, indice più vecchio dei file: sono stati normali,
   non errori. L'app mostra ciò che ha.
 - **La libreria è ibrida: una serie sola, risolta per capitolo.** Cartella
-  scelta, spazio privato dell'app e Drive sono `LibraryShelf` in ordine di
-  preferenza (`data/library.dart`); le serie si uniscono per chiave, i
-  capitoli per id, e ogni capitolo si legge dalla prima sorgente che lo sa
-  servire. Un capitolo locale conta solo se la sua cartella c'è davvero
-  (una lettura di `chapters/` per serie), altrimenti si legge da Drive o si
-  mostra come non scaricato. L'icona d'origine compare solo quando Drive c'è.
+  scelta, spazio privato dell'app, Drive dell'account e le altre remote sono
+  `LibraryShelf` in ordine di preferenza (`data/library.dart`), ognuno con
+  il suo `sourceId`; le serie si uniscono per chiave, i capitoli per id, e
+  ogni capitolo si legge dalla prima sorgente che lo sa servire
+  (`SeriesChapters.sourceOf` dice quale). La riga della serie e il titolo
+  vengono da una remota se ce n'è una — una copia sul telefono può essere
+  indietro — e fra le remote dalla prima, cioè dal Drive dell'account
+  davanti alle altre; i capitoli che ha solo un'altra si aggiungono, serviti
+  da lei. `SeriesPlace.drive` vuol dire «solo remota», qualunque sia. Un
+  capitolo locale conta solo se la sua cartella c'è davvero (una lettura di
+  `chapters/` per serie), altrimenti si legge da una remota o si mostra come
+  non scaricato. Una sorgente che non risponde diventa un avviso del
+  catalogo, mai una sorgente vuota; quella che sa dire perché (scaduta,
+  senza credenziali, irraggiungibile) lancia `SourceUnavailable` con id e
+  stato (`data/sources/source.dart`), e l'avviso è quello. L'icona d'origine
+  compare solo quando Drive c'è.
+- **Una sorgente in più è una riga di configurazione**
+  (`data/sources/source.dart`). Le tre di sempre — cartella scelta, spazio
+  dell'app, Drive dell'account — restano con le loro impostazioni; le altre
+  (un Drive condiviso, un NAS) stanno nell'impostazione `library.sources`, una
+  lista JSON di `SourceConfig` che viaggia con backup e account e che per
+  questo non contiene mai un segreto (`SourceSecrets`, per id). Tre stati
+  anche qui: lista vuota, lista letta, lista **illeggibile** — nell'ultimo
+  caso nessuna sorgente in più e l'impostazione non si riscrive finché
+  l'utente non ne modifica una (`librarySourcesProvider`,
+  `providers_sources.dart`); una riga di un tipo nato in una versione più
+  nuova non si usa ma si riscrive com'è. Lo stato di una sorgente
+  (`SourceState`) dice qualcosa del contenuto solo quando è `ready`: scaduta,
+  senza credenziali o irraggiungibile non è mai «vuota». L'id (`s-` e otto
+  cifre esadecimali) finisce negli indirizzi dei file e nelle chiavi di
+  cache, quindi non cambia più. Le sorgenti si compongono in un posto solo
+  (`storageSourcesProvider`, `providers_sources.dart`): le tre di sempre come
+  `ShelfSource` — involucri sottili sugli scaffali che già esistono — poi le
+  altre per `order`, costruite da una tabella tipo → costruttore
+  (`sourceBuildersProvider`: Drive condiviso e WebDAV); `libraryProvider` ne passa gli
+  scaffali a `Library`. Una riga scaduta, di un tipo senza costruttore, o la
+  lista illeggibile non sono sorgenti vuote: danno un `SourceUnavailable`
+  (`Library.notices`, poi `LibraryCatalog.notices`) e nessuno scaffale. Chi
+  scrive o cancella passa solo da ciò che lo permette: le cancellazioni
+  agiscono sui soli `LibraryRepository` e `DriveRepository`, e una serie che
+  hanno soltanto altre sorgenti non si propone come eliminabile
+  (`canRemoveSeries`, `series_removal.dart`).
+- **Le password delle sorgenti stanno in `flutter_secure_storage`**
+  (Keystore/Keychain; `SecureSourceSecrets`, dipendenza nuova): le
+  impostazioni viaggiano con backup e account, un segreto no. Su un telefono
+  nuovo la sorgente WebDAV c'è ed è `needsAuth` («Riscrivi la password»), non
+  una libreria vuota: `SecretWebDavTransport` legge il segreto alla prima
+  richiesta e senza password non chiede niente al server. Rimuovere una
+  sorgente toglie configurazione, segreto, stato (`support/sources/<id>/`) e
+  cache (`cache/sources/<id>/`), mai lo stato di lettura. La schermata è
+  Impostazioni → Libreria → Sorgenti (`ui/sources_screen.dart`, fogli in
+  `ui/sources_sheets.dart`).
+- **`dart_smb2` (SMB, seconda sorgente remota) è una dipendenza dell'app, non
+  del pacchetto**, e sta a `0.4.0` esatta. Il server si compila con `dart
+  compile exe`, che rifiuta i build hook del pacchetto: non lo può avere
+  (prova del 2026-11-14). 22 versioni in sette mesi con l'API che cambia a ogni
+  minore: si alza a mano, rileggendo il changelog e `libsmb2Release`
+  (`native_licenses.dart`). Porta codice nativo, libsmb2 (LGPL-2.1+) con
+  OpenSSL (Apache-2.0) dentro, scaricato in build dalle release del pacchetto
+  con SHA-256 fissato: le licenze e l'indirizzo del sorgente corrispondente
+  stanno nella pagina delle licenze (`native_licenses.dart`) e nel README.
+  Condizioni: SMB 2.1 o più recente (la 2.02 non negozia), porta 445
+  soltanto, sola lettura; in chiaro solo verso indirizzi privati, verso un
+  host pubblico solo con la cifratura SMB 3 (`seal`); ogni operazione ha un
+  tempo massimo e allo scadere si annulla con `Smb2CancelToken` (il `timeout`
+  del pool da solo ci mette più del doppio). Android: `minSdk` è
+  `flutter.minSdkVersion`, 24 per Flutter 3.47, quanto richiede il pacchetto.
+  **Non provato**: build Android e iOS con il build hook, un NAS vero (solo
+  Samba): residuo R8. Il trasporto sta in `data/sources/smb_transport.dart`
+  dietro `SmbSession`, per provarlo senza rete.
+- **Un punto solo porta i file remoti sul telefono**
+  (`data/sources/remote_router.dart`). Gli indirizzi del Drive dell'account
+  restano `drive:<percorso>` — stanno nelle chiavi della cache di ogni
+  telefono, e cambiarli le svuoterebbe — e quelli delle altre sorgenti sono
+  `remote:<id>/<percorso>`. `RemoteRouter` è il `RemoteFiles.instance`
+  dell'app e li smista: il lettore non prende rami per sorgente. Una sorgente
+  che non c'è più è un errore, mai un file vuoto.
+- **Una serie adottata cambia chiave, non identità.** Una riga con la chiave
+  nei `formerKeys` di un'altra si ignora nell'unione delle sorgenti
+  (`LibraryCatalog.merge`), sia locale sia di Drive: sul telefono la riga
+  vecchia di `library.json` resta finché non la riscrive chi l'ha scritta.
+  I `formerKeys` di una sorgente non mia (condivisione, NAS) nascondono solo
+  righe di quella sorgente, e i dati non si spostano da una chiave che il
+  telefono o il Drive dell'account tengono ancora (`ownedKeys`, FASE-5b §3).
+  I dati personali la seguono con `adoptFormerKeys` (`data/adoption.dart`,
+  agganciato da `IdentityAdoption` a ogni catalogo ricaricato): solo se la
+  chiave vecchia ha ancora dati, con la mappa id vecchio → nuovo dai
+  `formerIds`. Le copie scaricate sul telefono (`reading/downloads.json`) con
+  una chiave vecchia prendono cartelle, id e riga nuovi prima dello
+  spostamento, senza rete (`adoptCopy` del pacchetto, da
+  `adoptDownloadedCopies`): i capitoli già scaricati restano scaricati. Se il
+  `series.json` di Drive non si legge, la copia resta com'è e si riprova. Un capitolo
+  `listed: false` resta leggibile e porta «Non più sul sito» nella scheda.
 - **L'app cancella solo quando lo chiede l'utente**, o quando ha acceso la
   pulizia automatica (sotto): eliminando una serie
   (`data/series_removal.dart`: cartelle sul telefono, su Drive nel cestino
@@ -38,6 +125,20 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   (`sync/released.json`), che al giro seguente non lo riporta e non lo toglie
   dall'altra parte, e mentre un giro è in corso aspetta. Con FolderSync,
   che l'app non vede, può solo avvisare.
+- **Si cancella solo dove l'utente possiede** (FASE-5b §5,
+  `data/drive_ownership.dart`). Su Drive vale solo lo scaffale del Drive
+  dell'account (`origin == LibraryOrigin.drive`, `ownDriveShelf`), mai quello
+  di una condivisione: `withdrawPaths`/`withdrawChapters` lanciano
+  `StateError` su uno scaffale non proprio, perché un chiamante nuovo non salti
+  la regola. E solo se la cartella è dell'account: `DriveClient.owned`
+  (`ownedByMe`), ricordato in `drive.folder.owned` come `<folderId>:<true|false>`
+  (`driveFolderOwnedProvider`). Tre stati: non letta → nessuna cancellazione su
+  Drive, la pulizia lo richiede al giro dopo; falsa → niente pulizia su Drive,
+  niente capitoli di Drive nel foglio «Libera spazio», «Elimina» non tocca
+  Drive (il foglio dice perché, e una serie che sta solo lì non si propone né
+  si nasconde) e la condivisione della libreria non si offre. Un capitolo letto
+  da una condivisione è letto: la regola dei letti toglie anche la copia nel
+  proprio Drive, e la schermata lo dice.
 - **La pulizia automatica** (`data/auto_cleanup.dart`, Impostazioni →
   Libreria, `cleanup.auto` nel backup, spenta di partenza) toglie da ogni
   posto della libreria — cartella scelta, spazio dell'app e Drive, nel
@@ -49,9 +150,15 @@ Fatti d'area spostati dal `CLAUDE.md` di root (instradatore). Codice: `lib/src/d
   `archivedAt`: lì c'è l'archivio intero. Il permesso di scrivere su Drive si
   chiede accendendo una regola; senza, si toglie solo dal telefono. Il lavoro ad app chiusa (`AutoCleanupWorker.kt`, WorkManager alla
   prossima scadenza, motore Dart senza schermo) non ha database né libreria:
-  l'app gli lascia `cleanup/plan.json`, ogni capitolo con la sua scadenza e la
-  cartella di Drive, rifatto a ogni stato pubblicato; Drive lo apre con
-  `DriveRepository.withdrawPaths`, e `withdrawn.json` l'app lo rilegge quando
+  l'app gli lascia `cleanup/plan.json`, ogni capitolo con la sua scadenza,
+  l'account e la cartella di Drive, rifatto a ogni stato pubblicato e quando
+  account o cartella cambiano (prima di tutto ne escono i capitoli su Drive
+  che non sono di quell'account e cartella). `runAutoCleanup` toglie da Drive
+  solo se account e cartella di adesso sono quelli del piano, altrimenti li
+  lascia all'app. Il lavoro non ha la sessione del backend: salta Drive se dal
+  telefono si è usciti (`cloud.signedOut`), chiede il token per l'account del
+  piano e, prima di togliere, richiede a Drive se la cartella è sua; Drive lo
+  apre con `DriveRepository.withdrawPaths`, e `withdrawn.json` l'app lo rilegge quando
   cambia sul disco. Le serie aperte nel lettore
   aspettano, le cartelle sincronizzate si annotano come nel foglio e con un
   giro in corso aspettano; «man mano» lascia stare le serie che la seconda

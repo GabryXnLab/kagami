@@ -8,6 +8,7 @@ export 'src/google.dart';
 export 'src/identity.dart';
 export 'src/images.dart';
 export 'src/server.dart';
+export 'src/shares.dart';
 export 'src/updater.dart';
 export 'src/users.dart';
 export 'src/worker.dart';

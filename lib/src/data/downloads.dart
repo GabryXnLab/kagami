@@ -21,12 +21,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:kagami_archive/transport.dart';
 import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
 import '../l10n.dart';
+import 'download_origin.dart';
 import 'drive.dart';
-import 'drive_library.dart';
 import 'library_repository.dart';
 
 /// A che punto è il download di un capitolo.
@@ -57,10 +58,9 @@ class DownloadCancelled implements Exception {
 }
 
 class ChapterDownloader {
-  ChapterDownloader(this.drive, this.files);
+  ChapterDownloader(this.origin);
 
-  final DriveRepository drive;
-  final DriveFiles files;
+  final DownloadOrigin origin;
 
   /// Tavole scaricate insieme dentro un capitolo.
   static const int _atOnce = 4;
@@ -77,13 +77,14 @@ class ChapterDownloader {
     if (path == null || pages.isEmpty) {
       throw DriveException(currentL10n().dataChapterNoPagesOnDrive);
     }
+    final tiles = {for (final page in pages) ...page.tiles.map((tile) => tile.file)};
+    final queue = [...pages.map((page) => page.file), ...tiles];
+    _requireIndexPaths([entry.path, path, ...queue]);
     final target = Directory(p.join(destination, entry.path, path));
     final partial = Directory('${target.path}$partialSuffix');
     await partial.create(recursive: true);
     // Le tessere scendono con le tavole: sono ciò che il lettore legge, e la
     // tavola resta perché la cartella è una copia dell'archivio.
-    final tiles = {for (final page in pages) ...page.tiles.map((tile) => tile.file)};
-    final queue = [...pages.map((page) => page.file), ...tiles];
     final total = queue.length;
     var done = 0;
     onPage(done, total);
@@ -95,12 +96,14 @@ class ChapterDownloader {
         if (!await file.exists()) {
           try {
             await _fetchPage(entry, p.posix.join(path, name), file);
-          } on DriveOffline {
-            rethrow;
-          } on DriveException {
-            // Una tessera che su Drive non c'è non è una tavola persa: il
-            // lettore legge la tavola al suo posto.
-            if (!tiles.contains(name)) rethrow;
+          } on Object catch (error) {
+            // Una tessera che sulla sorgente non c'è non è una tavola persa:
+            // il lettore legge la tavola al suo posto.
+            if (isNetworkFailure(error) ||
+                (error is! DriveException && error is! TransportException) ||
+                !tiles.contains(name)) {
+              rethrow;
+            }
           }
         }
         onPage(++done, total);
@@ -130,33 +133,30 @@ class ChapterDownloader {
     }
   }
 
-  /// Una tavola già letta in streaming sta in cache: si copia invece di
-  /// riscaricarla.
+  /// Di nuovo davanti alla scrittura la regola dei percorsi di `malf.dart`:
+  /// un indice che sfugge alla lettura non porta file fuori da [destination].
+  static void _requireIndexPaths(Iterable<String> paths) {
+    for (final path in paths) {
+      if (!isIndexPath(path)) throw ArgumentError.value(path, 'path', 'percorso non ammesso');
+    }
+  }
+
   Future<void> _fetchPage(SeriesEntry entry, String relative, File file) async {
     // Su una rete a scatti una tavola persa per strada si riprova subito, da
     // dove era arrivata; solo se la rete non c'è davvero si ferma il capitolo.
     for (var attempt = 1;; attempt++) {
       try {
-        return await _fetchPageOnce(entry, relative, file);
-      } on DriveOffline {
-        if (attempt >= 3 || !await drive.client.network.check()) rethrow;
+        final temporary = File('${file.path}.tmp');
+        await origin.fetch(entry, relative, temporary);
+        await temporary.rename(file.path);
+        return;
+      } on Object catch (error) {
+        if (!isNetworkFailure(error) || attempt >= 3 || !await origin.online()) {
+          rethrow;
+        }
         await Future<void>.delayed(Duration(milliseconds: 600 * attempt));
       }
     }
-  }
-
-  Future<void> _fetchPageOnce(SeriesEntry entry, String relative, File file) async {
-    final address = drive.locate(entry, relative);
-    final temporary = File('${file.path}.tmp');
-    final cached = files.peek(address);
-    if (cached != null) {
-      await File(cached).copy(temporary.path);
-    } else {
-      final item = await drive.resolve('${entry.path}/$relative');
-      if (item == null) throw DriveException(currentL10n().dataPageNotOnDrive);
-      await drive.client.download(item.id, temporary);
-    }
-    await temporary.rename(file.path);
   }
 
   /// Quello che serve perché la serie si legga anche senza Drive: gli
@@ -170,18 +170,21 @@ class ChapterDownloader {
     required String destination,
     required SeriesEntry entry,
   }) async {
+    final covers = {entry.cover, entry.coverThumbnail}.nonNulls;
+    _requireIndexPaths([entry.path, ...covers]);
     final folder = Directory(p.join(destination, entry.path));
     await folder.create(recursive: true);
     for (final name in [seriesIndexFile, pagesIndexFile, 'series.json']) {
-      final text = await drive.seriesText(entry, name);
+      final text = await origin.seriesText(entry, name);
       if (text != null) await _writeAtomically(File(p.join(folder.path, name)), text);
     }
-    for (final name in {entry.cover, entry.coverThumbnail}.nonNulls) {
+    for (final name in covers) {
       final file = File(p.join(folder.path, name));
       if (await file.exists()) continue;
       try {
         await _fetchPage(entry, name, file);
-      } on DriveException {
+      } on Object catch (error) {
+        if (error is! DriveException && error is! TransportException) rethrow;
         // Una copertina che non arriva non vale il capitolo: si vedrà quella
         // di Drive, o il segnaposto.
       }

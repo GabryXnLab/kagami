@@ -26,6 +26,8 @@ import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/phone_check.dart' show gatedSites;
+import '../archive/repair.dart';
+import '../data/server_error_text.dart';
 import '../data/site_switch.dart' show titleKey;
 import '../format/malf.dart';
 import '../providers.dart';
@@ -36,6 +38,7 @@ import 'archive_series.dart';
 import 'archive_server.dart';
 import 'browser_check_page.dart';
 import '../l10n.dart';
+import 'sites_screen.dart';
 import 'sync_screen.dart' show clockOf;
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -151,8 +154,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         if (importText != null) {
           unawaited(ArchiveImportPage.open(context, text: importText));
         } else {
+          // Il link arriva da un'altra app: compila il campo e aspetta un tocco su «Verifica».
           _link.text = link!;
-          unawaited(_verify());
         }
       });
     }
@@ -265,7 +268,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       }
       http = fetcher;
     } else {
-      http = site = SiteHttp(provider.allowedHost);
+      http = site = SiteHttp(provider.allowedHost, publicOnly: !provider.builtIn);
     }
     _Found found;
     try {
@@ -277,7 +280,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on ProviderOffline {
       found = _Found.error(currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
-      found = _Found.error(error.message);
+      found = _Found.error(
+        error is ProviderChanged ? siteBrokenText(provider.name, error.message) : error.message,
+      );
     } finally {
       site?.close();
     }
@@ -341,7 +346,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on UnsupportedLink {
       if (mounted) setState(() => _unsupported = url);
     } on ProviderError catch (error) {
-      if (mounted) setState(() => _error = archiveErrorText(error));
+      if (mounted) setState(() => _error = archiveErrorText(error, url: url));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -760,12 +765,24 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       KSection(l10n.archiveSites),
       KGroup(
         children: [
+          KTile(
+            icon: LucideIcons.layoutList,
+            title: l10n.sitesTitle,
+            subtitle: l10n.sitesEntrySubtitle,
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SitesScreen())),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      KGroup(
+        children: [
           for (final provider in providers)
             KTile(
               icon: LucideIcons.globe,
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(provider.icon, width: 36, height: 36),
+                child: SiteIcon(provider, size: 36),
               ),
               title: provider.name,
               subtitle: Uri.parse(provider.home).host,
@@ -847,6 +864,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           ],
         ),
       ..._gated(),
+      const BrokenSitesCard(),
+      const SiteRecoveryCard(),
+      ..._repair(),
       const SizedBox(height: 12),
       ArchiveFollowedTile(
         count: view.tracked.length,
@@ -854,6 +874,61 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         tiles: _followedTiles,
       ),
     ];
+  }
+
+  /// «Ripara le serie archiviate»: dove il motore di adesso può farlo, una
+  /// riga che apre la scelta fra tutta la libreria e un sito; mentre gira,
+  /// il suo avanzamento.
+  List<Widget> _repair() {
+    if (!(ref.watch(repairAvailableProvider).value ?? false)) return const [];
+    final l10n = context.l10n;
+    final view = ref.watch(repairProvider);
+    return [
+      const SizedBox(height: 12),
+      KGroup(
+        children: [
+          KTile(
+            icon: LucideIcons.wrench,
+            title: l10n.archiveRepair,
+            subtitle: view.running && view.total > 0
+                ? l10n.archiveRepairRunning(view.done + 1, view.total, view.title)
+                : l10n.archiveRepairHint,
+            trailing: view.running
+                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: view.running ? null : _chooseRepair,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _chooseRepair() async {
+    final l10n = context.l10n;
+    final site = await showKagamiSheet<String?>(
+      context,
+      title: l10n.archiveRepair,
+      builder: (sheet) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+        child: KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.library,
+              title: l10n.archiveRepairAll,
+              onTap: () => Navigator.of(sheet).pop(''),
+            ),
+            for (final provider in providers)
+              KTile(
+                icon: LucideIcons.globe,
+                title: l10n.archiveRepairSite(provider.name),
+                onTap: () => Navigator.of(sheet).pop(provider.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (site == null || !mounted) return;
+    await startRepair(context, ref, site: site.isEmpty ? null : site);
   }
 
   /// Le serie ferme alla verifica di un sito, da chi controlla: una scheda
@@ -927,7 +1002,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on ProviderOffline {
       messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveNoConnection)));
     } on ServerException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      messenger.showSnackBar(SnackBar(content: Text(serverErrorText(error))));
     } finally {
       ref.invalidate(gatedSeriesProvider);
     }

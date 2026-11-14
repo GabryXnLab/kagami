@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/providers.dart' show SuppliedPages;
 import 'package:kagami_archive/runner.dart';
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -44,6 +47,19 @@ class _Challenged implements ProviderHttp {
   Future<Map<String, Object?>> json(String url) async => throw const CloudflareChallenge();
 }
 
+/// Un sito che risponde a tutto con la pagina della serie.
+class _Page implements ProviderHttp {
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async =>
+      (body: Uint8List.fromList(utf8.encode(_manhwaPage)), contentType: 'text/html');
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => true;
+
+  @override
+  Future<Map<String, Object?>> json(String url) async => throw const ProviderOffline();
+}
+
 /// Un sito che non risponde e non dà errore: la richiesta resta appesa.
 class _Hanging implements ProviderHttp {
   _Hanging(this.answer);
@@ -58,6 +74,34 @@ class _Hanging implements ProviderHttp {
 
   @override
   Future<Map<String, Object?>> json(String url) => answer.then((_) => const {});
+}
+
+/// Un sito lento che chiede la verifica: ogni serie della passata «Su altri
+/// siti» dura abbastanza perché un lavoro possa entrare a metà.
+class _Slow implements ProviderHttp {
+  _Slow({this.delay = const Duration(milliseconds: 25)});
+
+  /// Quanto dura ogni richiesta: il test che conta le serie viste prima dello stop lo alza,
+  /// così sotto carico la passata non fa in tempo a finirle tutte.
+  final Duration delay;
+  int calls = 0;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    calls++;
+    await Future<void>.delayed(delay);
+    throw const CloudflareChallenge();
+  }
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => throw const CloudflareChallenge();
+
+  @override
+  Future<Map<String, Object?>> json(String url) async {
+    calls++;
+    await Future<void>.delayed(delay);
+    throw const CloudflareChallenge();
+  }
 }
 
 const _manhwa = 'https://manhwaread.com/manhwa/disfarming/';
@@ -98,6 +142,42 @@ void main() {
     }
     fail('la condizione non si è avverata');
   }
+
+  Future<(String, String)> seedLibrary() async {
+    final root = p.join(dir.path, 'libreria');
+    const folder = 'Disfarming [manhwaread-disfarming]';
+    await Directory(p.join(root, folder)).create(recursive: true);
+    await File(p.join(root, folder, 'series.json')).writeAsString(jsonEncode({
+      'schemaVersion': 3,
+      'provider': 'manhwaread',
+      'id': 'disfarming',
+      'title': 'Vecchio titolo',
+      'source': _manhwa,
+      'metadata': const {},
+      'chapters': const <Object?>[],
+    }));
+    await File(p.join(root, 'library.json')).writeAsString(jsonEncode({
+      'series': [
+        {'key': 'manhwaread:disfarming', 'path': folder, 'source': _manhwa, 'title': 'Vecchio titolo'},
+      ],
+    }));
+    return (root, folder);
+  }
+
+  ServerWorker repairWorker(String root, ProviderHttp http) => ServerWorker(
+        files,
+        ArchiveEnvironment(
+          scratch: Directory(p.join(dir.path, 'scratch')),
+          storeFor: (_) => LocalStore(root),
+          httpFor: (provider, {userAgent, cookies = const {}}) => http,
+        ),
+        blocked: () async => null,
+        folder: () => 'f',
+        browser: SuppliedPages(const {}),
+        repairWatch: const Duration(milliseconds: 30),
+        retryAfter: const Duration(hours: 1),
+        log: (_) {},
+      );
 
   test('il giro prende quello che arriva mentre dorme, e la coda si svuota', () async {
     final worker = ServerWorker(files, environment(), blocked: () async => null, log: (_) {});
@@ -275,5 +355,166 @@ void main() {
     await files.enqueue(job('uno', 'https://example.com/x'));
     await worker.cancel('uno');
     expect(await files.jobs(), isEmpty);
+  });
+
+  test('la riparazione rilegge la serie, lascia l\'esito in storia e viene prima del lavoro in coda', () async {
+    final (root, folder) = await seedLibrary();
+    final worker = ServerWorker(
+      files,
+      ArchiveEnvironment(
+        scratch: Directory(p.join(dir.path, 'scratch')),
+        storeFor: (_) => LocalStore(root),
+        httpFor: (provider, {userAgent, cookies = const {}}) => _Page(),
+      ),
+      blocked: () async => null,
+      folder: () => 'f',
+      browser: SuppliedPages(const {}),
+      log: (_) {},
+    );
+    await files.enqueue(job('uno', 'https://example.com/non-un-sito'));
+    worker.repair(keys: {'manhwaread:disfarming'});
+    worker.repair(site: 'manhwaread');
+    worker.start();
+    await until(() async => (await files.history()).length == 2);
+    await worker.close();
+    final history = await files.history();
+    // Dal più recente: prima la riparazione, poi il lavoro.
+    final repaired = history.last;
+    expect(repaired.seriesKey, 'manhwaread:disfarming');
+    expect(repaired.repair?['titleChanged'], isTrue);
+    expect(history.first.title, 'uno');
+    expect(jsonDecode(await File(p.join(root, folder, 'series.json')).readAsString())['title'], 'Disfarming');
+  });
+
+  test('una riparazione scritta su file da un altro processo viene eseguita e il file sparisce', () async {
+    final (root, _) = await seedLibrary();
+    final worker = repairWorker(root, _Page())..start();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await queueRepair(files, RepairRequest(null, {'manhwaread:disfarming'}));
+    await until(() async => (await files.history()).length == 1);
+    await worker.close();
+    expect(File(p.join(files.directory.path, 'repair.json')).existsSync(), isFalse);
+  });
+
+  test('una riparazione fermata dalla rete resta nel file, e un worker nuovo la riprende', () async {
+    final (root, _) = await seedLibrary();
+    final file = File(p.join(files.directory.path, 'repair.json'));
+    var worker = repairWorker(root, _Offline());
+    worker.repair(site: 'manhwaread');
+    worker.start();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await worker.close();
+    expect(jsonDecode(await file.readAsString()), {'site': 'manhwaread'});
+
+    worker = repairWorker(root, _Page())..start();
+    await until(() async => (await files.history()).length == 1);
+    await worker.close();
+    expect(file.existsSync(), isFalse);
+  });
+
+  group('Su altri siti', () {
+    Future<String> seedSeries(int count) async {
+      final root = p.join(dir.path, 'libreria');
+      await Directory(root).create(recursive: true);
+      await File(p.join(root, 'library.json')).writeAsString(jsonEncode({
+        'series': [
+          for (var i = 0; i < count; i++)
+            {'key': 'manhwaread:s$i', 'path': 'S$i', 'source': 'https://manhwaread.com/manhwa/s$i/', 'title': 'Serie $i'},
+        ],
+      }));
+      return root;
+    }
+
+    ServerWorker elsewhereWorker(String root, ProviderHttp http) => ServerWorker(
+          files,
+          ArchiveEnvironment(
+            scratch: Directory(p.join(dir.path, 'scratch')),
+            storeFor: (_) => LocalStore(root),
+            httpFor: (provider, {userAgent, cookies = const {}}) => http,
+          ),
+          blocked: () async => null,
+          folder: () => 'f',
+          browser: SuppliedPages(const {}),
+          elsewhereDelay: Duration.zero,
+          retryAfter: const Duration(milliseconds: 50),
+          log: (_) {},
+        );
+
+    Future<bool> finished(ServerWorker worker) async =>
+        ((await worker.elsewhere())['pass'] as Map)['finishedAt'] != null;
+
+    test('dopo il controllo la passata scrive elsewhere.json e il suo stato', () async {
+      final root = await seedSeries(2);
+      final worker = elsewhereWorker(root, _Slow())..start();
+      await worker.checkNow();
+      await until(() => finished(worker));
+      final body = await worker.elsewhere();
+      final series = body['series'] as Map;
+      expect(series.keys, {'manhwaread:s0', 'manhwaread:s1'});
+      expect(((series['manhwaread:s0'] as Map)['sites'] as Map)['mangak'], containsPair('state', 'gated'));
+      final pass = body['pass'] as Map;
+      expect((pass['running'], pass['checked'], pass['pending']), (false, 2, 0));
+      expect(File(p.join(files.directory.path, 'elsewhere.json')).existsSync(), isTrue);
+      expect(((await worker.elsewhere(keys: {'manhwaread:s1'}))['series'] as Map).keys, ['manhwaread:s1']);
+      await worker.close();
+    });
+
+    test('con elsewhere spento il controllo non fa la passata', () async {
+      final root = await seedSeries(1);
+      final http = _Slow();
+      final worker = elsewhereWorker(root, http)..start();
+      await worker.configureCheck(elsewhere: false);
+      expect((await worker.checkSettings()).elsewhere, isFalse);
+      await worker.checkNow();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(((await worker.elsewhere())['series'] as Map), isEmpty);
+      expect(File(p.join(files.directory.path, 'elsewhere.json')).existsSync(), isFalse);
+      await worker.close();
+    });
+
+    test('le serie chieste si rileggono anche se non sono da riguardare', () async {
+      final root = await seedSeries(2);
+      final worker = elsewhereWorker(root, _Slow())..start();
+      await worker.checkNow();
+      await until(() => finished(worker));
+      Future<DateTime> seen(String key) async => DateTime.parse(
+          (((await worker.elsewhere())['series'] as Map)[key] as Map)['checkedAt'] as String);
+      final before = await seen('manhwaread:s1');
+      final other = await seen('manhwaread:s0');
+      worker.lookElsewhere({'manhwaread:s1'});
+      await until(() async => (await seen('manhwaread:s1')).isAfter(before));
+      expect(await seen('manhwaread:s0'), other);
+      await worker.close();
+    });
+
+    test('un lavoro che entra ferma la passata, che riprende a coda vuota', () async {
+      final root = await seedSeries(3);
+      final http = _Slow(delay: const Duration(milliseconds: 300));
+      final worker = elsewhereWorker(root, http)..start();
+      await worker.checkNow();
+      await until(() async => http.calls > 0);
+      expect(((await worker.elsewhere())['pass'] as Map)['running'], isTrue);
+      await files.enqueue(job('uno', 'https://example.com/non-un-sito'));
+      worker.wake();
+      await until(() async => (await files.history()).isNotEmpty);
+      expect(((await worker.elsewhere())['series'] as Map).length, lessThan(3));
+      await until(() => finished(worker));
+      final pass = (await worker.elsewhere())['pass'] as Map;
+      expect((pass['running'], pass['checked']), (false, 3));
+      expect(worker.stuck(run: const Duration(seconds: 1), check: const Duration(seconds: 1)), isNull);
+      await worker.close();
+    });
+
+    test('senza rete la passata resta in attesa e si riprova', () async {
+      final root = await seedSeries(1);
+      final offline = _Offline();
+      final worker = elsewhereWorker(root, offline)..start();
+      worker.lookElsewhere({'manhwaread:s0'});
+      await until(() async => offline.calls > 0);
+      final first = offline.calls;
+      await until(() async => offline.calls > first);
+      expect(((await worker.elsewhere())['pass'] as Map)['running'], isTrue);
+      await worker.close();
+    });
   });
 }

@@ -15,21 +15,34 @@ import 'package:kagami_archive/stores.dart';
 
 import 'config.dart';
 import 'google.dart';
+import 'shares.dart';
 import 'worker.dart';
 
 class Member {
-  const Member({required this.email, required this.addedAt, this.owner = false});
+  const Member({required this.email, required this.addedAt, this.owner = false, this.expiresAt});
 
   factory Member.fromJson(Map<String, Object?> json) => Member(
         email: json['email'] as String,
         addedAt: DateTime.tryParse('${json['addedAt']}') ?? DateTime.now(),
+        expiresAt: DateTime.tryParse('${json['expiresAt']}')?.toUtc(),
       );
 
   final String email;
   final DateTime addedAt;
   final bool owner;
 
-  Map<String, Object?> toJson() => {'email': email, 'addedAt': addedAt.toIso8601String()};
+  /// Quando finisce l'accesso; `null` senza scadenza. Il proprietario non scade.
+  final DateTime? expiresAt;
+
+  bool expiredAt(DateTime now) => !owner && expiresAt != null && !now.isBefore(expiresAt!);
+
+  Member withExpiry(DateTime? expiresAt) => Member(email: email, addedAt: addedAt, owner: owner, expiresAt: expiresAt);
+
+  Map<String, Object?> toJson() => {
+        'email': email,
+        'addedAt': addedAt.toIso8601String(),
+        if (expiresAt != null) 'expiresAt': expiresAt!.toUtc().toIso8601String(),
+      };
 }
 
 /// Ciò che l'API usa di un utente.
@@ -37,6 +50,9 @@ abstract interface class UserSpace {
   ArchiveFiles get files;
   JobControl get jobs;
   DriveSetup get drive;
+
+  /// Le condivisioni da ritirare alla scadenza (`shares`).
+  ShareKeeper get shares;
 
   Future<void> close();
 
@@ -51,7 +67,7 @@ String? normalizeEmail(String value) {
 }
 
 class Accounts {
-  Accounts(this.file, {required this.owner, required this.open});
+  Accounts(this.file, {required this.owner, required this.open, DateTime Function()? now}) : now = now ?? DateTime.now;
 
   final File file;
 
@@ -60,6 +76,9 @@ class Accounts {
 
   /// Apre lo spazio di un utente, col suo giro acceso.
   final Future<UserSpace> Function(String email) open;
+
+  /// L'orologio, finto nei test.
+  final DateTime Function() now;
 
   List<Member>? _members;
   final Map<String, Future<UserSpace>> _spaces = {};
@@ -89,13 +108,55 @@ class Accounts {
 
   Future<Member?> find(String email) async => (await list()).where((member) => member.email == email).firstOrNull;
 
-  Future<Member> add(String email) => _serial(() async {
+  Future<Member> add(String email, {DateTime? expiresAt}) => _serial(() async {
         final known = await find(email);
         if (known != null) return known;
-        final member = Member(email: email, addedAt: DateTime.now());
+        final member = Member(email: email, addedAt: DateTime.now(), expiresAt: expiresAt);
         await _save([...await list(), member]);
         return member;
       });
+
+  /// Cambia la scadenza di un utente ammesso (`null` la toglie); `null` se
+  /// non c'è. Se l'accesso torna valido lo spazio si riapre e la coda riparte.
+  Future<Member?> renew(String email, DateTime? expiresAt) async {
+    final member = await _serial(() async {
+      if (email == owner) throw ArgumentError('Il proprietario non scade.');
+      final members = await list();
+      final known = members.where((member) => member.email == email).firstOrNull;
+      if (known == null) return null;
+      final renewed = known.withExpiry(expiresAt);
+      await _save([for (final member in members) if (member.email == email) renewed else member]);
+      return renewed;
+    });
+    if (member != null && !member.expiredAt(now())) await space(email);
+    return member;
+  }
+
+  /// Toglie gli scaduti e ne cancella lo spazio subito (nessun periodo di grazia).
+  Future<void> sweep() async {
+    final at = now();
+    for (final member in await list()) {
+      if (member.expiredAt(at)) await remove(member.email);
+    }
+  }
+
+  /// Ritira i permessi di Drive scaduti di chi ha ancora l'accesso: lo spazio
+  /// di uno scaduto si cancella con il suo elenco (docs/server-api.md,
+  /// `PUT /v2/me/shares`). Un utente che non va non ferma gli altri.
+  Future<void> sweepShares({void Function(String line)? say}) async {
+    final at = now();
+    for (final member in await list()) {
+      if (member.expiredAt(at)) continue;
+      try {
+        final space = await this.space(member.email);
+        for (final problem in await space.shares.sweep(at, space.drive.unshare)) {
+          say?.call('Condivisione di ${member.email} non ritirata, si riprova: $problem');
+        }
+      } on Object catch (error) {
+        say?.call('Condivisioni di ${member.email} non controllate: $error');
+      }
+    }
+  }
 
   /// Toglie l'utente e cancella il suo spazio. Dice se c'era.
   Future<bool> remove(String email) => _serial(() async {
@@ -103,8 +164,7 @@ class Accounts {
         final members = await list();
         if (!members.any((member) => member.email == email)) return false;
         await _save([for (final member in members) if (member.email != email) member]);
-        final space = _spaces.remove(email);
-        if (space != null) await (await space).destroy();
+        await (await (_spaces.remove(email) ?? open(email))).destroy();
         return true;
       });
 
@@ -121,8 +181,9 @@ class Accounts {
 
   /// Accende i giri di tutti: le code lasciate a metà ripartono da sole.
   Future<void> openAll() async {
+    final at = now();
     for (final member in await list()) {
-      await space(member.email);
+      if (!member.expiredAt(at)) await space(member.email);
     }
   }
 

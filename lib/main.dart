@@ -6,23 +6,29 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'src/archive/background.dart';
 import 'src/data/auto_cleanup.dart';
 import 'src/data/cloud.dart';
+import 'src/data/db/account_databases.dart';
 import 'src/data/folder_sync_schedule.dart';
 import 'src/data/library_location.dart';
 import 'src/data/network.dart';
 import 'src/data/notifications.dart';
+import 'src/data/sentry_scrub.dart';
 import 'src/data/share_intake.dart';
 import 'src/l10n.dart';
+import 'src/native_licenses.dart';
 import 'src/providers.dart';
+import 'src/ui/account_scope.dart';
 import 'src/ui/app_shell.dart';
 import 'src/ui/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerNativeLicenses();
   // La sessione dell'account si ripristina prima del primo fotogramma:
   // altrimenti l'app si crederebbe scollegata per un istante e lo direbbe.
   await initCloud();
@@ -30,11 +36,28 @@ Future<void> main() async {
   ArrivalNotifications.instance.start();
   SharedText.instance.start();
   final directories = await AppDirectories.resolve();
+  final databases = AccountDatabases(await getApplicationDocumentsDirectory());
+  // Quale file di dati si apre dipende da chi è dentro: la sessione si attende
+  // (tetto 5 s) solo se serve a decidere, cioè se la nota dello slot manca.
+  final undecided = await databases.readNote() is SlotNoteAbsent;
+  final slot = await databases.resolveActive(
+    uid: undecided ? (await const CloudAuth().restoredAccount())?.id : null,
+    support: Directory(directories.support),
+    onUnreadable: (error) => Sentry.captureException(error),
+  );
+  // Lo slot segue l'account voluto: un altro uid lo cambia, una sessione persa
+  // no; l'uscita esplicita la chiede `CloudAccountNotifier`.
+  final slots = AccountSlots(databases, slot)
+    ..follow(
+      const CloudAuth().changes().map((account) => account?.id),
+      onError: (error) => Sentry.captureException(error),
+    );
   await _withSentry(
     () => runApp(
       SentryWidget(
-        child: ProviderScope(
-          overrides: [appDirectoriesProvider.overrideWithValue(directories)],
+        child: AccountScope(
+          slots: slots,
+          directories: directories,
           child: const KagamiApp(),
         ),
       ),
@@ -51,6 +74,9 @@ Future<void> _withSentry(FutureOr<void> Function() appRunner) =>
       options.dsn = _sentryDsn;
       options.environment = kReleaseMode ? 'production' : 'debug';
       options.tracesSampleRate = 0.2;
+      // Il progetto è di chi compila: indirizzi, email e id di Drive restano
+      // sul telefono (`sentry_scrub.dart`).
+      options.beforeSend = scrubEvent;
     }, appRunner: appRunner);
 
 /// Il giro programmato della sincronizzazione con Drive: lo avvia

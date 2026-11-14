@@ -20,6 +20,8 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 
+import 'transport.dart';
+
 /// Il permesso chiesto all'utente.
 ///
 /// Sola lettura: le cartelle le scrive rclone dal server, e a un lettore
@@ -86,6 +88,42 @@ class DriveItem {
       md5 ?? '$id-${modified?.millisecondsSinceEpoch ?? 0}';
 }
 
+/// Chi può arrivare a un file o a una cartella, per Drive.
+///
+/// [expiresAt] è la scadenza che **Drive** tiene: `null` vuol dire che Drive
+/// non toglierà il permesso da solo, e se un termine c'è lo fa valere Kagami
+/// (docs/drive.md, «La libreria condivisa»).
+class DrivePermission {
+  const DrivePermission({
+    required this.id,
+    this.type = 'user',
+    this.role = 'reader',
+    this.email,
+    this.expiresAt,
+  });
+
+  factory DrivePermission.fromJson(Map<String, Object?> json) => DrivePermission(
+        id: json['id'] as String,
+        type: json['type'] as String? ?? '',
+        role: json['role'] as String? ?? '',
+        email: (json['emailAddress'] as String?)?.toLowerCase(),
+        expiresAt: DateTime.tryParse('${json['expirationTime']}'),
+      );
+
+  final String id;
+
+  /// `user`, `group`, `domain` o `anyone`: solo i primi due hanno un indirizzo.
+  final String type;
+
+  /// `owner`, `organizer`, `fileOrganizer`, `writer`, `commenter`, `reader`.
+  final String role;
+
+  /// L'indirizzo come lo scrive Drive, minuscolo: può non essere quello
+  /// digitato da chi ha condiviso.
+  final String? email;
+  final DateTime? expiresAt;
+}
+
 class DriveException implements Exception {
   const DriveException(this.message, {this.status});
 
@@ -102,8 +140,10 @@ class DriveOffline extends DriveException {
   const DriveOffline([super.message = 'Nessuna connessione']);
 }
 
-/// Se un errore passerà da solo quando torna la rete.
-bool isNetworkFailure(Object? error) => error is DriveOffline;
+/// Se un errore passerà da solo quando torna la rete: anche una sorgente
+/// per percorsi che non risponde, perché la cache ne tenga il `.part`.
+bool isNetworkFailure(Object? error) =>
+    error is DriveOffline || error is TransportOffline;
 
 /// L'utente non ha ancora dato il permesso di leggere Drive, o l'ha tolto:
 /// serve un suo gesto, e l'interfaccia deve offrirglielo invece di un errore.
@@ -141,6 +181,7 @@ class DriveClient {
     @visibleForTesting this.stall = const Duration(seconds: 20),
     @visibleForTesting this.answer = const Duration(seconds: 20),
     @visibleForTesting this.multipartLimit = 5 * 1024 * 1024,
+    @visibleForTesting this.textLimit = textLimitBytes,
     int connections = 8,
   })  : _endpoint = endpoint ?? _drive,
         _http = HttpClient() {
@@ -169,6 +210,10 @@ class DriveClient {
   /// Fin qui un file sale in una richiesta sola: è la misura che Google
   /// indica per il caricamento multipart.
   final int multipartLimit;
+
+  /// Il tetto di [text]: un indice altrui enorme è un errore, non memoria
+  /// piena.
+  final int textLimit;
 
   /// Fino a quando Drive ha chiesto di rallentare: vedere [_send].
   DateTime _calm = DateTime.fromMillisecondsSinceEpoch(0);
@@ -237,8 +282,16 @@ class DriveClient {
       );
 
   /// Il contenuto di un file come testo.
-  Future<String> text(String id) async =>
-      utf8.decodeStream(_watch(await _get(_media(id))));
+  Future<String> text(String id) async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in _watch(await _get(_media(id)))) {
+      if (builder.length + chunk.length > textLimit) {
+        throw DriveException('Il file supera $textLimit byte');
+      }
+      builder.add(chunk);
+    }
+    return utf8.decode(builder.takeBytes());
+  }
 
   /// Scarica un file a flusso: una tavola non passa mai intera dalla memoria.
   ///
@@ -411,6 +464,7 @@ class DriveClient {
       final status = response.statusCode;
       if (status == HttpStatus.ok ||
           status == HttpStatus.created ||
+          status == HttpStatus.noContent ||
           status == HttpStatus.partialContent) {
         network.succeeded();
         return response;
@@ -461,6 +515,22 @@ class DriveClient {
         '/drive/v3/files/${Uri.encodeComponent(id)}',
         {'fields': _itemFields, 'supportsAllDrives': 'true'},
       )));
+
+  /// Se la cartella (o il file) [id] è dell'account (`ownedByMe`): Kagami
+  /// sposta nel cestino solo lì (FASE-5b §5). Un elemento di un Drive
+  /// condiviso non ha proprietario, e Drive non manda il campo: falso.
+  /// Un errore esce: «non ho potuto chiedere» non è «non è mia».
+  Future<bool> owned(String id) async {
+    final response = await _get(_endpoint(
+      '/drive/v3/files/${Uri.encodeComponent(id)}',
+      {'fields': 'id,ownedByMe', 'supportsAllDrives': 'true'},
+    ));
+    final json = jsonDecode(await utf8.decodeStream(_watch(response)));
+    if (json is! Map<String, Object?>) {
+      throw const DriveException('Risposta di Drive non valida');
+    }
+    return json['ownedByMe'] == true;
+  }
 
   /// Crea una cartella dentro [parentId].
   Future<DriveItem> createFolder(String name, String parentId) => _json(
@@ -556,6 +626,16 @@ class DriveClient {
     return _item(response);
   }
 
+  /// Cambia il nome di un file o di una cartella, lasciandolo dov'è.
+  Future<DriveItem> rename(String id, String name) => _json(
+        'PATCH',
+        _endpoint('/drive/v3/files/${Uri.encodeComponent(id)}', {
+          'fields': _itemFields,
+          'supportsAllDrives': 'true',
+        }),
+        {'name': name},
+      );
+
   /// Sposta nel cestino: da lì si recupera per trenta giorni, ed è l'unico
   /// modo in cui l'app toglie qualcosa da Drive.
   Future<void> trash(String id) async {
@@ -567,6 +647,108 @@ class DriveClient {
       }),
       {'trashed': true},
     );
+  }
+
+  static const String _permissionFields = 'id,type,role,emailAddress,expirationTime';
+
+  Uri _permissions(String fileId, [String? permissionId, Map<String, String> query = const {}]) => _endpoint(
+        '/drive/v3/files/$fileId/permissions${permissionId == null ? '' : '/$permissionId'}',
+        {'supportsAllDrives': 'true', ...query},
+      );
+
+  /// Lascia leggere [folderId], e tutto ciò che contiene, a [email]. Serve
+  /// lo scope completo ([driveWriteScope]).
+  ///
+  /// Nessuna email da Google: l'invito lo porta Kagami. Con [expiresAt] si
+  /// chiede a Drive di togliere il permesso da solo; se Drive rifiuta la
+  /// scadenza (non la concede a tutti gli account né a tutte le cartelle) il
+  /// permesso si crea senza, e chi chiama lo vede da
+  /// [DrivePermission.expiresAt] vuoto: il termine resta da far valere.
+  Future<DrivePermission> share(String folderId, String email, {DateTime? expiresAt}) =>
+      _expiring(expiresAt, (expiry) => _send(
+            'POST',
+            _permissions(folderId, null, const {
+              'fields': _permissionFields,
+              'sendNotificationEmail': 'false',
+            }),
+            write: _jsonBody({
+              'type': 'user',
+              'role': 'reader',
+              'emailAddress': email,
+              'expirationTime': ?expiry,
+            }),
+          ));
+
+  /// Sposta la scadenza di un permesso che c'è già, o la toglie con
+  /// [expiresAt] vuoto. Se il permesso non c'è più (Drive l'ha fatto scadere,
+  /// o qualcuno l'ha tolto) è un [DriveException] con `status` 404, e chi
+  /// chiama lo ricrea con [share]. La scadenza rifiutata vale come in [share].
+  Future<DrivePermission> renewShare(String folderId, String permissionId, DateTime? expiresAt) =>
+      _expiring(expiresAt, (expiry) => _send(
+            'PATCH',
+            _permissions(folderId, permissionId, {
+              'fields': _permissionFields,
+              if (expiry == null) 'removeExpiration': 'true',
+            }),
+            write: _jsonBody({'role': 'reader', 'expirationTime': ?expiry}),
+          ));
+
+  /// Una scrittura di permesso con la scadenza, e senza se Drive la rifiuta:
+  /// un 400 o un 403 che non sia il permesso mancante dell'app
+  /// ([DriveAuthRequired], che non ha `status`). Se il rifiuto era per altro,
+  /// la seconda richiesta fallisce uguale ed è il suo errore a uscire.
+  Future<DrivePermission> _expiring(
+    DateTime? expiresAt,
+    Future<HttpClientResponse> Function(String? expiry) write,
+  ) async {
+    Future<DrivePermission> run(String? expiry) async {
+      final json = jsonDecode(await utf8.decodeStream(_watch(await write(expiry))));
+      if (json is! Map<String, Object?> || json['id'] is! String) {
+        throw const DriveException('Risposta di Drive non valida');
+      }
+      return DrivePermission.fromJson(json);
+    }
+
+    if (expiresAt == null) return run(null);
+    try {
+      return await run(expiresAt.toUtc().toIso8601String());
+    } on DriveException catch (error) {
+      if (error.status != HttpStatus.badRequest && error.status != HttpStatus.forbidden) rethrow;
+      return run(null);
+    }
+  }
+
+  /// Ritira un permesso. Uno che non c'è più è già ritirato; ogni altro
+  /// errore lancia, e allora il permesso va considerato ancora lì.
+  Future<void> unshare(String folderId, String permissionId) async {
+    try {
+      await _watch(await _send('DELETE', _permissions(folderId, permissionId))).drain<void>();
+    } on DriveException catch (error) {
+      if (error.status != HttpStatus.notFound) rethrow;
+    }
+  }
+
+  /// Tutti i permessi di [folderId], il proprietario compreso, come li
+  /// elenca Drive: anche quelli dati a mano dal sito di Drive.
+  Future<List<DrivePermission>> sharedWith(String folderId) async {
+    final permissions = <DrivePermission>[];
+    String? page;
+    do {
+      final json = jsonDecode(await utf8.decodeStream(_watch(await _get(_permissions(folderId, null, {
+        'fields': 'nextPageToken,permissions($_permissionFields)',
+        'pageSize': '100',
+        'pageToken': ?page,
+      })))));
+      if (json is! Map<String, Object?>) {
+        throw const DriveException('Risposta di Drive non valida');
+      }
+      permissions.addAll((json['permissions'] as List? ?? const [])
+          .whereType<Map<String, Object?>>()
+          .where((row) => row['id'] is String)
+          .map(DrivePermission.fromJson));
+      page = json['nextPageToken'] as String?;
+    } while (page != null);
+    return permissions;
   }
 
   Future<DriveItem> _json(String method, Uri uri, Map<String, Object?> body) async =>
@@ -616,6 +798,8 @@ abstract interface class SyncRemote {
   Future<DriveItem> createFolder(String name, String parentId);
 
   Future<void> trash(String id);
+
+  Future<DriveItem> rename(String id, String name);
 }
 
 /// [SyncRemote] con il client vero.
@@ -656,4 +840,7 @@ class DriveSyncRemote implements SyncRemote {
 
   @override
   Future<void> trash(String id) => client.trash(id);
+
+  @override
+  Future<DriveItem> rename(String id, String name) => client.rename(id, name);
 }

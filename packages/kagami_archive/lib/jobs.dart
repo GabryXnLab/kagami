@@ -14,6 +14,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import 'health.dart';
 import 'stores.dart';
 
 /// Dove finisce ciò che si scarica.
@@ -270,6 +271,7 @@ class ArchiveOutcome {
     this.seriesKey,
     this.url,
     this.card = false,
+    this.repair,
   });
 
   factory ArchiveOutcome.fromJson(Map<String, Object?> json) => ArchiveOutcome(
@@ -280,6 +282,7 @@ class ArchiveOutcome {
         seriesKey: json['key'] as String?,
         url: json['url'] as String?,
         card: json['card'] == true,
+        repair: json['repair'] as Map<String, Object?>?,
       );
 
   final String title;
@@ -294,6 +297,9 @@ class ArchiveOutcome {
   /// Era solo la scheda ([ArchiveJob.cardOnly]): l'app la mostra come tale.
   final bool card;
 
+  /// L'esito di una riparazione (`RepairOutcome.toJson`); `null` negli altri.
+  final Map<String, Object?>? repair;
+
   Map<String, Object?> toJson() => {
         'title': title,
         'ok': ok,
@@ -302,6 +308,7 @@ class ArchiveOutcome {
         'key': ?seriesKey,
         'url': ?url,
         if (card) 'card': true,
+        'repair': ?repair,
       };
 }
 
@@ -327,7 +334,7 @@ class CheckSettings {
 /// cartella scelta sul telefono —, tranne quelle che l'utente ha smesso di
 /// seguire.
 class CheckScope {
-  const CheckScope({this.toServer = false, this.driveFolder, this.localRoot, this.unfollowed = const {}, this.server});
+  const CheckScope({this.toServer = false, this.driveFolder, this.localRoot, this.unfollowed = const {}, this.server, this.serverId, this.serverOwner, this.userSitesOnPhone = false});
 
   factory CheckScope.fromJson(Map<String, Object?> json) => CheckScope(
         toServer: json['toServer'] == true,
@@ -335,6 +342,9 @@ class CheckScope {
         localRoot: json['localRoot'] as String?,
         unfollowed: {...?(json['unfollowed'] as List?)?.whereType<String>()},
         server: json['server'] as String?,
+        serverId: json['serverId'] as String?,
+        serverOwner: json['serverOwner'] as String?,
+        userSitesOnPhone: json['userSitesOnPhone'] == true,
       );
 
   final bool toServer;
@@ -346,12 +356,25 @@ class CheckScope {
   /// telefono gli chiede quali serie sono ferme alla verifica del sito.
   final String? server;
 
+  /// Ciò che il collegamento ricorda di quel server (`id`, `owner`): ad app
+  /// chiusa il telefono si presenta con un biglietto per quell'id, e il
+  /// token solo se il server è suo.
+  final String? serverId;
+  final String? serverOwner;
+
+  /// Con [toServer], il server scelto non sa usare i siti degli utenti: le
+  /// loro serie le controlla il telefono.
+  final bool userSitesOnPhone;
+
   Map<String, Object?> toJson() => {
         'toServer': toServer,
         'driveFolder': ?driveFolder,
         'localRoot': ?localRoot,
         'unfollowed': [...unfollowed],
         'server': ?server,
+        'serverId': ?serverId,
+        'serverOwner': ?serverOwner,
+        'userSitesOnPhone': userSitesOnPhone,
       };
 }
 
@@ -390,6 +413,9 @@ class ArchiveFiles {
   File get ongoing => File(p.join(directory.path, 'ongoing.json'));
   File get _scope => File(p.join(directory.path, 'check-scope.json'));
   File get _gated => File(p.join(directory.path, 'gated.json'));
+
+  /// Quali siti non funzionano più per intero, dagli ultimi giri.
+  HealthLog get health => HealthLog(File(p.join(directory.path, 'health.json')));
 
   /// Cosa controlla il telefono, come l'ha scritto l'app: lo legge anche il
   /// controllo ad app chiusa, che il database non lo apre.

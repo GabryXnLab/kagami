@@ -18,7 +18,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../data/auto_cleanup.dart';
 import '../data/backup.dart';
+import '../data/backup_folder.dart';
 import '../data/cloud.dart';
+import '../data/db/account_databases.dart' show AccountDatabases;
 import '../data/folder_sync.dart';
 import '../data/library_view.dart' show HomeUpdatesSettings;
 import '../data/page_decoder.dart';
@@ -27,11 +29,19 @@ import '../data/reader_settings.dart';
 import '../l10n.dart';
 import '../data/read_ahead.dart';
 import '../providers.dart';
+import '../providers_backup.dart';
+import '../providers_shares.dart';
+import '../providers_social.dart';
+import 'drive_received_sheet.dart';
+import 'drive_share_sheet.dart';
 import 'app_shell.dart';
 import 'archive_screen.dart';
 import 'drive_ui.dart';
 import 'history_screen.dart';
 import 'statistics_screen.dart';
+import 'privacy_screen.dart';
+import 'social_screen.dart';
+import 'sources_screen.dart';
 import 'sync_screen.dart';
 import 'theme.dart';
 import 'widgets/cleanup_sheet.dart';
@@ -246,6 +256,16 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const _Value(),
                     onTap: () => open(const HistoryScreen()),
                   ),
+                  if (cloudAvailable)
+                    KTile(
+                      icon: LucideIcons.users,
+                      title: l10n.socialTitle,
+                      subtitle: (ref.watch(socialSettingsProvider).value?.enabled ?? false)
+                          ? l10n.socialSubtitleOn
+                          : l10n.socialSubtitleOff,
+                      trailing: const _Value(),
+                      onTap: () => open(const SocialScreen()),
+                    ),
                   KTile(
                     icon: LucideIcons.chartColumn,
                     title: l10n.moreStatistics,
@@ -455,6 +475,25 @@ class _LibraryPage extends ConsumerWidget {
               },
             ),
             KTile(
+              icon: LucideIcons.layers,
+              title: l10n.sourcesTitle,
+              subtitle: l10n.sourcesEntryNote,
+              trailing: const _Value(),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SourcesScreen()),
+              ),
+            ),
+            if (cloudAvailable)
+              KTile(
+                icon: LucideIcons.shieldCheck,
+                title: l10n.privacyTitle,
+                subtitle: l10n.privacyEntryNote,
+                trailing: const _Value(),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const PrivacyScreen()),
+                ),
+              ),
+            KTile(
               icon: LucideIcons.refreshCw,
               title: l10n.settingsReloadIndexes,
               subtitle: l10n.settingsReloadIndexesNote,
@@ -603,7 +642,11 @@ class _AutoCleanup extends ConsumerWidget {
         KTile(
           icon: LucideIcons.bookCheck,
           title: l10n.settingsAutoCleanupRead,
-          subtitle: l10n.settingsAutoCleanupReadNote,
+          // Con Drive: un capitolo letto da una condivisione è letto, e la
+          // regola toglie anche la copia nel Drive dell'account (FASE-5b §5).
+          subtitle: ref.watch(driveRepositoryProvider) == null
+              ? l10n.settingsAutoCleanupReadNote
+              : '${l10n.settingsAutoCleanupReadNote}\n${l10n.settingsAutoCleanupSharedRead}',
           onTap: () => read(!settings.read),
           trailing: Switch(value: settings.read, onChanged: read),
         ),
@@ -701,7 +744,6 @@ class _DataPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final root = ref.watch(libraryRootProvider);
     final autoBackup = ref.watch(autoBackupProvider).value ?? true;
     return _Page(
       title: l10n.settingsData,
@@ -732,7 +774,8 @@ class _DataPage extends ConsumerWidget {
               subtitle: l10n.settingsImportNote,
               onTap: () => _import(context, ref),
             ),
-            if (root != null) _AutoBackups(root: root),
+            _AutoBackups(support: ref.watch(appDirectoriesProvider).support),
+            const _BackupFolderTile(),
           ],
         ),
         const SizedBox(height: 22),
@@ -921,6 +964,14 @@ class _DriveState extends ConsumerState<_Drive> {
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => connectDrive(context, ref),
           ),
+          if (ref.watch(shareReceivedVisibleProvider))
+            KTile(
+              icon: LucideIcons.libraryBig,
+              title: l10n.driveReceivedTitle,
+              subtitle: l10n.driveReceivedEntryNote,
+              trailing: const Icon(LucideIcons.chevronRight, size: 18),
+              onTap: () => DriveReceivedSheet.open(context),
+            ),
         ],
       );
     }
@@ -944,6 +995,23 @@ class _DriveState extends ConsumerState<_Drive> {
             MaterialPageRoute<void>(builder: (_) => const SyncScreen()),
           ),
         ),
+        // Si condivide solo una cartella dell'account (FASE-5b §5).
+        if (ref.watch(driveAccessProvider) != null && ref.watch(driveFolderOwnedProvider).value == true)
+          KTile(
+            icon: LucideIcons.share2,
+            title: l10n.driveShareTitle,
+            subtitle: l10n.driveShareEntryNote,
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => DriveShareSheet.open(context),
+          ),
+        if (ref.watch(shareReceivedVisibleProvider))
+          KTile(
+            icon: LucideIcons.libraryBig,
+            title: l10n.driveReceivedTitle,
+            subtitle: l10n.driveReceivedEntryNote,
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => DriveReceivedSheet.open(context),
+          ),
         KTile(
           icon: LucideIcons.download,
           title: l10n.settingsDriveDownloadsGo,
@@ -1033,15 +1101,24 @@ class _Account extends ConsumerWidget {
 
     return KGroup(
       children: [
-        if (account == null)
+        if (account == null) ...[
           KTile(
             icon: LucideIcons.logIn,
             title: l10n.settingsAccountSignIn,
             subtitle: l10n.settingsAccountSignInNote,
             trailing: status.busy ? const _Working() : null,
             onTap: status.busy ? null : notifier.signIn,
-          )
-        else ...[
+          ),
+          // Sessione persa: a schermo restano i dati dell'account, e senza
+          // questa riga non ci sarebbe modo di tornare all'uso senza account.
+          if (ref.watch(databaseSlotProvider) != AccountDatabases.guest)
+            KTile(
+              icon: LucideIcons.logOut,
+              title: l10n.settingsAccountSignOut,
+              subtitle: l10n.settingsAccountSessionLostNote,
+              onTap: status.busy ? null : notifier.signOut,
+            ),
+        ] else ...[
           KTile(
             icon: LucideIcons.userRound,
             title: account.label,
@@ -1106,6 +1183,16 @@ class _Account extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    // Il profilo pubblico va via prima dell'account: dopo non si potrebbe più.
+    try {
+      await ref.read(socialControllerProvider.notifier).turnOff();
+    } on Object {
+      // Senza poter togliere il profilo dalla rete l'account resta com'è.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.socialRefusedSnack)));
+      }
+      return;
+    }
     await ref.read(cloudAccountProvider.notifier).forget();
   }
 
@@ -1335,19 +1422,59 @@ class _WithInfo extends StatelessWidget {
       );
 }
 
-/// Le copie automatiche che stanno nella libreria: serve saperlo, altrimenti
+/// La cartella in più per le copie automatiche: toccarla la sceglie, la X la
+/// toglie. Una cartella dentro una sorgente si rifiuta con un messaggio.
+class _BackupFolderTile extends ConsumerWidget {
+  const _BackupFolderTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final state = ref.watch(backupFolderProvider).value;
+    final chosen = state is BackupFolderChosen ? state.path : null;
+    return KTile(
+      icon: LucideIcons.folderOpen,
+      title: l10n.settingsBackupFolder,
+      subtitle: chosen == null
+          ? l10n.settingsBackupFolderNone
+          : l10n.settingsBackupFolderChosen(chosen),
+      trailing: chosen == null
+          ? null
+          : IconButton(
+              icon: const Icon(LucideIcons.x, size: 17),
+              onPressed: () => ref.read(backupFolderProvider.notifier).clear(),
+            ),
+      onTap: () async {
+        final messenger = ScaffoldMessenger.of(context);
+        final path = await FilePicker.getDirectoryPath(
+          dialogTitle: l10n.settingsBackupFolder,
+        );
+        if (path == null) return;
+        final refusal =
+            await ref.read(backupFolderProvider.notifier).choose(path);
+        if (refusal != null) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.settingsBackupFolderRefused)),
+          );
+        }
+      },
+    );
+  }
+}
+
+/// Le copie automatiche, nello spazio dell'app: serve saperlo, altrimenti
 /// il backup automatico è una promessa che nessuno può verificare.
 class _AutoBackups extends ConsumerWidget {
-  const _AutoBackups({required this.root});
+  const _AutoBackups({required this.support});
 
-  final String root;
+  final String support;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final service = ref.watch(backupServiceProvider);
     return FutureBuilder<List<File>>(
-      future: service.backupsIn(root),
+      future: service.backupsIn(support, slot: ref.watch(backupSlotProvider)),
       builder: (context, snapshot) {
         final files = snapshot.data ?? const <File>[];
         return KTile(
@@ -1362,7 +1489,7 @@ class _AutoBackups extends ConsumerWidget {
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               final bytes = await service.export();
-              final directory = Directory('$root/reading/backup');
+              final directory = BackupService.backupDirectory(support, ref.read(backupSlotProvider));
               await directory.create(recursive: true);
               final file = File('${directory.path}/${service.fileName()}');
               await file.writeAsBytes(bytes, flush: true);

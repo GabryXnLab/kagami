@@ -147,10 +147,10 @@ void main() {
         );
 
     test('su Drive toglie per serie, annota per la sincronizzazione e tiene la cartella nel piano', () async {
-      await files.writePlan([remote('A', '1', epoch), remote('A', '2', epoch), remote('B', '1', now.add(const Duration(days: 1)))], folder: 'root');
+      await files.writePlan([remote('A', '1', epoch), remote('A', '2', epoch), remote('B', '1', now.add(const Duration(days: 1)))], account: 'a@x.it', folder: 'root');
       final calls = <String, List<String>>{};
 
-      final outcome = await runAutoCleanup(files, sync, now: now, withdraw: (series, paths) async => calls[series] = paths);
+      final outcome = await runAutoCleanup(files, sync, now: now, target: (account: 'a@x.it', folder: 'root'), withdraw: (series, paths) async => calls[series] = paths);
 
       expect(calls, {'A': ['chapters/1', 'chapters/2']});
       expect(outcome.fromDrive, {'A': {'1', '2'}});
@@ -171,10 +171,11 @@ void main() {
     });
 
     test('senza rete si riprova fra poco, senza permesso no', () async {
-      await files.writePlan([remote('A', '1', epoch)]);
-      final offline = await runAutoCleanup(files, sync, now: now, withdraw: (_, _) => throw const DriveOffline());
+      await files.writePlan([remote('A', '1', epoch)], account: 'a@x.it', folder: 'root');
+      const target = (account: 'a@x.it', folder: 'root');
+      final offline = await runAutoCleanup(files, sync, now: now, target: target, withdraw: (_, _) => throw const DriveOffline());
       expect(offline.next, now.add(const Duration(minutes: 30)));
-      final denied = await runAutoCleanup(files, sync, now: now, withdraw: (_, _) => throw const DriveAuthRequired());
+      final denied = await runAutoCleanup(files, sync, now: now, target: target, withdraw: (_, _) => throw const DriveAuthRequired());
       expect(denied.next, isNull);
       expect((await files.readPlan()).items, hasLength(1));
     });

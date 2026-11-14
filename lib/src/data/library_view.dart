@@ -11,6 +11,7 @@ import 'package:kagami_archive/manual.dart' show manualProvider;
 
 import '../format/malf.dart';
 import '../l10n.dart';
+import '../format/kind.dart';
 import '../format/reading.dart';
 
 final DateTime _never = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
@@ -711,12 +712,25 @@ class LibraryFacets {
 bool _hasAny(Set<String> wanted, String? value) =>
     value != null && wanted.any((w) => w.toLowerCase() == value.toLowerCase());
 
+/// Un valore di `rules.types` col nome di una famiglia combacia per famiglia
+/// (`other` anche senza `type`); gli altri col testo com'è.
+bool _typeMatches(Set<String> wanted, String? type) {
+  final kind = kindOf(type);
+  return wanted.any((w) {
+    final family = kindNamed(w);
+    if (family != null) return family == kind;
+    return type != null && w.toLowerCase() == type.toLowerCase();
+  });
+}
+
 /// Se la serie soddisfa le regole di una raccolta. Regole vuote non
 /// combaciano con niente: senza criteri la raccolta non pesca.
 bool collectionRulesMatch(CollectionRules rules, SeriesSignals s) {
   if (rules.isEmpty) return false;
   final entry = s.entry;
-  if (rules.types.isNotEmpty && !_hasAny(rules.types, entry.type)) return false;
+  if (rules.types.isNotEmpty && !_typeMatches(rules.types, entry.type)) {
+    return false;
+  }
   if (rules.tags.isNotEmpty) {
     final have = {
       for (final t in [...entry.genres, ...entry.tags]) t.toLowerCase(),
@@ -745,7 +759,9 @@ bool collectionRulesMatch(CollectionRules rules, SeriesSignals s) {
 ///
 /// Una serie assente da [library] non è «non combacia»: una lettura fallita
 /// o Drive non raggiunto non devono svuotare la raccolta. Le manuali non si
-/// toccano, le [Collection.skipped] non rientrano.
+/// toccano, salvo in una raccolta vincolante ([CollectionRules.isBinding]),
+/// dove esce ogni serie presente che non combacia; le [Collection.skipped]
+/// non rientrano.
 Collection syncAutoMembers(Collection c, Iterable<SeriesSignals> library) {
   final present = <String>{};
   final matching = <SeriesSignals>[];
@@ -757,10 +773,15 @@ Collection syncAutoMembers(Collection c, Iterable<SeriesSignals> library) {
     }
   }
   final matchKeys = {for (final s in matching) s.entry.key};
-  final drop = {
-    for (final key in c.autoKeys)
-      if (present.contains(key) && !matchKeys.contains(key)) key,
-  };
+  final drop = c.rules.isBinding
+      ? {
+          for (final s in library)
+            if (!collectionRulesMatch(c.rules, s)) s.entry.key,
+        }.intersection(c.seriesKeys.toSet())
+      : {
+          for (final key in c.autoKeys)
+            if (present.contains(key) && !matchKeys.contains(key)) key,
+        };
   final have = c.seriesKeys.toSet();
   final add = (matching.where((s) => !have.contains(s.entry.key)).toList()
         ..sort((a, b) =>
@@ -776,4 +797,25 @@ Collection syncAutoMembers(Collection c, Iterable<SeriesSignals> library) {
     ],
     autoKeys: {...c.autoKeys.where((k) => !drop.contains(k)), ...add},
   );
+}
+
+/// Esito di un'aggiunta a mano a una raccolta.
+enum CollectionJoin {
+  joined,
+
+  /// Raccolta vincolante e la serie non combacia: non entra.
+  refused,
+
+  /// Raccolta vincolante e serie non ancora in libreria (appena messa in coda
+  /// da «Scarica un manga»): entra, e decide il primo giro di [syncAutoMembers].
+  pending,
+}
+
+/// Se la serie con segnali [s] può entrare a mano in [c].
+CollectionJoin canJoin(Collection c, SeriesSignals? s) {
+  if (!c.rules.isBinding) return CollectionJoin.joined;
+  if (s == null) return CollectionJoin.pending;
+  return collectionRulesMatch(c.rules, s)
+      ? CollectionJoin.joined
+      : CollectionJoin.refused;
 }

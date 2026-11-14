@@ -27,7 +27,9 @@ class HistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final library = ref.watch(libraryProvider);
-    final history = ref.watch(historyProvider);
+    final hidden = ref.watch(hiddenSeriesKeysProvider);
+    final history = ref.watch(historyProvider).whenData((rows) =>
+        [for (final row in rows) if (!hidden.contains(row.seriesKey)) row]);
     final incognito = ref.watch(incognitoProvider).value ?? false;
 
     return Scaffold(

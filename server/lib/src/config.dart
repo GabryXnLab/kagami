@@ -95,12 +95,20 @@ class ServerConfig {
 /// con quale client rinnovare i permessi di Drive. Il permesso del
 /// proprietario va nella sua cartella, come quello di tutti.
 class AppliedSetup {
-  const AppliedSetup({required this.project, required this.client, required this.owner, this.name, this.hash});
+  const AppliedSetup({
+    this.project,
+    required this.client,
+    required this.owner,
+    this.backend,
+    this.name,
+    this.hash,
+  });
 
   factory AppliedSetup.fromJson(Map<String, Object?> json) {
     final client = json['client'] as Map;
     return AppliedSetup(
-      project: json['project'] as String,
+      project: json['project'] as String?,
+      backend: SetupBackend.fromJson(json['backend']),
       client: GoogleClient(client['id'] as String, client['secret'] as String),
       owner: json['owner'] as String,
       name: json['name'] as String?,
@@ -108,9 +116,13 @@ class AppliedSetup {
     );
   }
 
-  final String project;
+  /// Il progetto Firebase della configurazione. Vale per i token solo
+  /// senza [backend] (le configurazioni di prima): dopo, Firebase lo accende
+  /// `KAGAMI_FIREBASE_PROJECT`.
+  final String? project;
   final GoogleClient client;
   final String owner;
+  final SetupBackend? backend;
   final String? name;
 
   /// L'impronta del blob da cui viene: lo stesso comando rilanciato non
@@ -118,9 +130,10 @@ class AppliedSetup {
   final String? hash;
 
   Map<String, Object?> toJson() => {
-        'project': project,
+        'project': ?project,
         'client': {'id': client.id, 'secret': client.secret},
         'owner': owner,
+        'backend': ?backend?.toJson(),
         'name': ?name,
         'hash': ?hash,
       };
@@ -132,6 +145,36 @@ class AppliedSetup {
 
   Future<void> save(ServerPaths paths) =>
       writeSecret(paths.setup, const JsonEncoder.withIndent('  ').convert(toJson()));
+}
+
+/// Il backend compatibile Supabase di chi compila, dal campo `backend` di
+/// `KAGAMI_SETUP` (`{"url", "anonKey"}`): ne accetta gli `access_token`.
+class SetupBackend {
+  const SetupBackend(this.url, this.anonKey);
+
+  /// `null` se [json] non è un backend completo.
+  static SetupBackend? fromJson(Object? json) {
+    if (json is! Map || json['url'] is! String || json['anonKey'] is! String) return null;
+    final url = Uri.tryParse((json['url'] as String).trim());
+    if (url == null || !url.hasScheme || url.host.isEmpty) return null;
+    return SetupBackend(url, json['anonKey'] as String);
+  }
+
+  /// Il campo `backend` del blob: `ServerSetup` di `kagami_archive` lo
+  /// ignora, quindi si legge qui.
+  static SetupBackend? fromBlob(String blob) {
+    try {
+      final json = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(blob.trim()))));
+      return json is Map ? fromJson(json['backend']) : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  final Uri url;
+  final String anonKey;
+
+  Map<String, Object?> toJson() => {'url': '$url', 'anonKey': anonKey};
 }
 
 /// L'impronta di un blob di configurazione.

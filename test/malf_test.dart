@@ -238,4 +238,31 @@ void main() {
     expect(short.tiles, isEmpty);
     expect(PageEntry.fromJson({'file': '0002.webp'}).tiles, isEmpty);
   });
+
+  test('i cambi di identità si leggono; senza i campi valgono i predefiniti', () {
+    final row = SeriesEntry.fromJson({
+      'key': 'coffeemanga:the-house',
+      'formerKeys': ['coffeemanga:7743', 3, 'coffeemanga:x'],
+    });
+    expect(row.formerKeys, ['coffeemanga:7743', 'coffeemanga:x']);
+    expect(row.toJson()['formerKeys'], row.formerKeys);
+    expect(SeriesEntry.fromJson({'key': 'a'}).formerKeys, isEmpty);
+    expect(SeriesEntry.fromJson({'key': 'a'}).toJson().containsKey('formerKeys'), isFalse);
+
+    final index = SeriesIndex.fromJson({
+      'key': 'coffeemanga:the-house',
+      'formerKeys': ['coffeemanga:7743'],
+      'chapters': [
+        {'id': 'chapter-1', 'formerIds': ['217607'], 'complete': true},
+        {'id': 'chapter-2', 'listed': false},
+        {'id': 'chapter-3', 'listed': true},
+      ],
+    });
+    expect(index.formerKeys, ['coffeemanga:7743']);
+    expect(index.chapters[0].formerIds, ['217607']);
+    expect(index.chapters[0].listed, isTrue);
+    expect(index.chapters[1].listed, isFalse);
+    expect(index.chapters[1].formerIds, isEmpty);
+    expect(index.chapters[2].listed, isTrue);
+  });
 }

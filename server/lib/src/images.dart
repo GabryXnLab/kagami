@@ -16,6 +16,12 @@ import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/images.dart';
 import 'package:path/path.dart' as p;
 
+/// Tetti sulla tavola da convertire, controllati con `vipsheader` prima di
+/// `vips copy`, che la espande in memoria: una tavola dichiarata enorme
+/// (bomba di decompressione) farebbe esaurire la RAM del server.
+const maxPageHeight = 40000;
+const maxPagePixels = 150000000;
+
 class VipsImageTools implements ImageTools {
   VipsImageTools(this.scratch, {this.vips = 'vips', this.header = 'vipsheader'});
 
@@ -64,9 +70,15 @@ class VipsImageTools implements ImageTools {
 
   @override
   Future<List<Uint8List>?> tiles(File page, List<int> heights) => _inTemp((dir) async {
-        final width = await Process.run(header, ['-f', 'width', page.path]);
-        final pixels = int.tryParse('${width.stdout}'.trim());
-        if (width.exitCode != 0 || pixels == null) return null;
+        Future<int?> field(String name) async {
+          final r = await Process.run(header, ['-f', name, page.path]);
+          return r.exitCode == 0 ? int.tryParse('${r.stdout}'.trim()) : null;
+        }
+
+        final pixels = await field('width');
+        final pageHeight = await field('height');
+        if (pixels == null || pageHeight == null) return null;
+        if (pageHeight > maxPageHeight || pixels * pageHeight > maxPagePixels) return null;
         // Decodificata una volta nel formato di vips, che si legge a
         // ritagli senza ridecodificare: altrimenti ogni tessera rileggerebbe
         // il WebP dall'inizio, e l'ultima costerebbe quanto la tavola.

@@ -48,4 +48,21 @@ Future<void> main() async {
   test('senza vips si dice che non c\'è, invece di rompersi', () async {
     expect(await VipsImageTools.available(vips: 'vips-che-non-esiste'), isFalse);
   });
+
+  test('tavole con altezza o area oltre il tetto si rifiutano prima di vips copy', () async {
+    final marker = File(p.join(dir.path, 'copy-chiamato'));
+    final fakeVips = File(p.join(dir.path, 'fake-vips'));
+    await fakeVips.writeAsString('#!/bin/sh\ntouch "${marker.path}"\n');
+    await Process.run('chmod', ['+x', fakeVips.path]);
+    final page = File(p.join(dir.path, 'page.webp'))..writeAsBytesSync([0]);
+
+    for (final (w, h) in [(720, maxPageHeight + 1), (20000, maxPageHeight)]) {
+      final script = File(p.join(dir.path, 'header-$w-$h'));
+      await script.writeAsString('#!/bin/sh\ncase "\$2" in width) echo $w;; *) echo $h;; esac\n');
+      await Process.run('chmod', ['+x', script.path]);
+      final tools = VipsImageTools(Directory(p.join(dir.path, 'scratch')), vips: fakeVips.path, header: script.path);
+      expect(await tools.tiles(page, [100]), isNull, reason: '${w}x$h');
+      expect(marker.existsSync(), isFalse, reason: 'vips copy non doveva partire');
+    }
+  });
 }

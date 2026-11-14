@@ -21,7 +21,7 @@ void main() {
   late Uri address;
 
   ServerClient as(String email, {Uri? at}) =>
-      ServerClient(ServerLink(at ?? address), ({bool refresh = false}) async => 'tok:$email');
+      ServerClient(ServerLink(at ?? address), (_, _, {bool refresh = false}) async => 'Bearer tok:$email');
 
   setUp(() async {
     server = await TestServer.start(owner: owner, name: 'Casa');
@@ -71,15 +71,15 @@ void main() {
   });
 
   test('token rifiutato, token scaduto, server spento, indirizzo di qualcos\'altro', () async {
-    final wrong = ServerClient(ServerLink(address), ({bool refresh = false}) async => 'falso');
+    final wrong = ServerClient(ServerLink(address), (_, _, {bool refresh = false}) async => 'Bearer falso');
     await expectLater(wrong.info(), throwsA(isA<ServerUnauthorized>()));
     wrong.close();
 
     // Il primo token è scaduto: il client ne chiede uno nuovo e riprova.
     final asked = <bool>[];
-    final stale = ServerClient(ServerLink(address), ({bool refresh = false}) async {
+    final stale = ServerClient(ServerLink(address), (_, _, {bool refresh = false}) async {
       asked.add(refresh);
-      return refresh ? 'tok:$owner' : 'scaduto';
+      return refresh ? 'Bearer tok:$owner' : 'Bearer scaduto';
     });
     expect((await stale.info()).email, owner);
     expect(asked, [false, true]);
@@ -118,6 +118,16 @@ void main() {
     await old.close(force: true);
   });
 
+  test('la proprietà della cartella (owner): il client la legge da info e dal cambio di cartella', () async {
+    expect((await client.info()).guardsTrash, isTrue);
+    // TestServer.ready la imposta senza leggerla.
+    expect((await client.info()).folderOwned, isNull);
+    expect(await client.chooseFolder('altrui-1'), (id: 'altrui-1', name: 'Scelta', owned: false));
+    expect((await client.info()).folderOwned, isFalse);
+    expect((await client.chooseFolder('mia')).owned, isTrue);
+    expect((await client.info()).folderOwned, isTrue);
+  });
+
   test('un amico: fuori finché non è ammesso, poi dà il suo Drive e ha la sua coda', () async {
     const friend = 'amico@example.com';
     final his = as(friend);
@@ -130,7 +140,7 @@ void main() {
     expect((info.isOwner, info.ready), (false, false));
     await expectLater(his.users(), throwsA(isA<ServerForbidden>().having((e) => e.code, 'code', 'owner_only')));
 
-    expect(await his.grantDrive('1//suo', 'sua-cartella'), (id: 'sua-cartella', name: 'Scelta'));
+    expect(await his.grantDrive('1//suo', 'sua-cartella'), (id: 'sua-cartella', name: 'Scelta', owned: true));
     expect((await his.info()).ready, isTrue);
     expect([for (final user in await client.users()) (user.email, user.owner, user.connected)], [
       (owner, true, true),
@@ -178,6 +188,19 @@ void main() {
     expect(excluded.minutes, 75);
     expect((await client.info()).unfollowed, isTrue);
 
+    final info0 = await client.info();
+    expect((info0.elsewhere, info0.check.elsewhere), (true, true));
+    expect((await client.configureCheck(elsewhere: false)).elsewhere, isFalse);
+    expect((await client.info()).check.elsewhere, isFalse);
+    final seen = await client.elsewhere();
+    expect(seen.series.keys, ['coffeemanga:a']);
+    expect((seen.pass.running, seen.pass.checked, seen.pass.pending), (false, 3, 2));
+    expect(jobs.elsewhereReads.last, isNull);
+    await client.elsewhere(keys: {'coffeemanga:a', 'mangak:b c'});
+    expect(jobs.elsewhereReads.last, {'coffeemanga:a', 'mangak:b c'});
+    await client.lookElsewhere({'coffeemanga:a'});
+    expect(jobs.looks.single, {'coffeemanga:a'});
+
     jobs.blocked = const [GatedSeries(key: 'manhwaread:d', title: 'D', url: 'https://manhwaread.com/manhwa/d/')];
     final info = await client.info();
     expect(info.verify, isTrue);
@@ -188,7 +211,7 @@ void main() {
     expect(jobs.pages.single.keys, ['https://manhwaread.com/manhwa/d/']);
 
     final folder = await client.chooseFolder('nuova');
-    expect(folder, (id: 'nuova', name: 'Scelta'));
+    expect(folder, (id: 'nuova', name: 'Scelta', owned: true));
     expect(drive.folderId, 'nuova');
 
     await files.remember(ArchiveOutcome(title: 'Fatta', ok: true, message: 'ok', finishedAt: DateTime.now()));
@@ -220,4 +243,22 @@ void main() {
     // Appena scaricata è anche appena guardata: il sito non si richiede.
     expect(jobs.seriesChecks, isEmpty);
   });
+
+  test('shares: il client vede la funzione, affida l\'elenco e lo rilegge', () async {
+    expect((await client.info()).shares, isTrue);
+    expect(await client.heldShares(), isEmpty);
+    final until = DateTime.utc(2026, 12, 14, 12);
+    final shares = [
+      RemoteShare(folderId: 'cartella', permissionId: 'p1', expiresAt: until),
+      RemoteShare(folderId: 'cartella', permissionId: 'p2', expiresAt: until.add(const Duration(days: 1))),
+    ];
+    expect(await client.replaceShares(shares), shares);
+    expect(await client.heldShares(), shares);
+    expect(await client.replaceShares(const []), isEmpty);
+    await expectLater(
+      client.replaceShares([RemoteShare(folderId: '', permissionId: 'p', expiresAt: until)]),
+      throwsA(isA<ServerException>().having((e) => e.code, 'code', 'bad_request')),
+    );
+  });
 }
+

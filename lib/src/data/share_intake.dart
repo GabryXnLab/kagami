@@ -9,6 +9,26 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../archive/bulk_import.dart';
+
+/// Oltre questa lunghezza un testo condiviso non è un elenco di link ma
+/// altro: non lo si legge.
+const sharedTextLimit = 100000;
+
+/// Oltre questa lunghezza un indirizzo condiviso è scartato.
+const sharedLinkLimit = 2048;
+
+/// I link del testo [text] arrivato da un'altra app, che non è fidata: un
+/// testo troppo lungo non dà niente, e un indirizzo troppo lungo è scartato.
+/// Resta solo http/https (`parseImportText`); niente parte da qui senza un tocco.
+List<ImportItem> sharedLinks(String text) {
+  if (text.length > sharedTextLimit) return const [];
+  return [
+    for (final item in parseImportText(text))
+      if (item.url.length <= sharedLinkLimit) item,
+  ];
+}
+
 class SharedText {
   SharedText({this.channel = const MethodChannel('kagami/share')}) : _native = !kIsWeb && Platform.isAndroid;
 

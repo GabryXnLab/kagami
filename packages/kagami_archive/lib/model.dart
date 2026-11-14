@@ -18,6 +18,13 @@ class ProviderError implements Exception {
   String toString() => message;
 }
 
+/// La pagina del sito non ha la forma che il provider si aspetta: il sito è
+/// cambiato e il provider va aggiornato. Non dipende dalla serie, quindi
+/// vale per tutto il sito ([SiteHealth]).
+class ProviderChanged extends ProviderError {
+  const ProviderChanged(super.message);
+}
+
 const int metadataSchemaVersion = 2;
 
 const List<String> releaseStatuses = [

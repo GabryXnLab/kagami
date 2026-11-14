@@ -477,6 +477,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get seriesChapterNotDownloaded => 'غير منزَّل';
 
   @override
+  String get seriesChapterUnlisted => 'لم يعد على الموقع';
+
+  @override
   String seriesChapterPages(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1157,6 +1160,112 @@ class AppLocalizationsAr extends AppLocalizations {
   String get archiveCheckNow => 'افحص الآن';
 
   @override
+  String get archiveRepair => 'إصلاح المسلسلات المؤرشفة';
+
+  @override
+  String get archiveRepairHint =>
+      'يعيد قراءة كل مسلسل من موقعه ويصحح العنوان والغلاف والفصول';
+
+  @override
+  String get archiveRepairAll => 'المكتبة كلها';
+
+  @override
+  String archiveRepairSite(String site) {
+    return 'مسلسلات $site فقط';
+  }
+
+  @override
+  String get archiveRepairSeries => 'إصلاح المسلسل';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return 'إصلاح $done من $total: $title';
+  }
+
+  @override
+  String get archiveRepairQueued =>
+      'بدأ الإصلاح على الخادم: تظهر النتائج في السجل.';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم إصلاح $count مسلسلات.',
+      one: 'تم إصلاح مسلسل واحد.',
+      zero: 'لا توجد مسلسلات لإصلاحها.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      'لا توجد مكتبة لإصلاحها: اختر مجلد Drive أو مجلد الهاتف.';
+
+  @override
+  String get archiveRepairNoServer =>
+      'الخادم لا يدعم إصلاح المسلسلات بعد: يلزم تحديثه.';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return 'فشل الإصلاح: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'الهاتف يُصلح أو يُنزّل بالفعل: حاول مرة أخرى بعد قليل.';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return 'موقع $site يعمل من جديد: أصلح مسلسلاته';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => 'إصلاح';
+
+  @override
+  String get archiveRepairDismiss => 'تجاهل';
+
+  @override
+  String get archiveRepairNothing => 'لا شيء لإصلاحه';
+
+  @override
+  String get archiveRepairAdopted => 'تم اعتماد مفتاح جديد';
+
+  @override
+  String get archiveRepairRetitled => 'تم تحديث العنوان';
+
+  @override
+  String get archiveRepairCover => 'تم تحديث الغلاف';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول جديدة',
+      one: 'فصل جديد واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول لم تعد مدرجة',
+      one: 'فصل واحد لم يعد مدرجًا',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return 'لم يتم الإصلاح: $error';
+  }
+
+  @override
   String get archiveNoTracked => 'لا توجد سلاسل للمتابعة حاليًا';
 
   @override
@@ -1501,6 +1610,21 @@ class AppLocalizationsAr extends AppLocalizations {
       'تنبيه: على عنوان عام وبدون تشفير يمكن قراءة رمز حسابك أثناء انتقاله. استخدم HTTPS (Tailscale Funnel، أو وكيلًا عكسيًا) أو Tailscale.';
 
   @override
+  String get serverDriveForeignTitle =>
+      'هل تمنح هذا الخادم وصولًا إلى Drive الخاص بك؟';
+
+  @override
+  String get serverDriveForeignBody =>
+      'هذا الخادم ليس لك: سيتمكن من يديره من القراءة والكتابة والحذف في كل Drive الخاص بك، وليس في مجلد المكتبة فقط. تابع فقط إذا كنت تثق به.';
+
+  @override
+  String get serverDriveForeignConfirm => 'منح الإذن';
+
+  @override
+  String get serverDriveNeedsHttps =>
+      'لا يُرسَل إذن Drive إلى خادم غير مشفّر (http://) على عنوان عام، إذ يمكن قراءته أثناء النقل. استخدم عنوان https:// أو شبكة خاصة مثل Tailscale.';
+
+  @override
   String get serverAddressSavedNote =>
       'ينتقل العنوان مع النسخة الاحتياطية ومع الحساب، مثل مجلد Drive.';
 
@@ -1827,7 +1951,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get syncDescUpload =>
-      'ما هو على الهاتف يصعد إلى Drive، مثل نسخ البيانات في reading/backup. أما فهارس المكتبة فتبقى كما هي من الخادم.';
+      'ما هو على الهاتف يصعد إلى Drive. أما فهارس المكتبة فتبقى كما هي من الخادم.';
 
   @override
   String get syncDescBoth =>
@@ -2063,11 +2187,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsDataNote => 'النسخ الاحتياطي والاستعادة والحذف';
 
   @override
-  String get settingsAutoBackup => 'نسخ تلقائي في المكتبة';
+  String get settingsAutoBackup => 'نسخ تلقائي على الهاتف';
 
   @override
   String get settingsAutoBackupNote =>
-      'مرة في اليوم في reading/backup/، وتنقله المزامنة إلى Drive مع المانغا';
+      'مرة في اليوم في مساحة التطبيق على هذا الهاتف. للاحتفاظ بنسخ في مكان آخر استخدم الحساب أو «تصدير»';
 
   @override
   String get settingsExport => 'تصدير البيانات';
@@ -2206,7 +2330,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsAccountUnavailableNote =>
-      'هذه النسخة بلا Firebase: تبقى البيانات حيث هي، على الجهاز';
+      'هذه النسخة بلا خادم خلفي: تبقى البيانات حيث هي، على الجهاز';
 
   @override
   String get settingsAccountSignIn => 'تسجيل الدخول بحساب Google';
@@ -2230,14 +2354,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsAccountSignOut => 'تسجيل الخروج';
 
   @override
-  String get settingsAccountSignOutNote => 'يرفع آخر قراءة، ثم ينهي الجلسة';
+  String get settingsAccountSignOutNote =>
+      'يرفع آخر قراءة، ثم ينهي الجلسة: يعود الهاتف إلى بيانات الاستخدام بدون حساب';
+
+  @override
+  String get settingsAccountSessionLostNote =>
+      'انتهت الجلسة: سجّل الدخول مجددًا للمزامنة، أو سجّل الخروج للعودة إلى بيانات الاستخدام بدون حساب';
 
   @override
   String get settingsAccountForget => 'التوقف عن حفظ نسخة';
 
   @override
   String get settingsAccountForgetNote =>
-      'يحذف البيانات من الحساب. وما على هذا الهاتف يبقى حيث هو';
+      'يحذف البيانات من الحساب وتعود إلى الاستخدام بدون حساب. وتبقى بيانات الحساب في ملفها الخاص على هذا الهاتف، مخفية حتى تسجّل الدخول من جديد';
 
   @override
   String get settingsAccountErrorNote => 'لم تُمس بيانات هذا الهاتف';
@@ -2247,7 +2376,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsAccountForgetExplain =>
-      'تختفي النسخة المحفوظة لك، ويُغلق تسجيل الدخول. حالة السلاسل والتقييمات والسجل والمجموعات على هذا الهاتف تبقى حيث هي، لكنها لن تظهر بعد الآن على هاتف آخر.';
+      'تختفي النسخة المحفوظة لك، ويُغلق تسجيل الدخول. يعود الهاتف إلى بيانات الاستخدام بدون حساب؛ وتبقى حالة السلاسل والتقييمات والسجل والمجموعات الخاصة بالحساب في ملفها على هذا الهاتف، لكنها لن تظهر حتى تسجّل الدخول من جديد بالحساب نفسه (ولن تظهر على هاتف آخر بعد الآن).';
 
   @override
   String get settingsAccountForgetConfirm => 'حذف من الحساب';
@@ -2314,7 +2443,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get settingsWhatItDoes => 'ما وظيفته';
 
   @override
-  String get settingsBackupsTitle => 'نسخ في المكتبة';
+  String get settingsBackupsTitle => 'نسخ على الهاتف';
 
   @override
   String get settingsBackupsNone =>
@@ -3112,6 +3241,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'على Drive ينتقل المجلد إلى سلة المهملات: يمكن استعادته من هناك لمدة ثلاثين يومًا.';
 
   @override
+  String get removeSeriesDriveNotOwned =>
+      'تبقى السلسلة على Drive: مجلد المكتبة ليس ملكًا لحسابك، أو لم يؤكد Drive ذلك بعد، وKagami لا يحذف إلا حيث تملك.';
+
+  @override
   String get removeSeriesConfirm => 'احذف';
 
   @override
@@ -3479,6 +3612,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dataCloudGoogleSignInFailed => 'فشل تسجيل الدخول بحساب Google';
+
+  @override
+  String get dataCloudBackendUnavailable =>
+      'هذه الميزة غير متاحة على الخادم الخلفي لهذا الإصدار';
+
+  @override
+  String get dataCloudTooLarge =>
+      'تتجاوز بياناتك الشخصية حد 16 MiB الذي يقبله الخادم: تبقى على هذا الهاتف، لكنها لا تُزامَن';
 
   @override
   String dataNewChaptersNotification(int count) {
@@ -4218,6 +4359,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'من الهاتف ومن Drive إلى سلة المهملات تلقائيًا. يبقى موضع القراءة والفصول المقروءة';
 
   @override
+  String get settingsAutoCleanupSharedRead =>
+      'الفصل المقروء من مكتبة مشتركة يُعدّ مقروءًا: تُزال أيضًا النسخة الموجودة في Drive الخاص بك.';
+
+  @override
   String get settingsAutoCleanupIdle => 'حذف فصول السلاسل المتروكة';
 
   @override
@@ -4365,6 +4510,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get collectionPropsMuted => 'كتم التحديثات';
 
   @override
+  String get collectionTraitHidden => 'إخفاء';
+
+  @override
+  String get collectionTraitHiddenHint =>
+      'بلا إشعارات؛ لا تظهر السلاسل إلا عند فتح المجموعة';
+
+  @override
   String get collectionPropsKeepChapters => 'استثناء من التنظيف التلقائي';
 
   @override
@@ -4385,4 +4537,1304 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       'عدد الفصول المنزّلة التي تبقى أمام الفصل الذي تقرؤه، في كل السلاسل التي تُنزَّل أثناء القراءة';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'موقع $site لا يعمل: لقد تغيّر ويحتاج Kagami إلى تحديث.';
+  }
+
+  @override
+  String get elsewhereTitle => 'على مواقع أخرى';
+
+  @override
+  String get elsewhereChecking => 'جارٍ البحث عن السلسلة في مواقع أخرى…';
+
+  @override
+  String elsewhereChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereLatest(String chapter) {
+    return 'الأخير: الفصل $chapter';
+  }
+
+  @override
+  String elsewhereLatestAt(String chapter, String date) {
+    return 'الأخير: الفصل $chapter، $date';
+  }
+
+  @override
+  String elsewhereAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'متقدم بـ $count فصول',
+      one: 'متقدم بفصل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereBehind(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'متأخر بـ $count فصول',
+      one: 'متأخر بفصل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get elsewhereSame => 'الفصل نفسه';
+
+  @override
+  String get elsewhereMissing => 'غير موجودة هنا';
+
+  @override
+  String get elsewhereBroken => 'الموقع لا يعمل';
+
+  @override
+  String get elsewhereGated => 'يطلب التحقق عبر المتصفح';
+
+  @override
+  String get elsewhereError => 'لم يرد';
+
+  @override
+  String get elsewhereSwitch => 'الانتقال إلى هذا الموقع';
+
+  @override
+  String get elsewhereSiteAction => 'أين تُقرأ في مكان آخر';
+
+  @override
+  String elsewhereSiteTitle(String site) {
+    return 'سلاسل $site';
+  }
+
+  @override
+  String get elsewhereSiteEmpty => 'لا توجد سلاسل في المكتبة من هذا الموقع.';
+
+  @override
+  String get elsewhereSiteUnknown => 'لم يُبحث عنها في مواقع أخرى بعد';
+
+  @override
+  String get elsewhereSiteNowhere => 'غير موجودة في مواقع أخرى';
+
+  @override
+  String get elsewhereSiteOffline =>
+      'يُعرض ما عُثر عليه سابقًا فقط. مع ربط Kagami Server يُبحث عن كل السلاسل.';
+
+  @override
+  String get sitesTitle => 'المواقع';
+
+  @override
+  String get sitesEntrySubtitle => 'المضمّنة وما تضيفه أنت';
+
+  @override
+  String get sitesBuiltInSection => 'مضمّنة في التطبيق';
+
+  @override
+  String get sitesAddedSection => 'المضافة';
+
+  @override
+  String get sitesNoneAdded => 'لم تتم إضافة أي موقع.';
+
+  @override
+  String get sitesNoLibrary =>
+      'يلزم مجلد على Drive أو على الهاتف كمكتبة: تُحفظ المواقع هناك.';
+
+  @override
+  String sitesVersion(int version) {
+    return 'الإصدار $version';
+  }
+
+  @override
+  String sitesReplaces(String name) {
+    return 'يحل محل $name';
+  }
+
+  @override
+  String get sitesBroken => 'ملف تالف';
+
+  @override
+  String get sitesUpdateNow => 'تحديث الآن';
+
+  @override
+  String get sitesUpdated => 'تم تحديث الموقع.';
+
+  @override
+  String get sitesUpToDate => 'لا جديد: الموقع محدَّث.';
+
+  @override
+  String get sitesRemove => 'إزالة';
+
+  @override
+  String sitesRemoveTitle(String name) {
+    return 'إزالة $name؟';
+  }
+
+  @override
+  String get sitesRemoveBody =>
+      'تبقى سلاسل هذا الموقع في المكتبة لكنها لا تُحدَّث حتى يعود الموقع.';
+
+  @override
+  String get sitesAdd => 'إضافة موقع';
+
+  @override
+  String get sitesAddHint => 'رابط الملف أو نص ملصق';
+
+  @override
+  String get sitesAddCheck => 'فحص';
+
+  @override
+  String get sitesInvalid => 'الملف غير صالح';
+
+  @override
+  String get sitesFetchFailed => 'تعذّر تنزيل الملف';
+
+  @override
+  String get sitesPreviewHosts => 'سيطلب الصفحات من';
+
+  @override
+  String get sitesTryTitle => 'جرّبه قبل التثبيت (اختياري)';
+
+  @override
+  String get sitesTryHint => 'بحث أو رابط سلسلة';
+
+  @override
+  String get sitesTry => 'تجربة';
+
+  @override
+  String sitesTrySeries(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return '$title: $_temp0';
+  }
+
+  @override
+  String sitesTryResults(int count, String first) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نتائج، الأولى: $first',
+      one: 'نتيجة واحدة: $first',
+      zero: 'لا نتائج',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sitesTryFailed => 'فشلت التجربة';
+
+  @override
+  String get sitesInstall => 'تثبيت';
+
+  @override
+  String sitesInstalled(String name) {
+    return 'تم تثبيت $name.';
+  }
+
+  @override
+  String get seriesKindManga => 'مانغا';
+
+  @override
+  String get seriesKindManhwa => 'مانهوا (كوريا)';
+
+  @override
+  String get seriesKindManhua => 'مانهوا (الصين)';
+
+  @override
+  String get seriesKindOther => 'أخرى';
+
+  @override
+  String get collectionPropsBinding => 'إلزامي';
+
+  @override
+  String get collectionPropsBindingNote =>
+      'لا تدخل المجموعة إلا السلاسل التي تطابق المعايير، حتى لو أُضيفت يدويًا.';
+
+  @override
+  String collectionBindingWillRemove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ستخرج $count سلاسل لا تطابق المعايير من المجموعة',
+      one: 'ستخرج سلسلة لا تطابق المعايير من المجموعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionBindingRefused(String title, String collection) {
+    return '«$title» لا يطابق معايير «$collection»';
+  }
+
+  @override
+  String collectionBindingRefusedMany(int count, String collection) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سلاسل لا تطابق',
+      one: 'سلسلة واحدة لا تطابق',
+    );
+    return '$_temp0 معايير «$collection»';
+  }
+
+  @override
+  String get collectionBindingLockTip => 'مجموعة إلزامية';
+
+  @override
+  String get accessDurationWeek => 'أسبوع واحد';
+
+  @override
+  String get accessDurationMonth => 'شهر واحد';
+
+  @override
+  String get accessDurationQuarter => 'ثلاثة أشهر';
+
+  @override
+  String get accessDurationYear => 'سنة واحدة';
+
+  @override
+  String get accessDurationNever => 'بلا انتهاء';
+
+  @override
+  String serverUserExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'ينتهي في $dateString';
+  }
+
+  @override
+  String get serverUserExpired => 'منتهي';
+
+  @override
+  String get serverUserRenew => 'تجديد';
+
+  @override
+  String serverUserRenewTitle(String email) {
+    return 'تجديد وصول $email';
+  }
+
+  @override
+  String serverMyAccessExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'ينتهي وصولك في $dateString';
+  }
+
+  @override
+  String get serverAccessExpired => 'انتهى الوصول: اطلب من صاحب الخادم تجديده';
+
+  @override
+  String dataServerExpiryTitle(String serverName) {
+    return 'وصولك إلى «$serverName» على وشك الانتهاء';
+  }
+
+  @override
+  String dataServerExpiryText(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'ينتهي في $dateString: اطلب من صاحب الخادم تجديده.';
+  }
+
+  @override
+  String get driveShareTitle => 'من يمكنه قراءة مكتبتي';
+
+  @override
+  String get driveShareEntryNote => 'من يرى المجلد على Drive وحتى متى';
+
+  @override
+  String driveShareIntro(String folder) {
+    return 'أضف حساب Google لمن تشاء: سيتمكن من قراءة المجلد «$folder» على Drive للقراءة فقط طوال المدة التي تختارها.';
+  }
+
+  @override
+  String get driveShareConsentTitle => 'مطلوب إذن إضافي على Drive';
+
+  @override
+  String driveShareConsentBody(String folder) {
+    return 'من تضيفه سيرى كل ملفات المجلد «$folder» وليس المكتبة فقط. لإدارة المشاركة يطلب منك Google إذنًا إضافيًا. نُسخ بيانات قراءتك الموجودة في المجلد تُنقل إلى سلة مهملات Drive.';
+  }
+
+  @override
+  String get driveShareConsentContinue => 'متابعة';
+
+  @override
+  String get driveShareAdd => 'مشاركة';
+
+  @override
+  String driveShareInFolder(String name) {
+    return 'المجلد «$name»';
+  }
+
+  @override
+  String get driveShareFromDrive => 'تمت المشاركة من Drive';
+
+  @override
+  String get driveShareRemoveBody => 'لن يتمكن بعد الآن من قراءة المجلد.';
+
+  @override
+  String get driveShareLinkAccess =>
+      'يمكن أيضًا قراءة المجلد لكل من لديه الرابط أو لنطاق: تتم إدارته من Drive.';
+
+  @override
+  String get driveShareDriveSilent => 'لم يستجب Drive: قد تكون القائمة ناقصة.';
+
+  @override
+  String get driveSharePersonalFound =>
+      'في المجلد نُسخ من بيانات قراءتك (reading/backup وstate.json وcollections.json): يمكن لمن يقرأه رؤيتها.';
+
+  @override
+  String get driveSharePersonalRemove => 'إزالة';
+
+  @override
+  String get driveSharePersonalUnchecked =>
+      'تعذّر التحقق مما إذا كانت نُسخ من بيانات قراءتك ما تزال في المجلد.';
+
+  @override
+  String get driveShareUnavailable =>
+      'هذا الخادم الخلفي لا يدعم مشاركة المكتبة.';
+
+  @override
+  String driveShareLoadFailed(String message) {
+    return 'تعذّرت قراءة من لديه صلاحية الوصول: $message';
+  }
+
+  @override
+  String get driveShareNobody => 'لا أحد حاليًا.';
+
+  @override
+  String driveShareAdded(String email) {
+    return 'يمكن لـ $email قراءة المكتبة.';
+  }
+
+  @override
+  String get driveShareOffline => 'لا يوجد اتصال: لم يتغير شيء.';
+
+  @override
+  String driveShareFailed(String message) {
+    return 'لم تنجح العملية: $message';
+  }
+
+  @override
+  String get driveShareSelf => 'هذا هو عنوانك أنت.';
+
+  @override
+  String get driveReceivedTitle => 'المكتبات المشاركة معي';
+
+  @override
+  String get driveReceivedEntryNote => 'دعوات الوصول إلى مكتبات الآخرين';
+
+  @override
+  String driveReceivedInvite(String owner, String folder) {
+    return 'منحك $owner حق القراءة فقط في المكتبة «$folder».';
+  }
+
+  @override
+  String get driveReceivedAccept => 'قبول';
+
+  @override
+  String get driveReceivedDecline => 'رفض';
+
+  @override
+  String get driveReceivedRemove => 'إزالة';
+
+  @override
+  String driveReceivedUntil(String owner, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$owner · حتى $dateString';
+  }
+
+  @override
+  String driveReceivedNoLimit(String owner) {
+    return '$owner · بلا انتهاء';
+  }
+
+  @override
+  String driveReceivedExpiredRow(String owner) {
+    return '$owner · انتهى الوصول';
+  }
+
+  @override
+  String get driveReceivedEmpty => 'لا توجد مكتبة مشاركة معك حاليًا.';
+
+  @override
+  String driveReceivedNotificationTitle(String owner) {
+    return 'شارك $owner مكتبة معك';
+  }
+
+  @override
+  String driveReceivedNotificationText(String folder) {
+    return 'افتح Kagami لقبول «$folder».';
+  }
+
+  @override
+  String driveNoticeSharedExpired(String name) {
+    return 'انتهى الوصول إلى مكتبة $name.';
+  }
+
+  @override
+  String driveNoticeSharedUnavailable(String name) {
+    return 'مكتبة $name لا تستجيب: ربما لم تعد مشاركة معك.';
+  }
+
+  @override
+  String get driveNoticeSourcesUnreadable => 'تعذرت قراءة المكتبات المشاركة.';
+
+  @override
+  String get driveReceivedManage => 'إدارة';
+
+  @override
+  String get sourcesTitle => 'المصادر';
+
+  @override
+  String get sourcesEntryNote => 'ترتيب القراءة ومكتبات إضافية';
+
+  @override
+  String get sourcesHelp =>
+      'تُدمج سلاسل كل المصادر في مكتبة واحدة. إذا وُجدت السلسلة في أكثر من مصدر فيفوز الأول.';
+
+  @override
+  String get sourcesBuiltInFolder => 'مجلد الهاتف';
+
+  @override
+  String get sourcesBuiltInApp => 'مساحة التطبيق';
+
+  @override
+  String get sourcesBuiltInDrive => 'Google Drive';
+
+  @override
+  String get sourcesKindWebdav => 'WebDAV / NAS';
+
+  @override
+  String get sourcesKindSmb => 'SMB';
+
+  @override
+  String get sourcesComingSoon => 'قريبًا';
+
+  @override
+  String get sourcesStateReady => 'جاهز';
+
+  @override
+  String get sourcesStateOffline => 'بلا اتصال';
+
+  @override
+  String get sourcesStateNeedsAuth => 'تلزم إعادة الربط';
+
+  @override
+  String sourcesStateExpired(String date) {
+    return 'انتهت في $date';
+  }
+
+  @override
+  String get sourcesStateMissing => 'المجلد مفقود';
+
+  @override
+  String get sourcesStateOtherAccount => 'تخص حسابًا آخر';
+
+  @override
+  String get sourcesReadOnlyBadge => 'للقراءة فقط';
+
+  @override
+  String sourcesOwner(String owner) {
+    return 'شاركها $owner';
+  }
+
+  @override
+  String get sourcesAdd => 'إضافة مصدر';
+
+  @override
+  String get sourcesWebdavFolderHint => 'مجلد المكتبة (مثل /manga)';
+
+  @override
+  String get sourcesWebdavUserHint => 'المستخدم';
+
+  @override
+  String get sourcesWebdavPasswordHint => 'كلمة المرور';
+
+  @override
+  String get sourcesWebdavNameHint => 'الاسم (اختياري، مثل NAS المنزل)';
+
+  @override
+  String get sourcesSmbHostHint => 'عنوان الكمبيوتر (مثل 192.168.1.10)';
+
+  @override
+  String get sourcesSmbShareHint => 'المشاركة (مثل manga)';
+
+  @override
+  String get sourcesSmbUserHint => 'المستخدم (فارغ = ضيف)';
+
+  @override
+  String get sourcesSmbDomainHint => 'النطاق (اختياري)';
+
+  @override
+  String get sourcesSmbSealLabel => 'التشفير (SMB 3)';
+
+  @override
+  String get sourcesSmbSealNote =>
+      'خارج شبكة المنزل يجب تفعيل التشفير: يجب أن يدعم الكمبيوتر SMB 3.';
+
+  @override
+  String get sourcesSmbPlainWarning =>
+      'بدون التشفير تنتقل كلمة المرور والملفات دون حماية: يصلح فقط على شبكة المنزل.';
+
+  @override
+  String get sourcesHttpPrivateWarning =>
+      'عنوان HTTP غير مشفّر على شبكة خاصة: يُرسل المستخدم وكلمة المرور دون تشفير. استخدمه على شبكة الواي فاي المنزلية فقط.';
+
+  @override
+  String get sourcesHttpPublicWarning =>
+      'عنوان HTTP عام غير آمن: ستُرسل كلمة المرور دون تشفير عبر الإنترنت. خارج الشبكة المحلية استخدم https://.';
+
+  @override
+  String get sourcesProbeButton => 'اختبار الاتصال';
+
+  @override
+  String get sourcesProbing => 'جارٍ الاختبار…';
+
+  @override
+  String sourcesProbeSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'نجح الاتصال: عُثر على $count سلسلة.',
+      one: 'نجح الاتصال: عُثر على سلسلة واحدة.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourcesProbeAuthFailed =>
+      'رُفضت بيانات الدخول: تحقق من المستخدم وكلمة المرور.';
+
+  @override
+  String get sourcesProbeUnreachable =>
+      'تعذّر الوصول: تحقق من العنوان والاتصال.';
+
+  @override
+  String get sourcesProbeNoLibrary =>
+      'لا توجد مكتبة هنا: library.json غير موجود في المجلد.';
+
+  @override
+  String get sourcesSave => 'حفظ';
+
+  @override
+  String get sourcesPasswordRewriteHint =>
+      'أعد كتابة كلمة المرور (فارغ: تبقى كما هي)';
+
+  @override
+  String get sourcesSecretNote =>
+      'تبقى كلمة المرور على هذا الهاتف فقط: لا تدخل النسخ الاحتياطي ولا الحساب.';
+
+  @override
+  String get sourcesRemove => 'إزالة المصدر';
+
+  @override
+  String get sourcesRemoveSubtitle =>
+      'يزيل الإعدادات وكلمة المرور والذاكرة المؤقتة؛ يبقى تقدّم القراءة.';
+
+  @override
+  String sourcesRemoveConfirmTitle(String name) {
+    return 'إزالة «$name»؟';
+  }
+
+  @override
+  String get sourcesRemoveConfirmBody =>
+      'يزيل الإعدادات وكلمة المرور والذاكرة المؤقتة من هذا الهاتف. يبقى تقدّم القراءة والتقييمات والسجل.';
+
+  @override
+  String get sourcesDismiss => 'إزالة';
+
+  @override
+  String get socialTitle => 'المجتمع';
+
+  @override
+  String get socialSubtitleOff => 'متوقف: لا يخرج شيء عنك من الهاتف';
+
+  @override
+  String get socialSubtitleOn => 'الملف الشخصي والتصنيفات وملاحظات القراءة';
+
+  @override
+  String get socialOffIntro =>
+      'المجتمع متوقف: لا يخرج شيء من هاتفك ولا يطلب التطبيق شيئاً من الشبكة. ترى أدناه البطاقة نفسها التي سيراها القرّاء الآخرون إن شغّلته.';
+
+  @override
+  String get socialNameLabel => 'اللقب';
+
+  @override
+  String get socialNameHint => 'من 2 إلى 24 حرفاً (ليس بريدك الإلكتروني أبداً)';
+
+  @override
+  String get socialBioLabel => 'نبذة (اختيارية)';
+
+  @override
+  String get socialAudienceSection => 'من يرى ملفك ومنشوراتك';
+
+  @override
+  String get socialAudienceEveryone => 'الجميع';
+
+  @override
+  String get socialAudienceFollowing => 'من أتابعهم';
+
+  @override
+  String get socialAudienceMutual => 'الأصدقاء المتبادلون';
+
+  @override
+  String get socialAudienceEveryoneNote =>
+      'يرى كل من فعّل المجتمع على هذا الخادم ملفك ومنشوراتك وترتيبك.';
+
+  @override
+  String get socialAudienceFollowingNote =>
+      'لا يرى ملفك ومنشوراتك وصفّك في التصنيف إلا من تتابعهم أنت أولاً.';
+
+  @override
+  String get socialAudienceMutualNote =>
+      'لا يرى ملفك ومنشوراتك إلا من تتابعه ويتابعك. يصله لقبك ليتمكن من المتابعة بالمقابل.';
+
+  @override
+  String get socialSwitchesSection => 'ما يُعرض إضافة إلى الأرقام والأنواع';
+
+  @override
+  String get socialShowPhoto => 'عرض صورة الحساب';
+
+  @override
+  String get socialShowSeries => 'عرض أكثر العناوين قراءة';
+
+  @override
+  String get socialShowActivity => 'عرض النشاط في آخر 14 يوماً';
+
+  @override
+  String get socialPreviewSection => 'معاينة دقيقة لما يخرج';
+
+  @override
+  String get socialPreviewHiddenExcluded => 'السلاسل المخفية مستبعدة';
+
+  @override
+  String socialPreviewLocked(String what) {
+    return '$what: غير منشور';
+  }
+
+  @override
+  String get socialPreviewPhoto => 'الصورة';
+
+  @override
+  String get socialPreviewSeries => 'العناوين';
+
+  @override
+  String get socialPreviewActivity => 'النشاط';
+
+  @override
+  String get socialWipeWarning =>
+      'إيقاف المجتمع يحذف كل ما نشرته: الملف والمنشورات والتعليقات والإعجابات والروابط والرسائل (حتى في محادثات الآخرين). تبقى الحظورات.';
+
+  @override
+  String get socialTurnOn => 'تشغيل المجتمع';
+
+  @override
+  String get socialTurnOff => 'إيقاف المجتمع وحذف كل شيء';
+
+  @override
+  String get socialTabBoards => 'التصنيفات';
+
+  @override
+  String get socialTabFeed => 'الخلاصة';
+
+  @override
+  String get socialTabPeople => 'الأشخاص';
+
+  @override
+  String get socialBoardWeek => 'الأسبوع';
+
+  @override
+  String get socialBoardMonth => 'الشهر';
+
+  @override
+  String get socialBoardAllTime => 'دائماً';
+
+  @override
+  String get socialBoardStreak => 'أيام متتالية';
+
+  @override
+  String get socialYouBadge => 'أنت';
+
+  @override
+  String socialChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فصول',
+      one: 'فصل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String socialStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count أيام',
+      one: 'يوم واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialBoardEmpty => 'لا أحد في التصنيف بعد';
+
+  @override
+  String get socialFeedEmptyTitle => 'لا منشورات بعد';
+
+  @override
+  String get socialFeedEmptyMessage =>
+      'ستظهر هنا ملاحظات القرّاء ومراجعاتهم وتوصياتهم.';
+
+  @override
+  String get socialPostKindNote => 'ملاحظة';
+
+  @override
+  String get socialPostKindReview => 'مراجعة';
+
+  @override
+  String get socialPostKindRecommendation => 'توصية';
+
+  @override
+  String socialSpoilerUpTo(String chapter) {
+    return 'يحتوي حرقاً حتى الفصل $chapter';
+  }
+
+  @override
+  String get socialSpoilerGeneric => 'يحتوي حرقاً';
+
+  @override
+  String get socialSpoilerReveal => 'المس للعرض على أي حال';
+
+  @override
+  String get socialFlaggedTitle => 'محتوى أبلغ عنه عدة قرّاء';
+
+  @override
+  String socialFlaggedReveal(String author) {
+    return 'من $author · المس للعرض';
+  }
+
+  @override
+  String get socialSearchPeopleHint => 'ابحث باللقب…';
+
+  @override
+  String get socialSearchNoEmailNotice =>
+      'لا توجد عناوين بريد هنا: ابحث عن اللقب الذي اختاره القارئ.';
+
+  @override
+  String get socialPeopleFollowingSection => 'المتابَعون';
+
+  @override
+  String get socialPeopleEmpty =>
+      'لا تتابع أحداً بعد. ابحث عن لقب أو افتح شخصاً من التصنيفات.';
+
+  @override
+  String get socialSearchNone => 'لا أحد بهذا اللقب';
+
+  @override
+  String socialAffinityLabel(int percent) {
+    return 'تقارب $percent%';
+  }
+
+  @override
+  String get socialInCommonSection => 'المشترك';
+
+  @override
+  String socialInCommonCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عناوين مشتركة',
+      one: 'عنوان مشترك',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialFollow => 'متابعة';
+
+  @override
+  String get socialFollowBack => 'متابعة بالمقابل';
+
+  @override
+  String get socialFollowing => 'تتابعه';
+
+  @override
+  String get socialMutual => 'أصدقاء';
+
+  @override
+  String get socialUnavailableTitle => 'هذا الخادم لا يدعم المجتمع';
+
+  @override
+  String get socialUnavailableBody =>
+      'الخادم المرتبط بحسابك لا يحتوي جداول المجتمع. بقية التطبيق يعمل بشكل طبيعي.';
+
+  @override
+  String get socialNeedsAccount =>
+      'يحتاج المجتمع إلى حساب: سجّل الدخول من الإعدادات.';
+
+  @override
+  String get socialRefusedSnack => 'تعذّر إكمال الإجراء.';
+
+  @override
+  String get socialLoadError => 'تعذّر قراءة المجتمع الآن.';
+
+  @override
+  String get socialRetry => 'إعادة المحاولة';
+
+  @override
+  String get socialProfileUnavailable => 'الملف غير متاح';
+
+  @override
+  String get socialProfilePrivate => 'ملف شخصي خاص';
+
+  @override
+  String get socialProfileGenres => 'الأنواع';
+
+  @override
+  String get socialProfileActivity => 'آخر 14 يوماً';
+
+  @override
+  String get socialProfileSeriesTitles => 'الأكثر قراءة';
+
+  @override
+  String get socialStatChapters => 'الفصول';
+
+  @override
+  String get socialStatSeries => 'السلاسل';
+
+  @override
+  String get socialStatStreak => 'أيام متتالية';
+
+  @override
+  String get socialWrite => 'اكتب';
+
+  @override
+  String get socialComposeTitle => 'منشور جديد';
+
+  @override
+  String get socialComposeBodyHint => 'ما رأيك؟';
+
+  @override
+  String get socialComposeSeries => 'السلسلة';
+
+  @override
+  String get socialComposeNoSeries => 'بلا سلسلة';
+
+  @override
+  String get socialComposeRating => 'التقييم';
+
+  @override
+  String get socialComposeSpoiler => 'يحتوي على حرق للأحداث';
+
+  @override
+  String get socialComposeSpoilerChapter => 'حتى الفصل (اختياري)';
+
+  @override
+  String get socialComposePublish => 'انشر';
+
+  @override
+  String get socialRefusalEmpty => 'اكتب شيئًا قبل النشر.';
+
+  @override
+  String get socialRefusalTooLong => 'النص طويل جدًا.';
+
+  @override
+  String get socialRefusalHiddenSeries =>
+      'هذه السلسلة مخفية: لا يُذكر اسمها في المجتمع.';
+
+  @override
+  String get socialRefusalNeedsSeries =>
+      'المراجعة أو التوصية تخص سلسلة: اختر واحدة.';
+
+  @override
+  String get socialRefusalNeedsRating => 'اختر تقييمًا من 1 إلى 10.';
+
+  @override
+  String socialCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تعليقات',
+      one: 'تعليق واحد',
+      zero: 'علّق',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialCommentsTitle => 'التعليقات';
+
+  @override
+  String get socialCommentsEmpty => 'لا تعليقات بعد';
+
+  @override
+  String get socialCommentHint => 'اكتب تعليقًا…';
+
+  @override
+  String socialReplyHint(String author) {
+    return 'الرد على $author…';
+  }
+
+  @override
+  String get socialReply => 'رد';
+
+  @override
+  String get socialCancelReply => 'إلغاء الرد';
+
+  @override
+  String get socialSend => 'إرسال';
+
+  @override
+  String get socialLike => 'إعجاب';
+
+  @override
+  String get socialMoreActions => 'إجراءات أخرى';
+
+  @override
+  String get socialMute => 'كتم';
+
+  @override
+  String get socialUnmute => 'إلغاء الكتم';
+
+  @override
+  String get socialFollowersSection => 'يتابعونك';
+
+  @override
+  String get socialMutedNote => 'مكتوم: لا تظهر منشوراته وتعليقاته هنا.';
+
+  @override
+  String get socialRemovePost => 'إزالة المنشور';
+
+  @override
+  String get socialRemovePostConfirm =>
+      'سيُحذف المنشور مع تعليقاته وإعجاباته. لا يمكن تعديل المنشورات: يمكنك كتابته من جديد.';
+
+  @override
+  String get socialRemoveComment => 'إزالة';
+
+  @override
+  String get socialUnknownReader => 'قارئ';
+
+  @override
+  String get socialSeriesPostsTitle => 'في المجتمع';
+
+  @override
+  String get socialSeriesPostsEmpty => 'لم يتحدث عنها أحد بعد';
+
+  @override
+  String get socialSeriesTalk => 'تحدّث عنها في المجتمع';
+
+  @override
+  String socialBlockPerson(String name) {
+    return 'حظر $name';
+  }
+
+  @override
+  String get socialBlockAction => 'حظر';
+
+  @override
+  String get socialBlockConfirm =>
+      'لن يرى أي منكما ملف الآخر الشخصي ولا منشوراته ولا تعليقاته، ولن يستطيع مراسلته. تُزال الروابط بينكما. لن يتم إخطار الشخص الآخر.';
+
+  @override
+  String get socialBlockedSnack => 'تم حظر الشخص.';
+
+  @override
+  String get socialReport => 'إبلاغ';
+
+  @override
+  String get socialReportIntro =>
+      'لماذا تبلّغ عنه؟ لن يعرف الشخص المُبلَّغ عنه ذلك، ويتضمن البلاغ نسخة من النص.';
+
+  @override
+  String get socialReportReasonSpam => 'بريد مزعج أو إعلان';
+
+  @override
+  String get socialReportReasonHarassment => 'مضايقة أو إلحاح';
+
+  @override
+  String get socialReportReasonSpoiler => 'حرق أحداث دون تحذير';
+
+  @override
+  String get socialReportReasonInappropriate => 'محتوى غير لائق';
+
+  @override
+  String get socialReportReasonOther => 'أخرى';
+
+  @override
+  String get socialReportNoteHint => 'ملاحظة إن أردت (اختياري)';
+
+  @override
+  String get socialReportSend => 'إرسال';
+
+  @override
+  String get socialReportSent => 'تم إرسال البلاغ.';
+
+  @override
+  String get messagesTitle => 'الرسائل';
+
+  @override
+  String get messagesWrite => 'اكتب رسالة';
+
+  @override
+  String get messagesEmpty =>
+      'لا توجد محادثات بعد. اكتب لأحدهم من ملفه الشخصي.';
+
+  @override
+  String get messagesThreadEmpty => 'لا توجد رسائل بعد.';
+
+  @override
+  String get messagesHint => 'اكتب رسالة';
+
+  @override
+  String get messagesSend => 'إرسال';
+
+  @override
+  String get messagesUnknownPerson => 'قارئ';
+
+  @override
+  String get messagesDeleteTitle => 'حذف الرسالة؟';
+
+  @override
+  String get messagesDeleteBody => 'ستختفي عند الطرفين.';
+
+  @override
+  String get messagesDeleteAction => 'حذف';
+
+  @override
+  String messagesExtensionMine(String folder) {
+    return 'طلبتَ وقتًا إضافيًا لـ «$folder».';
+  }
+
+  @override
+  String messagesExtensionTheirs(String name, String folder) {
+    return '$name يطلب وقتًا إضافيًا لـ «$folder».';
+  }
+
+  @override
+  String get messagesRenew => 'تجديد';
+
+  @override
+  String messagesRenewed(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'جُدِّدت المشاركة حتى $dateString.';
+  }
+
+  @override
+  String get messagesAskMore => 'اطلب وقتًا إضافيًا';
+
+  @override
+  String get messagesAskSent => 'أُرسل الطلب.';
+
+  @override
+  String get privacyTitle => 'الخصوصية والمجتمع';
+
+  @override
+  String get privacyEntryNote =>
+      'المجتمع، ومن يرى ملفك الشخصي، والرسائل، والأشخاص المحظورون';
+
+  @override
+  String get privacyOffNote =>
+      'عندما يكون المجتمع متوقفًا لا يغادر شيء هاتفك. تسري الخيارات أدناه عند تشغيله.';
+
+  @override
+  String get privacyNeedsName =>
+      'يتطلب تشغيل المجتمع اسمًا مستعارًا وحسابًا: اختر الاسم المستعار في الشاشة التي ستُفتح.';
+
+  @override
+  String get privacyMessagesSection => 'من يمكنه مراسلتي';
+
+  @override
+  String get privacyMessagesNobody => 'لا أحد';
+
+  @override
+  String get privacyBlockedSection => 'الأشخاص المحظورون';
+
+  @override
+  String get privacyBlockedEmpty => 'لم تحظر أحدًا.';
+
+  @override
+  String get privacyBlockedPerson => 'شخص محظور';
+
+  @override
+  String get privacyUnblock => 'إلغاء الحظر';
+
+  @override
+  String messageNotificationTitle(String sender) {
+    return 'رسالة جديدة من $sender';
+  }
+
+  @override
+  String driveExpiryNoticeTitle(String owner) {
+    return 'مكتبة $owner على وشك الانتهاء';
+  }
+
+  @override
+  String driveExpiryNoticeText(String folder, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'تنتهي صلاحية «$folder» في $dateString. افتح Kagami لطلب مزيد من الوقت.';
+  }
+
+  @override
+  String get settingsBackupFolder => 'مجلد النسخ الاحتياطية';
+
+  @override
+  String settingsBackupFolderChosen(String path) {
+    return 'إضافةً إلى مساحة التطبيق، تُحفظ النسخة التلقائية أيضًا في $path';
+  }
+
+  @override
+  String get settingsBackupFolderNone =>
+      'لا شيء: تبقى النسخ في مساحة التطبيق فقط';
+
+  @override
+  String get settingsBackupFolderRefused =>
+      'هذا المجلد داخل مصدر من المكتبة: المكتبة تُشارَك والنسخ تحتوي على بياناتك الشخصية. اختر مجلدًا آخر.';
+
+  @override
+  String get driveShareDownloadOption => 'يمكنه التنزيل أيضًا';
+
+  @override
+  String get driveShareDownloadNote =>
+      'هذا اتفاق بين التطبيقات وليس حماية: يستطيع أي شخص لديه حق الوصول إلى المجلد تنزيل الملفات من Drive أو من الموقع أو بتطبيق آخر. لا ينزّل Kagami لدى المستلم إلا إذا سمحت بذلك هنا.';
+
+  @override
+  String get driveShareRowDownload => 'التنزيل مسموح';
+
+  @override
+  String get driveShareRowStreaming => 'بث فقط';
+
+  @override
+  String get driveShareDownloadAllow => 'السماح بالتنزيل';
+
+  @override
+  String get driveShareDownloadDeny => 'بث فقط';
+
+  @override
+  String get driveShareDownloadUnavailable =>
+      'هذا الخادم لا يعرف صلاحية التنزيل بعد: تبقى المشاركة بثًا فقط.';
+
+  @override
+  String get driveReceivedCanDownload => 'يمكنك القراءة والتنزيل';
+
+  @override
+  String get driveReceivedStreamOnly => 'يمكنك القراءة بالبث فقط';
+
+  @override
+  String get seriesArchiveOwn => 'أرشفة في Drive الخاص بي';
+
+  @override
+  String get seriesArchiveOwnSiteMissing =>
+      'موقع هذه السلسلة مطلوب: ثبّته من الإعدادات ← المواقع؛ مواقع مكتبة شخص آخر لا تُثبَّت تلقائيًا.';
+
+  @override
+  String get seriesBringData => 'انقل بياناتي إلى هنا';
+
+  @override
+  String get seriesBringDataPick => 'من أي سلسلة؟';
+
+  @override
+  String get seriesBringDataEmpty =>
+      'لا توجد سلسلة أخرى في المكتبة لديها بيانات لك لنقلها.';
+
+  @override
+  String seriesBringDataBody(String from, String to, int matched) {
+    String _temp0 = intl.Intl.pluralLogic(
+      matched,
+      locale: localeName,
+      other: '# فصل مقروء بالرقم نفسه',
+      many: '# فصلًا مقروءًا بالرقم نفسه',
+      few: '# فصول مقروءة بالرقم نفسه',
+      two: 'فصلان مقروءان بالرقم نفسه',
+      one: 'فصل مقروء واحد بالرقم نفسه',
+      zero: 'لا فصول مقروءة بالرقم نفسه',
+    );
+    return '«$from» ← «$to». تنتقل الحالة والتقييم والملاحظات والمجموعات إلى السلسلة الهدف، ومعها $_temp0. تندمج مع ما هو موجود: تُجمع القراءات، وفي الباقي يُعتمد الأحدث. تبقى «$from» في المكتبة بلا بياناتك.';
+  }
+
+  @override
+  String seriesBringDataLost(int lost) {
+    String _temp0 = intl.Intl.pluralLogic(
+      lost,
+      locale: localeName,
+      other: '# فصل مقروء ليس لها فصل بالرقم نفسه: لن تُنقل، وتضيع مواضعها وسجلها وإشاراتها المرجعية.',
+      many: '# فصلًا مقروءًا ليس لها فصل بالرقم نفسه: لن تُنقل، وتضيع مواضعها وسجلها وإشاراتها المرجعية.',
+      few: '# فصول مقروءة ليس لها فصل بالرقم نفسه: لن تُنقل، وتضيع مواضعها وسجلها وإشاراتها المرجعية.',
+      two: 'فصلان مقروءان ليس لهما فصل بالرقم نفسه: لن يُنقلا، وتضيع مواضعهما وسجلهما وإشاراتهما المرجعية.',
+      one: 'فصل مقروء واحد ليس له فصل بالرقم نفسه: لن يُنقل، وتضيع موضعه وسجله وإشاراته المرجعية.',
+      zero: 'لا فصول مقروءة بلا مقابل.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesBringDataConfirm => 'انقل البيانات';
+
+  @override
+  String seriesBringDataDone(String title) {
+    return 'نُقلت البيانات إلى «$title».';
+  }
+
+  @override
+  String get seriesBringDataNoChapters =>
+      'تعذّرت الآن قراءة فصول إحدى السلسلتين: حاول مجددًا بعد قليل.';
+
+  @override
+  String sitesUnconfirmed(String name) {
+    return 'يبقى $name حتى تؤكد';
+  }
+
+  @override
+  String sitesConfirmReplace(String name) {
+    return 'استبدال $name';
+  }
+
+  @override
+  String get serverLinkTrust =>
+      'من يدير هذا الخادم يستطيع الكتابة في Drive الخاص بك: الإذن الذي تطلبه Google يبقى بيده. اربط خادمًا تثق به فقط.';
+
+  @override
+  String get serverErrorUpdateServer =>
+      'يجب تحديث هذا الخادم: ما لم يقبل التذاكر لن يُرسل إليه تسجيل دخولك.';
+
+  @override
+  String get serverErrorTicketsUnavailable =>
+      'لا تُصدر الواجهة الخلفية تذاكر للخوادم: لن يُرسل تسجيل دخولك إلى خادم شخص آخر.';
+
+  @override
+  String get serverErrorImpostor =>
+      'يدّعي هذا الخادم أنه خادم مرتبط بالفعل بعنوان آخر: لن يُرسل إليه شيء.';
+
+  @override
+  String get serverErrorOtherServer =>
+      'يردّ الآن خادم آخر على هذا العنوان: أعد ربطه.';
+
+  @override
+  String get serverErrorNotOwner =>
+      'مجلد Drive هذا ليس لك: لن ينقل الخادم أي شيء إلى سلة المهملات.';
 }

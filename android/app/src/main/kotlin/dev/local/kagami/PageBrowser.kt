@@ -7,6 +7,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import io.flutter.plugin.common.BinaryMessenger
@@ -44,6 +45,8 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         val url = call.argument<String>("url")
         val ready = call.argument<String>("ready")
         if (url == null || ready == null) return result.error("args", "url e ready", null)
+        // Solo pagine di siti in https: mai file:, content: o http.
+        if (!url.startsWith("https://")) return result.success(null)
         val timeout = (call.argument<Int>("timeoutMs") ?: 45000).toLong()
         main.post { open(url, ready, timeout, result) }
     }
@@ -58,9 +61,16 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         }
         view.settings.javaScriptEnabled = true
         view.settings.domStorageEnabled = true
+        // Spenti in modo esplicito: la pagina non deve poter leggere file né content provider dell'app.
+        view.settings.allowFileAccess = false
+        view.settings.allowContentAccess = false
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(view, true)
-        view.webViewClient = WebViewClient()
+        // Un reindirizzamento fuori da https (file:, content:, intent:, http:) non si segue.
+        view.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                request.url.scheme != "https"
+        }
         val metrics = context.resources.displayMetrics
         view.measure(
             View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.EXACTLY),

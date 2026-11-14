@@ -43,6 +43,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import 'health.dart';
 import 'http.dart';
 import 'jobs.dart';
 import 'manual.dart';
@@ -256,7 +257,9 @@ class Tracking {
   /// Rilegge le serie e mette in coda i capitoli nuovi. Un errore su una
   /// serie non ferma le altre: resta annotata, e si riprova al controllo
   /// seguente. Con [only] si guardano solo quelle serie; quelle in [skip]
-  /// (le serie che l'utente ha smesso di seguire) mai.
+  /// (le serie che l'utente ha smesso di seguire) mai. Con [where] solo i siti
+  /// che lo accettano, anche se il controllo è del server: è il telefono che
+  /// lo fa per quelli che il server non sa usare.
   Future<CheckReport> check(
     ArchiveFiles files,
     ProviderHttp Function(Provider provider) httpFor, {
@@ -264,9 +267,12 @@ class Tracking {
     bool Function()? cancelled,
     Set<String>? only,
     Set<String> skip = const {},
+    bool Function(Provider provider)? where,
   }) async {
     final report = CheckReport();
-    if (await files.delegated()) return report;
+    if (where == null && await files.delegated()) return report;
+    final watch = SiteWatch(files.health);
+    try {
     for (final entry in await load()) {
       if (cancelled?.call() ?? false) break;
       if (only != null && !only.contains(entry.key)) continue;
@@ -275,10 +281,13 @@ class Tracking {
       final Uint8List? page;
       try {
         final provider = selectProvider(entry.url);
+        if (where != null && !where(provider)) continue;
         (:series, :page) = await readSeries(provider, entry.url, httpFor(provider), browser: browser);
+        await watch.succeeded(provider.id);
       } on ProviderOffline {
         rethrow;
       } on ProviderError catch (error) {
+        await watch.failed(entry.provider, error);
         final message = error is CloudflareChallenge
             ? 'Il sito chiede la verifica: apri la serie da «Scarica un manga».'
             : '$error';
@@ -342,7 +351,46 @@ class Tracking {
         wanted: entry.wanted - (entry.ahead == null ? 0 : queued.length),
       ));
     }
+    } finally {
+      await watch.finish();
+    }
     return report;
+  }
+
+  /// La serie seguita come [from] — o già come [series], se l'ha vista prima
+  /// un download — prende la chiave e il link di [series], e i suoi capitoli
+  /// gli id del sito tradotti da [renamed]: una riparazione riuscita, che
+  /// azzera anche il [TrackedSeries.problem]. Non scrive se non cambia niente.
+  Future<void> adopt(String from, Series series, Map<String, String> renamed) async {
+    final entries = await load();
+    final matching = [for (final entry in entries) if (entry.key == from || entry.key == series.key) entry];
+    if (matching.isEmpty) return;
+    final entry = matching.first;
+    final updated = TrackedSeries(
+      provider: series.provider,
+      id: series.id,
+      title: series.title,
+      url: series.url,
+      target: entry.target,
+      chapters: {
+        for (final seen in matching)
+          for (final id in seen.chapters) renamed[id] ?? id,
+      }.toList(),
+      addedAt: entry.addedAt,
+      checkedAt: entry.checkedAt,
+      ahead: entry.ahead,
+      wanted: entry.wanted,
+      card: entry.card,
+    );
+    if (matching.length == 1 && jsonEncode(updated.toJson()) == jsonEncode(entry.toJson())) return;
+    var placed = false;
+    await _save([
+      for (final other in entries)
+        if (!matching.contains(other))
+          other
+        else if (!placed && (placed = true))
+          updated,
+    ]);
   }
 
   Future<void> _update(TrackedSeries updated) async {
@@ -380,6 +428,7 @@ Future<CheckReport> checkLibrary({
   PageBrowser? browser,
   Set<String> skip = const {},
   Set<String>? only,
+  bool Function(Provider provider)? where,
   bool Function()? cancelled,
   Duration pause = const Duration(seconds: 1),
 }) async {
@@ -387,6 +436,8 @@ Future<CheckReport> checkLibrary({
   final library = await store.readJson(libraryFile);
   final queued = {for (final job in await files.jobs()) job.url};
   var first = true;
+  final watch = SiteWatch(files.health);
+  try {
   for (final row in (library?['series'] as List? ?? const []).whereType<Map<String, Object?>>()) {
     if (cancelled?.call() ?? false) break;
     final key = row['key'];
@@ -402,6 +453,7 @@ Future<CheckReport> checkLibrary({
     } on ProviderError {
       continue;
     }
+    if (where != null && !where(provider)) continue;
     if (provider.needsBrowser && browser == null) continue;
     final title = row['title'] as String? ?? key;
     final index = await store.readJson(p.posix.join(path, seriesIndexName));
@@ -423,11 +475,13 @@ Future<CheckReport> checkLibrary({
       try {
         final Series series;
         (:series, :page) = await readSeries(provider, url, httpFor(provider), browser: browser);
+        await watch.succeeded(provider.id);
         fresh = [for (final chapter in series.chapters) if (!known.contains(chapter.id)) chapter.id];
         report.checked++;
       } on ProviderOffline {
         rethrow;
       } on ProviderError catch (error) {
+        await watch.failed(provider.id, error);
         report.failed.add((title: title, error: '$error'));
         if (error is CloudflareChallenge) report.gated.add(GatedSeries(key: key, title: title, url: url));
         continue;
@@ -447,6 +501,9 @@ Future<CheckReport> checkLibrary({
     if (fresh.isNotEmpty) report.queued.add(title);
     if (card) report.cards.add(title);
     if (halfway.isNotEmpty) report.repaired.add(title);
+  }
+  } finally {
+    await watch.finish();
   }
   return report;
 }

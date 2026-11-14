@@ -24,12 +24,12 @@ final RegExp _mediaHost = RegExp(r'^rx\.qvzr[a-z]\.org$');
 
 Map<String, Object?> _payload(Uint8List body) {
   final found = _nextData.firstMatch(utf8.decode(body, allowMalformed: true));
-  if (found == null) throw const ProviderError('Dati MangaK assenti dalla pagina.');
+  if (found == null) throw const ProviderChanged('Dati MangaK assenti dalla pagina.');
   try {
     final data = jsonDecode(found[1]!) as Map<String, Object?>;
     return (data['props'] as Map<String, Object?>)['pageProps'] as Map<String, Object?>;
   } on Object {
-    throw const ProviderError('Formato della pagina MangaK cambiato.');
+    throw const ProviderChanged('Formato della pagina MangaK cambiato.');
   }
 }
 
@@ -74,7 +74,7 @@ class MangaK extends Provider {
     final values = response['data'];
     final raw = response['success'] == true && values is Map ? values['chapters'] : null;
     if (raw is! List || raw.isEmpty) {
-      throw const ProviderError('Elenco completo dei capitoli MangaK non disponibile.');
+      throw const ProviderChanged('Elenco completo dei capitoli MangaK non disponibile.');
     }
     final seriesUrl = manga['url'];
     // Non tutti i capitoli sono `chapter-…`: Kidnapped Dragons ha un
@@ -87,7 +87,7 @@ class MangaK extends Provider {
           !isText(item['id']) ||
           !isText(item['name']) ||
           !isText(item['url'])) {
-        throw const ProviderError('Capitolo MangaK incompleto.');
+        throw const ProviderChanged('Capitolo MangaK incompleto.');
       }
       final chapterUrl = 'https://mangak.io${item['url']}';
       final itemUrl = item['url'] as String;
@@ -95,7 +95,7 @@ class MangaK extends Provider {
           !_chapterSlug.hasMatch(itemUrl.substring(prefix.length)) ||
           Uri.tryParse(chapterUrl)?.host != 'mangak.io' ||
           !seen.add(item['id'] as String)) {
-        throw const ProviderError('Elenco capitoli MangaK incoerente.');
+        throw const ProviderChanged('Elenco capitoli MangaK incoerente.');
       }
       // `number` di MangaK è il posto nell'elenco, non il numero del
       // capitolo: resta nei metadati e basta. Un nome senza numero («Prologue»)
@@ -115,7 +115,7 @@ class MangaK extends Provider {
     // arriva dall'API: quando esce un capitolo l'elenco ne ha uno in più per
     // un po'. Uno in meno, invece, è un elenco tagliato.
     if (expected is int && chapters.length < expected) {
-      throw ProviderError('Elenco incompleto: ${chapters.length} capitoli su $expected.');
+      throw ProviderChanged('Elenco incompleto: ${chapters.length} capitoli su $expected.');
     }
     final cover = manga['cover'];
     if (isText(cover)) validateUrl(cover as String);
@@ -139,7 +139,7 @@ class MangaK extends Provider {
     }).toString());
     final data = response['data'];
     final items = response['success'] == true && data is Map ? data['items'] : null;
-    if (items is! List) throw const ProviderError('Risposta della ricerca MangaK cambiata.');
+    if (items is! List) throw const ProviderChanged('Risposta della ricerca MangaK cambiata.');
     final results = <SearchResult>[];
     for (final item in items) {
       if (item is! Map<String, Object?> || !isText(item['name']) || !isText(item['url'])) continue;
@@ -168,19 +168,19 @@ class MangaK extends Provider {
     final data = _payload((await http.get(chapter.url)).body);
     final raw = data['initialChapter'];
     if (raw is! Map<String, Object?> || raw['id'] != chapter.id) {
-      throw ProviderError('Capitolo non corrispondente: ${chapter.title}.');
+      throw ProviderChanged('Capitolo non corrispondente: ${chapter.title}.');
     }
     final images = raw['images'];
     final details = raw['pages'];
     if (images is! List || images.isEmpty || details is! List || images.length != details.length) {
-      throw ProviderError('Elenco immagini incompleto: ${chapter.title}.');
+      throw ProviderChanged('Elenco immagini incompleto: ${chapter.title}.');
     }
     final pages = <Page>[];
     for (var i = 0; i < images.length; i++) {
       final image = images[i];
       final detail = details[i];
       if (detail is! Map || image is! String || image != detail['url']) {
-        throw ProviderError('Pagina non coerente: ${chapter.title}.');
+        throw ProviderChanged('Pagina non coerente: ${chapter.title}.');
       }
       validateUrl(image);
       pages.add(Page(

@@ -16,8 +16,8 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
-import '../format/malf.dart';
 import '../format/reading.dart';
+import 'db/account_databases.dart';
 import 'db/database.dart';
 import 'user_repository.dart';
 
@@ -61,6 +61,8 @@ class BackupService {
 
   final KagamiDatabase db;
   final String profileId;
+
+  static final RegExp _ownName = RegExp(r'^kagami-\d{8}-\d{4}\.json\.gz$');
 
   String fileName([DateTime? when]) {
     final now = (when ?? DateTime.now()).toLocal();
@@ -392,13 +394,25 @@ class BackupService {
     return true;
   }
 
-  /// La copia automatica dentro la libreria, se è ora di rifarla.
+  /// Dove stanno le copie automatiche: nello spazio dell'app, mai nella
+  /// libreria. La cartella della libreria si condivide con altre persone e si
+  /// sincronizza su Drive, e la copia contiene letture, voti e tutte le
+  /// impostazioni (indirizzi delle sorgenti compresi).
   ///
-  /// Sta in `reading/backup/` perché `reading/` è la cartella che MALF dà al
-  /// client, ed è già sincronizzata: una copia lì viaggia verso Drive con i
-  /// manga, senza che l'app debba sapere cos'è Drive.
-  Future<File?> autoBackup(String libraryRoot) async {
-    final directory = Directory(p.join(libraryRoot, readingDirectory, 'backup'));
+  /// Una cartella per slot: la potatura delle copie di un account non tocca
+  /// quelle di un altro.
+  static Directory backupDirectory(String supportDirectory, String slot) =>
+      Directory(p.join(supportDirectory, 'backup', slot));
+
+  /// La copia automatica, se è ora di rifarla. Con [extraDirectory] (la
+  /// cartella scelta dall'utente) la stessa copia va anche lì; se quella
+  /// scrittura fallisce la copia nello spazio dell'app resta valida.
+  Future<File?> autoBackup(
+    String supportDirectory, {
+    String slot = AccountDatabases.guest,
+    String? extraDirectory,
+  }) async {
+    final directory = backupDirectory(supportDirectory, slot);
     await directory.create(recursive: true);
     final existing = await _backups(directory);
     if (existing.isNotEmpty) {
@@ -409,18 +423,45 @@ class BackupService {
     }
     final file = File(p.join(directory.path, fileName()));
     await file.writeAsBytes(await export(), flush: true);
-    for (final old in (await _backups(directory)).skip(keptBackups)) {
-      await old.delete();
+    await trimBackups(supportDirectory, slot: slot);
+    if (extraDirectory != null) {
+      try {
+        final extra = Directory(p.join(extraDirectory, slot));
+        await extra.create(recursive: true);
+        await file.copy(p.join(extra.path, p.basename(file.path)));
+        final own = (await _backups(extra))
+            .where((old) => _ownName.hasMatch(p.basename(old.path)));
+        for (final old in own.skip(keptBackups)) {
+          await old.delete();
+        }
+      } on FileSystemException {
+        // Cartella sparita o senza permesso: lo si vede dalle copie che mancano.
+      }
     }
     return file;
   }
 
-  /// Le copie automatiche, dalla più recente.
-  Future<List<File>> backupsIn(String libraryRoot) => _backups(
-        Directory(p.join(libraryRoot, readingDirectory, 'backup')),
-      );
+  /// Tiene le [keptBackups] copie più recenti.
+  Future<void> trimBackups(
+    String supportDirectory, {
+    String slot = AccountDatabases.guest,
+  }) async {
+    for (final old in (await backupsIn(supportDirectory, slot: slot)).skip(keptBackups)) {
+      await old.delete();
+    }
+  }
 
-  Future<List<File>> _backups(Directory directory) async {
+  /// I file di copia di una cartella, dal più recente.
+  static Future<List<File>> listIn(Directory directory) => _backups(directory);
+
+  /// Le copie automatiche, dalla più recente.
+  Future<List<File>> backupsIn(
+    String supportDirectory, {
+    String slot = AccountDatabases.guest,
+  }) =>
+      _backups(backupDirectory(supportDirectory, slot));
+
+  static Future<List<File>> _backups(Directory directory) async {
     if (!await directory.exists()) return const [];
     final files = await directory
         .list()

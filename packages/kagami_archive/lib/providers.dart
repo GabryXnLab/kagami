@@ -20,6 +20,7 @@
 /// ([PageBrowser]) seguono da lì.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -41,6 +42,13 @@ abstract class Provider {
   /// L'icona del sito, fra gli asset dell'app.
   String get icon => 'assets/providers/$id.png';
 
+  /// L'icona di un sito degli utenti, in rete: non c'è fra gli asset.
+  String? get iconUrl => null;
+
+  /// Se il sito è incluso nell'app; `false` per quelli degli utenti
+  /// (`declarative.dart`).
+  bool get builtIn => true;
+
   /// Se [url] è il link di una serie di questo sito.
   bool accepts(String url);
 
@@ -61,8 +69,8 @@ abstract class Provider {
   Future<ChapterContent> fetchPages(Chapter chapter, ProviderHttp http);
 
   /// Le serie che la ricerca del sito dà per [query], nello stesso ordine:
-  /// è la barra di ricerca del sito, chiamata come la chiama lui. Serve solo
-  /// all'app per scegliere cosa scaricare, e il server non ce l'ha.
+  /// è la barra di ricerca del sito, chiamata come la chiama lui. Serve
+  /// all'app per scegliere cosa scaricare e a «Su altri siti» (`findElsewhere`).
   Future<List<SearchResult>> search(String query, ProviderHttp http);
 
   void validateUrl(String url) => checkUrl(url, allowedHost);
@@ -192,7 +200,43 @@ class SearchResult {
 /// tendina, non di una pagina di risultati.
 const int searchLimit = 10;
 
-final List<Provider> providers = [MangaK(), ManhwaRead(), AsuraScans(), CoffeeManga()];
+/// I siti inclusi nell'app.
+final List<Provider> builtInProviders = [MangaK(), ManhwaRead(), AsuraScans(), CoffeeManga()];
+
+List<Provider> _userProviders = const [];
+const Symbol _zoneProviders = #kagamiUserProviders;
+
+/// I siti che l'app conosce: quelli inclusi, con al loro posto quelli degli
+/// utenti con lo stesso id, più gli altri degli utenti. Il server dà a ogni
+/// account i suoi con [withUserProviders]; il telefono li installa per tutti
+/// con [installUserProviders].
+List<Provider> get providers {
+  final user = switch (Zone.current[_zoneProviders]) {
+    final List<Provider> sites => sites,
+    final List<Provider> Function() source => source(),
+    _ => _userProviders,
+  };
+  if (user.isEmpty) return builtInProviders;
+  final byId = {for (final provider in user) provider.id: provider};
+  return [
+    for (final provider in builtInProviders) byId.remove(provider.id) ?? provider,
+    ...byId.values,
+  ];
+}
+
+/// I siti degli utenti di questo processo, al posto di quelli di prima.
+void installUserProviders(List<Provider> sites) => _userProviders = List.unmodifiable(sites);
+
+/// Esegue [body] con [sites] come siti degli utenti: tutto ciò che [body] fa,
+/// anche dopo un `await`, vede [providers] con quelli. Il server lo usa per
+/// account, perché due account possono avere siti diversi con lo stesso id.
+R withUserProviders<R>(List<Provider> sites, R Function() body) =>
+    runZoned(body, zoneValues: {_zoneProviders: List<Provider>.unmodifiable(sites)});
+
+/// Come [withUserProviders], ma i siti si chiedono a [source] ogni volta: il
+/// giro di un account dura giorni e i suoi siti cambiano mentre gira.
+R withUserProviderSource<R>(List<Provider> Function() source, R Function() body) =>
+    runZoned(body, zoneValues: {_zoneProviders: source});
 
 final RegExp chapterNumberPattern =
     RegExp(r'\bchapter\s*0*(\d+)(?:[.,](\d+))?\b', caseSensitive: false);

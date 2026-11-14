@@ -17,22 +17,30 @@ import 'package:kagami_archive/manual.dart' show manualProvider, normalizeLink;
 import 'package:kagami_archive/providers.dart' as site;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../archive/repair.dart' show repairAvailableProvider;
 import '../data/auto_cleanup.dart' show shouldOfferCleanup;
 import '../data/cleanup.dart';
 import '../data/downloads.dart';
 import '../data/library.dart';
 import '../data/library_view.dart';
 import '../data/site_switch.dart';
+import '../data/user_sites.dart' show siteOfKey;
 import '../format/malf.dart';
 import '../format/reading.dart';
 import '../l10n.dart';
 import '../providers.dart';
+import '../providers_sources.dart' show downloadOriginProvider;
 import 'archive_flow.dart';
+import 'archive_screen.dart' show ArchiveScreen;
+import 'series_archive_own.dart';
+import 'series_data_move.dart' show bringDataHere;
 import 'archive_series.dart' show ArchiveChoice, ArchiveMode, ArchiveWhere, reachedChapterIndex;
 import 'drive_ui.dart';
+import 'elsewhere_section.dart';
 import 'library_screen.dart' show seriesRoute;
 import 'provider_switch.dart';
 import 'reader_screen.dart';
+import 'social_posts.dart' show SeriesSocialAction;
 import 'theme.dart';
 import 'widgets/cleanup_sheet.dart';
 import 'widgets/collection_sheet.dart';
@@ -198,19 +206,32 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     final chapters = sources?.index.chapters ?? const <ChapterEntry>[];
     final downloads = ref.watch(downloadsProvider);
     final leftovers = ref.watch(readLeftoversProvider(widget.seriesKey)).value;
+    // Si scarica da dove la sorgente lo permette: il Drive dell'account, le
+    // sorgenti per percorsi e le librerie condivise con «anche scaricare».
+    bool downloadable(String chapterId) {
+      final source = sources?.sourceOf(chapterId);
+      return source != null && ref.watch(downloadOriginProvider(source)) != null;
+    }
+
     final onDrive = [
       for (final chapter in chapters)
-        if (sources?.originOf(chapter.id) == LibraryOrigin.drive) chapter.id,
+        if (downloadable(chapter.id)) chapter.id,
     ];
     final ordered = [...chapters]..sort(
         (a, b) => _newestFirst
             ? b.order.compareTo(a.order)
             : a.order.compareTo(b.order),
       );
-    final visible = _visible(ordered, signals.state, onDrive.toSet());
+    final onDriveIds = onDrive.toSet();
+    final visible = _visible(ordered, signals.state, onDriveIds);
     final next = _resumeTarget(chapters, signals.state);
     final blocks = _blocks(chapters.length);
     final siteSource = _downloadableSource(signals.entry);
+    final archiveOwn = archiveOwnOffer(
+      ref.watch(seriesHoldersProvider(widget.seriesKey)),
+      signals.entry.source,
+      _knownSite,
+    );
     // Dal sito si scarica ciò che non c'è né sul telefono né su Drive.
     final missing = siteSource == null
         ? const <String>{}
@@ -270,9 +291,17 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                           ? null
                           : () => _switchProvider(signals.entry),
                       onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
+                      onRepair: signals.entry.provider == manualProvider || !(ref.watch(repairAvailableProvider).value ?? false)
+                          ? null
+                          : () => startRepair(context, ref, keys: {signals.entry.key}),
                       onMore: siteSource == null || offerStart || missing.isEmpty
                           ? null
                           : () => _startDownload(siteSource),
+                      onBringData: () => bringDataHere(context, ref, signals.entry),
+                      archiveOwn: archiveOwn,
+                      onArchiveOwn: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(builder: (_) => ArchiveScreen(link: signals.entry.source)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -295,6 +324,13 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                       signals: signals,
                     ),
                   ),
+                  if (signals.entry.provider != manualProvider && site.providerById(signals.entry.provider) != null) ...[
+                    const SizedBox(height: 22),
+                    ElsewhereSection(
+                      entry: signals.entry,
+                      onSwitch: (link) => _switchProvider(signals.entry, found: link),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -383,9 +419,9 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                       downloadKey(widget.seriesKey, chapter.id)];
                   return _ChapterTile(
                     chapter: chapter,
-                    fromDrive: origin == LibraryOrigin.drive,
+                    fromDrive: origin?.isRemote ?? false,
                     download: download,
-                    onDownload: origin == LibraryOrigin.drive
+                    onDownload: onDriveIds.contains(chapter.id)
                         ? () => _download([chapter.id])
                         : null,
                     onDownloadFromSite: missing.contains(chapter.id)
@@ -536,7 +572,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       try {
         inspected = await inspectArchiveLink(context, link);
       } on ProviderError catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: link))));
         return;
       }
       if (!mounted) return;
@@ -595,19 +631,25 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
   /// personali passano alla serie nuova — i capitoli abbinati per numero
   /// ([matchChapters]) — e la copia di ora si toglie. La scelta parte dai
   /// capitoli che la serie ha già, perché ciò che si toglie torni.
-  Future<void> _switchProvider(SeriesEntry entry) async {
+  ///
+  /// Con [found], il link che «Su altri siti» ha già trovato, la scelta del
+  /// provider si salta e si prosegue da lì.
+  Future<void> _switchProvider(SeriesEntry entry, {String? found}) async {
     if (_siteBusy) return;
     final l10n = context.l10n;
-    final manifest = await ref.read(seriesManifestProvider(entry.key).future);
-    final metadata = manifest?['metadata'];
-    final alternatives = metadata is Map ? metadata['alternativeTitles'] : null;
-    if (!mounted) return;
-    final link = await ProviderSwitchPage.open(context, entry, [
-      entry.title,
-      if (alternatives is List)
-        for (final title in alternatives)
-          if (title is String && title.trim().isNotEmpty) title,
-    ]);
+    var link = found;
+    if (link == null) {
+      final manifest = await ref.read(seriesManifestProvider(entry.key).future);
+      final metadata = manifest?['metadata'];
+      final alternatives = metadata is Map ? metadata['alternativeTitles'] : null;
+      if (!mounted) return;
+      link = await ProviderSwitchPage.open(context, entry, [
+        entry.title,
+        if (alternatives is List)
+          for (final title in alternatives)
+            if (title is String && title.trim().isNotEmpty) title,
+      ]);
+    }
     if (link == null || !mounted) return;
     setState(() => _siteBusy = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -617,7 +659,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       try {
         inspected = await inspectArchiveLink(context, link);
       } on ProviderError catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+        messenger.showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: link))));
         return;
       }
       if (!mounted) return;
@@ -713,7 +755,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
     if (ref.read(seriesPlaceProvider(widget.seriesKey)) == SeriesPlace.local) {
       return ArchiveWhere.phone;
     }
-    final destinations = archiveDestinations(ref);
+    final destinations = archiveDestinations(ref, siteId: siteOfKey(widget.seriesKey));
     if (!card && destinations.contains(ArchiveWhere.server)) return ArchiveWhere.server;
     return destinations.contains(ArchiveWhere.drive) ? ArchiveWhere.drive : ArchiveWhere.phone;
   }
@@ -729,7 +771,7 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
       if (identical(_inspected, pending)) _inspected = null;
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(archiveErrorText(error))));
+            .showSnackBar(SnackBar(content: Text(archiveErrorText(error, url: source))));
       }
       return null;
     }
@@ -1003,7 +1045,7 @@ class _Cover extends StatelessWidget {
       pinned: true,
       stretch: true,
       leading: const _GlassBack(),
-      actions: [_GlassMute(signals: signals), _GlassRemove(entry: entry)],
+      actions: [SeriesSocialAction(signals: signals), _GlassMute(signals: signals), _GlassRemove(entry: entry)],
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Stack(
@@ -1395,8 +1437,12 @@ class _SiteActions extends StatelessWidget {
     required this.onOpen,
     required this.onRefresh,
     required this.onMore,
+    required this.onBringData,
+    this.archiveOwn = ArchiveOwnOffer.none,
+    this.onArchiveOwn,
     this.onLink,
     this.onSwitch,
+    this.onRepair,
   });
 
   final bool busy;
@@ -1410,9 +1456,21 @@ class _SiteActions extends StatelessWidget {
   /// Per le altre: riscaricarla da un altro provider.
   final VoidCallback? onSwitch;
 
+  /// Rileggerla dal suo sito e correggere ciò che è cambiato; `null` dove il
+  /// motore di adesso non può.
+  final VoidCallback? onRepair;
+
   /// `null` se Kagami non sa leggere quel sito.
   final VoidCallback? onRefresh;
   final VoidCallback? onMore;
+
+  /// «Porta qui i miei dati» da un'altra serie in libreria (F5.16).
+  final VoidCallback onBringData;
+
+  /// Una serie che si legge solo da una libreria condivisa: archiviarla nel
+  /// proprio Drive (F5.15).
+  final ArchiveOwnOffer archiveOwn;
+  final VoidCallback? onArchiveOwn;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -1437,12 +1495,25 @@ class _SiteActions extends StatelessWidget {
               icon: LucideIcons.arrowLeftRight,
               onTap: busy ? null : onSwitch,
             ),
+          if (onRepair != null)
+            KChip(
+              label: context.l10n.archiveRepairSeries,
+              icon: LucideIcons.wrench,
+              onTap: busy ? null : onRepair,
+            ),
           if (onMore != null)
             KChip(
               label: context.l10n.seriesDownloadMore,
               icon: LucideIcons.download,
               onTap: busy ? null : onMore,
             ),
+          KChip(
+            label: context.l10n.seriesBringData,
+            icon: LucideIcons.arrowRightLeft,
+            onTap: busy ? null : onBringData,
+          ),
+          if (archiveOwn != ArchiveOwnOffer.none)
+            ArchiveOwnChip(offer: archiveOwn, busy: busy, onArchive: onArchiveOwn!),
           if (onRefresh != null)
             KChip(
               label: context.l10n.seriesRefreshCard,
@@ -2438,7 +2509,7 @@ class _Similar extends ConsumerWidget {
     if (mine.isEmpty) return const SizedBox.shrink();
 
     final scored = <(SeriesSignals, int)>[];
-    for (final signals in ref.watch(librarySignalsProvider)) {
+    for (final signals in ref.watch(shownSignalsProvider)) {
       if (signals.entry.key == seriesKey) continue;
       final shared = {...signals.entry.genres, ...signals.entry.tags}
           .where(mine.contains)
@@ -2531,6 +2602,7 @@ class _ChapterTile extends StatelessWidget {
     final l10n = context.l10n;
     final subtitle = <String>[
       if (!available) l10n.seriesChapterNotDownloaded,
+      if (!chapter.listed) l10n.seriesChapterUnlisted,
       if (fromDrive) l10n.seriesPlaceDrive,
       if (chapter.archivedAt != null)
         _shortDate(l10n, chapter.archivedAt!),

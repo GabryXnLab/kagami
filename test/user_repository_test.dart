@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kagami/src/data/adoption.dart';
 import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/user_repository.dart';
 import 'package:kagami/src/format/malf.dart';
@@ -435,6 +436,55 @@ void main() {
       await repository.moveSeries(old, fresh, chapters: {'a': '1', 'b': '1'});
       expect((await repository.loadStates())[fresh]!.readChapters, {'1'});
       expect(await db.select(db.chapterReads).get(), hasLength(1));
+    });
+  });
+
+  group('adoptFormerKeys', () {
+    const old = 'coffeemanga:7743';
+    const fresh = 'coffeemanga:the-house';
+
+    SeriesEntry adopted() => SeriesEntry.fromJson({
+          'key': fresh,
+          'formerKeys': [old],
+        });
+    final index = SeriesIndex.fromJson({
+      'key': fresh,
+      'chapters': [
+        {'id': 'chapter-1', 'formerIds': ['217607']},
+        {'id': 'chapter-2', 'formerIds': ['217608']},
+      ],
+    });
+
+    Future<int> run({Future<SeriesIndex?> Function(SeriesEntry)? load}) => adoptFormerKeys(
+          series: [adopted()],
+          keysWithData: repository.keysWithData,
+          loadIndex: load ?? (_) async => index,
+          move: (from, to, chapters) => repository.moveSeries(from, to, chapters: chapters),
+        );
+
+    test('i dati passano una volta sola, con gli id dei capitoli tradotti', () async {
+      await repository.saveSeriesState(old, SeriesState(status: ShelfStatus.reading, rating: 7));
+      await repository.markChapters(old, ['217607'], true);
+      expect(await run(), 1);
+
+      final states = await repository.loadStates();
+      expect(states.containsKey(old), isFalse);
+      expect(states[fresh]!.rating, 7);
+      expect(states[fresh]!.readChapters, {'chapter-1'});
+
+      // Il secondo giro non legge nemmeno l'indice e non schiaccia ciò che
+      // l'utente ha fatto nel frattempo sulla chiave nuova.
+      await repository.saveSeriesState(fresh, SeriesState(status: ShelfStatus.reading, rating: 9));
+      expect(await run(load: (_) => throw StateError('non si legge')), 0);
+      expect((await repository.loadStates())[fresh]!.rating, 9);
+    });
+
+    test("un indice illeggibile non sposta niente e il giro dopo riprova", () async {
+      await repository.markChapters(old, ['217607'], true);
+      expect(await run(load: (_) async => null), 0);
+      expect((await repository.keysWithData()), contains(old));
+      expect(await run(), 1);
+      expect((await repository.loadStates())[fresh]!.readChapters, {'chapter-1'});
     });
   });
 }

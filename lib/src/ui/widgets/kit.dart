@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kagami_archive/providers.dart' show Provider, builtInProviders;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../l10n.dart';
@@ -565,6 +566,51 @@ class KSegmented extends StatelessWidget {
   }
 }
 
+/// Per quanto si dà un accesso (al server, e a ciò che verrà dopo): la scelta
+/// è sempre fra queste, e «un mese» è quella proposta.
+enum AccessDuration {
+  week(Duration(days: 7)),
+  month(Duration(days: 30)),
+  quarter(Duration(days: 90)),
+  year(Duration(days: 365)),
+  never(null);
+
+  const AccessDuration(this.span);
+
+  final Duration? span;
+
+  static const AccessDuration proposed = month;
+
+  /// La data di scadenza contando da [now]; `null` se non scade.
+  DateTime? expiresAt([DateTime? now]) => span == null ? null : (now ?? DateTime.now()).add(span!);
+
+  String label(AppLocalizations l10n) => switch (this) {
+        week => l10n.accessDurationWeek,
+        month => l10n.accessDurationMonth,
+        quarter => l10n.accessDurationQuarter,
+        year => l10n.accessDurationYear,
+        never => l10n.accessDurationNever,
+      };
+}
+
+/// La scelta della durata di un accesso, a cursore come [KSegmented].
+class AccessDurationPicker extends StatelessWidget {
+  const AccessDurationPicker({required this.value, required this.onChanged, super.key});
+
+  final AccessDuration value;
+  final ValueChanged<AccessDuration> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return KSegmented(
+      options: [for (final duration in AccessDuration.values) duration.label(l10n)],
+      index: value.index,
+      onChanged: (i) => onChanged(AccessDuration.values[i]),
+    );
+  }
+}
+
 /// Un numero con la sua etichetta: il mattone di tutte le file di statistiche.
 class KFigure extends StatelessWidget {
   const KFigure({
@@ -1022,4 +1068,40 @@ class KProgress extends StatelessWidget {
               AlwaysStoppedAnimation(tint ?? context.colors.primary),
         ),
       );
+}
+
+/// L'icona di un sito: dagli asset per quelli inclusi, dalla rete (`iconUrl`)
+/// per quelli degli utenti, con un globo se non c'è o non si scarica. Un sito
+/// degli utenti che sostituisce uno incluso e non dà un'icona sua tiene
+/// quella dell'app.
+class SiteIcon extends StatelessWidget {
+  const SiteIcon(this.site, {super.key, required this.size});
+
+  final Provider site;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = site.iconUrl;
+    final fallback = SizedBox(
+      width: size,
+      height: size,
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: Icon(LucideIcons.globe, size: size * 0.6, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      ),
+    );
+    if (site.builtIn || (url == null && builtInProviders.any((built) => built.id == site.id))) {
+      return Image.asset(site.icon, width: size, height: size, errorBuilder: (_, _, _) => fallback);
+    }
+    if (url == null) return fallback;
+    return Image.network(
+      url,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
+      loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+    );
+  }
 }

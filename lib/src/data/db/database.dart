@@ -15,8 +15,11 @@
 /// mantenere una copia da invalidare a ogni sincronizzazione.
 library;
 
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path/path.dart' as p;
 
 part 'database.g.dart';
 
@@ -273,6 +276,16 @@ class AppSettings extends Table {
 )
 class KagamiDatabase extends _$KagamiDatabase {
   KagamiDatabase() : super(_open());
+
+  /// Un file preciso (uno per account, vedi `account_databases.dart`): stesso
+  /// isolate di sfondo di [KagamiDatabase.new], percorso deciso da chi chiama.
+  KagamiDatabase.file(File file)
+      : super(
+          driftDatabase(
+            name: p.basenameWithoutExtension(file.path),
+            native: DriftNativeOptions(databasePath: () async => file.path),
+          ),
+        );
 
   /// Database in memoria per i test: nessun file, nessun isolate.
   KagamiDatabase.forTesting(super.executor);

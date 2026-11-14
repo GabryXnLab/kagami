@@ -15,12 +15,27 @@ void main() {
   String? chromium;
   final logged = <String>[];
 
+  // I processi figli di Chromium (crashpad, zygote) possono scrivere nel
+  // profilo per un attimo dopo l'uscita del principale: la cancellazione
+  // riprova invece di fallire su «Directory not empty» (CI del 2026-11-15).
+  Future<void> deleteProfile(Directory profile) async {
+    for (var attempt = 0;; attempt++) {
+      try {
+        if (await profile.exists()) await profile.delete(recursive: true);
+        return;
+      } on FileSystemException {
+        if (attempt == 9) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+    }
+  }
+
   // Ogni test ha il suo profilo e il suo Chromium: nessun blocco o processo
   // di un test può toccare il seguente. Il log resta per dire, a un fallimento,
   // cosa ha visto il browser.
   Future<HeadlessBrowser> newBrowser(Duration timeout, [Directory? dir]) async {
     final profile = dir ?? await Directory.systemTemp.createTemp('kagami-browser-');
-    addTearDown(() => profile.delete(recursive: true));
+    addTearDown(() => deleteProfile(profile));
     final browser = HeadlessBrowser(chromium!, profile,
         timeout: timeout, log: logged.add, guard: false, private: (address) => address.address == '127.0.0.1');
     addTearDown(browser.close);
@@ -202,7 +217,7 @@ void main() {
 
     final proxyPort = await free();
     final profile = await Directory.systemTemp.createTemp('kagami-browser-');
-    addTearDown(() => profile.delete(recursive: true));
+    addTearDown(() => deleteProfile(profile));
     // Come `kagami-server browser`, ma sul loopback e su porte libere; DevTools
     // passa dall'inoltro, che ammette solo l'indirizzo del «server».
     final container = await BrowserContainer.start(chromium!, profile, '127.0.0.1:$proxyPort',
@@ -227,7 +242,7 @@ void main() {
 
   test('contenitore: un client che chiude di colpo non fa cadere il comando browser', () async {
     final profile = await Directory.systemTemp.createTemp('kagami-browser-');
-    addTearDown(() => profile.delete(recursive: true));
+    addTearDown(() => deleteProfile(profile));
     final container = await BrowserContainer.start(chromium!, profile, '127.0.0.1:9',
         address: InternetAddress.loopbackIPv4, port: 0, admit: GuardProxy.resolvedFrom('127.0.0.1'), log: logged.add);
     addTearDown(container.stop);

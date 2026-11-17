@@ -36,7 +36,8 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-  # Analisi e test di ci.yml, senza il suo APK: gli APK e l'IPA li fa build.yml.
+  # Analisi e test di ci.yml, senza il suo APK: gli APK e l'IPA li fa build.yml. Pubblica
+  # anche l'immagine del server come `stable` e `v<versione>` (con il catalogo dei secret).
   check:
     name: Controlli
     needs: version
@@ -46,8 +47,12 @@ jobs:
       contents: read
       packages: write
     uses: ./.github/workflows/ci.yml
+    secrets:
+      CATALOG_URLS: ${{ secrets.CATALOG_URLS }}
+      CATALOG_KEYS: ${{ secrets.CATALOG_KEYS }}
     with:
       build_apk: false
+      release_version: ${{ needs.version.outputs.version }}
 
   build:
     name: Build

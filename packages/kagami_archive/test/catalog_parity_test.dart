@@ -4,6 +4,7 @@
 // («I siti inclusi nel formato 2»); ogni altra è uno `skip` con il motivo.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:kagami_archive/catalog.dart';
 import 'package:kagami_archive/declarative.dart';
@@ -104,6 +105,26 @@ Future<void> _samePages(
     final fromSite = await site.fetchPages(actual.chapters[i], siteHttp);
     expect(_pages(fromSite), _pages(fromDart), reason: chapter.title);
   }
+}
+
+/// Una sola pagina salvata, per l'indirizzo dato.
+class _OnePage implements ProviderHttp {
+  _OnePage(this.url, this.body);
+
+  final String url;
+  final List<int> body;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    if (url != this.url) throw StateError('pagina non salvata: $url');
+    return (body: Uint8List.fromList(body), contentType: 'text/html');
+  }
+
+  @override
+  Future<Map<String, Object?>> json(String url) => throw StateError('json non salvato: $url');
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) async => true;
 }
 
 /// ManhwaRead con i dati strutturati nella testa della pagina (JSON-LD e
@@ -443,6 +464,23 @@ void main() {
       expect(actual.metadata['authors'], expected.metadata['authors']);
     }, skip: 'Fuori dal formato: il Dart legge le coppie etichetta-valore del corpo con euristica (`_labels`); '
         'il file dà un selettore per campo, e la pagina finta non ha classi stabili.');
+
+    // La pagina vera del 2026-11-17 non ha più coppie etichetta-valore: generi, tag e autori sono
+    // link (`/genre/`, `/tag/`, `/author/`), lo stato è `data-status`, il tipo sta solo nella
+    // descrizione. Il Dart non ne legge niente; la definizione v3 sì.
+    test('pagina vera: tipo, stato e tag dal markup nuovo', () async {
+      const real = 'https://manhwaread.com/manhwa/my-girlfriend-was-already-fully-trained/';
+      final html = File('test/fixtures/sites/manhwaread/2026-11-17-browser/034be5e90ed9.html').readAsBytesSync();
+      final series = await site.fetchSeries(real, _OnePage(real, html));
+      final metadata = _classified(series);
+      expect(metadata['type'], 'manhwa');
+      expect(metadata['status'], 'ongoing');
+      expect(metadata['genres'], containsAll(['Drama', 'Hentai']));
+      expect(metadata['tags'], ['Fellatio', 'Full Color', 'Long Strip', 'Netorare', 'Nudity', 'Threesome']);
+      expect(metadata['authors'], ['Gongsimi', 'Jinaganeun Geumtaeyang']);
+      expect(metadata['artists'], ['Do-Ya']);
+      expect(metadata['alternativeTitles'], hasLength(3));
+    });
 
     test('tavole dalla ricetta base64 di chapterData', () async {
       // Il finto serve solo le tavole del primo capitolo.

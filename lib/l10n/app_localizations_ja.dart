@@ -1147,6 +1147,15 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get archiveRepairPagesDone => 'シリーズを修復しました。';
+
+  @override
+  String get archiveRepairPagesNone => 'サーバーはライブラリでこのシリーズを見つけられませんでした。';
+
+  @override
+  String get archiveRepairNoVerification => '認証を通過できなかったため、シリーズは修復されませんでした。';
+
+  @override
   String get archiveRepairBusy =>
       'スマートフォンはすでに修復中またはダウンロード中です。しばらくしてからもう一度お試しください。';
 

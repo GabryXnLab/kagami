@@ -1190,6 +1190,17 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get archiveRepairPagesDone => 'Série réparée.';
+
+  @override
+  String get archiveRepairPagesNone =>
+      'Le serveur n\'a pas trouvé la série dans la bibliothèque.';
+
+  @override
+  String get archiveRepairNoVerification =>
+      'Vérification non réussie : la série n\'a pas été réparée.';
+
+  @override
   String get archiveRepairBusy =>
       'Le téléphone répare ou télécharge déjà : réessayez dans un instant.';
 

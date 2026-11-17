@@ -354,7 +354,10 @@ spuntare «Verify you are human», che capita soprattutto dagli indirizzi dei
 data center. Allora quella serie resta in attesa (`check.gated`): il telefono
 lo avvisa con una notifica, la verifica la passa chi lo usa, e il telefono
 manda al server le pagine di quelle serie (`POST /v2/check/pages`), che le
-controlla subito. Le tavole il server le prende dal CDN
+controlla subito. Lo stesso vale per «Ripara la serie»: la pagina la apre il
+telefono e il server ripara quella serie subito (`POST /v2/repair/pages`);
+la riparazione di un sito intero o della libreria non passa dal telefono, e queste serie possono fermarsi alla verifica.
+Le tavole il server le prende dal CDN
 del sito. Se il sito blocca anche quello dall'indirizzo del server, il lavoro
 finisce con un errore che lo dice, e quella serie va scaricata dal telefono.
 

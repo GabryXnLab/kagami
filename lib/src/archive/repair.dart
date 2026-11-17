@@ -15,7 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/http.dart' show ProviderOffline;
 import 'package:kagami_archive/model.dart' show ProviderError;
-import 'package:kagami_archive/providers.dart' show providerById;
+import 'package:kagami_archive/providers.dart' show providerById, selectProvider;
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/repair.dart';
 import 'package:kagami_archive/tracking.dart';
@@ -175,6 +175,24 @@ final repairAvailableProvider = FutureProvider.autoDispose<bool>((ref) async {
     client.close();
   }
 });
+
+/// Le serie di [keys] che il server può riparare solo con la pagina aperta sul
+/// telefono (il loro sito è dietro una verifica), con il link da aprire. [sources]
+/// dice il link di ogni chiave; una chiave senza link o di un sito libero non c'è.
+Map<String, String> repairNeedingVerification(Set<String> keys, Map<String, String> sources) {
+  final result = <String, String>{};
+  for (final key in keys) {
+    final url = sources[key];
+    if (url == null) continue;
+    try {
+      final provider = selectProvider(url);
+      if (provider.browser != null) result[key] = provider.canonical(url);
+    } on ProviderError {
+      continue;
+    }
+  }
+  return result;
+}
 
 class RepairController extends Notifier<RepairView> {
   @override

@@ -386,6 +386,24 @@ void main() {
     expect(jsonDecode(await File(p.join(root, folder, 'series.json')).readAsString())['title'], 'Disfarming');
   });
 
+  test('repairPages ripara solo le serie delle pagine date, con la pagina data al posto del sito', () async {
+    final (root, folder) = await seedLibrary();
+    final worker = repairWorker(root, _Challenged());
+    final none = await worker.repairPages({'https://manhwaread.com/manhwa/altra/': _manhwaPage});
+    expect(none.repaired, 0);
+    expect(none.failed, isEmpty);
+    expect(await files.history(), isEmpty);
+    final done = await worker.repairPages({_manhwa: _manhwaPage});
+    expect(done.repaired, 1);
+    expect(done.failed, isEmpty);
+    expect((await files.history()).single.seriesKey, 'manhwaread:disfarming');
+    expect(jsonDecode(await File(p.join(root, folder, 'series.json')).readAsString())['title'], 'Disfarming');
+    // Con una riparazione in attesa il server non è libero.
+    worker.repair(site: 'manhwaread');
+    await expectLater(worker.repairPages({_manhwa: _manhwaPage}), throwsA(isA<WorkerBusy>()));
+    await worker.close();
+  });
+
   test('una riparazione scritta su file da un altro processo viene eseguita e il file sparisce', () async {
     final (root, _) = await seedLibrary();
     final worker = repairWorker(root, _Page())..start();

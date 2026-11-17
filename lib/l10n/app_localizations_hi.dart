@@ -1184,6 +1184,17 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String get archiveRepairPagesDone => 'सीरीज़ ठीक हो गई।';
+
+  @override
+  String get archiveRepairPagesNone =>
+      'सर्वर को लाइब्रेरी में यह सीरीज़ नहीं मिली।';
+
+  @override
+  String get archiveRepairNoVerification =>
+      'सत्यापन पूरा नहीं हुआ, इसलिए सीरीज़ ठीक नहीं की गई।';
+
+  @override
   String get archiveRepairBusy =>
       'फ़ोन पहले से मरम्मत या डाउनलोड कर रहा है: थोड़ी देर बाद फिर कोशिश करें।';
 

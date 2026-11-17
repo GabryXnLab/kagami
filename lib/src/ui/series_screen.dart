@@ -304,7 +304,12 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                       onRefresh: siteSource == null ? null : () => _refreshCard(siteSource),
                       onRepair: signals.entry.provider == manualProvider || !(ref.watch(repairAvailableProvider).value ?? false)
                           ? null
-                          : () => startRepair(context, ref, keys: {signals.entry.key}),
+                          : () => startRepair(
+                              context,
+                              ref,
+                              keys: {signals.entry.key},
+                              sources: {if (signals.entry.source != null) signals.entry.key: signals.entry.source!},
+                            ),
                       onMore: siteSource == null || offerStart || missing.isEmpty
                           ? null
                           : () => _startDownload(siteSource),

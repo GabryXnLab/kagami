@@ -271,7 +271,8 @@ sapere per chi chiedere il biglietto, e il controllo di salute di Docker.
   verifica del browser, quando la verifica si risolve da sola; senza, li
   salta. `verify`: dice quali serie sono ferme alla verifica (`gated` in
   `check`) e ne accetta le pagine (`POST /v2/check/pages`). `repair`:
-  ripara la libreria (`POST /v2/repair`). `elsewhere`: cerca ogni giorno le
+  ripara la libreria (`POST /v2/repair`). `repairPages`: ripara subito le
+  serie di cui riceve le pagine (`POST /v2/repair/pages`). `elsewhere`: cerca ogni giorno le
   serie della libreria sugli altri siti (`GET /v2/elsewhere`) e accetta
   `elsewhere` in `PUT /v2/check`. `userProviders`: usa i siti degli utenti
   (`providers/` della cartella di Drive, `docs/siti.md`) per l'account che li
@@ -564,6 +565,26 @@ finito:
 
 `gated` sono le serie mandate che restano ferme (una pagina che non era
 quella della serie).
+
+### `POST /v2/repair/pages` — ripara le serie dietro la verifica
+
+```json
+{"pages": [{"url": "https://manhwaread.com/manhwa/disfarming/", "html": "<!DOCTYPE html>…"}]}
+```
+
+Stesso corpo e stessi limiti di `check/pages` (`400` se sbagliato). Per i
+siti che il server non legge da sé (la verifica di Cloudflare): il telefono
+la passa e manda qui la pagina della serie. Il server ripara adesso, come
+`POST /v2/repair`, solo le serie della libreria il cui link è fra le pagine,
+leggendo la pagina da qui; una pagina di una serie che non è in libreria si
+ignora. Risponde a riparazione finita; gli esiti stanno anche in `history`:
+
+```json
+{"repaired": 1, "failed": [{"title": "Disfarming", "error": "…"}]}
+```
+
+Errori: `409 drive_not_ready` senza Drive, `409 busy` se il server sta già
+facendo un giro, una riparazione o un controllo (si riprova).
 
 ### `POST /v2/repair` → `202` — ripara la libreria
 

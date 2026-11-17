@@ -1145,6 +1145,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get archiveRepairPagesDone => '系列已修复。';
+
+  @override
+  String get archiveRepairPagesNone => '服务器在资料库中没有找到该系列。';
+
+  @override
+  String get archiveRepairNoVerification => '未通过验证,该系列未修复。';
+
+  @override
   String get archiveRepairBusy => '手机正在修复或下载，请稍后再试。';
 
   @override

@@ -18,6 +18,7 @@ import 'package:kagami_archive/health.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/manual.dart' show manualProvider;
 import 'package:kagami_archive/providers.dart' show PageBrowser, Provider, SuppliedPages, builtInProviders, providers, selectProvider, withUserProviderSource;
 import 'package:kagami_archive/repair.dart';
 import 'package:kagami_archive/runner.dart';
@@ -224,10 +225,26 @@ abstract interface class JobControl {
   /// aperte da una persona sul telefono ([pages], per link).
   Future<CheckReport> checkPages(Map<String, String> pages);
 
+  /// Ripara adesso le serie della libreria il cui link è in [pages] (per link,
+  /// con la pagina aperta sul telefono). Le serie che non sono in libreria non
+  /// contano. Lancia [WorkerBusy] se il server sta già lavorando.
+  Future<PagesRepair> repairPages(Map<String, String> pages);
+
   /// Mette in attesa la riparazione della libreria: tutta, un [site] o le
   /// serie in [keys]. Una sola richiesta in attesa per utente, e le nuove
   /// si sommano a lei.
   void repair({String? site, Set<String>? keys});
+}
+
+/// L'esito di [ServerJobs.repairPages]: serie riparate e serie che hanno dato errore.
+class PagesRepair {
+  int repaired = 0;
+  final List<({String title, String error})> failed = [];
+}
+
+/// Il server sta già facendo un giro, una riparazione o un controllo.
+class WorkerBusy implements Exception {
+  const WorkerBusy();
 }
 
 /// Dove sta lo stato dell'ultima passata «Su altri siti», accanto a `elsewhere.json`.
@@ -571,6 +588,12 @@ class ServerWorker implements JobControl {
         continue;
       }
       if (_elsewhereWanted && !await _elsewhereNow()) {
+        await _sleep(retryAfter);
+        continue;
+      }
+      // Una riparazione con le pagine del telefono (repairPages) gira fuori da
+      // questo ciclo: il giro aspetta lei, che alla fine lo risveglia.
+      if (_repairing) {
         await _sleep(retryAfter);
         continue;
       }
@@ -1012,6 +1035,57 @@ class ServerWorker implements JobControl {
     final report = await _sweep(await checkSettings(), browser: supplied, only: only);
     if (report.queued.isNotEmpty || report.repaired.isNotEmpty) wake();
     return report;
+  }
+
+  @override
+  Future<PagesRepair> repairPages(Map<String, String> pages) async {
+    final folderId = folder?.call();
+    if (folderId == null) return PagesRepair();
+    if (_repairing || _repair != null || _alive != null || _checking != null || _elsewhereRunning) {
+      throw const WorkerBusy();
+    }
+    _repairing = true;
+    _alive = DateTime.now();
+    final result = PagesRepair();
+    try {
+      final target = ArchiveTarget(destination: ArchiveDestination.drive, folderId: folderId);
+      final store = environment.storeFor(target);
+      final links = {for (final url in pages.keys) _canonical(url)};
+      final only = {
+        for (final row in await libraryRows(store))
+          if (row['key'] case final String key when row['source'] is String && row['provider'] != manualProvider)
+            if (links.contains(_canonical(row['source'] as String))) key,
+      };
+      if (only.isEmpty) return result;
+      await repairLibrary(
+        store: store,
+        httpFor: (provider) => environment.httpFor(provider),
+        scratch: environment.scratch,
+        images: environment.images,
+        browser: SuppliedPages(pages),
+        health: files.health,
+        tracking: Tracking(files.ongoing),
+        files: files,
+        target: target,
+        only: only,
+        cancelled: () => _closed,
+        progress: (_, _, _) => _alive = DateTime.now(),
+        onOutcome: (outcome) async {
+          await files.remember(outcome.toArchiveOutcome());
+          final error = outcome.error;
+          if (error == null) {
+            result.repaired++;
+          } else {
+            result.failed.add((title: outcome.title, error: error));
+          }
+        },
+      );
+      return result;
+    } finally {
+      _repairing = false;
+      _alive = null;
+      if ((await files.jobs()).isNotEmpty) wake();
+    }
   }
 
   static String _canonical(String url) {

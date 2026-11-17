@@ -1227,6 +1227,16 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get archiveRepairPagesDone => 'تم إصلاح السلسلة.';
+
+  @override
+  String get archiveRepairPagesNone => 'لم يعثر الخادم على السلسلة في المكتبة.';
+
+  @override
+  String get archiveRepairNoVerification =>
+      'لم يتم اجتياز التحقق، لذا لم يتم إصلاح السلسلة.';
+
+  @override
   String get archiveRepairBusy =>
       'الهاتف يُصلح أو يُنزّل بالفعل: حاول مرة أخرى بعد قليل.';
 

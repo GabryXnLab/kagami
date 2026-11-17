@@ -61,6 +61,14 @@ const MethodChannel notificationsChannel = MethodChannel('kagami/notifications')
 /// chiave della serie, che non comincia mai in questo modo.
 const String serverInvitePrefix = 'server-invite:';
 
+/// Quelle degli inviti a una libreria di Drive condivisa: toccandole si apre
+/// l'elenco delle librerie condivise con me.
+const String shareInvitePrefix = 'share-invite:';
+
+/// Quelle dei messaggi privati: la chiave è `message:<uid di chi scrive>`, una
+/// per conversazione, e toccandola si apre la conversazione.
+const String messagePrefix = 'message:';
+
 /// La chiave della notifica delle serie ferme alla verifica di un sito
 /// (`ArrivalNotifier.VERIFY_KEY`): toccandola si apre la verifica.
 const String verifyNotificationKey = 'verify:';
@@ -119,6 +127,21 @@ class ArrivalNotifications {
     if (!_native) return;
     await Permission.notification.request();
     await channel.invokeMethod<void>('invite', {'key': '$serverInvitePrefix$id', 'title': title, 'text': text});
+  }
+
+  /// Un messaggio privato nuovo. Usa il canale degli inviti (stesso lato
+  /// nativo): una notifica per conversazione, che la successiva rimpiazza.
+  Future<void> message(String peer, {required String title, required String text}) async {
+    if (!_native) return;
+    await Permission.notification.request();
+    await channel.invokeMethod<void>('invite', {'key': '$messagePrefix$peer', 'title': title, 'text': text});
+  }
+
+  /// L'avviso che qualcuno ha condiviso con noi la sua libreria di Drive.
+  Future<void> shareInvite(String id, {required String title, required String text}) async {
+    if (!_native) return;
+    await Permission.notification.request();
+    await channel.invokeMethod<void>('shareInvite', {'key': '$shareInvitePrefix$id', 'title': title, 'text': text});
   }
 
   /// Programma il controllo della cartella locale ad app chiusa.

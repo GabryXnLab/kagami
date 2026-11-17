@@ -144,15 +144,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seriesMuteMuted => '已静音新章节通知。';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '手机上已有的都读完了：还有 $count 个已公布的章节未下载。',
-      one: '手机上已有的都读完了：还有 1 个已公布的章节未下载。',
+      other: '已下载的内容都读完了：还有 $count 个未读章节尚未下载。',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已下载的内容都读完了：还有 $count 个章节待读，接下来的已在队列中。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => '下载接下来的章节';
 
   @override
   String get seriesCaughtUpAll => '已全部读完。';
@@ -441,6 +453,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get seriesChapterNotDownloaded => '未下载';
+
+  @override
+  String get seriesChapterUnlisted => '已从网站移除';
 
   @override
   String seriesChapterPages(int count) {
@@ -894,6 +909,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get archiveResults => '搜索结果';
+
+  @override
   String archiveNoResults(String site) {
     return '在 $site 上没有结果。';
   }
@@ -1078,6 +1096,104 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get archiveCheckNow => '立即检查';
+
+  @override
+  String get archiveRepair => '修复已归档的系列';
+
+  @override
+  String get archiveRepairHint => '从站点重新读取每个系列，并修正标题、封面和章节';
+
+  @override
+  String get archiveRepairAll => '整个书库';
+
+  @override
+  String archiveRepairSite(String site) {
+    return '仅 $site 的系列';
+  }
+
+  @override
+  String get archiveRepairSeries => '修复该系列';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return '正在修复 $done/$total：$title';
+  }
+
+  @override
+  String get archiveRepairQueued => '已在服务器上开始修复，结果会显示在历史记录中。';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已修复 $count 个系列。',
+      zero: '没有需要修复的系列。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary => '没有可修复的书库：请选择 Drive 或手机上的文件夹。';
+
+  @override
+  String get archiveRepairNoServer => '服务器还不支持修复系列，需要更新。';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return '修复失败：$error';
+  }
+
+  @override
+  String get archiveRepairBusy => '手机正在修复或下载，请稍后再试。';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return '$site 又能用了：修复它的系列';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => '修复';
+
+  @override
+  String get archiveRepairDismiss => '忽略';
+
+  @override
+  String get archiveRepairNothing => '无需修复';
+
+  @override
+  String get archiveRepairAdopted => '已采用新标识';
+
+  @override
+  String get archiveRepairRetitled => '标题已更新';
+
+  @override
+  String get archiveRepairCover => '封面已更新';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个新章节',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个章节已不在列表中',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return '未能修复：$error';
+  }
 
   @override
   String get archiveNoTracked => '暂时没有要跟进的作品';
@@ -1401,6 +1517,20 @@ class AppLocalizationsZh extends AppLocalizations {
       '注意：在公网地址上使用明文连接，你的账号令牌在传输中可被读取。请使用 HTTPS（Tailscale Funnel、反向代理）或 Tailscale。';
 
   @override
+  String get serverDriveForeignTitle => '要把你的 Drive 交给这台服务器吗?';
+
+  @override
+  String get serverDriveForeignBody =>
+      '这台服务器不是你的:管理它的人可以读取、写入并删除你整个 Drive 里的内容,而不只是库文件夹。只有在你信任对方时才继续。';
+
+  @override
+  String get serverDriveForeignConfirm => '授予权限';
+
+  @override
+  String get serverDriveNeedsHttps =>
+      '不会向公网地址上未加密 (http://) 的服务器发送 Drive 权限:传输中可能被读取。请使用 https:// 地址,或 Tailscale 这样的私有网络。';
+
+  @override
   String get serverAddressSavedNote => '地址会随备份和账号一起保存，与 Drive 文件夹一样。';
 
   @override
@@ -1718,8 +1848,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncDescDownload => 'Drive 上新增的内容会下载到手机。手机上的内容不会上传。';
 
   @override
-  String get syncDescUpload =>
-      '手机上的内容会上传到 Drive，例如 reading/backup 中的数据副本。书库索引仍以服务器的为准。';
+  String get syncDescUpload => '手机上的内容会上传到 Drive。书库索引仍以服务器的为准。';
 
   @override
   String get syncDescBoth =>
@@ -1951,11 +2080,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDataNote => '备份、恢复和清除';
 
   @override
-  String get settingsAutoBackup => '自动备份到书库';
+  String get settingsAutoBackup => '自动备份到本机';
 
   @override
   String get settingsAutoBackupNote =>
-      '每天一次，保存到 reading/backup/，同步时会和漫画一起传到 Drive';
+      '每天一次，保存在这部手机上应用自己的存储空间。想放到别处，请使用账号或“导出”';
 
   @override
   String get settingsExport => '导出数据';
@@ -2089,7 +2218,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAccountUnavailable => '此处无法使用账号';
 
   @override
-  String get settingsAccountUnavailableNote => '这个版本没有 Firebase：数据保留在设备上';
+  String get settingsAccountUnavailableNote => '这个版本没有后端：数据保留在设备上';
 
   @override
   String get settingsAccountSignIn => '使用 Google 登录';
@@ -2112,13 +2241,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAccountSignOut => '退出登录';
 
   @override
-  String get settingsAccountSignOutNote => '先上传最新的阅读记录，再退出登录';
+  String get settingsAccountSignOutNote => '先上传最新的阅读记录，再退出登录：手机将恢复为不使用账号时的数据';
+
+  @override
+  String get settingsAccountSessionLostNote =>
+      '登录已过期：重新登录即可同步，或退出登录以恢复为不使用账号时的数据';
 
   @override
   String get settingsAccountForget => '不再保留副本';
 
   @override
-  String get settingsAccountForgetNote => '从账号中删除数据。这部手机上的数据保持不变';
+  String get settingsAccountForgetNote =>
+      '从账号中删除数据，并回到不登录账号的使用状态。账号的数据留在这部手机上它自己的文件中，重新登录前不会显示';
 
   @override
   String get settingsAccountErrorNote => '这部手机上的数据没有受到影响';
@@ -2128,7 +2262,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsAccountForgetExplain =>
-      '为你保存的副本会被删除，并退出登录。这部手机上的状态、评分、阅读历史和合集保持不变，但在其他手机上将不再看到。';
+      '为你保存的副本会被删除，并退出登录。手机会回到未登录时使用的数据；账号的状态、评分、阅读历史和合集保留在这部手机上它自己的文件中，重新用同一账号登录前不会显示（在其他手机上也将不再看到）。';
 
   @override
   String get settingsAccountForgetConfirm => '从账号中删除';
@@ -2193,7 +2327,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsWhatItDoes => '作用';
 
   @override
-  String get settingsBackupsTitle => '书库中的副本';
+  String get settingsBackupsTitle => '本机上的副本';
 
   @override
   String get settingsBackupsNone => '还没有副本：第一份会在下次打开应用时生成';
@@ -2648,9 +2782,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shellTabLibrary => '书库';
 
   @override
-  String get shellTabCollections => '合集';
-
-  @override
   String get moreDownload => '下载漫画';
 
   @override
@@ -2920,6 +3051,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get removeSeriesDrive => 'Drive 上的文件夹会移到回收站，三十天内可从那里恢复。';
+
+  @override
+  String get removeSeriesDriveNotOwned =>
+      'Drive 上的系列会保留：资料库文件夹不属于你的账号，或 Drive 尚未确认，而 Kagami 只在你拥有的位置删除。';
 
   @override
   String get removeSeriesConfirm => '删除';
@@ -3261,6 +3396,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dataCloudGoogleSignInFailed => 'Google 登录失败';
+
+  @override
+  String get dataCloudBackendUnavailable => '此版本的后端不支持该功能';
+
+  @override
+  String get dataCloudTooLarge => '你的个人数据超过了后端接受的 16 MiB：数据仍保留在这部手机上，但不会同步';
 
   @override
   String dataNewChaptersNotification(int count) {
@@ -3949,6 +4090,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '自动从手机和 Drive（移入回收站）删除。阅读进度和已读记录会保留';
 
   @override
+  String get settingsAutoCleanupSharedRead =>
+      '从共享读过的章节也算已读：你 Drive 中的副本也会一并删除。';
+
+  @override
   String get settingsAutoCleanupIdle => '删除闲置系列的章节';
 
   @override
@@ -4069,6 +4214,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collectionPropsMuted => '静音更新';
 
   @override
+  String get collectionTraitHidden => '隐藏';
+
+  @override
+  String get collectionTraitHiddenHint => '不发通知；系列只有打开合集时才会显示';
+
+  @override
   String get collectionPropsKeepChapters => '排除出自动清理';
 
   @override
@@ -4088,4 +4239,1291 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsReadAheadWindowNote => '在所有边读边下载的作品中，正在阅读的章节之后保持已下载的章节数';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return '网站 $site 无法使用：它已更改，需要更新 Kagami。';
+  }
+
+  @override
+  String get elsewhereTitle => '在其他网站';
+
+  @override
+  String get elsewhereChecking => '正在其他网站上查找该系列…';
+
+  @override
+  String elsewhereChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 章',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereLatest(String chapter) {
+    return '最新：第$chapter章';
+  }
+
+  @override
+  String elsewhereLatestAt(String chapter, String date) {
+    return '最新：第$chapter章，$date';
+  }
+
+  @override
+  String elsewhereAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '领先 $count 章',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereBehind(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '落后 $count 章',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get elsewhereSame => '章节相同';
+
+  @override
+  String get elsewhereMissing => '此处没有';
+
+  @override
+  String get elsewhereBroken => '网站无法使用';
+
+  @override
+  String get elsewhereGated => '需要浏览器验证';
+
+  @override
+  String get elsewhereError => '未响应';
+
+  @override
+  String get elsewhereSwitch => '切换到此网站';
+
+  @override
+  String get elsewhereSiteAction => '在别处阅读';
+
+  @override
+  String elsewhereSiteTitle(String site) {
+    return '$site 的系列';
+  }
+
+  @override
+  String get elsewhereSiteEmpty => '资料库中没有来自此网站的系列。';
+
+  @override
+  String get elsewhereSiteUnknown => '尚未在其他网站查找';
+
+  @override
+  String get elsewhereSiteNowhere => '在其他网站上未找到';
+
+  @override
+  String get elsewhereSiteOffline => '仅显示已找到的内容。连接 Kagami Server 后会搜索所有系列。';
+
+  @override
+  String get sitesTitle => '网站';
+
+  @override
+  String get sitesEntrySubtitle => '内置的和你添加的';
+
+  @override
+  String get sitesBuiltInSection => '应用内置';
+
+  @override
+  String get sitesAddedSection => '已添加';
+
+  @override
+  String get sitesNoneAdded => '尚未添加网站。';
+
+  @override
+  String get sitesNoLibrary => '需要一个 Drive 或手机文件夹作为书库：网站保存在那里。';
+
+  @override
+  String sitesVersion(int version) {
+    return '版本 $version';
+  }
+
+  @override
+  String sitesReplaces(String name) {
+    return '替换 $name';
+  }
+
+  @override
+  String get sitesBroken => '文件已损坏';
+
+  @override
+  String get sitesUpdateNow => '立即更新';
+
+  @override
+  String get sitesUpdated => '网站已更新。';
+
+  @override
+  String get sitesUpToDate => '没有更新：网站已是最新。';
+
+  @override
+  String get sitesRemove => '移除';
+
+  @override
+  String sitesRemoveTitle(String name) {
+    return '移除 $name?';
+  }
+
+  @override
+  String get sitesRemoveBody => '该网站的作品会保留在书库中，但在网站恢复前不会更新。';
+
+  @override
+  String get sitesAdd => '添加网站';
+
+  @override
+  String get sitesAddHint => '文件链接或粘贴的文本';
+
+  @override
+  String get sitesAddCheck => '检查';
+
+  @override
+  String get sitesInvalid => '文件无效';
+
+  @override
+  String get sitesFetchFailed => '无法下载文件';
+
+  @override
+  String get sitesPreviewHosts => '将从以下主机请求页面';
+
+  @override
+  String get sitesTryTitle => '安装前试用（可选）';
+
+  @override
+  String get sitesTryHint => '搜索词或作品链接';
+
+  @override
+  String get sitesTry => '试用';
+
+  @override
+  String sitesTrySeries(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个章节',
+      one: '1 个章节',
+    );
+    return '$title：$_temp0';
+  }
+
+  @override
+  String sitesTryResults(int count, String first) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个结果，第一个：$first',
+      one: '1 个结果：$first',
+      zero: '没有结果',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sitesTryFailed => '试用失败';
+
+  @override
+  String sitesFault(String phase, String field) {
+    return '阶段：$phase · 字段：$field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return '阶段：$phase';
+  }
+
+  @override
+  String get sitesInstall => '安装';
+
+  @override
+  String sitesInstalled(String name) {
+    return '已安装 $name。';
+  }
+
+  @override
+  String get seriesKindManga => '日本漫画';
+
+  @override
+  String get seriesKindManhwa => '韩国漫画';
+
+  @override
+  String get seriesKindManhua => '中国漫画';
+
+  @override
+  String get seriesKindOther => '其他';
+
+  @override
+  String get collectionPropsBinding => '强制';
+
+  @override
+  String get collectionPropsBindingNote => '只有符合条件的作品才能放进合集，手动添加也一样。';
+
+  @override
+  String collectionBindingWillRemove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部不符合条件的作品将移出合集',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionBindingRefused(String title, String collection) {
+    return '《$title》不符合「$collection」的条件';
+  }
+
+  @override
+  String collectionBindingRefusedMany(int count, String collection) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部作品不符合「$collection」的条件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionBindingLockTip => '强制合集';
+
+  @override
+  String get accessDurationWeek => '一周';
+
+  @override
+  String get accessDurationMonth => '一个月';
+
+  @override
+  String get accessDurationQuarter => '三个月';
+
+  @override
+  String get accessDurationYear => '一年';
+
+  @override
+  String get accessDurationNever => '永不过期';
+
+  @override
+  String serverUserExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '将于 $dateString 到期';
+  }
+
+  @override
+  String get serverUserExpired => '已过期';
+
+  @override
+  String get serverUserRenew => '续期';
+
+  @override
+  String serverUserRenewTitle(String email) {
+    return '为 $email 续期访问权限';
+  }
+
+  @override
+  String serverMyAccessExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '你的访问权限将于 $dateString 到期';
+  }
+
+  @override
+  String get serverAccessExpired => '访问权限已过期：请让服务器的所有者续期';
+
+  @override
+  String dataServerExpiryTitle(String serverName) {
+    return '你对“$serverName”的访问权限即将到期';
+  }
+
+  @override
+  String dataServerExpiryText(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '将于 $dateString 到期：请让服务器的所有者续期。';
+  }
+
+  @override
+  String get driveShareTitle => '谁可以阅读我的书库';
+
+  @override
+  String get driveShareEntryNote => '谁能看到 Drive 上的文件夹，以及到何时';
+
+  @override
+  String driveShareIntro(String folder) {
+    return '添加任意人的 Google 账号：在你选择的时间内，对方可以只读方式阅读 Drive 上的文件夹“$folder”。';
+  }
+
+  @override
+  String get driveShareConsentTitle => '需要再授予一项 Drive 权限';
+
+  @override
+  String driveShareConsentBody(String folder) {
+    return '被添加的人将看到文件夹“$folder”中的所有文件，而不只是书库。为了管理共享，Google 会再请求一项权限。 文件夹中你的阅读数据副本将移到 Drive 回收站。';
+  }
+
+  @override
+  String get driveShareConsentContinue => '继续';
+
+  @override
+  String get driveShareAdd => '共享';
+
+  @override
+  String driveShareInFolder(String name) {
+    return '文件夹“$name”';
+  }
+
+  @override
+  String get driveShareFromDrive => '来自 Drive 的共享';
+
+  @override
+  String get driveShareRemoveBody => '对方将不能再阅读该文件夹。';
+
+  @override
+  String get driveShareLinkAccess => '持有链接的人或某个域也可以阅读该文件夹：请在 Drive 中管理。';
+
+  @override
+  String get driveShareDriveSilent => 'Drive 没有响应：列表可能不完整。';
+
+  @override
+  String get driveSharePersonalFound =>
+      '文件夹中有你的阅读数据副本（reading/backup、state.json、collections.json）：能读取该文件夹的人都能看到。';
+
+  @override
+  String get driveSharePersonalRemove => '移除';
+
+  @override
+  String get driveSharePersonalUnchecked => '无法检查文件夹中是否还留有你的阅读数据副本。';
+
+  @override
+  String get driveShareUnavailable => '此后端不支持书库共享。';
+
+  @override
+  String driveShareLoadFailed(String message) {
+    return '无法读取谁有访问权限：$message';
+  }
+
+  @override
+  String get driveShareNobody => '目前没有人。';
+
+  @override
+  String driveShareAdded(String email) {
+    return '$email 可以阅读书库。';
+  }
+
+  @override
+  String get driveShareOffline => '没有网络连接：没有任何更改。';
+
+  @override
+  String driveShareFailed(String message) {
+    return '未成功：$message';
+  }
+
+  @override
+  String get driveShareSelf => '这是你自己的地址。';
+
+  @override
+  String get driveReceivedTitle => '与我共享的书库';
+
+  @override
+  String get driveReceivedEntryNote => '他人书库的邀请与访问权限';
+
+  @override
+  String driveReceivedInvite(String owner, String folder) {
+    return '$owner 授予了你对书库「$folder」的只读访问权限。';
+  }
+
+  @override
+  String get driveReceivedAccept => '接受';
+
+  @override
+  String get driveReceivedDecline => '拒绝';
+
+  @override
+  String get driveReceivedRemove => '移除';
+
+  @override
+  String driveReceivedUntil(String owner, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$owner · 截止 $dateString';
+  }
+
+  @override
+  String driveReceivedNoLimit(String owner) {
+    return '$owner · 无期限';
+  }
+
+  @override
+  String driveReceivedExpiredRow(String owner) {
+    return '$owner · 访问已过期';
+  }
+
+  @override
+  String get driveReceivedEmpty => '目前没有与你共享的书库。';
+
+  @override
+  String driveReceivedNotificationTitle(String owner) {
+    return '$owner 与你共享了一个书库';
+  }
+
+  @override
+  String driveReceivedNotificationText(String folder) {
+    return '打开 Kagami 以接受「$folder」。';
+  }
+
+  @override
+  String driveNoticeSharedExpired(String name) {
+    return '对 $name 的书库的访问已过期。';
+  }
+
+  @override
+  String driveNoticeSharedUnavailable(String name) {
+    return '$name 的书库没有响应：可能已不再与你共享。';
+  }
+
+  @override
+  String get driveNoticeSourcesUnreadable => '无法读取共享书库。';
+
+  @override
+  String get driveReceivedManage => '管理';
+
+  @override
+  String get sourcesTitle => '来源';
+
+  @override
+  String get sourcesEntryNote => '读取顺序与额外的书库';
+
+  @override
+  String get sourcesHelp => '所有来源的系列会合并为一个书库。同一系列出现在多个来源时，排在前面的优先。';
+
+  @override
+  String get sourcesBuiltInFolder => '手机文件夹';
+
+  @override
+  String get sourcesBuiltInApp => '应用空间';
+
+  @override
+  String get sourcesBuiltInDrive => 'Google Drive';
+
+  @override
+  String get sourcesKindWebdav => 'WebDAV / NAS';
+
+  @override
+  String get sourcesKindSmb => 'SMB';
+
+  @override
+  String get sourcesComingSoon => '即将推出';
+
+  @override
+  String get sourcesStateReady => '就绪';
+
+  @override
+  String get sourcesStateOffline => '离线';
+
+  @override
+  String get sourcesStateNeedsAuth => '需要重新连接';
+
+  @override
+  String sourcesStateExpired(String date) {
+    return '已于 $date 过期';
+  }
+
+  @override
+  String get sourcesStateMissing => '文件夹已不存在';
+
+  @override
+  String get sourcesStateOtherAccount => '属于另一个账号';
+
+  @override
+  String get sourcesReadOnlyBadge => '只读';
+
+  @override
+  String sourcesOwner(String owner) {
+    return '$owner 共享';
+  }
+
+  @override
+  String get sourcesAdd => '添加来源';
+
+  @override
+  String get sourcesWebdavFolderHint => '书库文件夹（例如 /manga）';
+
+  @override
+  String get sourcesWebdavUserHint => '用户';
+
+  @override
+  String get sourcesWebdavPasswordHint => '密码';
+
+  @override
+  String get sourcesWebdavNameHint => '名称（可选，例如 家用 NAS）';
+
+  @override
+  String get sourcesSmbHostHint => '电脑地址（例如 192.168.1.10）';
+
+  @override
+  String get sourcesSmbShareHint => '共享名（例如 manga）';
+
+  @override
+  String get sourcesSmbUserHint => '用户（留空 = 访客）';
+
+  @override
+  String get sourcesSmbDomainHint => '域（可选）';
+
+  @override
+  String get sourcesSmbSealLabel => '加密（SMB 3）';
+
+  @override
+  String get sourcesSmbSealNote => '在家庭网络之外必须启用加密：电脑需要支持 SMB 3。';
+
+  @override
+  String get sourcesSmbPlainWarning => '不加密时密码和文件以明文传输：仅适用于家庭网络。';
+
+  @override
+  String get sourcesHttpPrivateWarning =>
+      '私有网络上的未加密 HTTP 地址：用户名和密码将以明文传输。仅在家用 Wi-Fi 下使用。';
+
+  @override
+  String get sourcesHttpPublicWarning =>
+      '不安全的公网 HTTP 地址：密码将在互联网上以明文传输。在本地网络之外请使用 https://。';
+
+  @override
+  String get sourcesProbeButton => '测试连接';
+
+  @override
+  String get sourcesProbing => '正在测试…';
+
+  @override
+  String sourcesProbeSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '连接成功：找到 $count 个系列。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourcesProbeAuthFailed => '凭据被拒绝：请检查用户名和密码。';
+
+  @override
+  String get sourcesProbeUnreachable => '无法访问：请检查地址和网络连接。';
+
+  @override
+  String get sourcesProbeNoLibrary => '此处没有书库：文件夹中缺少 library.json。';
+
+  @override
+  String get sourcesSave => '保存';
+
+  @override
+  String get sourcesPasswordRewriteHint => '重新输入密码（留空：保持不变）';
+
+  @override
+  String get sourcesSecretNote => '密码仅保存在此手机上：不会进入备份或账号。';
+
+  @override
+  String get sourcesRemove => '移除来源';
+
+  @override
+  String get sourcesRemoveSubtitle => '移除配置、密码和缓存；阅读进度保留。';
+
+  @override
+  String sourcesRemoveConfirmTitle(String name) {
+    return '移除“$name”？';
+  }
+
+  @override
+  String get sourcesRemoveConfirmBody => '从此手机移除配置、密码和缓存。阅读进度、评分和历史记录保留。';
+
+  @override
+  String get sourcesDismiss => '移除';
+
+  @override
+  String get socialTitle => '社区';
+
+  @override
+  String get socialSubtitleOff => '已关闭：你的任何信息都不会发出';
+
+  @override
+  String get socialSubtitleOn => '资料、排行榜和阅读笔记';
+
+  @override
+  String get socialOffIntro =>
+      '社区已关闭：手机不会发出任何内容，应用也不会向网络请求任何数据。下方正是你开启后其他读者会看到的资料卡。';
+
+  @override
+  String get socialNameLabel => '昵称';
+
+  @override
+  String get socialNameHint => '2 到 24 个字符（不要使用邮箱地址）';
+
+  @override
+  String get socialBioLabel => '简介（可选）';
+
+  @override
+  String get socialAudienceSection => '谁能看到你的资料和帖子';
+
+  @override
+  String get socialAudienceEveryone => '所有人';
+
+  @override
+  String get socialAudienceFollowing => '我关注的人';
+
+  @override
+  String get socialAudienceMutual => '互相关注';
+
+  @override
+  String get socialAudienceEveryoneNote => '在此后端开启社区的任何人都能看到你的资料、帖子和排名。';
+
+  @override
+  String get socialAudienceFollowingNote => '只有你先关注的人才能看到你的资料、帖子和排名。';
+
+  @override
+  String get socialAudienceMutualNote => '只有你关注且也关注你的人能看到资料和帖子。对方会收到你的昵称，以便回关。';
+
+  @override
+  String get socialSwitchesSection => '除数字和类型外要展示的内容';
+
+  @override
+  String get socialShowPhoto => '显示账号头像';
+
+  @override
+  String get socialShowSeries => '显示读得最多的作品';
+
+  @override
+  String get socialShowActivity => '显示最近 14 天的活动';
+
+  @override
+  String get socialPreviewSection => '将发布内容的精确预览';
+
+  @override
+  String get socialPreviewHiddenExcluded => '已排除隐藏的系列';
+
+  @override
+  String socialPreviewLocked(String what) {
+    return '$what：未发布';
+  }
+
+  @override
+  String get socialPreviewPhoto => '头像';
+
+  @override
+  String get socialPreviewSeries => '作品名';
+
+  @override
+  String get socialPreviewActivity => '活动';
+
+  @override
+  String get socialWipeWarning =>
+      '关闭社区会删除你发布的一切：资料、帖子、评论、点赞、关注关系和消息（包括他人会话中的）。屏蔽会保留。';
+
+  @override
+  String get socialTurnOn => '开启社区';
+
+  @override
+  String get socialTurnOff => '关闭社区并删除全部';
+
+  @override
+  String get socialTabBoards => '排行榜';
+
+  @override
+  String get socialTabFeed => '动态';
+
+  @override
+  String get socialTabPeople => '用户';
+
+  @override
+  String get socialBoardWeek => '本周';
+
+  @override
+  String get socialBoardMonth => '本月';
+
+  @override
+  String get socialBoardAllTime => '总计';
+
+  @override
+  String get socialBoardStreak => '连续天数';
+
+  @override
+  String get socialYouBadge => '你';
+
+  @override
+  String socialChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 章',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String socialStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialBoardEmpty => '排行榜暂无人员';
+
+  @override
+  String get socialFeedEmptyTitle => '暂无帖子';
+
+  @override
+  String get socialFeedEmptyMessage => '读者的笔记、书评和推荐会显示在这里。';
+
+  @override
+  String get socialPostKindNote => '笔记';
+
+  @override
+  String get socialPostKindReview => '书评';
+
+  @override
+  String get socialPostKindRecommendation => '推荐';
+
+  @override
+  String socialSpoilerUpTo(String chapter) {
+    return '含剧透，至第 $chapter 章';
+  }
+
+  @override
+  String get socialSpoilerGeneric => '含剧透';
+
+  @override
+  String get socialSpoilerReveal => '点按仍然显示';
+
+  @override
+  String get socialFlaggedTitle => '多位读者举报的内容';
+
+  @override
+  String socialFlaggedReveal(String author) {
+    return '来自 $author · 点按查看';
+  }
+
+  @override
+  String get socialSearchPeopleHint => '按昵称搜索…';
+
+  @override
+  String get socialSearchNoEmailNotice => '这里没有邮箱地址：请搜索读者自选的昵称。';
+
+  @override
+  String get socialPeopleFollowingSection => '已关注';
+
+  @override
+  String get socialPeopleEmpty => '你还没有关注任何人。搜索昵称，或从排行榜打开某人。';
+
+  @override
+  String get socialSearchNone => '没有此昵称的用户';
+
+  @override
+  String socialAffinityLabel(int percent) {
+    return '契合度 $percent%';
+  }
+
+  @override
+  String get socialInCommonSection => '共同点';
+
+  @override
+  String socialInCommonCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 部共同作品',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialFollow => '关注';
+
+  @override
+  String get socialFollowBack => '回关';
+
+  @override
+  String get socialFollowing => '已关注';
+
+  @override
+  String get socialMutual => '好友';
+
+  @override
+  String get socialUnavailableTitle => '此后端没有社区功能';
+
+  @override
+  String get socialUnavailableBody => '账号所连接的服务器没有社区数据表。应用的其他功能正常使用。';
+
+  @override
+  String get socialNeedsAccount => '社区需要账号：请在设置中登录。';
+
+  @override
+  String get socialRefusedSnack => '无法完成该操作。';
+
+  @override
+  String get socialLoadError => '暂时无法读取社区。';
+
+  @override
+  String get socialRetry => '重试';
+
+  @override
+  String get socialProfileUnavailable => '资料不可用';
+
+  @override
+  String get socialProfilePrivate => '私密资料';
+
+  @override
+  String get socialProfileGenres => '类型';
+
+  @override
+  String get socialProfileActivity => '最近 14 天';
+
+  @override
+  String get socialProfileSeriesTitles => '读得最多';
+
+  @override
+  String get socialStatChapters => '章节';
+
+  @override
+  String get socialStatSeries => '系列';
+
+  @override
+  String get socialStatStreak => '连续天数';
+
+  @override
+  String get socialWrite => '写帖子';
+
+  @override
+  String get socialComposeTitle => '新帖子';
+
+  @override
+  String get socialComposeBodyHint => '你怎么看？';
+
+  @override
+  String get socialComposeSeries => '作品';
+
+  @override
+  String get socialComposeNoSeries => '不关联作品';
+
+  @override
+  String get socialComposeRating => '评分';
+
+  @override
+  String get socialComposeSpoiler => '含剧透';
+
+  @override
+  String get socialComposeSpoilerChapter => '截至第几话（可选）';
+
+  @override
+  String get socialComposePublish => '发布';
+
+  @override
+  String get socialRefusalEmpty => '发布前请先写点内容。';
+
+  @override
+  String get socialRefusalTooLong => '内容太长。';
+
+  @override
+  String get socialRefusalHiddenSeries => '该作品已隐藏：不会在社区中提及。';
+
+  @override
+  String get socialRefusalNeedsSeries => '书评或推荐需要关联作品：请选择一部。';
+
+  @override
+  String get socialRefusalNeedsRating => '请选择 1 到 10 的评分。';
+
+  @override
+  String socialCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条评论',
+      zero: '评论',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialCommentsTitle => '评论';
+
+  @override
+  String get socialCommentsEmpty => '暂无评论';
+
+  @override
+  String get socialCommentHint => '写评论…';
+
+  @override
+  String socialReplyHint(String author) {
+    return '回复 $author…';
+  }
+
+  @override
+  String get socialReply => '回复';
+
+  @override
+  String get socialCancelReply => '取消回复';
+
+  @override
+  String get socialSend => '发送';
+
+  @override
+  String get socialLike => '赞';
+
+  @override
+  String get socialMoreActions => '更多操作';
+
+  @override
+  String get socialMute => '静音';
+
+  @override
+  String get socialUnmute => '取消静音';
+
+  @override
+  String get socialFollowersSection => '关注你的人';
+
+  @override
+  String get socialMutedNote => '已静音：此人的帖子和评论不会在这里显示。';
+
+  @override
+  String get socialRemovePost => '删除帖子';
+
+  @override
+  String get socialRemovePostConfirm => '帖子会连同评论和点赞一起删除。帖子不能编辑：可以重新写一条。';
+
+  @override
+  String get socialRemoveComment => '删除';
+
+  @override
+  String get socialUnknownReader => '一位读者';
+
+  @override
+  String get socialSeriesPostsTitle => '社区讨论';
+
+  @override
+  String get socialSeriesPostsEmpty => '还没有人讨论';
+
+  @override
+  String get socialSeriesTalk => '在社区讨论';
+
+  @override
+  String socialBlockPerson(String name) {
+    return '屏蔽$name';
+  }
+
+  @override
+  String get socialBlockAction => '屏蔽';
+
+  @override
+  String get socialBlockConfirm =>
+      '你们双方都将看不到对方的资料、帖子和评论，也无法给对方发消息。你们之间的关注关系会被解除。对方不会收到通知。';
+
+  @override
+  String get socialBlockedSnack => '已屏蔽该用户。';
+
+  @override
+  String get socialReport => '举报';
+
+  @override
+  String get socialReportIntro => '为什么要举报？被举报的人不会知道，举报会附上文本的副本。';
+
+  @override
+  String get socialReportReasonSpam => '垃圾信息或广告';
+
+  @override
+  String get socialReportReasonHarassment => '骚扰或纠缠';
+
+  @override
+  String get socialReportReasonSpoiler => '未加提示的剧透';
+
+  @override
+  String get socialReportReasonInappropriate => '不当内容';
+
+  @override
+  String get socialReportReasonOther => '其他';
+
+  @override
+  String get socialReportNoteHint => '可以附一条备注（选填）';
+
+  @override
+  String get socialReportSend => '发送';
+
+  @override
+  String get socialReportSent => '举报已发送。';
+
+  @override
+  String get messagesTitle => '消息';
+
+  @override
+  String get messagesWrite => '发消息';
+
+  @override
+  String get messagesEmpty => '还没有对话。在对方的主页上给 TA 发消息吧。';
+
+  @override
+  String get messagesThreadEmpty => '还没有消息。';
+
+  @override
+  String get messagesHint => '输入消息';
+
+  @override
+  String get messagesSend => '发送';
+
+  @override
+  String get messagesUnknownPerson => '一位读者';
+
+  @override
+  String get messagesDeleteTitle => '删除这条消息？';
+
+  @override
+  String get messagesDeleteBody => '双方都将看不到它。';
+
+  @override
+  String get messagesDeleteAction => '删除';
+
+  @override
+  String messagesExtensionMine(String folder) {
+    return '你请求延长“$folder”的访问时间。';
+  }
+
+  @override
+  String messagesExtensionTheirs(String name, String folder) {
+    return '$name请求延长“$folder”的访问时间。';
+  }
+
+  @override
+  String get messagesRenew => '续期';
+
+  @override
+  String messagesRenewed(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '已将共享续期至 $dateString。';
+  }
+
+  @override
+  String get messagesAskMore => '请求延长时间';
+
+  @override
+  String get messagesAskSent => '请求已发送。';
+
+  @override
+  String get privacyTitle => '隐私与社区';
+
+  @override
+  String get privacyEntryNote => '社区、谁能看到你的资料、私信和已屏蔽的人';
+
+  @override
+  String get privacyOffNote => '社区关闭时，手机不会发出任何内容。下面的选择在开启后生效。';
+
+  @override
+  String get privacyNeedsName => '开启社区需要昵称和账号：请在打开的页面中选择昵称。';
+
+  @override
+  String get privacyMessagesSection => '谁可以给我发私信';
+
+  @override
+  String get privacyMessagesNobody => '没有人';
+
+  @override
+  String get privacyBlockedSection => '已屏蔽的人';
+
+  @override
+  String get privacyBlockedEmpty => '你还没有屏蔽任何人。';
+
+  @override
+  String get privacyBlockedPerson => '已屏蔽的人';
+
+  @override
+  String get privacyUnblock => '取消屏蔽';
+
+  @override
+  String messageNotificationTitle(String sender) {
+    return '来自$sender的新消息';
+  }
+
+  @override
+  String driveExpiryNoticeTitle(String owner) {
+    return '$owner 的书库即将到期';
+  }
+
+  @override
+  String driveExpiryNoticeText(String folder, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '「$folder」将于 $dateString 到期。打开 Kagami 申请延长时间。';
+  }
+
+  @override
+  String get settingsBackupFolder => '备份文件夹';
+
+  @override
+  String settingsBackupFolderChosen(String path) {
+    return '除应用自身空间外，自动备份也会保存到 $path';
+  }
+
+  @override
+  String get settingsBackupFolderNone => '无：备份仅保存在应用自身空间';
+
+  @override
+  String get settingsBackupFolderRefused =>
+      '此文件夹位于资源库来源之内：资源库会被共享，而备份包含你的个人数据。请另选一个。';
+
+  @override
+  String get driveShareDownloadOption => '也可以下载';
+
+  @override
+  String get driveShareDownloadNote =>
+      '这是应用之间的约定，不是保护措施：能访问该文件夹的人可以通过 Drive、网站或其他应用下载文件。接收方的 Kagami 只有在你于此允许时才会下载。';
+
+  @override
+  String get driveShareRowDownload => '可下载';
+
+  @override
+  String get driveShareRowStreaming => '仅在线阅读';
+
+  @override
+  String get driveShareDownloadAllow => '允许下载';
+
+  @override
+  String get driveShareDownloadDeny => '仅在线阅读';
+
+  @override
+  String get driveShareDownloadUnavailable => '此后端尚不支持下载权限：共享仍然仅限在线阅读。';
+
+  @override
+  String get driveReceivedCanDownload => '可阅读和下载';
+
+  @override
+  String get driveReceivedStreamOnly => '只能在线阅读';
+
+  @override
+  String get seriesArchiveOwn => '归档到我的 Drive';
+
+  @override
+  String get seriesArchiveOwnSiteMissing =>
+      '需要这个系列的站点：请在 设置 → 站点 中安装；他人资料库的站点不会自动安装。';
+
+  @override
+  String get seriesBringData => '把我的数据移到这里';
+
+  @override
+  String get seriesBringDataPick => '从哪个系列？';
+
+  @override
+  String get seriesBringDataEmpty => '书库中没有其他系列有你的数据可移。';
+
+  @override
+  String seriesBringDataBody(String from, String to, int matched) {
+    String _temp0 = intl.Intl.pluralLogic(
+      matched,
+      locale: localeName,
+      other: '# 个编号相同的已读章节',
+    );
+    return '「$from」→「$to」。状态、评分、笔记和合集会移到目标系列，同时移过去的还有$_temp0。它们会与已有数据合并：已读记录合在一起，其余以最新的为准。「$from」留在书库中，但不再有你的数据。';
+  }
+
+  @override
+  String seriesBringDataLost(int lost) {
+    String _temp0 = intl.Intl.pluralLogic(
+      lost,
+      locale: localeName,
+      other: '# 个已读章节没有编号相同的章节：不会移过去，它们的位置、历史和书签会丢失。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesBringDataConfirm => '移过数据';
+
+  @override
+  String seriesBringDataDone(String title) {
+    return '数据已移到「$title」。';
+  }
+
+  @override
+  String get seriesBringDataNoChapters => '现在无法读取两个系列之一的章节：请稍后再试。';
+
+  @override
+  String sitesUnconfirmed(String name) {
+    return '确认之前仍使用 $name';
+  }
+
+  @override
+  String sitesConfirmReplace(String name) {
+    return '替换 $name';
+  }
+
+  @override
+  String get serverLinkTrust =>
+      '管理此服务器的人可以写入你的 Drive：Google 向你索取的权限就掌握在他们手里。只连接你信任的服务器。';
+
+  @override
+  String get serverErrorUpdateServer => '此服务器需要更新：在它支持票据之前，不会向它发送你的登录信息。';
+
+  @override
+  String get serverErrorTicketsUnavailable => '后端不为服务器签发票据：不会把你的登录信息发送给他人的服务器。';
+
+  @override
+  String get serverErrorImpostor => '此服务器自称是已通过另一个地址连接的服务器：不会向它发送任何内容。';
+
+  @override
+  String get serverErrorOtherServer => '此地址现在由另一台服务器响应：请重新连接。';
+
+  @override
+  String get serverErrorNotOwner => '此 Drive 文件夹不属于你：服务器不会把任何内容移到回收站。';
+
+  @override
+  String get sitesOriginBuiltIn => '内置';
+
+  @override
+  String get sitesOriginCatalog => '目录';
+
+  @override
+  String get sitesOriginUser => '你的';
+
+  @override
+  String get sitesCatalogBroken => '暂时不可用';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return '暂时不可用：$message';
+  }
+
+  @override
+  String get sitesNeedsNewer => '需要更新版本的 Kagami';
+
+  @override
+  String get sitesCatalogSection => '网站目录';
+
+  @override
+  String get sitesCatalogUse => '使用目录';
+
+  @override
+  String get sitesCatalogOff => '已关闭：只有内置网站和你自己的网站生效，应用不会为此发起任何网络请求。';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return '第 $serial 版（$date）';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return '上次检查：$when';
+  }
 }

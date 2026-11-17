@@ -36,6 +36,10 @@ abstract interface class DriveSetup {
   String? get folderId;
   String? get folderName;
 
+  /// Se la cartella è dell'account (`ownedByMe`), `null` se non è stato
+  /// letto: il server sposta nel cestino solo con `true` (`owner`).
+  bool? get folderOwned;
+
   /// Prova il permesso e la cartella, e solo se vanno tutti e due li salva.
   Future<void> grant(String refreshToken, String folderId);
 
@@ -44,28 +48,40 @@ abstract interface class DriveSetup {
 
   /// Dimentica permesso e cartella.
   Future<void> forget();
+
+  /// Ritira un permesso di una cartella (`DriveClient.unshare`: 404 è già
+  /// ritirato). Senza il permesso dell'utente lancia [DriveNotAuthorized].
+  Future<void> unshare(String folderId, String permissionId);
 }
 
 class UserDrive implements DriveSetup {
-  UserDrive(this.file, this.client, {this.endpoint});
+  UserDrive(this.file, this.client, {this.endpoint, this.driveFor});
 
   final File file;
   final GoogleClient client;
   final Uri? endpoint;
 
+  /// Il client di Drive col token di [token], nei test uno che risponde in locale.
+  final DriveClient Function(Future<String> Function({bool refresh}) token)? driveFor;
+
   String? _refresh;
   String? _folderId;
   String? _folderName;
+  bool? _owned;
   String? _access;
   DateTime _expires = DateTime.fromMillisecondsSinceEpoch(0);
 
-  late final DriveClient drive = DriveClient(token, network: const ServerNetwork(), connections: driveLanes);
+  late final DriveClient drive =
+      driveFor?.call(token) ?? DriveClient(token, network: const ServerNetwork(), connections: driveLanes);
 
   Future<void> load() async {
     final json = await readJsonFile(file) ?? const {};
     _refresh = json['refreshToken'] as String?;
     _folderId = json['folderId'] as String?;
     _folderName = json['folderName'] as String?;
+    // Di un'altra cartella non vale: non letto.
+    final owned = json['owned'];
+    _owned = owned is Map && owned['folderId'] == _folderId ? owned['owned'] as bool? : null;
   }
 
   @override
@@ -76,6 +92,28 @@ class UserDrive implements DriveSetup {
 
   @override
   String? get folderName => _folderName;
+
+  @override
+  bool? get folderOwned => _owned;
+
+  /// La proprietà della cartella [id], se è quella della libreria: un lavoro
+  /// messo in coda per una cartella di prima non sposta niente nel cestino.
+  bool? ownedOf(String id) => id == _folderId ? _owned : null;
+
+  /// Chiede a Drive se la cartella è dell'account; un errore la lascia non
+  /// letta, e si richiede al giro dopo ([blocked]).
+  Future<void> _readOwner() async {
+    final id = _folderId;
+    if (id == null) return;
+    bool? owned;
+    try {
+      owned = await drive.owned(id);
+    } on DriveException {
+      owned = null;
+    }
+    if (id != _folderId) return;
+    _owned = owned;
+  }
 
   /// Il token per [DriveClient].
   Future<String> token({bool refresh = false}) async {
@@ -115,11 +153,13 @@ class UserDrive implements DriveSetup {
       final item = await _check(folderId);
       _folderId = item.id;
       _folderName = item.name;
+      _owned = null;
     } on Object {
       _refresh = previous;
       _access = null;
       rethrow;
     }
+    await _readOwner();
     await _save();
   }
 
@@ -129,6 +169,7 @@ class UserDrive implements DriveSetup {
     _refresh = refreshToken;
     _folderId = folderId;
     _folderName = folderName;
+    _owned = null;
     _access = null;
     await _save();
   }
@@ -138,6 +179,8 @@ class UserDrive implements DriveSetup {
     final item = await _check(folderId);
     _folderId = item.id;
     _folderName = item.name;
+    _owned = null;
+    await _readOwner();
     await _save();
     return item;
   }
@@ -156,9 +199,13 @@ class UserDrive implements DriveSetup {
     _refresh = null;
     _folderId = null;
     _folderName = null;
+    _owned = null;
     _access = null;
     if (await file.exists()) await file.delete();
   }
+
+  @override
+  Future<void> unshare(String folderId, String permissionId) => drive.unshare(folderId, permissionId);
 
   Future<void> _save() => writeSecret(
         file,
@@ -166,6 +213,7 @@ class UserDrive implements DriveSetup {
           'refreshToken': ?_refresh,
           'folderId': ?_folderId,
           'folderName': ?_folderName,
+          if (_owned != null) 'owned': {'folderId': _folderId, 'owned': _owned},
         }),
       );
 
@@ -175,6 +223,10 @@ class UserDrive implements DriveSetup {
     if (_folderId == null) return 'Manca la cartella della libreria: sceglila dall\'app.';
     try {
       await token();
+      if (_owned == null) {
+        await _readOwner();
+        if (_owned != null) await _save();
+      }
       return null;
     } on DriveNotAuthorized catch (error) {
       return '$error';

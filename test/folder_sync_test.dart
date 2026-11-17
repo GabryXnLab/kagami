@@ -493,4 +493,11 @@ class FakeRemote implements SyncRemote {
     _check();
     _items.remove(id);
   }
+
+  @override
+  Future<DriveItem> rename(String id, String name) async {
+    _check();
+    final item = _items[id]!;
+    return _add(DriveItem(id: id, name: name, folder: item.folder, size: item.size, md5: item.md5, parents: item.parents));
+  }
 }

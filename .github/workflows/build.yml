@@ -31,6 +31,16 @@ on:
         required: false
       GOOGLE_SERVER_CLIENT_SECRET:
         required: false
+      BACKEND_URL:
+        required: false
+      BACKEND_ANON_KEY:
+        required: false
+      GOOGLE_SERVER_CLIENT_ID:
+        required: false
+      CATALOG_URLS:
+        required: false
+      CATALOG_KEYS:
+        required: false
 
 permissions:
   contents: read
@@ -72,7 +82,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }} BACKEND_URL=${{ secrets.BACKEND_URL }} BACKEND_ANON_KEY=${{ secrets.BACKEND_ANON_KEY }} GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} CATALOG_URLS=${{ secrets.CATALOG_URLS }} CATALOG_KEYS=${{ secrets.CATALOG_KEYS }}
 
   # Flutter dà o un APK per architettura o l'universale, mai tutti e due in un giro:
   # due job in parallelo invece di due build una dopo l'altra.
@@ -99,7 +109,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} GOOGLE_SERVER_CLIENT_SECRET=${{ secrets.GOOGLE_SERVER_CLIENT_SECRET }} BACKEND_URL=${{ secrets.BACKEND_URL }} BACKEND_ANON_KEY=${{ secrets.BACKEND_ANON_KEY }} GOOGLE_SERVER_CLIENT_ID=${{ secrets.GOOGLE_SERVER_CLIENT_ID }} CATALOG_URLS=${{ secrets.CATALOG_URLS }} CATALOG_KEYS=${{ secrets.CATALOG_KEYS }}
 
   # Senza account Apple Developer: l'IPA lo firma chi lo installa (AltStore,
   # Sideloadly). Su iOS account e Drive restano spenti, quindi niente Firebase.
@@ -119,4 +129,4 @@ jobs:
     secrets:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+      DART_DEFINES: SENTRY_DSN=${{ secrets.SENTRY_DSN }} CATALOG_URLS=${{ secrets.CATALOG_URLS }} CATALOG_KEYS=${{ secrets.CATALOG_KEYS }}

@@ -15,6 +15,13 @@ import '../format/reading.dart';
 /// I capitoli da tenere pronti, se la serie non dice altro.
 const int readAheadWindow = 5;
 
+/// Se il man mano deve lasciare in pace una serie: l'ultimo controllo non è
+/// riuscito, o il suo sito è rotto. Rimetterla in coda a ogni passata
+/// produce solo lavori falliti; ci pensa il controllo seguente, che azzera
+/// il problema.
+bool aheadHeldBack({required String key, String? problem, required Set<String> brokenSites}) =>
+    problem != null || brokenSites.contains(key.split(':').first);
+
 class AheadPlan {
   const AheadPlan({this.enqueue = const [], this.wanted = 0});
 
@@ -65,3 +72,11 @@ AheadPlan planAhead({
   final enqueue = missing.take(need).toList(growable: false);
   return AheadPlan(enqueue: enqueue, wanted: need - enqueue.length);
 }
+
+/// I capitoli ancora da leggere che non si possono aprire — annunciati e non
+/// scaricati, né sul telefono né su Drive —, in ordine di lettura. Finché ce
+/// ne sono il lettore non è «in pari», anche se ha letto tutto ciò che ha.
+List<String> unreadUnavailable(List<ChapterEntry> chapters, SeriesState state) => [
+      for (final chapter in [...chapters]..sort((a, b) => a.order.compareTo(b.order)))
+        if (!chapter.isReadable && !state.readChapters.contains(chapter.id)) chapter.id,
+    ];

@@ -3,8 +3,11 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links_linux
   dynamic_color
+  flutter_secure_storage_linux
   sentry_flutter
+  url_launcher_linux
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

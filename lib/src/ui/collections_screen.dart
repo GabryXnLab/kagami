@@ -2,6 +2,7 @@
 ///
 /// Quelle create a mano hanno nome, colore e un ordine scelto dall'utente;
 /// accanto stanno quelle che l'app costruisce da sé e che non si modificano.
+/// Si apre dalla libreria, che le mostra come filtri sopra la griglia.
 library;
 
 import 'package:collection/collection.dart';
@@ -13,7 +14,6 @@ import '../data/library_view.dart';
 import '../format/reading.dart';
 import '../l10n.dart';
 import '../providers.dart';
-import 'app_shell.dart';
 import 'library_screen.dart';
 import 'theme.dart';
 import 'widgets/collection_properties_sheet.dart';
@@ -35,30 +35,25 @@ class CollectionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collections = ref.watch(collectionsProvider);
-    final all = ref.watch(librarySignalsProvider);
+    final all = ref.watch(shownSignalsProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text(context.l10n.collectionsTitle),
+        actions: [
+          IconButton(
+            tooltip: context.l10n.collectionsNew,
+            icon: const Icon(LucideIcons.plus),
+            onPressed: () => askForCollection(context, ref),
+          ),
+          const SizedBox(width: 6),
+        ],
+      ),
       body: SafeArea(
-        bottom: false,
+        top: false,
         child: ListView(
-          padding: const EdgeInsets.only(bottom: navBarInset),
+          padding: const EdgeInsets.only(top: 8, bottom: 24),
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 12, 18),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(context.l10n.collectionsTitle, style: KagamiType.display(30)),
-                  ),
-                  KButton(
-                    label: context.l10n.collectionsNew,
-                    icon: LucideIcons.plus,
-                    height: 42,
-                    onPressed: () => askForCollection(context, ref),
-                  ),
-                ],
-              ),
-            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
               child: Column(
@@ -126,8 +121,9 @@ class _AutoTile extends ConsumerWidget {
         onTap: count == 0
             ? null
             : () {
+                // Si arriva qui dalla libreria: tornarci la mostra filtrata.
                 ref.read(libraryFilterProvider.notifier).showAuto(auto);
-                ref.read(shellTabProvider.notifier).show(ShellTab.library);
+                Navigator.of(context).pop();
               },
       );
 }
@@ -143,7 +139,7 @@ class _CollectionTile extends ConsumerWidget {
         child: KCard(
           padding: EdgeInsets.zero,
           child: KTile(
-            icon: LucideIcons.bookmark,
+            icon: collection.traits.hidden ? LucideIcons.eyeOff : LucideIcons.bookmark,
             tint: collection.color == null ? null : Color(collection.color!),
             title: collection.name,
             subtitle: context.l10n.collectionsSeriesCount(collection.seriesKeys.length),
@@ -155,6 +151,11 @@ class _CollectionTile extends ConsumerWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (collection.rules.isBinding)
+                  Tooltip(
+                    message: context.l10n.collectionBindingLockTip,
+                    child: Icon(LucideIcons.lock, size: 16, color: context.tokens.muted),
+                  ),
                 if (!collection.rules.isEmpty || !collection.traits.isEmpty)
                   Tooltip(
                     message: context.l10n.collectionsHasProps,
@@ -206,6 +207,7 @@ class _CollectionTile extends ConsumerWidget {
                     ref,
                     rules: collection.rules,
                     traits: collection.traits,
+                    memberKeys: collection.seriesKeys.toSet(),
                   );
                   if (picked != null) {
                     await reading.editCollection(

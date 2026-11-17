@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/model.dart';
 import 'package:kagami_archive/providers.dart';
 import 'package:kagami_archive/providers/mangak.dart';
 import 'package:kagami_archive/runner.dart';
@@ -19,6 +20,12 @@ class OfflineHttp extends ChallengedHttp {
   @override
   Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) =>
       throw const ProviderOffline();
+}
+
+class ChangedHttp extends ChallengedHttp {
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) =>
+      throw const ProviderChanged('rotto');
 }
 
 void main() {
@@ -113,6 +120,43 @@ void main() {
     override = null;
     expect(await ArchiveRunner(files, environment()).run(), RunEnd.done);
     expect(await files.jobs(), isEmpty);
+  });
+
+  group('ProviderChanged', () {
+    test('con una variante nuova il lavoro resta in coda e il sito non è rotto', () async {
+      await files.enqueue(job());
+      override = ChangedHttp();
+      final seen = <String>[];
+      final end = await ArchiveRunner(files, environment(), onProviderChanged: (site, error) async {
+        seen.add(site);
+        return true;
+      }).run();
+      expect(end, RunEnd.retry);
+      expect(seen, ['mangak']);
+      expect((await files.jobs()).single.id, 'j1');
+      expect((await files.health.load())['mangak']?.broken, isNot(true));
+    });
+
+    test('senza variante nuova il lavoro fallisce e il sito è rotto', () async {
+      await files.enqueue(job());
+      override = ChangedHttp();
+      final end = await ArchiveRunner(files, environment(), onProviderChanged: (site, error) async => false).run();
+      expect(end, RunEnd.done);
+      expect(await files.jobs(), isEmpty);
+      expect((await files.health.load())['mangak']?.broken, isTrue);
+    });
+
+    test('il controllo delle serie seguite lo segnala', () async {
+      await files.enqueue(job());
+      await ArchiveRunner(files, environment()).run();
+      override = ChangedHttp();
+      final seen = <String>[];
+      await Tracking(files.ongoing).check(files, (provider) => override!, onProviderChanged: (site, error) async {
+        seen.add(site);
+        return false;
+      });
+      expect(seen, ['mangak']);
+    });
   });
 
   test('un link che non è di nessun sito finisce fra gli errori, e la coda va avanti', () async {
@@ -249,6 +293,16 @@ void main() {
       // Né una serie che l'utente ha smesso di seguire.
       expect((await Tracking(files.ongoing).check(files, (provider) => http, skip: {series.key})).checked, 0);
       expect((await check()).queued, ['Test / Series']);
+    });
+
+    test('col server a controllare, il telefono guarda i siti che gli passa `where`', () async {
+      final series = await MangaK().fetchSeries('https://mangak.io/test-series', http);
+      const drive = ArchiveTarget(destination: ArchiveDestination.drive, folderId: 'cartella');
+      await Tracking(files.ongoing).record(series, drive, settled: const ['C1'], metadata: const {'releaseStatus': 'ongoing'});
+      await files.writeScope(const CheckScope(toServer: true, userSitesOnPhone: true));
+      expect((await files.scope()).userSitesOnPhone, isTrue);
+      expect((await Tracking(files.ongoing).check(files, (provider) => http, where: (_) => false)).checked, 0);
+      expect((await Tracking(files.ongoing).check(files, (provider) => http, where: (_) => true)).queued, ['Test / Series']);
     });
 
     test('senza capitoli nuovi non mette in coda niente', () async {

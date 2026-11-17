@@ -3,7 +3,6 @@
 /// usarlo.
 library;
 
-import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,8 +11,10 @@ import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/remote.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../data/server_error_text.dart';
 import '../data/cloud.dart';
 import '../data/drive.dart';
+import '../data/backend.dart';
 import '../data/server_access.dart';
 import '../l10n.dart';
 import '../providers.dart';
@@ -109,6 +110,25 @@ List<({ArchiveOutcome outcome, int runs})> recentOutcomes(List<ArchiveOutcome> h
   return recent.values.toList();
 }
 
+/// Il testo di un esito: quello del lavoro o, per una riparazione, cosa ha
+/// cambiato (`RepairOutcome.toJson`), nella lingua dell'app — il messaggio
+/// del motore è sempre in italiano.
+String archiveOutcomeText(AppLocalizations l10n, ArchiveOutcome outcome) {
+  final repair = outcome.repair;
+  if (repair == null) return outcome.message;
+  int count(String name) => (repair[name] as List?)?.length ?? 0;
+  final error = repair['error'];
+  if (error is String) return l10n.archiveRepairError(error);
+  final parts = [
+    if (repair['adoptedFrom'] != null) l10n.archiveRepairAdopted,
+    if (repair['titleChanged'] == true) l10n.archiveRepairRetitled,
+    if (repair['coverChanged'] == true) l10n.archiveRepairCover,
+    if (count('added') > 0) l10n.archiveRepairAdded(count('added')),
+    if (count('unlisted') > 0) l10n.archiveRepairUnlisted(count('unlisted')),
+  ];
+  return parts.isEmpty ? l10n.archiveRepairNothing : parts.join(l10n.archiveCheckSeparator);
+}
+
 /// Una serie scaricata da poco: la copertina se è già in libreria, com'è
 /// andata l'ultima volta, e il tocco che la apre — o la riprova, se è
 /// andata male.
@@ -128,8 +148,8 @@ class ArchiveRecentTile extends ConsumerWidget {
     final entry = key == null ? null : ref.watch(seriesEntryProvider(key));
     final when = archiveWhen(outcome.finishedAt);
     final line = runs > 1
-        ? l10n.archiveRecentLineRuns(when, runs, outcome.message)
-        : l10n.archiveHistoryLine(when, outcome.message);
+        ? l10n.archiveRecentLineRuns(when, runs, archiveOutcomeText(l10n, outcome))
+        : l10n.archiveHistoryLine(when, archiveOutcomeText(l10n, outcome));
     return KPress(
       onTap: entry != null ? () => openSeries(context, entry.key) : onRetry,
       child: Padding(
@@ -459,19 +479,24 @@ class ArchiveFollowedTile extends StatelessWidget {
 
 /// Collega questo account al server a [url]: il server dice se lo conosce,
 /// e se non ha ancora il suo Drive glielo si dà. Si salva solo se tutto è
-/// andato; `null` se l'utente ha rinunciato a un passo.
-Future<ServerInfo?> linkServer(BuildContext context, WidgetRef ref, Uri url) async {
+/// andato; `null` se l'utente ha rinunciato a un passo. Con [own] è il
+/// server appena creato da questo account: il collegamento lo ricorda, e solo
+/// a lui va il token della sessione se lui o il backend non hanno i biglietti.
+Future<ServerInfo?> linkServer(BuildContext context, WidgetRef ref, Uri url, {bool own = false}) async {
   final email = await _signedIn(ref);
   if (email == null || !context.mounted) return null;
   final access = ref.read(serverAccessProvider);
-  final link = ServerLink(url);
-  final client = ServerClient(link, access.idToken);
+  final current = ref.read(serverLinkProvider).value;
+  final owner = own ? email.toLowerCase() : (current?.url == url ? current?.owner : null);
+  var link = ServerLink(url, owner: owner);
+  final client = ServerClient(link, access.idToken, linked: current);
   try {
     var info = await client.info();
     if (!info.ready) {
-      if (!context.mounted || !await _giveDrive(context, ref, client, email)) return null;
+      if (!context.mounted || !await _giveDrive(context, ref, client, email, url, owner == email.toLowerCase())) return null;
       info = await client.info();
     }
+    link = ServerLink(url, id: (await client.hello()).id, owner: owner);
     await ref.read(serverLinkProvider.notifier).choose(link);
     try {
       await access.withdraw(email, url);
@@ -492,17 +517,64 @@ Future<String?> _signedIn(WidgetRef ref) async {
 
 /// Dà al server il permesso sul Drive di [email] e la cartella della
 /// libreria che legge l'app; se l'app non ne ha una, la si sceglie prima.
-Future<bool> _giveDrive(BuildContext context, WidgetRef ref, ServerClient client, String email) async {
-  var folder = ref.read(driveFolderProvider).value;
-  if (folder == null) {
-    await connectDrive(context, ref);
-    folder = ref.read(driveFolderProvider).value;
-    if (folder == null) return false;
-  }
-  final grant = await ref.read(serverAccessProvider).grantDrive(email);
-  if (grant == null) return false;
-  await client.grantDrive(grant.refreshToken, folder.id);
-  return true;
+/// [own]: il server è di questo account.
+Future<bool> _giveDrive(
+  BuildContext context,
+  WidgetRef ref,
+  ServerClient client,
+  String email,
+  Uri url,
+  bool own,
+) {
+  return guardDriveGrant(
+    url: url,
+    own: own,
+    confirm: () async {
+      final sure = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.serverDriveForeignTitle),
+          content: Text(context.l10n.serverDriveForeignBody),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(context.l10n.serverCancel)),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(context.l10n.serverDriveForeignConfirm),
+            ),
+          ],
+        ),
+      );
+      return sure == true;
+    },
+    send: () async {
+      var folder = ref.read(driveFolderProvider).value;
+      if (folder == null) {
+        await connectDrive(context, ref);
+        folder = ref.read(driveFolderProvider).value;
+        if (folder == null) return false;
+      }
+      final grant = await ref.read(serverAccessProvider).grantDrive(email);
+      if (grant == null) return false;
+      await client.grantDrive(grant.refreshToken, folder.id);
+      return true;
+    },
+  );
+}
+
+/// Le due condizioni prima di mandare il permesso di Drive a un server: mai
+/// su `http://` verso un indirizzo pubblico (refresh token in chiaro) e, se il
+/// server non è di questo account, solo dopo la conferma esplicita (il
+/// permesso vale per tutto il Drive, non per la sola cartella).
+@visibleForTesting
+Future<bool> guardDriveGrant({
+  required Uri url,
+  required bool own,
+  required Future<bool> Function() confirm,
+  required Future<bool> Function() send,
+}) async {
+  if (url.scheme == 'http' && !isPrivateAddress(url)) throw ServerException(currentL10n().serverDriveNeedsHttps);
+  if (!own && !await confirm()) return false;
+  return send();
 }
 
 /// La sezione «Server»: accesso, inviti, com'è collegato, cosa sta facendo,
@@ -651,6 +723,19 @@ class ServerSection extends ConsumerWidget {
             trailing: const Icon(LucideIcons.chevronRight, size: 18),
             onTap: () => _grant(context, ref, link),
           ),
+        if (info != null && !info.isOwner && info.expiresAt != null && !info.expired)
+          KTile(
+            icon: LucideIcons.clock,
+            title: l10n.serverMyAccessExpires(info.expiresAt!.toLocal()),
+          ),
+        if (info != null && info.expired)
+          KTile(
+            icon: LucideIcons.unplug,
+            tint: context.tokens.danger,
+            title: l10n.serverAccessExpired,
+            subtitle: l10n.serverUnlink,
+            onTap: () => _guard(context, notifier.unlink),
+          ),
         if (differs)
           KTile(
             icon: LucideIcons.folderSync,
@@ -784,7 +869,7 @@ class ServerSection extends ConsumerWidget {
     final l10n = context.l10n;
     try {
       await ref.read(serverAccessProvider).withdraw(invite.to, Uri.parse(invite.url));
-    } on FirebaseException {
+    } on Exception {
       messenger.showSnackBar(SnackBar(content: Text(l10n.serverInviteRemoveFailed)));
     }
   }
@@ -794,7 +879,7 @@ class ServerSection extends ConsumerWidget {
     if (email == null) return;
     final client = ServerClient(link, ref.read(serverAccessProvider).idToken);
     await _guard(context, () async {
-      if (await _giveDrive(context, ref, client, email)) {
+      if (await _giveDrive(context, ref, client, email, link.url, link.owner == email.toLowerCase())) {
         await ref.read(remoteArchiveProvider.notifier).refresh(full: true);
       }
     });
@@ -818,7 +903,7 @@ class ServerSection extends ConsumerWidget {
       await notifier.check();
       messenger.showSnackBar(SnackBar(content: Text(l10n.serverCheckingNow)));
     } on ServerException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      messenger.showSnackBar(SnackBar(content: Text(serverErrorText(error))));
     }
   }
 }
@@ -829,7 +914,7 @@ Future<void> _guard(BuildContext context, Future<void> Function() action) async 
   try {
     await action();
   } on ServerException catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    messenger.showSnackBar(SnackBar(content: Text(serverErrorText(error))));
   } on DriveException catch (error) {
     messenger.showSnackBar(SnackBar(content: Text(error.message)));
   }
@@ -935,7 +1020,7 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
         content: Text(context.l10n.serverLinked(info.name, '${info.folderName ?? info.folderId}')),
       ));
     } on ServerException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = serverErrorText(error));
     } on DriveException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } finally {
@@ -969,6 +1054,10 @@ class _ServerLinkSheetState extends ConsumerState<ServerLinkSheet> {
                     : l10n.serverLinkNew,
             style: KagamiType.body(13, height: 1.45, color: muted),
           ),
+          if (from == null) ...[
+            const SizedBox(height: 10),
+            Text(l10n.serverLinkTrust, style: KagamiType.body(12.5, height: 1.45, color: muted)),
+          ],
           const SizedBox(height: 14),
           _AddressField(controller: _address, enabled: !_busy, onChanged: () => setState(() {})),
           const SizedBox(height: 10),
@@ -1037,7 +1126,7 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
     try {
       await step();
     } on ServerException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = serverErrorText(error));
     } on DriveException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } finally {
@@ -1060,7 +1149,10 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
         final account = ref.read(cloudAccountProvider).account;
         final first = account?.name?.split(' ').first;
         final setup = ServerSetup(
-          project: access.project,
+          backend: ServerSetupBackend(
+            url: BackendConfig.environment.url,
+            anonKey: BackendConfig.environment.anonKey,
+          ),
           client: grant.client,
           owner: email,
           refreshToken: grant.refreshToken,
@@ -1084,7 +1176,7 @@ class _ServerSetupSheetState extends ConsumerState<ServerSetupSheet> {
         if (url == null) {
           throw ServerException(context.l10n.serverComputerAddressMissing);
         }
-        final info = await linkServer(context, ref, url);
+        final info = await linkServer(context, ref, url, own: true);
         if (info == null || !mounted) return;
         if (!info.isOwner) {
           throw ServerException(context.l10n.serverNotOwner('${info.owner}'));
@@ -1198,6 +1290,9 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
   final TextEditingController _email = TextEditingController();
   bool _busy = false;
   String? _error;
+  AccessDuration _duration = AccessDuration.proposed;
+
+  bool get _expiry => ref.read(remoteArchiveProvider).info?.features.contains('expiry') ?? false;
 
   @override
   void dispose() {
@@ -1216,7 +1311,10 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
       _error = null;
     });
     try {
-      await ref.read(remoteArchiveProvider.notifier).addUser(email);
+      await ref.read(remoteArchiveProvider.notifier).addUser(
+            email,
+            expiresAt: _expiry ? _duration.expiresAt() : null,
+          );
       _email.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1224,7 +1322,7 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
         ));
       }
     } on ServerException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) setState(() => _error = serverErrorText(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1246,9 +1344,32 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
     await _guard(context, () => ref.read(remoteArchiveProvider.notifier).removeUser(user));
   }
 
+  Future<void> _renew(ServerUser user) async {
+    final duration = await showKagamiSheet<AccessDuration>(
+      context,
+      title: context.l10n.serverUserRenewTitle(user.email),
+      builder: (context) => const RenewChoice(),
+    );
+    if (duration == null || !mounted) return;
+    await _guard(context, () => ref.read(remoteArchiveProvider.notifier).renewUser(user, duration.expiresAt()));
+  }
+
+  String _subtitle(ServerUser user, bool expiry) {
+    final l10n = context.l10n;
+    final base = user.owner
+        ? l10n.serverOwnerYou
+        : user.connected
+            ? l10n.serverConnected
+            : l10n.serverInvitedPending;
+    final at = user.expiresAt;
+    if (!expiry || user.owner || (at == null && !user.expired)) return base;
+    return '$base · ${user.expired || at == null ? l10n.serverUserExpired : l10n.serverUserExpires(at.toLocal())}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final users = ref.watch(remoteArchiveProvider.select((view) => view.users));
+    final expiry = ref.watch(remoteArchiveProvider.select((view) => view.info?.features.contains('expiry') ?? false));
     final muted = context.tokens.muted;
     final l10n = context.l10n;
     return Padding(
@@ -1279,6 +1400,10 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
               ),
             ),
           ),
+          if (expiry) ...[
+            const SizedBox(height: 10),
+            AccessDurationPicker(value: _duration, onChanged: (value) => setState(() => _duration = value)),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 10),
             Text(_error!, style: KagamiType.body(13, height: 1.45, color: context.tokens.danger)),
@@ -1289,17 +1414,23 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
               KTile(
                 icon: user.owner ? LucideIcons.crown : LucideIcons.user,
                 title: user.email,
-                subtitle: user.owner
-                    ? l10n.serverOwnerYou
-                    : user.connected
-                        ? l10n.serverConnected
-                        : l10n.serverInvitedPending,
+                subtitle: _subtitle(user, expiry),
                 trailing: user.owner
                     ? null
-                    : IconButton(
-                        tooltip: l10n.serverRemove,
-                        icon: const Icon(LucideIcons.userMinus, size: 18),
-                        onPressed: _busy ? null : () => _remove(user),
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (expiry)
+                            TextButton(
+                              onPressed: _busy ? null : () => _renew(user),
+                              child: Text(l10n.serverUserRenew),
+                            ),
+                          IconButton(
+                            tooltip: l10n.serverRemove,
+                            icon: const Icon(LucideIcons.userMinus, size: 18),
+                            onPressed: _busy ? null : () => _remove(user),
+                          ),
+                        ],
                       ),
               ),
           ]),
@@ -1307,4 +1438,35 @@ class _ServerUsersSheetState extends ConsumerState<ServerUsersSheet> {
       ),
     );
   }
+}
+
+/// Per quanto rinnovare un accesso: il selettore e il pulsante che lo conferma.
+class RenewChoice extends StatefulWidget {
+  const RenewChoice({super.key});
+
+  @override
+  State<RenewChoice> createState() => _RenewChoiceState();
+}
+
+class _RenewChoiceState extends State<RenewChoice> {
+  AccessDuration _duration = AccessDuration.proposed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AccessDurationPicker(value: _duration, onChanged: (value) => setState(() => _duration = value)),
+            const SizedBox(height: 18),
+            KButton(
+              label: context.l10n.serverUserRenew,
+              icon: LucideIcons.refreshCw,
+              expand: true,
+              onPressed: () => Navigator.of(context).pop(_duration),
+            ),
+          ],
+        ),
+      );
 }

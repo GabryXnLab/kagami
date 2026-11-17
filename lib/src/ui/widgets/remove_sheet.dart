@@ -9,7 +9,7 @@ import 'package:kagami_archive/remote.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../data/drive.dart';
-import '../../data/drive_library.dart';
+import '../../data/drive_ownership.dart';
 import '../../data/series_removal.dart';
 import '../../format/malf.dart';
 import '../../l10n.dart';
@@ -18,18 +18,39 @@ import '../theme.dart';
 import 'cleanup_sheet.dart' show driveWriter;
 import 'kit.dart';
 
+/// Le serie fra [entries] che l'app può togliere: quelle che hanno solo una
+/// sorgente senza diritto di cancellare (una condivisione, un Drive la cui
+/// cartella non è dell'account) non si propongono.
+List<SeriesEntry> _removable(WidgetRef ref, List<SeriesEntry> entries, bool? driveOwned) => [
+      for (final entry in entries)
+        if (canRemoveSeries(ref.read(seriesHoldersProvider(entry.key)), driveOwned: driveOwned)) entry,
+    ];
+
+/// Se qualcuna di [entries] sta nel Drive dell'account.
+bool _onOwnDrive(WidgetRef ref, List<SeriesEntry> entries) =>
+    entries.any((entry) => ownDriveShelf(ref.read(seriesHoldersProvider(entry.key))) != null);
+
 /// Chiede conferma e toglie [entries]. `true` se le ha tolte: chi sta
 /// guardando una di quelle serie deve uscire.
 Future<bool> confirmRemoveSeries(
   BuildContext context,
   WidgetRef ref,
-  List<SeriesEntry> entries,
+  List<SeriesEntry> all,
 ) async {
-  if (entries.isEmpty) return false;
+  // Non letta vuol dire non propria finché Drive non risponde: su Drive
+  // non si cancella (FASE-5b §5).
+  final driveOwned = await _driveOwned(ref);
+  if (!context.mounted) return false;
   final l10n = context.l10n;
-  final onDrive = entries.any(
-    (entry) => ref.read(seriesHoldersProvider(entry.key)).any((shelf) => shelf is DriveRepository),
-  );
+  final entries = _removable(ref, all, driveOwned);
+  if (entries.isEmpty) {
+    // Si dice perché: la serie sta solo in un Drive non proprio.
+    if (driveOwned != true && _onOwnDrive(ref, all)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.removeSeriesDriveNotOwned)));
+    }
+    return false;
+  }
+  final onDrive = _onOwnDrive(ref, entries);
   final sure = await showKagamiSheet<bool>(
     context,
     title: l10n.removeSeriesTitle(entries.length),
@@ -52,7 +73,7 @@ Future<bool> confirmRemoveSeries(
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    l10n.removeSeriesDrive,
+                    driveOwned == true ? l10n.removeSeriesDrive : l10n.removeSeriesDriveNotOwned,
                     style: KagamiType.body(13, height: 1.45, color: context.tokens.muted),
                   ),
                 ),
@@ -82,15 +103,16 @@ Future<bool> confirmRemoveSeries(
 Future<bool> removeSeriesNow(
   BuildContext context,
   WidgetRef ref,
-  List<SeriesEntry> entries, {
+  List<SeriesEntry> all, {
   Set<String> keepUrls = const {},
   bool announce = true,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = context.l10n;
-  final onDrive = entries.any(
-    (entry) => ref.read(seriesHoldersProvider(entry.key)).any((shelf) => shelf is DriveRepository),
-  );
+  final driveOwned = await _driveOwned(ref);
+  final entries = _removable(ref, all, driveOwned);
+  if (entries.isEmpty) return false;
+  final onDrive = driveOwned == true && _onOwnDrive(ref, entries);
   final sync = ref.read(syncFilesProvider);
   // Un giro in corso potrebbe riportare proprio le cartelle che si tolgono.
   if (await sync.busy()) {
@@ -116,6 +138,7 @@ Future<bool> removeSeriesNow(
         drive: ref.read(driveFilesProvider),
         writer: writer,
         folderId: folderId,
+        driveOwned: driveOwned,
         keepUrls: keepUrls,
       );
       removed.add(entry);
@@ -129,12 +152,25 @@ Future<bool> removeSeriesNow(
   if (removed.isEmpty) return false;
   // Prima Drive si rilegge, poi il catalogo, che segue le serie tolte.
   ref.read(driveRepositoryProvider)?.refresh();
-  await ref.read(removedSeriesProvider.notifier).hide(removed);
+  // Una serie che resta in un Drive non proprio resta anche in griglia.
+  await ref.read(removedSeriesProvider.notifier).hide([
+    for (final entry in removed)
+      if (driveOwned == true || !_onOwnDrive(ref, [entry])) entry,
+  ]);
   ref.read(selectionProvider.notifier).clear();
   if (announce) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.removeSeriesDone(removed.length))));
   }
   return removed.length == entries.length;
+}
+
+/// Se la cartella di Drive è dell'account; `null` se Drive non l'ha detto.
+Future<bool?> _driveOwned(WidgetRef ref) async {
+  try {
+    return await ref.read(driveFolderOwnedProvider.future);
+  } on Object {
+    return null;
+  }
 }
 
 /// Il server che segue la serie, o che ha in coda dei suoi capitoli, la

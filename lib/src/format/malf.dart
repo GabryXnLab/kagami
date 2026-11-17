@@ -5,6 +5,10 @@
 /// dei campi JSON o la disposizione delle cartelle.
 library;
 
+import 'dart:developer' as developer;
+
+import 'package:kagami_archive/model.dart' show canonicalClassification;
+import 'package:kagami_archive/transport.dart' show isIndexPath;
 import 'package:path/path.dart' as p;
 
 import '../l10n.dart';
@@ -73,11 +77,28 @@ class SeriesEntry {
     this.latestChapterArchivedAt,
     this.archivedAt,
     this.source,
+    this.formerKeys = const [],
   });
 
-  factory SeriesEntry.fromJson(Map<String, Object?> json) => SeriesEntry(
+  factory SeriesEntry.fromJson(Map<String, Object?> json) {
+    // Le librerie già scritte hanno tag in slug e generi in grafie diverse:
+    // si leggono in forma canonica (docs/malf.md), senza riscaricare.
+    final c = canonicalClassification(
+      type: json['type'] as String?,
+      genres: _strings(json['genres']),
+      tags: _strings(json['tags']),
+    );
+    return SeriesEntry._fromJson(json, c);
+  }
+
+  factory SeriesEntry._fromJson(
+    Map<String, Object?> json,
+    ({String? type, List<String> genres, List<String> tags}) c,
+  ) =>
+      SeriesEntry(
         key: json['key'] as String,
-        path: json['path'] as String? ?? '',
+        // Senza `path` resta la radice, com'era: dentro la libreria comunque.
+        path: json['path'] == null || json['path'] == '' ? '' : _indexPath(json['path']),
         title: json['title'] as String? ?? '',
         provider: json['provider'] as String? ?? '',
         releaseStatus: ReleaseStatus.parse(json['releaseStatus']),
@@ -86,21 +107,22 @@ class SeriesEntry {
         pageCount: _int(json['pageCount']),
         bytes: _int(json['bytes']),
         signature: json['signature'] as String? ?? '',
-        cover: json['cover'] as String?,
-        coverThumbnail: json['coverThumbnail'] as String?,
+        cover: _optionalIndexPath(json['cover']),
+        coverThumbnail: _optionalIndexPath(json['coverThumbnail']),
         coverWidth: _maybeInt(json['coverWidth']),
         coverHeight: _maybeInt(json['coverHeight']),
         authors: _strings(json['authors']),
         artists: _strings(json['artists']),
-        genres: _strings(json['genres']),
-        tags: _strings(json['tags']),
-        type: json['type'] as String?,
+        genres: c.genres,
+        tags: c.tags,
+        type: c.type,
         language: json['language'] as String?,
         latestChapterNumber: json['latestChapterNumber'] as String?,
         latestChapterTitle: json['latestChapterTitle'] as String?,
         latestChapterArchivedAt: _time(json['latestChapterArchivedAt']),
         archivedAt: _time(json['archivedAt']),
         source: json['source'] as String?,
+        formerKeys: _strings(json['formerKeys']),
       );
 
   /// La riga com'è in `library.json`. Serve a chi scarica una serie da Drive
@@ -132,6 +154,7 @@ class SeriesEntry {
         'latestChapterArchivedAt': ?latestChapterArchivedAt?.toIso8601String(),
         'archivedAt': ?archivedAt?.toIso8601String(),
         'source': ?source,
+        if (formerKeys.isNotEmpty) 'formerKeys': formerKeys,
       };
 
   SeriesEntry copyWith({int? archivedChapterCount}) => SeriesEntry(
@@ -160,6 +183,7 @@ class SeriesEntry {
         latestChapterArchivedAt: latestChapterArchivedAt,
         archivedAt: archivedAt,
         source: source,
+        formerKeys: formerKeys,
       );
 
   final String key;
@@ -190,6 +214,10 @@ class SeriesEntry {
   /// Il link della serie sul sito: è ciò che permette di scaricarne altri
   /// capitoli, o di aprirla, senza ricordarsi da dove veniva.
   final String? source;
+
+  /// Le chiavi che la serie ha avuto prima di quella attuale (cambio
+  /// d'identità adottato da chi archivia): i dati personali si spostano da lì.
+  final List<String> formerKeys;
 
   /// Capitoli pubblicati dal provider e non ancora presenti in locale.
   int get missingChapterCount =>
@@ -224,7 +252,8 @@ class LibraryIndex {
     final entries = (json['series'] as List? ?? const [])
         .whereType<Map<String, Object?>>()
         .where((row) => row['key'] is String)
-        .map(SeriesEntry.fromJson)
+        .map((row) => _row(row, SeriesEntry.fromJson, libraryIndexFile))
+        .nonNulls
         .toList(growable: false);
     return LibraryIndex(
       generatedAt: _time(json['generatedAt']),
@@ -261,6 +290,8 @@ class ChapterEntry {
     this.path,
     this.publishedAt,
     this.archivedAt,
+    this.formerIds = const [],
+    this.listed = true,
   });
 
   factory ChapterEntry.fromJson(Map<String, Object?> json) => ChapterEntry(
@@ -273,9 +304,11 @@ class ChapterEntry {
         number: json['number'] as String?,
         title: json['title'] as String?,
         sortKey: (json['sortKey'] as num?)?.toDouble(),
-        path: json['path'] as String?,
+        path: json['path'] == null ? null : _indexPath(json['path']),
         publishedAt: _time(json['publishedAt']),
         archivedAt: _time(json['archivedAt']),
+        formerIds: _strings(json['formerIds']),
+        listed: json['listed'] != false,
       );
 
   final String id;
@@ -290,6 +323,12 @@ class ChapterEntry {
   final String? path;
   final DateTime? publishedAt;
   final DateTime? archivedAt;
+
+  /// Gli id che il capitolo ha avuto prima di quello attuale.
+  final List<String> formerIds;
+
+  /// `false`: archiviato e leggibile, ma il sito non lo elenca più.
+  final bool listed;
 
   /// Leggibile solo se i file ci sono: una serie in corso elenca anche
   /// capitoli annunciati dal provider e non ancora scaricati.
@@ -334,6 +373,7 @@ class SeriesIndex {
     required this.releaseStatus,
     required this.signature,
     required this.chapters,
+    this.formerKeys = const [],
   });
 
   factory SeriesIndex.fromJson(Map<String, Object?> json) => SeriesIndex(
@@ -344,8 +384,10 @@ class SeriesIndex {
         chapters: (json['chapters'] as List? ?? const [])
             .whereType<Map<String, Object?>>()
             .where((row) => row['id'] is String)
-            .map(ChapterEntry.fromJson)
+            .map((row) => _row(row, ChapterEntry.fromJson, seriesIndexFile))
+            .nonNulls
             .toList(growable: false),
+        formerKeys: _strings(json['formerKeys']),
       );
 
   final String key;
@@ -353,6 +395,7 @@ class SeriesIndex {
   final ReleaseStatus releaseStatus;
   final String signature;
   final List<ChapterEntry> chapters;
+  final List<String> formerKeys;
 
   List<ChapterEntry> get readable =>
       chapters.where((chapter) => chapter.isReadable).toList(growable: false);
@@ -373,7 +416,7 @@ class PageEntry {
     final width = _maybeInt(json['width']);
     final height = _maybeInt(json['height']);
     return PageEntry(
-      file: json['file'] as String,
+      file: _indexPath(json['file']),
       width: width,
       height: height,
       bytes: _maybeInt(json['bytes']),
@@ -418,7 +461,9 @@ class TileEntry {
       if (row is! Map) return const [];
       final file = row['file'];
       final tall = _maybeInt(row['height']);
-      if (file is! String || tall == null || tall <= 0) return const [];
+      if (file is! String || !isIndexPath(file) || tall == null || tall <= 0) {
+        return const [];
+      }
       tiles.add(TileEntry(file: file, height: tall, bytes: _maybeInt(row['bytes'])));
     }
     final total = tiles.fold<int>(0, (sum, tile) => sum + tile.height);
@@ -441,7 +486,8 @@ class PagesIndex {
         pages[key] = value
             .whereType<Map<String, Object?>>()
             .where((row) => row['file'] is String)
-            .map(PageEntry.fromJson)
+            .map((row) => _row(row, PageEntry.fromJson, pagesIndexFile))
+            .nonNulls
             .toList(growable: false);
       }
     }
@@ -458,3 +504,27 @@ class PagesIndex {
 
   List<PageEntry> of(String chapterId) => pages[chapterId] ?? const [];
 }
+
+/// Una riga di un indice, o `null` se non si legge: un campo del tipo
+/// sbagliato o un percorso non ammesso costa quella riga, non l'indice intero
+/// (che per `library.json` vorrebbe dire una libreria vuota).
+T? _row<T>(Map<String, Object?> json, T Function(Map<String, Object?>) parse, String file) {
+  try {
+    return parse(json);
+  } on Object catch (error) {
+    if (error is! TypeError && error is! FormatException) rethrow;
+    developer.log('riga scartata in $file: $error', name: 'kagami.malf');
+    return null;
+  }
+}
+
+/// Un percorso relativo dell'indice, ammesso solo se resta dentro la
+/// libreria (`isIndexPath`, regola di `docs/malf.md`).
+String _indexPath(Object? value) {
+  if (value is String && isIndexPath(value)) return value;
+  throw FormatException('percorso non ammesso', value);
+}
+
+/// Una copertina non ammessa è una copertina che non c'è: la serie resta.
+String? _optionalIndexPath(Object? value) =>
+    value is String && isIndexPath(value) ? value : null;

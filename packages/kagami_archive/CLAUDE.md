@@ -22,3 +22,21 @@ Vincoli del pacchetto Dart puro; il resto del progetto è nel `CLAUDE.md` di roo
   ferma un sito registrato senza icona, con un id non valido o con una
   verifica su host non suoi. Un attrezzo che serve a due siti va nel kit,
   non copiato.
+- **I siti degli utenti non sono file Dart.** Un sito descritto da un JSON
+  (`docs/siti.md`, `providers/<id>.json` nella libreria) lo interpreta
+  `declarative.dart` (`DeclarativeProvider`, nessun codice eseguito, host
+  validati all'installazione). Il registro [providers] è un getter a tre
+  strati (`Provider.origin`): inclusi (`builtInProviders`), sopra il catalogo
+  firmato (`installCatalogProviders`, uno per processo, `docs/catalogo.md`),
+  sopra quelli degli utenti, sul telefono con
+  `installUserProviders`, sul server per account con `withUserProviders` /
+  `withUserProviderSource` (una zona: due account possono avere lo stesso id
+  con file diversi). Un campo nuovo del formato si aggiunge prima in
+  `docs/siti.md`, poi qui e in `test/declarative_test.dart`.
+- **Perché ogni dipendenza** (spostato dal `CLAUDE.md` di root): `html` per
+  le pagine di ManhwaRead, `crypto` per lo SHA-256 dei manifest e l'MD5 della
+  ricevuta di Drive, `unorm_dart` per la NFKC dei nomi di cartella, uguale a
+  quella di Python, `xml` per il `multistatus` di WebDAV (`webdav.dart`),
+  letto per namespace e non per prefisso, che ogni server sceglie a modo suo.
+  Nell'app, fuori dal pacchetto, `webview_flutter` fa
+  superare all'utente la verifica di Cloudflare.

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.2+3
+version: 1.1.1+5
 
 environment:
   sdk: ^3.13.3
@@ -52,9 +52,6 @@ dependencies:
   package_info_plus: ^10.2.1
   lucide_icons_flutter: ^3.1.6
   google_sign_in: ^7.2.0
-  firebase_core: ^4.15.0
-  firebase_auth: ^6.7.0
-  cloud_firestore: ^6.10.0
   google_sign_in_platform_interface: ^3.1.0
   sentry_flutter: ^9.0.0
   html: ^0.15.7
@@ -63,12 +60,17 @@ dependencies:
   webview_flutter: ^4.14.1
   kagami_archive:
     path: packages/kagami_archive
+  supabase_flutter: ^2.18.3
+  flutter_secure_storage: ^11.2.0
+  dart_smb2: 0.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_driver:
     sdk: flutter
+  # Già nel lock con webview_flutter: la WebView finta di `rendered_page_test.dart`.
+  webview_flutter_platform_interface: ^2.15.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -92,6 +94,7 @@ flutter:
   generate: true
   assets:
     - assets/providers/
+    - assets/licenses/
 
   fonts:
     - family: Figtree

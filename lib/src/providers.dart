@@ -7,27 +7,35 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:kagami_archive/health.dart' show SiteHealth;
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/providers.dart' show SuppliedPages;
 import 'package:kagami_archive/remote.dart';
+import 'package:kagami_archive/stores.dart' show LocalStore;
 import 'package:kagami_archive/tracking.dart';
 
 import 'archive/device.dart';
+import 'archive/page_browser.dart' show platformPageBrowser;
 import 'archive/phone_check.dart';
+import 'data/adoption.dart';
 import 'data/arrivals.dart';
 import 'data/auto_cleanup.dart';
+import 'data/backend.dart';
 import 'data/backup.dart';
+import 'data/backup_folder.dart' show BackupFolderChosen;
+import 'data/reading_migration.dart';
 import 'data/cleanup.dart';
 import 'data/cloud.dart';
+import 'data/db/account_databases.dart' show AccountDatabases, AccountSlots;
 import 'data/db/database.dart';
 import 'data/downloads.dart';
 import 'data/drive.dart';
 import 'data/drive_library.dart';
+import 'data/drive_ownership.dart';
 import 'data/folder_sync.dart';
 import 'data/folder_sync_schedule.dart';
 import 'data/library.dart';
@@ -38,7 +46,15 @@ import 'data/network.dart';
 import 'data/notifications.dart';
 import 'data/read_ahead.dart';
 import 'data/reader_settings.dart';
+import 'data/reader_store.dart';
 import 'data/server_access.dart';
+import 'data/server_error_text.dart';
+import 'data/sources/remote_router.dart';
+import 'providers_backup.dart' show backupFolderProvider;
+import 'providers_sources.dart' show downloadOriginProvider, storageSourcesProvider;
+import 'data/catalog_recheck.dart' show catalogRecheckProvider;
+import 'data/catalog_sync.dart' show catalogProvider;
+import 'data/user_sites.dart' show engineForSite, noServerSites, serverCatalogOlder, serverSitesProvider;
 import 'data/statistics.dart';
 import 'data/user_repository.dart';
 import 'format/malf.dart';
@@ -178,6 +194,18 @@ final driveFileCacheProvider = Provider<DriveFileCache>((ref) {
   return cache;
 });
 
+/// Chi smista gli indirizzi remoti fra il Drive dell'account e le altre
+/// sorgenti: uno per l'app, ed è lui il [RemoteFiles] che lettore e copertine
+/// trovano. Nasce quando la prima sorgente remota si collega.
+final remoteRouterProvider = Provider<RemoteRouter>((ref) {
+  final router = RemoteRouter();
+  RemoteFiles.instance = router;
+  ref.onDispose(() {
+    if (identical(RemoteFiles.instance, router)) RemoteFiles.instance = null;
+  });
+  return router;
+});
+
 /// La libreria su Drive, quando c'è un account e una cartella.
 final driveRepositoryProvider = Provider<DriveRepository?>((ref) {
   if (!cloudAvailable) return null;
@@ -197,7 +225,7 @@ final driveRepositoryProvider = Provider<DriveRepository?>((ref) {
     files: ref.watch(driveFileCacheProvider),
   );
   final files = DriveFiles(repository);
-  RemoteFiles.instance = files;
+  final router = ref.watch(remoteRouterProvider)..primary = files;
   // La cache sa cosa buttare solo sapendo cosa si è letto. Lo stato si
   // pubblica all'avvio e uscendo dal lettore — mai mentre si scorre — ed è
   // il momento giusto per rifare i conti.
@@ -214,7 +242,7 @@ final driveRepositoryProvider = Provider<DriveRepository?>((ref) {
     }));
   }, fireImmediately: true);
   ref.onDispose(() {
-    if (identical(RemoteFiles.instance, files)) RemoteFiles.instance = null;
+    if (identical(router.primary, files)) router.primary = null;
     files.dispose();
     client.close();
   });
@@ -223,8 +251,23 @@ final driveRepositoryProvider = Provider<DriveRepository?>((ref) {
 
 final driveFilesProvider = Provider<DriveFiles?>((ref) {
   ref.watch(driveRepositoryProvider);
-  final files = RemoteFiles.instance;
+  final files = ref.watch(remoteRouterProvider).primary;
   return files is DriveFiles ? files : null;
+});
+
+/// Se la cartella della libreria su Drive è dell'account: Kagami vi cancella
+/// solo allora (FASE-5b §5). `null` senza Drive o se Drive non ha risposto:
+/// niente cancellazioni su Drive, e la pulizia lo richiede al giro dopo.
+final driveFolderOwnedProvider = FutureProvider<bool?>((ref) async {
+  final drive = ref.watch(driveRepositoryProvider);
+  if (drive == null) return null;
+  final users = ref.watch(userRepositoryProvider);
+  return resolveFolderOwnership(
+    folderId: drive.folderId,
+    stored: await users.readSetting(driveFolderOwnedKey),
+    ask: drive.client.owned,
+    save: (value) => users.writeSetting(driveFolderOwnedKey, value),
+  );
 });
 
 /// La libreria unita: la cartella scelta, i download nello spazio dell'app
@@ -233,20 +276,9 @@ final libraryProvider = Provider<Library?>((ref) {
   final root = ref.watch(libraryRootProvider);
   final hasFolder =
       ref.watch(driveFolderProvider.select((state) => state.value != null));
-  final drive = ref.watch(driveRepositoryProvider);
   if (root == null && !hasFolder) return null;
-  final directories = ref.watch(appDirectoriesProvider);
-  return Library([
-    // Con Drive la cartella può anche non avere `library.json`: può
-    // contenere soltanto ciò che l'app vi ha scaricato.
-    if (root != null) LibraryRepository(root, requireIndex: !hasFolder),
-    LibraryRepository(
-      directories.privateLibrary,
-      requireIndex: false,
-      private: true,
-    ),
-    ?drive,
-  ]);
+  final sources = ref.watch(storageSourcesProvider);
+  return Library(sources.shelves, notices: sources.notices);
 });
 
 /// Rilegge la libreria da capo, Drive compreso. È il gesto di chi tira giù
@@ -298,16 +330,17 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
   Future<void> _drain() async {
     if (_running) return;
     _running = true;
-    final finished = <String, ({String series, String destination})>{};
+    final finished = <String, ({String series, String destination, String source})>{};
     final remembered = <String>{};
     try {
       while (_queue.isNotEmpty) {
         final job = _queue.removeAt(0);
         final key = downloadKey(job.series, job.chapter);
         try {
-          await _download(job.series, job.chapter, job.destination, key);
+          final (:source, :destination) = await _download(job.series, job.chapter, job.destination, key);
           state = {...state}..remove(key);
-          finished[job.series] = (series: job.series, destination: job.destination);
+          finished[job.series] =
+              (series: job.series, destination: destination, source: source);
           // Al primo capitolo la serie si scrive subito fra quelle scaricate:
           // se l'app si chiude a metà di «scarica tutti», quello che è sceso
           // si ritrova comunque.
@@ -317,8 +350,19 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
           ref.invalidate(seriesChaptersProvider(job.series));
         } on DownloadCancelled {
           state = {...state}..remove(key);
-        } on DriveOffline {
+        } on Object catch (error) {
           if (_cancelled.contains(key)) continue;
+          if (!isNetworkFailure(error)) {
+            state = {
+              ...state,
+              key: DownloadProgress(done: 0, total: 0, error: error),
+            };
+            if (_queue.every((next) => next.series != job.series) &&
+                finished.containsKey(job.series)) {
+              await _finishSeries(finished.remove(job.series)!);
+            }
+            continue;
+          }
           // Senza rete un download non è fallito, è fermo: resta in testa alla
           // coda e riparte quando la rete torna. Le tavole già scese restano
           // nella cartella `.part`, e anche quella a metà riprende dal byte
@@ -337,12 +381,6 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
           // Una rete che torna a scatti non va presa d'assalto al primo segno.
           await Future<void>.delayed(const Duration(seconds: 2));
           continue;
-        } on Object catch (error) {
-          if (_cancelled.contains(key)) continue;
-          state = {
-            ...state,
-            key: DownloadProgress(done: 0, total: 0, error: error),
-          };
         }
         if (_queue.every((next) => next.series != job.series) &&
             finished.containsKey(job.series)) {
@@ -354,24 +392,28 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
     }
   }
 
-  Future<void> _download(
+  /// Scarica un capitolo dalla sorgente che lo serve e ne ridà l'id, con la
+  /// cartella dove è finito: quella che la sorgente impone, se lo fa.
+  Future<({String source, String destination})> _download(
     String seriesKey,
     String chapterId,
     String destination,
     String key,
   ) async {
-    final drive = ref.read(driveRepositoryProvider);
-    final files = ref.read(driveFilesProvider);
     final entry = ref.read(seriesEntryProvider(seriesKey));
-    if (drive == null || files == null || entry == null) {
+    final chapters = await ref.read(seriesChaptersProvider(seriesKey).future);
+    final source = chapters?.sourceOf(chapterId);
+    final origin = source == null ? null : ref.read(downloadOriginProvider(source));
+    if (entry == null || origin == null) {
       throw DriveException(currentL10n().dataDriveNotLinked);
     }
-    final index = await drive.loadSeries(entry);
+    final index = await origin.shelf.loadSeries(entry);
     final chapter = index?.chapters.firstWhereOrNull((row) => row.id == chapterId);
-    final pages = (await drive.loadPages(entry))?.of(chapterId) ?? const [];
+    final pages = (await origin.shelf.loadPages(entry))?.of(chapterId) ?? const [];
     if (chapter == null) throw DriveException(currentL10n().dataChapterNotOnDrive);
-    await ChapterDownloader(drive, files).download(
-      destination: destination,
+    final target = origin.destination ?? destination;
+    await ChapterDownloader(origin).download(
+      destination: target,
       entry: entry,
       chapter: chapter,
       pages: pages,
@@ -381,19 +423,21 @@ class DownloadsNotifier extends Notifier<Map<String, DownloadProgress>> {
         key: DownloadProgress(done: done, total: total),
       },
     );
+    return (source: source!, destination: target);
   }
 
-  Future<void> _finishSeries(({String series, String destination}) job) async {
-    final drive = ref.read(driveRepositoryProvider);
-    final files = ref.read(driveFilesProvider);
+  Future<void> _finishSeries(
+    ({String series, String destination, String source}) job,
+  ) async {
+    final origin = ref.read(downloadOriginProvider(job.source));
     final entry = ref.read(seriesEntryProvider(job.series));
-    if (drive == null || files == null || entry == null) return;
+    if (origin == null || entry == null) return;
     try {
-      await ChapterDownloader(drive, files)
+      await ChapterDownloader(origin)
           .finishSeries(destination: job.destination, entry: entry);
     } on Object {
       // I capitoli sono già al loro posto: senza indici accanto si leggono
-      // lo stesso finché c'è Drive, e il prossimo download li riscrive.
+      // lo stesso finché c'è la sorgente, e il prossimo download li riscrive.
     }
     ref.invalidate(libraryCatalogProvider);
   }
@@ -563,6 +607,7 @@ final readLeftoversProvider =
     seriesStateProvider(key).select((state) => state.readChapters),
   );
   final drive = ref.watch(driveFilesProvider);
+  final driveOwned = await ref.watch(driveFolderOwnedProvider.future);
   final chapters = await ref.watch(seriesChaptersProvider(key).future);
   if (entry == null || chapters == null) return ReadLeftovers.empty;
   return findReadLeftovers(
@@ -571,6 +616,7 @@ final readLeftoversProvider =
     holders: holders,
     read: read,
     drive: drive,
+    driveOwned: driveOwned,
   );
 });
 
@@ -665,6 +711,10 @@ class AutoCleanup extends Notifier<void> {
     ref.listen(readingProvider, (_, _) => _schedule());
     ref.listen(libraryCatalogProvider, (_, _) => _schedule());
     ref.listen(autoCleanupSettingsProvider, (_, _) => _schedule());
+    // Un altro account o un'altra cartella: il piano di prima non vale più
+    // per Drive, anche per il lavoro ad app chiusa.
+    ref.listen(cloudAccountProvider.select((status) => status.account?.email), (_, _) => _schedule());
+    ref.listen(driveFolderProvider.select((folder) => folder.value?.id), (_, _) => _schedule());
     // Il tempo passa anche con l'app in background: tornando, ciò che è
     // scaduto si toglie subito, senza aspettare il lavoro programmato.
     final lifecycle = AppLifecycleListener(onResume: _schedule);
@@ -699,6 +749,20 @@ class AutoCleanup extends Notifier<void> {
     }
   }
 
+  /// Il Drive su cui la pulizia può togliere: account e cartella di adesso,
+  /// se la cartella è dell'account. Una proprietà non letta si richiede qui,
+  /// a ogni giro, finché Drive non risponde.
+  Future<DriveTarget?> _target() async {
+    final drive = ref.read(driveRepositoryProvider);
+    final account = ref.read(cloudAccountProvider).account?.email;
+    if (drive == null || account == null || account.isEmpty) return null;
+    if (ref.read(driveFolderOwnedProvider).hasValue && ref.read(driveFolderOwnedProvider).value == null) {
+      ref.invalidate(driveFolderOwnedProvider);
+    }
+    final owned = await ref.read(driveFolderOwnedProvider.future);
+    return owned == true ? (account: account, folder: drive.folderId) : null;
+  }
+
   Future<void> _run() async {
     final settings = await ref.read(autoCleanupSettingsProvider.future);
     final files = ref.read(autoCleanupFilesProvider);
@@ -707,6 +771,19 @@ class AutoCleanup extends Notifier<void> {
       await files.writePlan(const []);
       await const AutoCleanupScheduler().apply(null);
       return;
+    }
+    final target = await _target();
+    final previous = await files.readPlan();
+    if (target == null || previous.account != target.account || previous.folder != target.folder) {
+      // Prima ancora di rifare il piano (la libreria può non essere pronta):
+      // i capitoli su Drive di un altro account o di un'altra cartella, o di
+      // una cartella non propria, escono, perché il lavoro ad app chiusa non
+      // li tolga.
+      await files.writePlan(
+        [for (final item in previous.items) if (!item.onDrive) item],
+        account: target?.account,
+        folder: target?.folder,
+      );
     }
     final catalog = ref.read(libraryCatalogProvider).value;
     final library = ref.read(libraryProvider);
@@ -735,17 +812,17 @@ class AutoCleanup extends Notifier<void> {
       // Su Drive c'è tutto l'archivio: si guardano solo le serie che una
       // regola può toccare, cioè con capitoli letti o già cominciate
       // ([planAutoCleanup]). Gli indici sono già in memoria; l'elenco dei
-      // capitoli si chiede solo per le serie con capitoli già tolti.
-      final drive = holders.whereType<DriveRepository>().firstOrNull;
-      if (drive != null && (read || activity[entry.key] != null)) {
+      // capitoli si chiede solo per le serie con capitoli già tolti. Solo il
+      // Drive dell'account, e solo se la cartella è sua.
+      if (read || activity[entry.key] != null) {
         try {
-          chapters.addAll(await driveChaptersOf(entry, drive));
+          chapters.addAll(await cleanupDriveChapters(entry, holders, owned: target != null));
         } on DriveException {
           // Senza Drive ora: la serie torna nel piano al giro dopo.
         }
       }
     }
-    final drive = ref.read(driveRepositoryProvider);
+    final drive = target == null ? null : ref.read(driveRepositoryProvider);
     await files.writePlan(
       planAutoCleanup(
         settings: settings,
@@ -754,7 +831,8 @@ class AutoCleanup extends Notifier<void> {
         activity: (key) => activity[key],
         excluded: (key) => reading.traitsOf(key).keepChapters,
       ),
-      folder: drive?.folderId,
+      account: target?.account,
+      folder: target?.folder,
     );
     DriveClient? writer;
     final AutoCleanupOutcome outcome;
@@ -763,6 +841,7 @@ class AutoCleanup extends Notifier<void> {
         files,
         ref.read(syncFilesProvider),
         hold: {...holding},
+        target: target,
         withdraw: drive == null
             ? null
             : (seriesPath, paths) {
@@ -810,9 +889,24 @@ class RatingInvite extends AsyncNotifier<bool> {
 final ratingInviteProvider =
     AsyncNotifierProvider<RatingInvite, bool>(RatingInvite.new);
 
-/// Il database dei dati personali: uno solo per tutta la vita dell'app.
+/// Lo slot (guest o un account) di cui questo contenitore legge il database:
+/// lo mette `AccountScope`, che cambiando slot smonta tutto il contenitore.
+final databaseSlotProvider = Provider<String>((ref) => AccountDatabases.guest);
+
+/// Lo slot attivo e i file: lo crea `main`.
+final accountSlotsProvider = Provider<AccountSlots>(
+  (ref) => throw UnimplementedError('AccountSlots va creato in main'),
+);
+
+/// Il database dei dati personali: un file per slot, aperto e chiuso con il
+/// contenitore. Un `KagamiDatabase` non cambia mai file: una scrittura rimasta
+/// in volo dopo il cambio di slot fallisce sul file chiuso.
 final databaseProvider = Provider<KagamiDatabase>((ref) {
-  final database = KagamiDatabase();
+  final file = ref
+      .watch(accountSlotsProvider)
+      .databases
+      .fileFor(ref.watch(databaseSlotProvider));
+  final database = KagamiDatabase.file(file);
   ref.onDispose(database.close);
   return database;
 });
@@ -855,7 +949,21 @@ class Reading extends AsyncNotifier<ReadingData> {
     final root = ref.watch(libraryRootProvider);
     // Una libreria che arriva dal vecchio formato porta con sé `reading/`:
     // lo si importa una volta sola, poi il database è la verità.
-    if (root != null) await _repository.importLegacyReading(root);
+    if (root != null) {
+      await _repository.importLegacyReading(root);
+      // Dopo l'importazione: i due JSON storici escono dalla libreria solo
+      // se sono già stati portati dentro.
+      try {
+        await moveReadingOutOfLibrary(
+          repository: _repository,
+          root: root,
+          support: ref.read(appDirectoriesProvider).support,
+          slot: ref.read(backupSlotProvider),
+        );
+      } on FileSystemException {
+        // Resta com'è e si riprova all'avvio dopo: lo stato si carica lo stesso.
+      }
+    }
     return ReadingData(
       series: await _repository.loadStates(),
       collections: await _repository.loadCollections(),
@@ -1211,11 +1319,28 @@ class Reading extends AsyncNotifier<ReadingData> {
     ]);
   }
 
-  Future<void> setSeriesInCollection(
+  /// Una raccolta vincolante rifiuta (senza scrivere) la serie che non
+  /// combacia con le sue regole; togliere è sempre permesso.
+  Future<CollectionJoin> setSeriesInCollection(
     String id,
     String seriesKey,
     bool member,
   ) async {
+    if (member) {
+      final target = _data.collections.firstWhereOrNull((row) => row.id == id);
+      if (target != null) {
+        final outcome =
+            canJoin(target, ref.read(seriesSignalsProvider(seriesKey)));
+        if (outcome == CollectionJoin.refused) return outcome;
+        await _setMembership(id, seriesKey, member);
+        return outcome;
+      }
+    }
+    await _setMembership(id, seriesKey, member);
+    return CollectionJoin.joined;
+  }
+
+  Future<void> _setMembership(String id, String seriesKey, bool member) async {
     await _replaceCollections([
       for (final collection in _data.collections)
         if (collection.id != id)
@@ -1324,7 +1449,7 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
       catalog.index.series,
       reading.series,
       marks,
-      mutedKeys: _mutedByCollections(reading),
+      mutedKeys: silencedSeriesKeys(reading.collections),
     );
     final changed = {...recorded, ...plan.marks};
     if (changed.isEmpty) return;
@@ -1333,10 +1458,6 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
     await ArrivalNotifications.instance.show(plan.alerts);
   }
 
-  Set<String> _mutedByCollections(ReadingData reading) => {
-        for (final c in reading.collections)
-          if (c.traits.muted) ...c.seriesKeys,
-      };
 
   /// Lascia al controllo ad app chiusa le serie da guardare nella cartella
   /// locale. Lo si fa uscendo dall'app: è da lì in poi che serve, ed è lo
@@ -1352,7 +1473,7 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
                   root,
                   ref.read(librarySignalsProvider),
                   marks,
-                  mutedKeys: _mutedByCollections(reading),
+                  mutedKeys: silencedSeriesKeys(reading.collections),
                 ),
         );
         if (root != null) {
@@ -1378,6 +1499,35 @@ class Arrivals extends AsyncNotifier<Map<String, ArrivalMark>> {
 
 final arrivalsProvider =
     AsyncNotifierProvider<Arrivals, Map<String, ArrivalMark>>(Arrivals.new);
+
+/// Le serie senza notifiche né novità annunciate, anche ad app chiusa: quelle
+/// delle raccolte silenziate e di quelle nascoste. Il riferimento degli arrivi
+/// avanza lo stesso.
+Set<String> silencedSeriesKeys(Iterable<Collection> collections) => {
+      for (final c in collections)
+        if (c.traits.muted || c.traits.hidden) ...c.seriesKeys,
+    };
+
+/// Le serie che stanno in almeno una raccolta nascosta.
+final hiddenSeriesKeysProvider = Provider<Set<String>>((ref) => {
+      for (final c in ref.watch(collectionsProvider))
+        if (c.traits.hidden) ...c.seriesKeys,
+    });
+
+/// La libreria senza le serie nascoste: è ciò che leggono le liste
+/// dell'interfaccia (home, libreria, statistiche…). [librarySignalsProvider]
+/// resta intero per chi deve sapere tutto (autoinserimento, arrivi,
+/// riparazione, «già in libreria», il dettaglio della raccolta);
+/// `test/hidden_surfaces_test.dart` tiene l'elenco chiuso.
+final shownSignalsProvider = Provider<List<SeriesSignals>>((ref) {
+  final all = ref.watch(librarySignalsProvider);
+  final hidden = ref.watch(hiddenSeriesKeysProvider);
+  if (hidden.isEmpty) return all;
+  return [
+    for (final s in all)
+      if (!hidden.contains(s.entry.key)) s,
+  ];
+});
 
 /// Indice e stato incrociati: è la forma in cui l'interfaccia guarda la
 /// libreria, e l'unica che sa dire cosa è nuovo e cosa resta da leggere.
@@ -1589,8 +1739,12 @@ final visibleLibraryProvider = Provider<List<SeriesSignals>>((ref) {
       : ref
           .watch(collectionsProvider)
           .firstWhereOrNull((row) => row.id == filter.collectionId);
+  // Le nascoste si vedono solo dalla loro raccolta: una raccolta non nascosta
+  // che ne contiene una non la mostra.
   return applyFilter(
-    ref.watch(librarySignalsProvider),
+    collection != null && collection.traits.hidden
+        ? ref.watch(librarySignalsProvider)
+        : ref.watch(shownSignalsProvider),
     filter,
     collectionOrder: collection?.seriesKeys ?? const [],
   );
@@ -1603,13 +1757,17 @@ final historyProvider = FutureProvider<List<HistoryEntry>>((ref) async {
   return ref.watch(userRepositoryProvider).history();
 });
 
+/// Lo slot le cui copie si fanno e si elencano: quello del database.
+final backupSlotProvider = Provider<String>((ref) => ref.watch(databaseSlotProvider));
+
 final backupServiceProvider = Provider<BackupService>(
   (ref) => BackupService(ref.watch(databaseProvider)),
 );
 
-/// Copia automatica dentro la libreria. È accesa di suo: da quando i dati
-/// personali stanno nel database, è l'unica cosa che li fa sopravvivere a una
-/// reinstallazione senza che l'utente ci debba pensare.
+/// Copia automatica nello spazio dell'app (mai nella libreria, che si
+/// condivide). È accesa di suo: protegge da una fusione o un ripristino
+/// sbagliati, non dalla perdita del telefono, che è compito dell'account o di
+/// «Esporta».
 class AutoBackup extends AsyncNotifier<bool> {
   static const String _key = 'backup.auto';
 
@@ -1629,21 +1787,31 @@ final autoBackupProvider =
 /// Fa la copia se è ora di farla. Si guarda una volta all'avvio: è un lavoro
 /// da qualche centinaio di kilobyte, non una cosa da ripetere.
 final autoBackupRunProvider = FutureProvider<void>((ref) async {
-  final root = ref.watch(libraryRootProvider);
-  if (root == null) return;
   if (!await ref.watch(autoBackupProvider.future)) return;
-  await ref.watch(backupServiceProvider).autoBackup(root);
+  final folder = await ref.watch(backupFolderProvider.future);
+  await ref.watch(backupServiceProvider).autoBackup(
+        ref.watch(appDirectoriesProvider).support,
+        slot: ref.watch(backupSlotProvider),
+        extraDirectory: folder is BackupFolderChosen ? folder.path : null,
+      );
 });
 
 /// L'accesso con Google e il viaggio dei dati personali.
 final cloudAuthProvider = Provider<CloudAuth>((ref) => const CloudAuth());
 
-final cloudSyncProvider = Provider<CloudSync>(
-  (ref) => CloudSync(
+/// La riga del lettore nel backend.
+final readerStoreProvider = Provider<ReaderStore>((ref) => SupabaseReaderStore(backend));
+
+final cloudSyncProvider = Provider<CloudSync>((ref) {
+  final auth = ref.watch(cloudAuthProvider);
+  return CloudSync(
     ref.watch(backupServiceProvider),
     ref.watch(userRepositoryProvider),
-  ),
-);
+    ref.watch(readerStoreProvider),
+    slot: ref.watch(databaseSlotProvider),
+    sessionUid: () => auth.current?.id,
+  );
+});
 
 /// Chi ha fatto l'accesso, e com'è andata l'ultima sincronizzazione.
 ///
@@ -1679,16 +1847,23 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
         state = state.copyWith(busy: false);
         return;
       }
+      // Un altro account fa cambiare slot e smontare questo contenitore; se
+      // è ancora qui, la guardia di `CloudSync` non manda il suo file nella
+      // riga del nuovo account.
+      if (!ref.mounted) return;
       state = state.copyWith(account: account);
       await _run();
     } on Exception catch (error) {
-      state = state.copyWith(busy: false, error: cloudMessage(error));
+      if (ref.mounted) state = state.copyWith(busy: false, error: cloudMessage(error));
     }
   }
 
   /// Uscire manda su quello che si ha prima di dimenticare chi si era:
-  /// altrimenti l'ultima lettura resterebbe su un telefono solo.
+  /// altrimenti l'ultima lettura resterebbe su un telefono solo. Poi si torna
+  /// ai dati dell'uso senza account, che smonta questo contenitore. Vale anche
+  /// con la sessione persa: lì non si manda su niente e si cambia solo slot.
   Future<void> signOut() async {
+    final slots = ref.read(accountSlotsProvider);
     state = state.copyWith(busy: true, clearError: true);
     try {
       await ref.read(cloudSyncProvider).sync();
@@ -1696,9 +1871,14 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
       // Uscire deve riuscire anche senza rete: i dati restano qui, e la
       // prossima sincronizzazione li ritroverà.
     }
+    await _leave(slots);
+  }
+
+  Future<void> _leave(AccountSlots slots) async {
     await ref.read(cloudAuthProvider).signOut();
     ref.read(driveAuthProvider).forget();
     state = const CloudStatus();
+    await slots.leave();
   }
 
   Future<void> syncNow() => _run();
@@ -1713,23 +1893,33 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
   /// Smette di tenerne copia: la riga in rete sparisce e l'accesso si chiude.
   /// I dati di questo telefono non si toccano.
   Future<void> forget() async {
+    final slots = ref.read(accountSlotsProvider);
     state = state.copyWith(busy: true, clearError: true);
     try {
-      await ref.read(cloudSyncProvider).forget();
+      // La sessione non è di questo slot: la riga che si toglierebbe è di un
+      // altro, e lo slot sta già cambiando.
+      if (!await ref.read(cloudSyncProvider).forget()) {
+        if (ref.mounted) state = state.copyWith(busy: false);
+        return;
+      }
     } on Exception catch (error) {
       state = state.copyWith(busy: false, error: cloudMessage(error));
       return;
     }
-    await ref.read(cloudAuthProvider).signOut();
-    ref.read(driveAuthProvider).forget();
-    state = const CloudStatus();
+    await _leave(slots);
   }
 
   Future<void> _run() async {
     if (!state.signedIn) return;
     state = state.copyWith(busy: true, clearError: true);
     try {
-      final (:at, :merged) = await ref.read(cloudSyncProvider).sync();
+      final result = await ref.read(cloudSyncProvider).sync();
+      if (!ref.mounted) return;
+      if (result == null) {
+        state = state.copyWith(busy: false);
+        return;
+      }
+      final (:at, :merged) = result;
       state = state.copyWith(busy: false, lastSyncAt: at);
       // Fondere ha riscritto il database sotto l'app: la fotografia in memoria
       // va rifatta, altrimenti la libreria mostra ancora quella di prima.
@@ -1741,7 +1931,7 @@ class CloudAccountNotifier extends Notifier<CloudStatus> {
         ref.invalidate(serverLinkProvider);
       }
     } on Exception catch (error) {
-      state = state.copyWith(busy: false, error: cloudMessage(error));
+      if (ref.mounted) state = state.copyWith(busy: false, error: cloudMessage(error));
     }
   }
 
@@ -1969,7 +2159,7 @@ final incognitoProvider = AsyncNotifierProvider<Incognito, bool>(Incognito.new);
 
 /// Le destinazioni della navigazione. Stanno nel grafo e non nella shell
 /// perché anche le raccolte automatiche vi mandano l'utente.
-enum ShellTab { home, library, collections, settings }
+enum ShellTab { home, library, social, settings }
 
 class ShellTabNotifier extends Notifier<ShellTab> {
   @override
@@ -2106,7 +2296,8 @@ class ArchiveController extends Notifier<ArchiveView> {
       report = await checkFromPhone(
         _files,
         deviceEnvironment(_files, client, ref.read(appDirectoriesProvider).cache),
-        browser: const NativePageBrowser(),
+        browser: platformPageBrowser(),
+        onProviderChanged: ref.read(catalogRecheckProvider).onChanged,
       );
     } finally {
       client.close();
@@ -2179,6 +2370,7 @@ class ReadAhead extends Notifier<void> {
   /// altrimenti si rimetterebbero in coda o non si potrebbero aprire.
   String? _seenLocal;
   String? _seenServer;
+  bool _serverPending = false;
 
   /// Il controllo sul sito per una serie arrivata in fondo: non a ogni
   /// uscita dal lettore, che in fondo alla serie sono tutte uguali.
@@ -2275,10 +2467,20 @@ class ReadAhead extends Notifier<void> {
 
   /// «Man mano» lo fa tutto chi l'utente ha scelto ([archiveEngineProvider]):
   /// le serie seguite dall'altro restano ferme finché non si torna a lui.
+  /// Fanno eccezione i siti degli utenti che il server non sa usare
+  /// ([engineForSite]): le loro serie le scarica il telefono, e lo segue lui.
   Future<void> _plan() async {
     final window = await ref.read(readAheadWindowProvider.future);
     if (ref.read(archiveEngineProvider) == ArchiveEngine.server) {
       await _planServer(window);
+      final sites = await ref.read(serverSitesProvider.future);
+      final phoneSerial = ref.read(catalogProvider).serial;
+      await _planPhone(
+        window,
+        only: (entry) =>
+            engineForSite(ArchiveEngine.server, entry.provider, server: sites, phoneCatalogSerial: phoneSerial) ==
+            ArchiveEngine.phone,
+      );
     } else {
       await _planPhone(window);
     }
@@ -2292,6 +2494,8 @@ class ReadAhead extends Notifier<void> {
     try {
       final smart = [for (final series in await client.ongoing()) if (series.ahead != null) series];
       if (smart.isEmpty) return;
+      final sites = (await client.info()).check.sites;
+      final broken = {for (final MapEntry(:key, :value) in sites.entries) if (value.broken) key};
       final queue = await client.queue();
       final urls = {for (final series in smart) series.url};
       pending = queue.jobs.any((job) => urls.contains(job.url));
@@ -2299,6 +2503,7 @@ class ReadAhead extends Notifier<void> {
       _seenServer = _progress(queue.history.firstOrNull, queue.status);
       if (_stale(_seenServer, seen)) return;
       for (final series in smart) {
+        if (aheadHeldBack(key: series.key, problem: series.problem, brokenSites: broken)) continue;
         final same = [for (final job in queue.jobs) if (job.url == series.url) job];
         if (same.any((job) => job.ids == null)) continue;
         final plan = await _planOf(series.key, window, {for (final job in same) ...?job.ids});
@@ -2325,24 +2530,33 @@ class ReadAhead extends Notifier<void> {
       // Lo stesso, senza rete.
     } finally {
       client.close();
+      _serverPending = pending;
       _followUp(pending);
     }
   }
 
-  Future<void> _planPhone(int window) async {
+  /// Con [only] solo le serie che lo accettano; il ripasso resta acceso anche
+  /// se lo voleva il giro del server appena fatto.
+  Future<void> _planPhone(int window, {bool Function(TrackedSeries entry)? only}) async {
     final files = ref.read(archiveFilesProvider);
     final tracking = Tracking(files.ongoing);
-    final smart = [for (final entry in await tracking.load()) if (entry.ahead != null) entry];
+    final smart = [
+      for (final entry in await tracking.load())
+        if (entry.ahead != null && (only?.call(entry) ?? true)) entry
+    ];
     if (smart.isEmpty) return;
     final jobs = await files.jobs();
     final urls = {for (final entry in smart) entry.url};
-    _followUp(jobs.any((job) => urls.contains(job.url)));
+    _followUp(jobs.any((job) => urls.contains(job.url)) || (only != null && _serverPending));
     final seen = _seenLocal;
     _seenLocal = _progress((await files.history()).firstOrNull, await files.status());
     if (_stale(_seenLocal, seen)) return;
     var queued = false;
     final check = <String>{};
+    final health = await files.health.load();
+    final broken = {for (final MapEntry(:key, :value) in health.entries) if (value.broken) key};
     for (final entry in smart) {
+      if (aheadHeldBack(key: entry.key, problem: entry.problem, brokenSites: broken)) continue;
       final same = [for (final job in jobs) if (job.url == entry.url) job];
       // Una serie che scende per intero, o da un capitolo in poi, porta già
       // tutto quello che si potrebbe chiedere.
@@ -2370,7 +2584,7 @@ class ReadAhead extends Notifier<void> {
       try {
         final report = await tracking.check(
           files,
-          (provider) => SiteHttp(provider.allowedHost),
+          (provider) => SiteHttp(provider.allowedHost, publicOnly: !provider.builtIn),
           only: check,
           skip: ref.read(unfollowedProvider).value ?? const {},
         );
@@ -2448,6 +2662,67 @@ class CollectionAutoFill extends Notifier<void> {
 final collectionAutoFillProvider =
     NotifierProvider<CollectionAutoFill, void>(CollectionAutoFill.new);
 
+/// Porta i dati personali dalle chiavi vecchie di una serie adottata da chi
+/// archivia a quella nuova (`adoptFormerKeys`) ogni volta che la libreria si
+/// ricarica. Aspetta un catalogo senza avvisi: con una sorgente che non ha
+/// risposto la riga adottata potrebbe mancare, e «non so» non è «non c'è».
+class IdentityAdoption extends Notifier<void> {
+  Future<void> _work = Future.value();
+
+  @override
+  void build() {
+    ref.listen(libraryCatalogProvider, (_, next) {
+      final catalog = next.value;
+      if (catalog == null || catalog.notices.isNotEmpty) return;
+      _work = _work.then((_) => _run(catalog)).catchError((Object _) {});
+    }, fireImmediately: true);
+  }
+
+  Future<void> _run(LibraryCatalog catalog) async {
+    final library = ref.read(libraryProvider);
+    if (library == null) return;
+    // Prima i file sul telefono, poi i dati: le due cose non dipendono l'una
+    // dall'altra, ma un catalogo riletto deve trovare le copie già al loro posto.
+    final drive = library.shelves.whereType<DriveRepository>().firstOrNull;
+    var copies = 0;
+    if (drive != null) {
+      for (final phone in library.shelves.whereType<LibraryRepository>()) {
+        copies += await adoptDownloadedCopies(
+          series: catalog.index.series,
+          phone: phone,
+          storeOf: () => LocalStore(phone.root, hideFromGallery: !phone.private),
+          fresh: (entry) async {
+            try {
+              final text = await drive.seriesText(entry, 'series.json');
+              final data = text == null ? null : jsonDecode(text);
+              return data is Map<String, Object?> ? data : null;
+            } on Exception {
+              return null;
+            }
+          },
+        );
+      }
+    }
+    final repository = ref.read(userRepositoryProvider);
+    final moved = await adoptFormerKeys(
+      series: catalog.index.series,
+      keysWithData: repository.keysWithData,
+      loadIndex: (entry) async => (await library.loadSeries(
+        entry,
+        catalog.holders[entry.key] ?? const <LibraryShelf>[],
+      ))
+          ?.index,
+      move: (from, to, chapters) =>
+          ref.read(readingProvider.notifier).moveSeries(from, to, chapters: chapters),
+      keep: ownedKeys(catalog),
+    );
+    if (moved > 0) ref.invalidate(seriesActivityProvider);
+    if (copies > 0) ref.invalidate(libraryCatalogProvider);
+  }
+}
+
+final identityAdoptionProvider = NotifierProvider<IdentityAdoption, void>(IdentityAdoption.new);
+
 /// Il server che scarica al posto del telefono: il suo indirizzo. Sta fra
 /// le impostazioni del database, quindi viaggia con backup e account come la
 /// cartella di Drive: su un telefono nuovo il server è già collegato, e chi
@@ -2471,6 +2746,42 @@ class ServerLinkNotifier extends AsyncNotifier<ServerLink?> {
     await ref
         .read(userRepositoryProvider)
         .writeSetting(_key, link == null ? '' : jsonEncode(link.toJson()));
+  }
+
+  bool _adopting = false;
+
+  /// Il primo contatto riuscito di un collegamento di prima dei biglietti
+  /// ([ServerLink.legacy]): ne salva l'id del server e di chi è, una volta,
+  /// così il collegamento non resta senza accesso e un altro server non può
+  /// più prenderne il posto.
+  ///
+  /// Il server è «mio» ([me] è l'`owner`) solo se dice di esserlo, ed è tutto
+  /// ciò che si può sapere di un collegamento che non ricorda come è nato: un
+  /// server che mente lo dichiara proprio. Il danno è già fatto, però: un
+  /// collegamento di prima gli ha già dato il token a ogni richiesta, e
+  /// `owner` non estende niente a un server nuovo, perché solo [ServerLink.fromJson]
+  /// produce collegamenti `legacy` e linkServer scrive sempre il suo. Chi non
+  /// dice di essere il proprio resta con `owner` vuoto («non è mio»): niente
+  /// token da qui in poi. Una lettura che fallisce non scrive niente: non
+  /// aver potuto chiedere non è «non è mio».
+  Future<void> adopt(ServerClient client, String? me) async {
+    final link = state.value;
+    if (_adopting || link == null || !link.legacy || client.link.url != link.url) return;
+    final email = me?.toLowerCase();
+    if (email == null || email.isEmpty) return;
+    _adopting = true;
+    try {
+      final hello = await client.hello();
+      final info = await client.info();
+      final mine = info.isOwner && info.owner?.toLowerCase() == email;
+      if (state.value != link) return;
+      await choose(ServerLink(link.url, id: hello.id, owner: mine ? email : ''));
+    } on Object {
+      // Non ha risposto, ha rifiutato o il client è già chiuso: si riprova al
+      // prossimo contatto.
+    } finally {
+      _adopting = false;
+    }
   }
 }
 
@@ -2570,7 +2881,15 @@ const int defaultCheckMinutes = 4 * 60;
 
 /// Ciò che decide il controllo, quando tutto è letto: prima, il server di
 /// partenza e l'elenco vuoto sono solo ipotesi.
-typedef _CheckPlan = ({ArchiveEngine engine, Set<String> unfollowed, String? driveFolder, String? localRoot});
+typedef _CheckPlan = ({
+  ArchiveEngine engine,
+  bool serverHasUserSites,
+  bool serverCatalogOlder,
+  Set<String> unfollowed,
+  String? driveFolder,
+  String? localRoot,
+  ServerLink? link,
+});
 
 final _checkPlanProvider = Provider<_CheckPlan?>((ref) {
   final unfollowed = ref.watch(unfollowedProvider);
@@ -2583,11 +2902,19 @@ final _checkPlanProvider = Provider<_CheckPlan?>((ref) {
   final signedIn = ref.watch(cloudAccountProvider.select((status) => status.signedIn));
   return (
     engine: ref.watch(archiveEngineProvider),
+    // Finché non risponde è «no»: quei siti restano al telefono ([serverSitesProvider]).
+    serverHasUserSites: (ref.watch(serverSitesProvider).value ?? noServerSites).userSites,
+    serverCatalogOlder: serverCatalogOlder(
+      ref.watch(serverSitesProvider).value ?? noServerSites,
+      ref.watch(catalogProvider).serial,
+    ),
     unfollowed: unfollowed.value ?? const {},
     // La cartella può arrivare da un backup anche in una build senza
-    // Firebase, dove Drive non si può aprire.
+    // backend, dove Drive non si può aprire.
     driveFolder: cloudAvailable && signedIn ? ref.watch(driveFolderProvider).value?.id : null,
     localRoot: ref.watch(libraryRootProvider),
+    // Il collegamento cambia quando il primo contatto lo adotta: il file del controllo va riscritto.
+    link: ref.watch(serverLinkProvider).value,
   );
 });
 
@@ -2616,7 +2943,11 @@ class ArchiveEngineSync extends Notifier<void> {
       driveFolder: plan.driveFolder,
       localRoot: plan.localRoot,
       unfollowed: plan.unfollowed,
+      userSitesOnPhone: server && !plan.serverHasUserSites,
+      catalogOnPhone: server && plan.serverCatalogOlder,
       server: server ? link?.url.toString() : null,
+      serverId: server ? link?.id : null,
+      serverOwner: server ? link?.owner : null,
     ));
     // Il controllo del telefono si accoda da solo giorno dopo giorno; se un
     // giro è morto prima di farlo, la catena si rimette qui. Con il server
@@ -2644,6 +2975,35 @@ class ArchiveEngineSync extends Notifier<void> {
 }
 
 final archiveEngineSyncProvider = NotifierProvider<ArchiveEngineSync, void>(ArchiveEngineSync.new);
+
+/// La salute dei siti, da chi controlla: il file del telefono o la risposta
+/// del server. `null` se non si è potuto chiedere (server spento, senza
+/// rete): non è «tutti sani», e chi propone di riparare un sito tornato
+/// sano non deve scambiarlo per tale.
+final siteHealthProvider = FutureProvider.autoDispose<Map<String, SiteHealth>?>((ref) async {
+  if (ref.watch(archiveEngineProvider) == ArchiveEngine.phone) {
+    return ref.watch(archiveFilesProvider).health.load();
+  }
+  final link = ref.watch(serverLinkProvider).value;
+  if (link == null) return null;
+  final client = serverClient(ref, link);
+  try {
+    return (await client.info()).check.sites;
+  } on ServerException {
+    return null;
+  } on IOException {
+    return null;
+  } finally {
+    client.close();
+  }
+});
+
+/// I siti rotti (`ProviderChanged`, o tutte le serie che falliscono), da chi
+/// controlla.
+final brokenSitesProvider = FutureProvider.autoDispose<Map<String, SiteHealth>>((ref) async {
+  final sites = await ref.watch(siteHealthProvider.future) ?? const <String, SiteHealth>{};
+  return {for (final MapEntry(:key, :value) in sites.entries) if (value.broken) key: value};
+});
 
 /// Le serie che il controllo ha trovato ferme alla verifica di un sito, da
 /// chi controlla: il file del telefono o, con il server, la sua risposta.
@@ -2691,19 +3051,28 @@ final serverAccessProvider = Provider<ServerAccess>((ref) => const ServerAccess(
 /// Un client per [link] con il token dell'account di adesso.
 ServerClient serverClient(Ref ref, ServerLink link) {
   final access = ref.read(serverAccessProvider);
-  return ServerClient(link, access.idToken);
+  final client = ServerClient(link, access.idToken);
+  if (link.legacy) {
+    unawaited(ref.read(serverLinkProvider.notifier).adopt(client, ref.read(cloudAccountProvider).account?.email));
+  }
+  return client;
 }
 
 /// Gli inviti ai server degli altri per l'account con cui si è fatto
-/// l'accesso. Senza le regole di Firestore pubblicate la lettura fallisce:
-/// non ci sono inviti, e basta.
+/// l'accesso: letti all'avvio, quando l'app torna in primo piano e quando il
+/// canale in tempo reale dice che qualcosa è cambiato. Una lettura fallita
+/// lascia l'elenco di prima (non è «nessun invito»); un backend senza la
+/// tabella vuol dire funzione non disponibile, e non si riprova.
 final serverInvitesProvider = StreamProvider<List<ServerInvite>>((ref) {
   final email = ref.watch(cloudAccountProvider.select((status) => status.account?.email));
   if (!cloudAvailable || email == null || email.isEmpty) return Stream.value(const []);
-  return ref
-      .watch(serverAccessProvider)
-      .invitesFor(email)
-      .handleError((Object _) {}, test: (error) => error is FirebaseException);
+  final resumed = StreamController<void>();
+  final lifecycle = AppLifecycleListener(onResume: () => resumed.add(null));
+  ref.onDispose(() {
+    lifecycle.dispose();
+    unawaited(resumed.close());
+  });
+  return watchServerInvites(ref.watch(serverAccessProvider), email, resumed: resumed.stream);
 });
 
 /// Dà notizia di un invito una volta sola: gli id già annunciati stanno fra
@@ -2722,6 +3091,27 @@ Future<void> announceServerInvites(UserRepository user, List<ServerInvite> invit
     );
   }
   await user.writeSetting(key, {...seen, for (final invite in fresh) invite.id}.join(','));
+}
+
+/// Avvisa, una volta sola, che l'accesso al server di un altro scade fra
+/// meno di tre giorni. L'id sta fra le impostazioni (server e data insieme: un
+/// rinnovo ne fa un altro), come per gli inviti. L'app lo controlla quando
+/// legge il server, non ad app chiusa.
+Future<void> announceAccessExpiry(UserRepository user, ServerInfo info, ServerLink link, {DateTime? now}) async {
+  final expiresAt = info.expiresAt;
+  if (info.isOwner || info.expired || expiresAt == null) return;
+  if (expiresAt.difference(now ?? DateTime.now()) > const Duration(days: 3)) return;
+  const key = 'server.expiry.seen';
+  final id = '${link.url}@${expiresAt.toUtc().toIso8601String()}';
+  final seen = {...(await user.readSetting(key) ?? '').split(',').where((id) => id.isNotEmpty)};
+  if (seen.contains(id)) return;
+  final l10n = currentL10n();
+  await ArrivalNotifications.instance.invite(
+    'expiry-${id.hashCode}',
+    title: l10n.dataServerExpiryTitle(info.name),
+    text: l10n.dataServerExpiryText(expiresAt.toLocal()),
+  );
+  await user.writeSetting(key, {...seen, id}.join(','));
 }
 
 /// Il server come lo mostra «Scarica un manga».
@@ -2815,7 +3205,15 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     if (client == null) return;
     final every = full || _tick++ % 10 == 0;
     try {
-      final info = every || state.info == null ? await client.info() : null;
+      // Scaduto, il server risponde `403 expired` a quasi tutto: la
+      // presentazione si chiede ogni volta, per accorgersi del rinnovo.
+      final info = every || state.info == null || state.info!.expired ? await client.info() : null;
+      if (info != null) unawaited(announceAccessExpiry(ref.read(userRepositoryProvider), info, client.link));
+      if (info != null && info.expired) {
+        if (!ref.mounted || client != _client) return;
+        state = state.copyWith(info: info, error: currentL10n().serverAccessExpired, unauthorized: false);
+        return;
+      }
       final queue = await client.queue();
       final ongoing = every ? await client.ongoing() : null;
       final users = every && (info ?? state.info)?.isOwner == true ? await client.users() : null;
@@ -2840,8 +3238,11 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
       );
     } on ServerException catch (error) {
       if (!ref.mounted || client != _client) return;
+      // Scaduto da un attimo: la presentazione, che passa anche da scaduti,
+      // lo dice con i suoi dati.
+      if (error is ServerExpired) unawaited(refresh(full: true));
       state = state.copyWith(
-        error: error.message,
+        error: serverErrorText(error),
         unauthorized: error is ServerUnauthorized || error is ServerForbidden,
       );
     }
@@ -2924,9 +3325,10 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     await refresh(full: true);
   }
 
-  /// Ammette un account e lo avvisa: l'invito lo trova la sua app.
-  Future<void> addUser(String email) async {
-    final user = await _live.addUser(email);
+  /// Ammette un account e lo avvisa: l'invito lo trova la sua app. Con
+  /// [expiresAt] l'accesso scade (il server deve saperlo: `expiry`).
+  Future<void> addUser(String email, {DateTime? expiresAt}) async {
+    final user = await _live.addUser(email, expiresAt: expiresAt);
     await refresh(full: true);
     final link = state.link;
     if (link == null) return;
@@ -2934,9 +3336,15 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
       await ref
           .read(serverAccessProvider)
           .invite(to: user.email, url: link.url, serverName: state.info?.name ?? 'Kagami Server');
-    } on FirebaseException {
+    } on Exception {
       throw ServerException(currentL10n().dataServerUserNotNotified(user.email, link.url.toString()));
     }
+  }
+
+  /// Cambia la scadenza di un account; `null` la toglie. Un accesso scaduto riparte.
+  Future<void> renewUser(ServerUser user, DateTime? expiresAt) async {
+    await _live.renewUser(user.email, expiresAt);
+    await refresh(full: true);
   }
 
   Future<void> removeUser(ServerUser user) async {
@@ -2946,7 +3354,7 @@ class RemoteArchiveController extends Notifier<RemoteArchiveView> {
     if (link == null) return;
     try {
       await ref.read(serverAccessProvider).withdraw(user.email, link.url);
-    } on FirebaseException {
+    } on Exception {
       // L'invito rimasto non apre niente: il server non lo ammette più.
     }
   }

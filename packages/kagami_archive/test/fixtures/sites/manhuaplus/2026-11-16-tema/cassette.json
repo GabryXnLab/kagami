@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-16T21:10:07.465650Z",
+  "entries": {
+    "https://manhuaplus.com/?s=apotheosis&post_type=wp-manga": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "2c8c5de445eb.html"
+    },
+    "https://manhuaplus.com/manga/apotheosis/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "79435be5454a.html"
+    },
+    "https://manhuaplus.com/manga/apotheosis/chapter-500/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "2f4ce415dee8.html"
+    }
+  }
+}

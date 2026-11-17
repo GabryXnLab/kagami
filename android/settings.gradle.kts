@@ -21,8 +21,8 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.1.0" apply false
     id("org.jetbrains.kotlin.android") version "2.4.0" apply false
-    // Trasforma google-services.json nelle risorse da cui Firebase e
-    // google_sign_in leggono a quale progetto appartiene questa app.
+    // Trasforma google-services.json nelle risorse da cui google_sign_in legge
+    // il client OAuth di questa app.
     id("com.google.gms.google-services") version "4.4.4" apply false
 }
 

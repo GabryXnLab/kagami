@@ -16,16 +16,29 @@ import 'package:path/path.dart' as p;
 import '../format/malf.dart';
 import '../l10n.dart';
 import 'library_repository.dart';
+import 'sources/source.dart';
 
 /// Da dove arriva qualcosa: basta a scegliere l'icona e il modo di leggerlo.
-enum LibraryOrigin { local, drive }
+enum LibraryOrigin {
+  local,
+
+  /// Il Drive dell'account.
+  drive,
+
+  /// Un'altra sorgente remota: il Drive che qualcuno ha condiviso, un NAS.
+  remote;
+
+  /// Si legge in streaming, attraverso [RemoteFiles], e non dal telefono.
+  bool get isRemote => this != local;
+}
 
 /// Dove sta una serie, come lo dice l'icona sulla copertina.
 enum SeriesPlace {
   /// Tutto quello che c'è da leggere è sul telefono.
   local,
 
-  /// Niente è sul telefono: si legge da Drive.
+  /// Niente è sul telefono: si legge da una sorgente remota (il nome è di
+  /// quando l'unica era Drive).
   drive,
 
   /// Una parte è sul telefono e il resto — di solito i capitoli arrivati
@@ -41,6 +54,10 @@ enum SeriesPlace {
 /// strada da fare per arrivare alla tavola è esattamente quella di sempre.
 abstract interface class LibraryShelf {
   LibraryOrigin get origin;
+
+  /// L'id della sorgente ([SourceConfig.id]): per le tre di sempre quelli
+  /// fissi di [SourceConfig], per le altre quello della loro riga.
+  String get sourceId;
 
   Future<LibraryIndex> loadLibrary();
 
@@ -96,7 +113,10 @@ class LibraryCatalog {
 
   /// Una sorgente che non ha risposto, quando le altre sì: la libreria si
   /// mostra lo stesso, e il problema si dice in una riga invece che al posto
-  /// della libreria.
+  /// della libreria. Finché ce n'è uno, le serie che mancano possono essere
+  /// solo di chi non ha risposto: chi trae conclusioni da un'assenza
+  /// (adozioni, arrivi) aspetta un catalogo senza avvisi. Una sorgente che sa
+  /// dire perché non ha risposto lascia qui un [SourceUnavailable].
   final List<Object> notices;
 
   /// Il catalogo senza le serie tolte dall'utente ([removed], chiave →
@@ -152,6 +172,9 @@ class SeriesChapters {
   final Map<String, LibraryShelf> servedBy;
 
   LibraryOrigin? originOf(String chapterId) => servedBy[chapterId]?.origin;
+
+  /// L'id della sorgente che serve il capitolo, se qualcuna lo sa servire.
+  String? sourceOf(String chapterId) => servedBy[chapterId]?.sourceId;
 }
 
 /// Il prefisso degli indirizzi che non sono ancora un file sul telefono.
@@ -161,7 +184,25 @@ class SeriesChapters {
 /// stringhe, come ha sempre fatto.
 const String remotePrefix = 'drive:';
 
-bool isRemote(String address) => address.startsWith(remotePrefix);
+/// Il prefisso delle altre sorgenti remote: `remote:<id della sorgente>/…`.
+/// Il Drive dell'account resta `drive:` — è nelle chiavi della cache di ogni
+/// telefono, e cambiarlo le svuoterebbe tutte.
+const String sourcePrefix = 'remote:';
+
+bool isRemote(String address) =>
+    address.startsWith(remotePrefix) || address.startsWith(sourcePrefix);
+
+/// L'indirizzo di un file di una sorgente remota che non è il Drive
+/// dell'account.
+String sourceAddress(String sourceId, String relative) =>
+    '$sourcePrefix$sourceId/$relative';
+
+/// L'id della sorgente di un indirizzo `remote:`, o `null` se non lo è.
+String? sourceIdOf(String address) {
+  if (!address.startsWith(sourcePrefix)) return null;
+  final slash = address.indexOf('/', sourcePrefix.length);
+  return slash < 0 ? null : address.substring(sourcePrefix.length, slash);
+}
 
 /// Chi trasforma un indirizzo remoto in un file sul telefono.
 ///
@@ -201,9 +242,15 @@ Future<String> localFileOf(String address, {bool urgent = true}) {
 }
 
 class Library {
-  Library(this.shelves);
+  Library(this.shelves, {this.notices = const []});
 
-  /// In ordine di preferenza: prima le cartelle del telefono, poi Drive.
+  /// Avvisi che non vengono da uno scaffale: una sorgente configurata che
+  /// questa versione non sa costruire, scaduta, o una lista che non si è
+  /// potuta leggere. Finiscono nel catalogo come quelli degli scaffali.
+  final List<Object> notices;
+
+  /// In ordine di preferenza: prima le cartelle del telefono, poi il Drive
+  /// dell'account, poi le altre remote nel loro ordine.
   final List<LibraryShelf> shelves;
 
   /// La cartella scelta dall'utente, se c'è: è quella di cui si guarda la
@@ -233,7 +280,7 @@ class Library {
         problems.isNotEmpty) {
       throw problems.first;
     }
-    return merge(indexes, problems);
+    return merge(indexes, [...problems, ...notices]);
   }
 
   /// L'unione vera e propria, separata dal disco perché la si possa provare.
@@ -241,18 +288,39 @@ class Library {
     Map<LibraryShelf, LibraryIndex> indexes, [
     List<Object> notices = const [],
   ]) {
+    // Una riga con la chiave nei `formerKeys` di un'altra è un avanzo di chi
+    // non conosce l'adozione (sul telefono `library.json` resta com'era).
+    // Quelli di una sorgente mia (telefono, Drive dell'account) valgono per
+    // tutte; quelli di un'altra solo per le sue righe: l'indice di chi
+    // condivide non nasconde una serie che ho anch'io (FASE-5b §3).
+    final adopted = {
+      for (final MapEntry(key: shelf, value: index) in indexes.entries)
+        if (shelf.origin != LibraryOrigin.remote)
+          for (final entry in index.series) ...entry.formerKeys,
+    };
     final rows = <String, SeriesEntry>{};
+    final rowIsRemote = <String, bool>{};
     final holders = <String, List<LibraryShelf>>{};
     final localCount = <String, int>{};
-    final driveCount = <String, int>{};
+    final remoteCount = <String, int>{};
     for (final MapEntry(key: shelf, value: index) in indexes.entries) {
-      final drive = shelf.origin == LibraryOrigin.drive;
+      final remote = shelf.origin.isRemote;
+      final own = shelf.origin == LibraryOrigin.remote
+          ? {for (final entry in index.series) ...entry.formerKeys}
+          : const <String>{};
       for (final entry in index.series) {
+        if (adopted.contains(entry.key) || own.contains(entry.key)) continue;
         holders.putIfAbsent(entry.key, () => []).add(shelf);
-        // La riga di Drive vince: è quella che l'archivio ha scritto per
-        // ultima, mentre una copia locale può essere indietro di giorni.
-        if (drive || !rows.containsKey(entry.key)) rows[entry.key] = entry;
-        final counts = drive ? driveCount : localCount;
+        // Una riga remota vince su una locale: è quella che l'archivio ha
+        // scritto per ultima, mentre una copia sul telefono può essere
+        // indietro di giorni. Fra le remote vince la prima nell'ordine in
+        // cui arrivano, cioè il Drive dell'account davanti alle altre.
+        final current = rowIsRemote[entry.key];
+        if (current == null || (remote && !current)) {
+          rows[entry.key] = entry;
+          rowIsRemote[entry.key] = remote;
+        }
+        final counts = remote ? remoteCount : localCount;
         counts[entry.key] = [
           counts[entry.key] ?? 0,
           entry.archivedChapterCount,
@@ -261,11 +329,11 @@ class Library {
     }
     final places = <String, SeriesPlace>{
       for (final key in rows.keys)
-        key: switch ((localCount[key], driveCount[key])) {
+        key: switch ((localCount[key], remoteCount[key])) {
           (null, _) => SeriesPlace.drive,
           (_, null) => SeriesPlace.local,
-          (final local?, final drive?) =>
-            local >= drive ? SeriesPlace.local : SeriesPlace.mixed,
+          (final local?, final remote?) =>
+            local >= remote ? SeriesPlace.local : SeriesPlace.mixed,
         },
     };
     final series = rows.values.toList(growable: false);
@@ -355,12 +423,15 @@ class Library {
           path: chapter.path,
           publishedAt: chapter.publishedAt,
           archivedAt: chapter.archivedAt,
+          formerIds: chapter.formerIds,
+          listed: chapter.listed,
         );
       }
     }
-    // L'indice di Drive dà titolo, stato e firma: è il più recente.
+    // Il primo indice remoto dà titolo, stato e firma: è il più recente, ed
+    // è della stessa sorgente che ha dato la riga della serie.
     final head = indexes.entries
-            .firstWhereOrNull((row) => row.key.origin == LibraryOrigin.drive)
+            .firstWhereOrNull((row) => row.key.origin.isRemote)
             ?.value ??
         indexes.values.first;
     return SeriesChapters(
@@ -370,6 +441,7 @@ class Library {
         releaseStatus: head.releaseStatus,
         signature: head.signature,
         chapters: chapters.values.sortedBy<num>((chapter) => chapter.order),
+        formerKeys: head.formerKeys,
       ),
       servedBy: servedBy,
     );
@@ -471,7 +543,7 @@ class Library {
     if (name == null || holders.isEmpty) return null;
     final first = holders.first.locate(entry, name);
     final remote =
-        holders.firstWhereOrNull((shelf) => shelf.origin == LibraryOrigin.drive);
+        holders.firstWhereOrNull((shelf) => shelf.origin.isRemote);
     return SeriesImage(
       first,
       remote == null || identical(remote, holders.first)

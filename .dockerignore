@@ -5,6 +5,7 @@
 !packages/kagami_archive
 !server
 !assets/providers
+!catalog
 **/.dart_tool
 **/build
 server/data

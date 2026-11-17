@@ -12,16 +12,21 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:kagami_archive/catalog.dart' show catalogEngine;
 import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
+import 'package:kagami_archive/declarative.dart' show DeclarativeProvider;
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/stores.dart' show FolderNotOwned;
 import 'package:kagami_archive/tracking.dart';
 import 'package:path/path.dart' as p;
 
+import 'catalog.dart';
 import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
+import 'shares.dart';
 import 'users.dart';
 import 'worker.dart' show ServerCheck;
 
@@ -38,11 +43,27 @@ class ApiError implements Exception {
   final String message;
 }
 
+/// Quanti lavori tiene al più la coda di un utente: ognuno può portare una
+/// pagina fino a [maxBody], salvata sul disco del server.
+const int maxQueuedJobs = 1000;
+
 /// Quante serie escluse dal controllo accetta `PUT /v2/check`.
 const int maxUnfollowed = 5000;
 
+/// Quante chiavi al più chiede una riparazione.
+const int maxRepairKeys = 5000;
+
+/// Quante chiavi accetta `GET /v2/elsewhere`, e `POST /v2/elsewhere` per volta.
+const int maxElsewhereRead = 200;
+const int maxElsewhereLook = 50;
+
 /// Quante pagine accetta `POST /v2/check/pages` in una volta.
 const int maxPages = 50;
+
+/// Quante condivisioni accetta `PUT /v2/me/shares`, e quanto è lungo al più
+/// un id (lo stesso limite delle righe sul backend).
+const int maxShares = 200;
+const int maxShareText = 128;
 
 class ServerApi {
   ServerApi({
@@ -52,9 +73,21 @@ class ServerApi {
     required this.images,
     this.browser = false,
     this.log = _stderr,
+    this.id,
+    this.tickets,
+    this.catalog,
   });
 
+  /// Il catalogo dei siti; `null` se non è configurato.
+  final ServerCatalog? catalog;
+
   final String name;
+
+  /// L'id del server, dichiarato in `GET /`: i biglietti valgono per lui.
+  final String? id;
+
+  /// Chi verifica i biglietti (`Kagami-Ticket`); `null` senza backend.
+  final IdentityVerifier? tickets;
 
   /// `null` finché il server non ha una configurazione: ogni richiesta
   /// risponde `not_configured`.
@@ -81,6 +114,11 @@ class ServerApi {
       final (code, body) = await _route(request);
       status = code;
       await _send(response, code, body);
+    } on FolderNotOwned catch (error) {
+      status = HttpStatus.forbidden;
+      await _send(response, status, {
+        'error': {'code': FolderNotOwned.code, 'message': '$error'},
+      });
     } on ApiError catch (error) {
       status = error.status;
       await _send(response, error.status, {
@@ -112,7 +150,12 @@ class ServerApi {
     // La sola risposta senza token: dice che qui c'è un Kagami Server, e
     // serve a Docker per sapere se è vivo. Nient'altro.
     if (segments.isEmpty && method == 'GET') {
-      return (HttpStatus.ok, {'service': 'kagami-server', 'api': apiVersion});
+      return (HttpStatus.ok, {
+        'service': 'kagami-server',
+        'api': apiVersion,
+        'id': ?id,
+        if (tickets != null) 'features': ['tickets'],
+      });
     }
     if (segments.isEmpty || segments.first != 'v$apiVersion') {
       throw const ApiError(HttpStatus.notFound, 'not_found', 'Indirizzo sconosciuto.');
@@ -123,17 +166,30 @@ class ServerApi {
       throw const ApiError(HttpStatus.serviceUnavailable, 'not_configured',
           'Il server è partito senza configurazione: avvialo col comando generato dall\'app.');
     }
-    final email = await _authenticate(request, identity, accounts);
+    await accounts.sweep();
+    final member = await _authenticate(request, identity, accounts);
+    final email = member.email;
     final me = await accounts.space(email);
     final path = segments.skip(1).toList();
+    return me.jobs.withSites(() => _dispatch(request, method, path, accounts, email, me));
+  }
+
+  Future<(int, Object?)> _dispatch(
+      HttpRequest request, String method, List<String> path, Accounts accounts, String email, UserSpace me) async {
     return switch ((method, path)) {
       ('GET', ['server']) => (HttpStatus.ok, await _server(accounts, email, me)),
       ('PUT', ['me', 'drive']) => (HttpStatus.ok, await _grant(me, await _body(request))),
       ('DELETE', ['me', 'drive']) => await _forgetDrive(me),
       ('PUT', ['me', 'folder']) => (HttpStatus.ok, await _folder(me, await _body(request))),
+      ('GET', ['me', 'shares']) => (HttpStatus.ok, await _shares(me)),
+      ('PUT', ['me', 'shares']) => (HttpStatus.ok, await _replaceShares(me, await _body(request))),
       ('GET', ['jobs']) => (HttpStatus.ok, await _jobs(me)),
       ('POST', ['jobs']) => (HttpStatus.created, await _enqueue(me, await _body(request))),
       ('DELETE', ['jobs', final id]) => await _cancel(me, id),
+      ('POST', ['providers']) => (HttpStatus.ok, await _reloadSites(me)),
+      ('POST', ['repair']) => (HttpStatus.accepted, await _repair(me, await _body(request))),
+      ('GET', ['elsewhere']) => (HttpStatus.ok, await _elsewhere(me, request.uri.queryParameters['keys'])),
+      ('POST', ['elsewhere']) => (HttpStatus.accepted, await _lookElsewhere(me, await _body(request))),
       ('DELETE', ['history']) => await _clearHistory(me),
       ('GET', ['ongoing']) => (HttpStatus.ok, await _ongoing(me)),
       ('DELETE', ['ongoing', final key]) => await _forget(me, key),
@@ -143,29 +199,49 @@ class ServerApi {
       ('POST', ['check', 'pages']) => (HttpStatus.ok, await _checkPages(me, await _body(request))),
       ('GET', ['users']) => (HttpStatus.ok, await _users(_owner(accounts, email))),
       ('POST', ['users']) => (HttpStatus.created, await _addUser(_owner(accounts, email), await _body(request))),
+      ('PUT', ['users', final who]) => (HttpStatus.ok, await _renewUser(_owner(accounts, email), who, await _body(request))),
       ('DELETE', ['users', final who]) => await _removeUser(_owner(accounts, email), who),
       _ => throw const ApiError(HttpStatus.notFound, 'not_found', 'Indirizzo sconosciuto.'),
     };
   }
 
-  /// L'indirizzo di chi chiama, se il token vale e l'account è ammesso.
-  Future<String> _authenticate(HttpRequest request, IdentityVerifier identity, Accounts accounts) async {
+  static Map<String, Object?> _expiry(Member member, DateTime now) => {
+        if (member.expiresAt != null) 'expiresAt': member.expiresAt!.toUtc().toIso8601String(),
+      };
+
+  /// Ciò che questo server sa fare oltre alla v2 di partenza: l'app offre
+  /// una funzione solo a un server che la elenca.
+  List<String> get _features =>
+      ['ahead', 'unfollowed', 'verify', 'sites', 'repair', 'elsewhere', 'userProviders', 'expiry', 'shares', 'owner', if (browser) 'browser',
+        if (tickets != null) 'tickets', if (catalog != null) 'catalog'];
+
+  /// Chi chiama, se il token vale e l'account è ammesso.
+  Future<Member> _authenticate(HttpRequest request, IdentityVerifier identity, Accounts accounts) async {
     final header = request.headers.value(HttpHeaders.authorizationHeader) ?? '';
-    const scheme = 'Bearer ';
+    const scheme = 'Bearer ', ticket = 'Kagami-Ticket ';
     final presented = header.startsWith(scheme) ? header.substring(scheme.length).trim() : '';
     final Identity who;
     try {
-      if (presented.isEmpty) throw const IdentityError('Manca il token dell\'account: fai l\'accesso nell\'app.');
-      who = await identity.verify(presented);
+      if (header.startsWith(ticket)) {
+        final tickets = this.tickets;
+        if (tickets == null) throw const IdentityError('Questo server non accetta biglietti: non conosce il backend.');
+        who = await tickets.verify(header.substring(ticket.length).trim());
+      } else {
+        if (presented.isEmpty) throw const IdentityError('Manca il token dell\'account: fai l\'accesso nell\'app.');
+        who = await identity.verify(presented);
+      }
     } on IdentityError catch (error) {
       request.response.headers.set(HttpHeaders.wwwAuthenticateHeader, 'Bearer realm="kagami-server"');
       throw ApiError(HttpStatus.unauthorized, 'unauthorized', error.message);
+    } on IdentityUnavailable catch (error) {
+      throw ApiError(HttpStatus.serviceUnavailable, 'identity_unavailable', error.message);
     }
-    if (await accounts.find(who.email) == null) {
+    final member = await accounts.find(who.email);
+    if (member == null) {
       throw ApiError(HttpStatus.forbidden, 'not_allowed',
           '${who.email} non è fra gli account ammessi: chiedi al proprietario del server di aggiungerlo.');
     }
-    return who.email;
+    return member;
   }
 
   static Accounts _owner(Accounts accounts, String email) => email == accounts.owner
@@ -191,29 +267,65 @@ class ServerApi {
 
   Future<Map<String, Object?>> _server(Accounts accounts, String email, UserSpace me) async => {
         'service': 'kagami-server',
+        'id': ?id,
         'version': serverVersion,
         'api': apiVersion,
         'name': name,
         'owner': accounts.owner,
-        'providers': [
-          for (final provider in providers) {'id': provider.id, 'name': provider.name},
-        ],
+        'providers': _providersJson(),
+        if (me.jobs.sitesErrors.isNotEmpty) 'sitesErrors': me.jobs.sitesErrors,
         'images': images,
-        // Ciò che questo server sa fare oltre alla v2 di partenza: l'app
-        // offre una funzione solo a un server che la elenca.
-        'features': ['ahead', 'unfollowed', 'verify', if (browser) 'browser'],
+        'features': _features,
+        if (catalog != null) 'catalog': {'engine': catalogEngine, 'serial': catalog!.serial},
         'check': {
           ..._checkJson(await me.jobs.checkSettings()),
           'gated': [for (final entry in await me.jobs.gated()) entry.toJson()],
+          'sites': {for (final MapEntry(:key, :value) in (await me.jobs.sites()).entries) key: value.toJson()},
         },
-        'me': {'email': email, 'owner': email == accounts.owner, 'drive': await _drive(me.drive)},
+        'me': {
+          'email': email,
+          'owner': email == accounts.owner,
+          'drive': await _drive(me.drive),
+          if (await accounts.find(email) case final member?) ..._expiry(member, accounts.now()),
+        },
       };
 
   static Future<Map<String, Object?>> _drive(DriveSetup drive) async => {
         'authorized': await drive.authorized,
         'folderId': drive.folderId,
         'folderName': drive.folderName,
+        'owned': drive.folderOwned,
       };
+
+  static Future<Map<String, Object?>> _shares(UserSpace me) async => {
+        'shares': [for (final share in await me.shares.list()) share.toJson()],
+      };
+
+  /// L'elenco intero, che sostituisce il precedente solo se è tutto valido.
+  static Future<Map<String, Object?>> _replaceShares(UserSpace me, Map<String, Object?> body) async {
+    const bad = 'bad_request';
+    final rows = body['shares'];
+    if (rows is! List) throw const ApiError(HttpStatus.badRequest, bad, 'Manca l\'elenco «shares».');
+    if (rows.length > maxShares) {
+      throw const ApiError(HttpStatus.badRequest, bad, 'Al più $maxShares condivisioni.');
+    }
+    bool id(Object? value) => value is String && value.isNotEmpty && value.length <= maxShareText;
+    final shares = <HeldShare>[];
+    for (final row in rows) {
+      if (row is! Map<String, Object?> || !id(row['folderId']) || !id(row['permissionId'])) {
+        throw const ApiError(HttpStatus.badRequest, bad,
+            'Ogni condivisione vuole «folderId» e «permissionId», testi sotto i $maxShareText caratteri.');
+      }
+      final expiresAt = row['expiresAt'] is String ? DateTime.tryParse(row['expiresAt'] as String) : null;
+      if (expiresAt == null) throw const ApiError(HttpStatus.badRequest, bad, '«expiresAt» non è una data.');
+      final share = HeldShare(
+          folderId: row['folderId'] as String, permissionId: row['permissionId'] as String, expiresAt: expiresAt.toUtc());
+      if (shares.any(share.sameAs)) throw const ApiError(HttpStatus.badRequest, bad, 'Una condivisione è ripetuta.');
+      shares.add(share);
+    }
+    await me.shares.replace(shares);
+    return _shares(me);
+  }
 
   static Map<String, Object?> _job(ArchiveJob job) => {
         'id': job.id,
@@ -284,6 +396,11 @@ class ServerApi {
     if (!await drive.authorized || folderId == null) {
       throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
           'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    final queue = await files.jobs();
+    if (queue.length >= maxQueuedJobs && !queue.any((job) => job.url == url)) {
+      throw const ApiError(HttpStatus.tooManyRequests, 'queue_full',
+          'La coda ha già $maxQueuedJobs lavori: aspetta che il server ne finisca qualcuno.');
     }
     final random = Random.secure();
     final id = 'srv-${DateTime.now().millisecondsSinceEpoch}-${random.nextInt(1 << 32).toRadixString(36)}';
@@ -380,19 +497,47 @@ class ServerApi {
         'enabled': settings.enabled,
         'library': settings.library,
         'unfollowed': [...settings.unfollowed],
+        'elsewhere': settings.elsewhere,
         'checkedAt': ?settings.checkedAt?.toIso8601String(),
         'checked': settings.checked,
         'queued': settings.queued,
         'failed': settings.failed,
       };
 
+  Future<Map<String, Object?>> _repair(UserSpace me, Map<String, Object?> body) async {
+    final site = body['site'];
+    final keys = body['keys'];
+    if (site != null && keys != null) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«site» e «keys» non vanno insieme.');
+    }
+    if (site != null && (site is! String || !providers.any((provider) => provider.id == site))) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«site» è l\'id di uno dei siti del server.');
+    }
+    if (keys != null &&
+        (keys is! List || keys.isEmpty || keys.length > maxRepairKeys || keys.any((key) => key is! String))) {
+      throw const ApiError(
+          HttpStatus.badRequest, 'bad_request', '«keys» è un elenco di chiavi di serie, da 1 a $maxRepairKeys.');
+    }
+    if (!await me.drive.authorized || me.drive.folderId == null) {
+      throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
+          'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    me.jobs.repair(site: site as String?, keys: keys == null ? null : {for (final key in keys as List) key as String});
+    return {
+      'repair': {'queued': true},
+    };
+  }
+
   Future<Map<String, Object?>> _configureCheck(UserSpace me, Map<String, Object?> body) async {
     final enabled = body['enabled'];
     final minutes = body['minutes'];
     final library = body['library'];
     final unfollowed = body['unfollowed'];
-    if ((enabled != null && enabled is! bool) || (library != null && library is! bool)) {
-      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«enabled» e «library» sono sì o no.');
+    final elsewhere = body['elsewhere'];
+    if ((enabled != null && enabled is! bool) ||
+        (library != null && library is! bool) ||
+        (elsewhere != null && elsewhere is! bool)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', '«enabled», «library» e «elsewhere» sono sì o no.');
     }
     if (minutes != null && (minutes is! int || minutes < 0 || minutes >= 24 * 60)) {
       throw const ApiError(HttpStatus.badRequest, 'bad_request', '«minutes» va da 0 a 1439.');
@@ -407,7 +552,56 @@ class ServerApi {
       minutes: minutes as int?,
       library: library as bool?,
       unfollowed: unfollowed == null ? null : {for (final key in unfollowed as List) key as String},
+      elsewhere: elsewhere as bool?,
     ));
+  }
+
+  /// I siti che il server usa per chi chiama; va chiamato nella sua zona.
+  List<Map<String, Object?>> _providersJson() => [
+        for (final provider in providers)
+          {
+            'id': provider.id,
+            'name': provider.name,
+            if (!provider.builtIn) 'builtIn': false,
+            if (provider.origin == ProviderOrigin.catalog) 'origin': 'catalog',
+            if (provider.unwrapped case final DeclarativeProvider site) 'version': site.version,
+          },
+      ];
+
+  Future<Map<String, Object?>> _reloadSites(UserSpace me) async {
+    if (!await me.drive.authorized || me.drive.folderId == null) {
+      throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
+          'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    await me.jobs.refreshSites();
+    return {
+      'providers': _providersJson(),
+      if (me.jobs.sitesErrors.isNotEmpty) 'sitesErrors': me.jobs.sitesErrors,
+    };
+  }
+
+  Future<Map<String, Object?>> _elsewhere(UserSpace me, String? keys) {
+    final wanted = keys == null ? null : {...keys.split(',').where((key) => key.isNotEmpty)};
+    if (wanted != null && wanted.length > maxElsewhereRead) {
+      throw const ApiError(
+          HttpStatus.badRequest, 'bad_request', '«keys» ha al più $maxElsewhereRead chiavi di serie.');
+    }
+    return me.jobs.elsewhere(keys: wanted);
+  }
+
+  Future<Map<String, Object?>> _lookElsewhere(UserSpace me, Map<String, Object?> body) async {
+    final keys = body['keys'];
+    if (keys is! List || keys.isEmpty || keys.length > maxElsewhereLook || keys.any((key) => key is! String)) {
+      throw const ApiError(
+          HttpStatus.badRequest, 'bad_request', '«keys» è un elenco di chiavi di serie, da 1 a $maxElsewhereLook.');
+    }
+    if (!await me.drive.authorized || me.drive.folderId == null) {
+      throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
+          'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    final wanted = {for (final key in keys) key as String};
+    me.jobs.lookElsewhere(wanted);
+    return {'queued': wanted.length};
   }
 
   /// Le pagine delle serie ferme alla verifica, aperte sul telefono da chi
@@ -484,25 +678,64 @@ class ServerApi {
     }
   }
 
-  static Map<String, Object?> _member(Member member, bool connected) => {
+  static Map<String, Object?> _member(Member member, bool connected, DateTime now) => {
         'email': member.email,
         'owner': member.owner,
         'addedAt': member.addedAt.toIso8601String(),
         'connected': connected,
+        ..._expiry(member, now),
       };
 
+  /// La riga di un utente; lo spazio di uno scaduto non si riapre per dirla.
+  Future<Map<String, Object?>> _row(Accounts accounts, Member member) async {
+    final now = accounts.now();
+    final connected = !member.expiredAt(now) && await (await accounts.space(member.email)).drive.authorized;
+    return _member(member, connected, now);
+  }
+
   Future<Map<String, Object?>> _users(Accounts accounts) async => {
-        'users': [
-          for (final member in await accounts.list())
-            _member(member, await (await accounts.space(member.email)).drive.authorized),
-        ],
+        'users': [for (final member in await accounts.list()) await _row(accounts, member)],
       };
+
+  /// `expiresAt` di un corpo: assente o `null` è «senza scadenza»; una data
+  /// passata o illeggibile è un errore.
+  DateTime? _expiresAt(Accounts accounts, Object? value) {
+    if (value == null) return null;
+    final at = value is String ? DateTime.tryParse(value)?.toUtc() : null;
+    if (at == null) throw const ApiError(HttpStatus.badRequest, 'bad_request', 'La scadenza non è una data.');
+    if (!at.isAfter(accounts.now())) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', 'La scadenza è già passata.');
+    }
+    return at;
+  }
 
   Future<Map<String, Object?>> _addUser(Accounts accounts, Map<String, Object?> body) async {
     final email = body['email'] is String ? normalizeEmail(body['email'] as String) : null;
     if (email == null) throw const ApiError(HttpStatus.badRequest, 'bad_request', 'Scrivi un indirizzo email valido.');
-    final member = await accounts.add(email);
-    return {'user': _member(member, await (await accounts.space(email)).drive.authorized)};
+    final expiresAt = _expiresAt(accounts, body['expiresAt']);
+    if (email == accounts.owner && expiresAt != null) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', 'Il proprietario non scade.');
+    }
+    var member = await accounts.add(email, expiresAt: expiresAt);
+    if (body.containsKey('expiresAt') && email != accounts.owner && member.expiresAt != expiresAt) {
+      member = (await accounts.renew(email, expiresAt))!;
+    }
+    return {'user': await _row(accounts, member)};
+  }
+
+  Future<Map<String, Object?>> _renewUser(Accounts accounts, String who, Map<String, Object?> body) async {
+    final email = normalizeEmail(who);
+    if (email == accounts.owner) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', 'Il proprietario non scade.');
+    }
+    if (!body.containsKey('expiresAt')) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request', 'Manca la scadenza (null per toglierla).');
+    }
+    final member = email == null ? null : await accounts.renew(email, _expiresAt(accounts, body['expiresAt']));
+    if (member == null) {
+      throw const ApiError(HttpStatus.notFound, 'not_found', 'Questo account non è fra quelli ammessi.');
+    }
+    return {'user': await _row(accounts, member)};
   }
 
   Future<(int, Object?)> _removeUser(Accounts accounts, String who) async {

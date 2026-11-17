@@ -149,16 +149,31 @@ class AppLocalizationsHi extends AppLocalizations {
   String get seriesMuteMuted => 'नए अध्यायों की सूचनाएँ म्यूट कर दी गईं।';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other:
-          'फ़ोन में जो है, वह सब पढ़ लिया: $count घोषित अध्याय अभी नहीं हैं।',
-      one: 'फ़ोन में जो है, वह सब पढ़ लिया: एक घोषित अध्याय अभी नहीं है।',
+          'डाउनलोड किया गया सब पढ़ लिया: $count बिना पढ़े अध्याय अभी नहीं आए हैं।',
+      one: 'डाउनलोड किया गया सब पढ़ लिया: एक बिना पढ़ा अध्याय अभी नहीं आया है।',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'डाउनलोड किया गया सब पढ़ लिया: $count अध्याय पढ़ने बाकी हैं, अगले कतार में हैं।',
+      one: 'डाउनलोड किया गया सब पढ़ लिया: अगला अध्याय कतार में है।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => 'अगले डाउनलोड करें';
 
   @override
   String get seriesCaughtUpAll => 'पूरी पढ़ ली।';
@@ -447,6 +462,9 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get seriesChapterNotDownloaded => 'डाउनलोड नहीं हुआ';
+
+  @override
+  String get seriesChapterUnlisted => 'अब साइट पर नहीं';
 
   @override
   String seriesChapterPages(int count) {
@@ -918,6 +936,9 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String get archiveResults => 'परिणाम';
+
+  @override
   String archiveNoResults(String site) {
     return '$site पर कोई नतीजा नहीं।';
   }
@@ -1109,6 +1130,112 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get archiveCheckNow => 'अभी जाँचें';
+
+  @override
+  String get archiveRepair => 'संग्रहीत सीरीज़ ठीक करें';
+
+  @override
+  String get archiveRepairHint =>
+      'हर सीरीज़ को उसकी साइट से दोबारा पढ़ता है और शीर्षक, कवर और चैप्टर ठीक करता है';
+
+  @override
+  String get archiveRepairAll => 'पूरी लाइब्रेरी';
+
+  @override
+  String archiveRepairSite(String site) {
+    return 'केवल $site की सीरीज़';
+  }
+
+  @override
+  String get archiveRepairSeries => 'सीरीज़ ठीक करें';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return '$total में से $done ठीक हो रही है: $title';
+  }
+
+  @override
+  String get archiveRepairQueued =>
+      'सर्वर पर मरम्मत शुरू हुई: नतीजे इतिहास में दिखेंगे।';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़ ठीक हुईं।',
+      one: '1 सीरीज़ ठीक हुई।',
+      zero: 'ठीक करने के लिए कोई सीरीज़ नहीं।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      'ठीक करने के लिए कोई लाइब्रेरी नहीं है: Drive या फ़ोन का फ़ोल्डर चुनें।';
+
+  @override
+  String get archiveRepairNoServer =>
+      'सर्वर अभी सीरीज़ ठीक करना नहीं जानता: उसे अपडेट करना होगा।';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return 'मरम्मत विफल रही: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'फ़ोन पहले से मरम्मत या डाउनलोड कर रहा है: थोड़ी देर बाद फिर कोशिश करें।';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return '$site फिर से चल रही है: उसकी सीरीज़ ठीक करें';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => 'ठीक करें';
+
+  @override
+  String get archiveRepairDismiss => 'अनदेखा करें';
+
+  @override
+  String get archiveRepairNothing => 'ठीक करने को कुछ नहीं';
+
+  @override
+  String get archiveRepairAdopted => 'नई कुंजी अपनाई गई';
+
+  @override
+  String get archiveRepairRetitled => 'शीर्षक अपडेट हुआ';
+
+  @override
+  String get archiveRepairCover => 'कवर अपडेट हुआ';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count नए चैप्टर',
+      one: '1 नया चैप्टर',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count चैप्टर अब सूची में नहीं',
+      one: '1 चैप्टर अब सूची में नहीं',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return 'ठीक नहीं हुई: $error';
+  }
 
   @override
   String get archiveNoTracked => 'अभी कोई सीरीज़ ट्रैक नहीं हो रही';
@@ -1447,6 +1574,20 @@ class AppLocalizationsHi extends AppLocalizations {
       'ध्यान दें: सार्वजनिक पते पर बिना एन्क्रिप्शन के आपके खाते का टोकन रास्ते में पढ़ा जा सकता है। HTTPS (Tailscale Funnel, एक रिवर्स प्रॉक्सी) या Tailscale इस्तेमाल करें।';
 
   @override
+  String get serverDriveForeignTitle => 'क्या इस सर्वर को अपना Drive देना है?';
+
+  @override
+  String get serverDriveForeignBody =>
+      'यह सर्वर आपका नहीं है: इसे चलाने वाला आपके पूरे Drive में पढ़, लिख और मिटा सकेगा, सिर्फ़ लाइब्रेरी वाले फ़ोल्डर में नहीं। तभी आगे बढ़ें जब आप उस पर भरोसा करते हों।';
+
+  @override
+  String get serverDriveForeignConfirm => 'अनुमति दें';
+
+  @override
+  String get serverDriveNeedsHttps =>
+      'Drive की अनुमति सार्वजनिक पते पर बिना एन्क्रिप्शन (http://) वाले सर्वर को नहीं भेजी जाती: रास्ते में उसे पढ़ा जा सकता है। https:// पता या Tailscale जैसा निजी नेटवर्क इस्तेमाल करें।';
+
+  @override
   String get serverAddressSavedNote =>
       'पता बैकअप और खाते के साथ चलता है, Drive फ़ोल्डर की तरह।';
 
@@ -1773,7 +1914,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get syncDescUpload =>
-      'जो फ़ोन में है, वह Drive पर चढ़ता है — जैसे reading/backup में डेटा की कॉपियाँ। लाइब्रेरी के इंडेक्स सर्वर के ही रहते हैं।';
+      'जो फ़ोन में है, वह Drive पर चढ़ता है। लाइब्रेरी के इंडेक्स सर्वर के ही रहते हैं।';
 
   @override
   String get syncDescBoth =>
@@ -2015,11 +2156,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsDataNote => 'बैकअप, पुनर्स्थापना और मिटाना';
 
   @override
-  String get settingsAutoBackup => 'लाइब्रेरी में अपने आप कॉपी';
+  String get settingsAutoBackup => 'फ़ोन पर अपने आप कॉपी';
 
   @override
   String get settingsAutoBackupNote =>
-      'दिन में एक बार reading/backup/ में, जिसे सिंक मांगा के साथ Drive पर ले जाता है';
+      'दिन में एक बार, इसी फ़ोन में ऐप की अपनी जगह पर। कहीं और रखने के लिए अकाउंट या «एक्सपोर्ट» है';
 
   @override
   String get settingsExport => 'डेटा एक्सपोर्ट करें';
@@ -2161,7 +2302,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsAccountUnavailableNote =>
-      'इस बिल्ड में Firebase नहीं है: डेटा वहीं रहता है जहाँ है, डिवाइस पर';
+      'इस बिल्ड में बैकएंड नहीं है: डेटा वहीं रहता है जहाँ है, डिवाइस पर';
 
   @override
   String get settingsAccountSignIn => 'Google से साइन इन करें';
@@ -2186,14 +2327,18 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsAccountSignOutNote =>
-      'आख़िरी पढ़ाई ऊपर भेजता है, फिर साइन आउट करता है';
+      'आख़िरी पढ़ाई ऊपर भेजता है, फिर साइन आउट करता है: फ़ोन पर बिना खाते के इस्तेमाल वाला डेटा लौट आता है';
+
+  @override
+  String get settingsAccountSessionLostNote =>
+      'सत्र समाप्त हो गया है: सिंक करने के लिए फिर से साइन इन करें, या बिना खाते के इस्तेमाल वाले डेटा पर लौटने के लिए साइन आउट करें';
 
   @override
   String get settingsAccountForget => 'कॉपी रखना बंद करें';
 
   @override
   String get settingsAccountForgetNote =>
-      'खाते से डेटा मिटाता है। इस फ़ोन का डेटा वहीं रहता है जहाँ है';
+      'खाते से डेटा मिटाता है और आप बिना खाते के उपयोग पर लौट जाते हैं। खाते का डेटा इस फ़ोन पर उसकी अपनी फ़ाइल में रहता है, दोबारा साइन इन करने तक छिपा';
 
   @override
   String get settingsAccountErrorNote => 'इस फ़ोन के डेटा को नहीं छुआ गया';
@@ -2203,7 +2348,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get settingsAccountForgetExplain =>
-      'आपके लिए रखी गई कॉपी मिट जाती है और साइन इन बंद हो जाता है। इस फ़ोन की स्थिति, रेटिंग, इतिहास और कलेक्शन वहीं रहते हैं — पर किसी दूसरे फ़ोन पर नहीं दिखेंगे।';
+      'आपके लिए रखी गई कॉपी मिट जाती है और साइन इन बंद हो जाता है। फ़ोन बिना खाते के उपयोग के डेटा पर लौट आता है; खाते की स्थिति, रेटिंग, इतिहास और कलेक्शन इस फ़ोन पर उसकी अपनी फ़ाइल में रहते हैं, पर उसी खाते से दोबारा साइन इन करने तक नहीं दिखेंगे (और किसी दूसरे फ़ोन पर नहीं दिखेंगे)।';
 
   @override
   String get settingsAccountForgetConfirm => 'खाते से मिटाएँ';
@@ -2270,7 +2415,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsWhatItDoes => 'यह क्या करता है';
 
   @override
-  String get settingsBackupsTitle => 'लाइब्रेरी में कॉपियाँ';
+  String get settingsBackupsTitle => 'फ़ोन पर कॉपियाँ';
 
   @override
   String get settingsBackupsNone =>
@@ -2734,9 +2879,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shellTabLibrary => 'लाइब्रेरी';
 
   @override
-  String get shellTabCollections => 'कलेक्शन';
-
-  @override
   String get moreDownload => 'मांगा डाउनलोड करें';
 
   @override
@@ -3016,6 +3158,10 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get removeSeriesDrive =>
       'Drive पर फ़ोल्डर ट्रैश में जाता है: तीस दिन तक वहाँ से वापस लाया जा सकता है।';
+
+  @override
+  String get removeSeriesDriveNotOwned =>
+      'Drive पर सीरीज़ बनी रहती है: लाइब्रेरी फ़ोल्डर आपके खाते का नहीं है, या Drive ने अभी पुष्टि नहीं की है, और Kagami सिर्फ़ वहीं हटाता है जहाँ आप मालिक हैं।';
 
   @override
   String get removeSeriesConfirm => 'हटाएँ';
@@ -3365,6 +3511,14 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get dataCloudGoogleSignInFailed => 'Google से साइन इन नहीं हो सका';
+
+  @override
+  String get dataCloudBackendUnavailable =>
+      'यह सुविधा इस बिल्ड के बैकएंड पर उपलब्ध नहीं है';
+
+  @override
+  String get dataCloudTooLarge =>
+      'आपका निजी डेटा बैकएंड की 16 MiB सीमा से बड़ा है: यह इस फ़ोन पर रहेगा, लेकिन सिंक नहीं होगा';
 
   @override
   String dataNewChaptersNotification(int count) {
@@ -4088,6 +4242,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'फ़ोन से और Drive से (ट्रैश में), अपने-आप। पढ़ने की जगह और पढ़े हुए अध्याय बने रहते हैं';
 
   @override
+  String get settingsAutoCleanupSharedRead =>
+      'किसी साझा लाइब्रेरी से पढ़ा गया अध्याय पढ़ा हुआ माना जाता है: आपके Drive की प्रति भी हट जाती है।';
+
+  @override
   String get settingsAutoCleanupIdle => 'छोड़ी गई सीरीज़ के अध्याय हटाएँ';
 
   @override
@@ -4226,6 +4384,13 @@ class AppLocalizationsHi extends AppLocalizations {
   String get collectionPropsMuted => 'अपडेट म्यूट करें';
 
   @override
+  String get collectionTraitHidden => 'छिपाएँ';
+
+  @override
+  String get collectionTraitHiddenHint =>
+      'कोई सूचना नहीं; शृंखलाएँ केवल संग्रह खोलने पर दिखती हैं';
+
+  @override
   String get collectionPropsKeepChapters => 'स्वचालित सफ़ाई से बाहर रखें';
 
   @override
@@ -4246,4 +4411,1352 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       'पढ़ते-पढ़ते डाउनलोड होने वाली सभी सीरीज़ में, जो अध्याय आप पढ़ रहे हैं उसके आगे कितने डाउनलोड किए हुए अध्याय रहें';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'साइट $site काम नहीं कर रही: वह बदल गई है और Kagami को अपडेट करना होगा।';
+  }
+
+  @override
+  String get elsewhereTitle => 'अन्य साइटों पर';
+
+  @override
+  String get elsewhereChecking => 'अन्य साइटों पर सीरीज़ खोजी जा रही है…';
+
+  @override
+  String elsewhereChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय',
+      one: '1 अध्याय',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereLatest(String chapter) {
+    return 'नवीनतम: अध्याय $chapter';
+  }
+
+  @override
+  String elsewhereLatestAt(String chapter, String date) {
+    return 'नवीनतम: अध्याय $chapter, $date';
+  }
+
+  @override
+  String elsewhereAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय आगे',
+      one: '1 अध्याय आगे',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereBehind(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय पीछे',
+      one: '1 अध्याय पीछे',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get elsewhereSame => 'वही अध्याय';
+
+  @override
+  String get elsewhereMissing => 'यहाँ नहीं है';
+
+  @override
+  String get elsewhereBroken => 'साइट काम नहीं कर रही';
+
+  @override
+  String get elsewhereGated => 'ब्राउज़र सत्यापन माँगता है';
+
+  @override
+  String get elsewhereError => 'जवाब नहीं दिया';
+
+  @override
+  String get elsewhereSwitch => 'इस साइट पर जाएँ';
+
+  @override
+  String get elsewhereSiteAction => 'और कहाँ पढ़ें';
+
+  @override
+  String elsewhereSiteTitle(String site) {
+    return '$site की सीरीज़';
+  }
+
+  @override
+  String get elsewhereSiteEmpty =>
+      'लाइब्रेरी की कोई सीरीज़ इस साइट से नहीं है।';
+
+  @override
+  String get elsewhereSiteUnknown => 'अभी तक अन्य साइटों पर नहीं खोजी गई';
+
+  @override
+  String get elsewhereSiteNowhere => 'अन्य साइटों पर नहीं मिली';
+
+  @override
+  String get elsewhereSiteOffline =>
+      'केवल वही दिखता है जो पहले मिल चुका था। Kagami Server जुड़ा हो तो सभी सीरीज़ खोजी जाती हैं।';
+
+  @override
+  String get sitesTitle => 'साइटें';
+
+  @override
+  String get sitesEntrySubtitle => 'शामिल साइटें और जो आप जोड़ते हैं';
+
+  @override
+  String get sitesBuiltInSection => 'ऐप में शामिल';
+
+  @override
+  String get sitesAddedSection => 'जोड़ी गई';
+
+  @override
+  String get sitesNoneAdded => 'कोई साइट नहीं जोड़ी गई।';
+
+  @override
+  String get sitesNoLibrary =>
+      'लाइब्रेरी के रूप में Drive या फ़ोन का फ़ोल्डर चाहिए: साइटें वहीं सहेजी जाती हैं।';
+
+  @override
+  String sitesVersion(int version) {
+    return 'संस्करण $version';
+  }
+
+  @override
+  String sitesReplaces(String name) {
+    return '$name की जगह लेती है';
+  }
+
+  @override
+  String get sitesBroken => 'फ़ाइल खराब है';
+
+  @override
+  String get sitesUpdateNow => 'अभी अपडेट करें';
+
+  @override
+  String get sitesUpdated => 'साइट अपडेट हो गई।';
+
+  @override
+  String get sitesUpToDate => 'कुछ नया नहीं: साइट अप टू डेट है।';
+
+  @override
+  String get sitesRemove => 'हटाएँ';
+
+  @override
+  String sitesRemoveTitle(String name) {
+    return '$name हटाएँ?';
+  }
+
+  @override
+  String get sitesRemoveBody =>
+      'इस साइट की सीरीज़ लाइब्रेरी में रहती हैं, पर साइट लौटने तक अपडेट नहीं होतीं।';
+
+  @override
+  String get sitesAdd => 'साइट जोड़ें';
+
+  @override
+  String get sitesAddHint => 'फ़ाइल का लिंक या चिपकाया टेक्स्ट';
+
+  @override
+  String get sitesAddCheck => 'जाँचें';
+
+  @override
+  String get sitesInvalid => 'फ़ाइल मान्य नहीं है';
+
+  @override
+  String get sitesFetchFailed => 'फ़ाइल डाउनलोड नहीं हो सकी';
+
+  @override
+  String get sitesPreviewHosts => 'पन्ने यहाँ से माँगेगी';
+
+  @override
+  String get sitesTryTitle => 'इंस्टॉल से पहले आज़माएँ (वैकल्पिक)';
+
+  @override
+  String get sitesTryHint => 'एक खोज या सीरीज़ का लिंक';
+
+  @override
+  String get sitesTry => 'आज़माएँ';
+
+  @override
+  String sitesTrySeries(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय',
+      one: 'एक अध्याय',
+    );
+    return '$title: $_temp0';
+  }
+
+  @override
+  String sitesTryResults(int count, String first) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count परिणाम, पहला: $first',
+      one: 'एक परिणाम: $first',
+      zero: 'कोई परिणाम नहीं',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sitesTryFailed => 'आज़माइश विफल रही';
+
+  @override
+  String sitesFault(String phase, String field) {
+    return 'चरण: $phase · फ़ील्ड: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return 'चरण: $phase';
+  }
+
+  @override
+  String get sitesInstall => 'इंस्टॉल करें';
+
+  @override
+  String sitesInstalled(String name) {
+    return '$name इंस्टॉल हो गई।';
+  }
+
+  @override
+  String get seriesKindManga => 'मंगा';
+
+  @override
+  String get seriesKindManhwa => 'मनह्वा';
+
+  @override
+  String get seriesKindManhua => 'मनह्वा (चीनी)';
+
+  @override
+  String get seriesKindOther => 'अन्य';
+
+  @override
+  String get collectionPropsBinding => 'अनिवार्य';
+
+  @override
+  String get collectionPropsBindingNote =>
+      'केवल मापदंडों में आने वाली सीरीज़ ही संग्रह में रह सकती हैं, हाथ से जोड़ने पर भी।';
+
+  @override
+  String collectionBindingWillRemove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'मापदंडों में न आने वाली $count सीरीज़ संग्रह से बाहर हो जाएँगी',
+      one: 'मापदंडों में न आने वाली एक सीरीज़ संग्रह से बाहर हो जाएगी',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionBindingRefused(String title, String collection) {
+    return '«$title» «$collection» के मापदंडों में नहीं आती';
+  }
+
+  @override
+  String collectionBindingRefusedMany(int count, String collection) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count सीरीज़',
+      one: 'एक सीरीज़',
+    );
+    return '$_temp0 «$collection» के मापदंडों में नहीं आती';
+  }
+
+  @override
+  String get collectionBindingLockTip => 'अनिवार्य संग्रह';
+
+  @override
+  String get accessDurationWeek => 'एक सप्ताह';
+
+  @override
+  String get accessDurationMonth => 'एक महीना';
+
+  @override
+  String get accessDurationQuarter => 'तीन महीने';
+
+  @override
+  String get accessDurationYear => 'एक साल';
+
+  @override
+  String get accessDurationNever => 'कभी समाप्त नहीं';
+
+  @override
+  String serverUserExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString को समाप्त होगा';
+  }
+
+  @override
+  String get serverUserExpired => 'समाप्त';
+
+  @override
+  String get serverUserRenew => 'नवीनीकरण';
+
+  @override
+  String serverUserRenewTitle(String email) {
+    return '$email की पहुँच का नवीनीकरण';
+  }
+
+  @override
+  String serverMyAccessExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'आपकी पहुँच $dateString को समाप्त होगी';
+  }
+
+  @override
+  String get serverAccessExpired =>
+      'पहुँच समाप्त हो गई: सर्वर वाले से इसका नवीनीकरण करने को कहें';
+
+  @override
+  String dataServerExpiryTitle(String serverName) {
+    return '«$serverName» तक आपकी पहुँच जल्द समाप्त होने वाली है';
+  }
+
+  @override
+  String dataServerExpiryText(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString को समाप्त होगा: सर्वर वाले से इसका नवीनीकरण करने को कहें।';
+  }
+
+  @override
+  String get driveShareTitle => 'मेरी लाइब्रेरी कौन पढ़ सकता है';
+
+  @override
+  String get driveShareEntryNote => 'Drive पर फ़ोल्डर कौन देख सकता है और कब तक';
+
+  @override
+  String driveShareIntro(String folder) {
+    return 'जिसे चाहें उसका Google खाता जोड़ें: वह चुनी हुई अवधि तक Drive पर फ़ोल्डर «$folder» केवल पढ़ सकेगा।';
+  }
+
+  @override
+  String get driveShareConsentTitle => 'Drive पर एक और अनुमति चाहिए';
+
+  @override
+  String driveShareConsentBody(String folder) {
+    return 'जिसे आप जोड़ेंगे वह फ़ोल्डर «$folder» की सभी फ़ाइलें देखेगा, सिर्फ़ लाइब्रेरी नहीं। साझा करना संभालने के लिए Google एक और अनुमति माँगेगा। फ़ोल्डर में मौजूद आपके पढ़ने के डेटा की प्रतियाँ Drive के ट्रैश में चली जाएँगी।';
+  }
+
+  @override
+  String get driveShareConsentContinue => 'जारी रखें';
+
+  @override
+  String get driveShareAdd => 'साझा करें';
+
+  @override
+  String driveShareInFolder(String name) {
+    return 'फ़ोल्डर «$name»';
+  }
+
+  @override
+  String get driveShareFromDrive => 'Drive से साझा किया गया';
+
+  @override
+  String get driveShareRemoveBody => 'वह अब फ़ोल्डर नहीं पढ़ पाएगा।';
+
+  @override
+  String get driveShareLinkAccess =>
+      'लिंक वाला कोई भी या कोई डोमेन भी यह फ़ोल्डर पढ़ सकता है: इसे Drive से संभालें।';
+
+  @override
+  String get driveShareDriveSilent =>
+      'Drive ने जवाब नहीं दिया: सूची अधूरी हो सकती है।';
+
+  @override
+  String get driveSharePersonalFound =>
+      'फ़ोल्डर में आपके पढ़ने के डेटा की प्रतियाँ हैं (reading/backup, state.json, collections.json): जो इसे पढ़ सकता है वह इन्हें देख सकता है।';
+
+  @override
+  String get driveSharePersonalRemove => 'हटाएँ';
+
+  @override
+  String get driveSharePersonalUnchecked =>
+      'जाँच नहीं हो सकी कि फ़ोल्डर में आपके पढ़ने के डेटा की प्रतियाँ अभी भी हैं या नहीं।';
+
+  @override
+  String get driveShareUnavailable =>
+      'इस बैकएंड में लाइब्रेरी साझा करने की सुविधा नहीं है।';
+
+  @override
+  String driveShareLoadFailed(String message) {
+    return 'यह नहीं पढ़ पा रहा कि किसके पास पहुँच है: $message';
+  }
+
+  @override
+  String get driveShareNobody => 'अभी कोई नहीं।';
+
+  @override
+  String driveShareAdded(String email) {
+    return '$email लाइब्रेरी पढ़ सकता है।';
+  }
+
+  @override
+  String get driveShareOffline => 'कनेक्शन नहीं है: कुछ नहीं बदला।';
+
+  @override
+  String driveShareFailed(String message) {
+    return 'नहीं हो पाया: $message';
+  }
+
+  @override
+  String get driveShareSelf => 'यह आपका अपना पता है।';
+
+  @override
+  String get driveReceivedTitle => 'मेरे साथ साझा की गई लाइब्रेरी';
+
+  @override
+  String get driveReceivedEntryNote =>
+      'दूसरों की लाइब्रेरी के निमंत्रण और एक्सेस';
+
+  @override
+  String driveReceivedInvite(String owner, String folder) {
+    return '$owner ने आपको लाइब्रेरी «$folder» का केवल-पढ़ने वाला एक्सेस दिया है।';
+  }
+
+  @override
+  String get driveReceivedAccept => 'स्वीकार करें';
+
+  @override
+  String get driveReceivedDecline => 'अस्वीकार करें';
+
+  @override
+  String get driveReceivedRemove => 'हटाएँ';
+
+  @override
+  String driveReceivedUntil(String owner, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$owner · $dateString तक';
+  }
+
+  @override
+  String driveReceivedNoLimit(String owner) {
+    return '$owner · कोई समाप्ति नहीं';
+  }
+
+  @override
+  String driveReceivedExpiredRow(String owner) {
+    return '$owner · एक्सेस समाप्त';
+  }
+
+  @override
+  String get driveReceivedEmpty => 'अभी आपके साथ कोई लाइब्रेरी साझा नहीं है।';
+
+  @override
+  String driveReceivedNotificationTitle(String owner) {
+    return '$owner ने आपके साथ एक लाइब्रेरी साझा की';
+  }
+
+  @override
+  String driveReceivedNotificationText(String folder) {
+    return '«$folder» स्वीकार करने के लिए Kagami खोलें।';
+  }
+
+  @override
+  String driveNoticeSharedExpired(String name) {
+    return '$name की लाइब्रेरी का एक्सेस समाप्त हो गया है।';
+  }
+
+  @override
+  String driveNoticeSharedUnavailable(String name) {
+    return '$name की लाइब्रेरी जवाब नहीं दे रही: शायद अब आपके साथ साझा नहीं है।';
+  }
+
+  @override
+  String get driveNoticeSourcesUnreadable =>
+      'साझा लाइब्रेरी पढ़ी नहीं जा सकीं।';
+
+  @override
+  String get driveReceivedManage => 'प्रबंधित करें';
+
+  @override
+  String get sourcesTitle => 'स्रोत';
+
+  @override
+  String get sourcesEntryNote => 'पढ़ने का क्रम और अतिरिक्त लाइब्रेरी';
+
+  @override
+  String get sourcesHelp =>
+      'सभी स्रोतों की सीरीज़ एक लाइब्रेरी में मिल जाती हैं। एक सीरीज़ कई जगह हो तो पहला स्रोत चुना जाता है।';
+
+  @override
+  String get sourcesBuiltInFolder => 'फ़ोन का फ़ोल्डर';
+
+  @override
+  String get sourcesBuiltInApp => 'ऐप का स्थान';
+
+  @override
+  String get sourcesBuiltInDrive => 'Google Drive';
+
+  @override
+  String get sourcesKindWebdav => 'WebDAV / NAS';
+
+  @override
+  String get sourcesKindSmb => 'SMB';
+
+  @override
+  String get sourcesComingSoon => 'जल्द आ रहा है';
+
+  @override
+  String get sourcesStateReady => 'तैयार';
+
+  @override
+  String get sourcesStateOffline => 'ऑफ़लाइन';
+
+  @override
+  String get sourcesStateNeedsAuth => 'फिर से जोड़ें';
+
+  @override
+  String sourcesStateExpired(String date) {
+    return '$date को समाप्त';
+  }
+
+  @override
+  String get sourcesStateMissing => 'फ़ोल्डर नहीं मिला';
+
+  @override
+  String get sourcesStateOtherAccount => 'किसी दूसरे खाते की';
+
+  @override
+  String get sourcesReadOnlyBadge => 'केवल पढ़ने के लिए';
+
+  @override
+  String sourcesOwner(String owner) {
+    return '$owner द्वारा साझा';
+  }
+
+  @override
+  String get sourcesAdd => 'स्रोत जोड़ें';
+
+  @override
+  String get sourcesWebdavFolderHint => 'लाइब्रेरी फ़ोल्डर (जैसे /manga)';
+
+  @override
+  String get sourcesWebdavUserHint => 'उपयोगकर्ता';
+
+  @override
+  String get sourcesWebdavPasswordHint => 'पासवर्ड';
+
+  @override
+  String get sourcesWebdavNameHint => 'नाम (वैकल्पिक, जैसे घर का NAS)';
+
+  @override
+  String get sourcesSmbHostHint => 'कंप्यूटर का पता (जैसे 192.168.1.10)';
+
+  @override
+  String get sourcesSmbShareHint => 'शेयर (जैसे manga)';
+
+  @override
+  String get sourcesSmbUserHint => 'उपयोगकर्ता (खाली = अतिथि)';
+
+  @override
+  String get sourcesSmbDomainHint => 'डोमेन (वैकल्पिक)';
+
+  @override
+  String get sourcesSmbSealLabel => 'एन्क्रिप्शन (SMB 3)';
+
+  @override
+  String get sourcesSmbSealNote =>
+      'घर के नेटवर्क के बाहर एन्क्रिप्शन ज़रूरी है: कंप्यूटर को SMB 3 आना चाहिए।';
+
+  @override
+  String get sourcesSmbPlainWarning =>
+      'एन्क्रिप्शन के बिना पासवर्ड और फ़ाइलें खुली जाती हैं: केवल घर के नेटवर्क पर ठीक है।';
+
+  @override
+  String get sourcesHttpPrivateWarning =>
+      'निजी नेटवर्क पर बिना एन्क्रिप्शन वाला HTTP पता: उपयोगकर्ता और पासवर्ड खुले में जाते हैं। इसे केवल घर के Wi-Fi पर इस्तेमाल करें।';
+
+  @override
+  String get sourcesHttpPublicWarning =>
+      'असुरक्षित सार्वजनिक HTTP पता: पासवर्ड इंटरनेट पर खुले में जाएगा। लोकल नेटवर्क के बाहर https:// इस्तेमाल करें।';
+
+  @override
+  String get sourcesProbeButton => 'कनेक्शन जाँचें';
+
+  @override
+  String get sourcesProbing => 'जाँच जारी है…';
+
+  @override
+  String sourcesProbeSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'कनेक्शन सफल: $count सीरीज़ मिलीं।',
+      one: 'कनेक्शन सफल: 1 सीरीज़ मिली।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourcesProbeAuthFailed =>
+      'क्रेडेंशियल अस्वीकृत: उपयोगकर्ता और पासवर्ड जाँचें।';
+
+  @override
+  String get sourcesProbeUnreachable =>
+      'पहुँच नहीं हो सकी: पता और कनेक्शन जाँचें।';
+
+  @override
+  String get sourcesProbeNoLibrary =>
+      'यहाँ कोई लाइब्रेरी नहीं: फ़ोल्डर में library.json नहीं है।';
+
+  @override
+  String get sourcesSave => 'सहेजें';
+
+  @override
+  String get sourcesPasswordRewriteHint =>
+      'पासवर्ड फिर से लिखें (खाली: जैसा है वैसा)';
+
+  @override
+  String get sourcesSecretNote =>
+      'पासवर्ड केवल इसी फ़ोन में रहता है: बैकअप या खाते में नहीं जाता।';
+
+  @override
+  String get sourcesRemove => 'स्रोत हटाएँ';
+
+  @override
+  String get sourcesRemoveSubtitle =>
+      'सेटिंग, पासवर्ड और कैश हटते हैं; पढ़ने की स्थिति बनी रहती है।';
+
+  @override
+  String sourcesRemoveConfirmTitle(String name) {
+    return '“$name” हटाएँ?';
+  }
+
+  @override
+  String get sourcesRemoveConfirmBody =>
+      'इस फ़ोन से सेटिंग, पासवर्ड और कैश हटते हैं। पढ़ने की स्थिति, रेटिंग और इतिहास बने रहते हैं।';
+
+  @override
+  String get sourcesDismiss => 'हटाएँ';
+
+  @override
+  String get socialTitle => 'समुदाय';
+
+  @override
+  String get socialSubtitleOff => 'बंद: आपके बारे में कुछ भी बाहर नहीं जाता';
+
+  @override
+  String get socialSubtitleOn => 'प्रोफ़ाइल, रैंकिंग और पढ़ने के नोट';
+
+  @override
+  String get socialOffIntro =>
+      'समुदाय बंद है: आपके फ़ोन से कुछ बाहर नहीं जाता और ऐप नेटवर्क से कुछ नहीं माँगता। नीचे वही कार्ड है जो चालू करने पर दूसरे पाठक देखेंगे।';
+
+  @override
+  String get socialNameLabel => 'उपनाम';
+
+  @override
+  String get socialNameHint => '2 से 24 अक्षर (ईमेल पता कभी नहीं)';
+
+  @override
+  String get socialBioLabel => 'परिचय (वैकल्पिक)';
+
+  @override
+  String get socialAudienceSection => 'आपकी प्रोफ़ाइल और पोस्ट कौन देखे';
+
+  @override
+  String get socialAudienceEveryone => 'सभी';
+
+  @override
+  String get socialAudienceFollowing => 'जिन्हें मैं फ़ॉलो करता हूँ';
+
+  @override
+  String get socialAudienceMutual => 'आपसी मित्र';
+
+  @override
+  String get socialAudienceEveryoneNote =>
+      'इस बैकएंड पर समुदाय चालू रखने वाला हर व्यक्ति आपकी प्रोफ़ाइल, पोस्ट और रैंक देखता है।';
+
+  @override
+  String get socialAudienceFollowingNote =>
+      'केवल वही लोग आपकी प्रोफ़ाइल, पोस्ट और रैंक देखते हैं जिन्हें आप पहले फ़ॉलो करते हैं।';
+
+  @override
+  String get socialAudienceMutualNote =>
+      'केवल वही लोग प्रोफ़ाइल और पोस्ट देखते हैं जिन्हें आप फ़ॉलो करते हैं और जो आपको भी फ़ॉलो करते हैं। उन्हें आपका उपनाम मिलता है ताकि वे बदले में फ़ॉलो कर सकें।';
+
+  @override
+  String get socialSwitchesSection => 'आँकड़ों और शैलियों के अलावा क्या दिखाएँ';
+
+  @override
+  String get socialShowPhoto => 'खाते की फ़ोटो दिखाएँ';
+
+  @override
+  String get socialShowSeries => 'सबसे ज़्यादा पढ़े शीर्षक दिखाएँ';
+
+  @override
+  String get socialShowActivity => 'पिछले 14 दिनों की गतिविधि दिखाएँ';
+
+  @override
+  String get socialPreviewSection => 'जो बाहर जाएगा उसका सटीक पूर्वावलोकन';
+
+  @override
+  String get socialPreviewHiddenExcluded => 'छिपी सीरीज़ शामिल नहीं';
+
+  @override
+  String socialPreviewLocked(String what) {
+    return '$what: प्रकाशित नहीं';
+  }
+
+  @override
+  String get socialPreviewPhoto => 'फ़ोटो';
+
+  @override
+  String get socialPreviewSeries => 'शीर्षक';
+
+  @override
+  String get socialPreviewActivity => 'गतिविधि';
+
+  @override
+  String get socialWipeWarning =>
+      'समुदाय बंद करने पर आपका प्रकाशित सब कुछ मिट जाता है: प्रोफ़ाइल, पोस्ट, टिप्पणियाँ, लाइक, फ़ॉलो और संदेश (दूसरों की बातचीत में भी)। ब्लॉक बने रहते हैं।';
+
+  @override
+  String get socialTurnOn => 'समुदाय चालू करें';
+
+  @override
+  String get socialTurnOff => 'समुदाय बंद करें और सब मिटाएँ';
+
+  @override
+  String get socialTabBoards => 'रैंकिंग';
+
+  @override
+  String get socialTabFeed => 'फ़ीड';
+
+  @override
+  String get socialTabPeople => 'लोग';
+
+  @override
+  String get socialBoardWeek => 'सप्ताह';
+
+  @override
+  String get socialBoardMonth => 'महीना';
+
+  @override
+  String get socialBoardAllTime => 'हमेशा';
+
+  @override
+  String get socialBoardStreak => 'लगातार दिन';
+
+  @override
+  String get socialYouBadge => 'आप';
+
+  @override
+  String socialChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count अध्याय',
+      one: '1 अध्याय',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String socialStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count दिन',
+      one: '1 दिन',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialBoardEmpty => 'अभी रैंकिंग में कोई नहीं';
+
+  @override
+  String get socialFeedEmptyTitle => 'अभी कोई पोस्ट नहीं';
+
+  @override
+  String get socialFeedEmptyMessage =>
+      'पाठकों के नोट, समीक्षाएँ और सुझाव यहाँ दिखेंगे।';
+
+  @override
+  String get socialPostKindNote => 'नोट';
+
+  @override
+  String get socialPostKindReview => 'समीक्षा';
+
+  @override
+  String get socialPostKindRecommendation => 'सुझाव';
+
+  @override
+  String socialSpoilerUpTo(String chapter) {
+    return 'अध्याय $chapter तक स्पॉइलर';
+  }
+
+  @override
+  String get socialSpoilerGeneric => 'स्पॉइलर शामिल';
+
+  @override
+  String get socialSpoilerReveal => 'फिर भी दिखाने के लिए छुएँ';
+
+  @override
+  String get socialFlaggedTitle => 'कई पाठकों ने इस सामग्री की रिपोर्ट की';
+
+  @override
+  String socialFlaggedReveal(String author) {
+    return '$author द्वारा · देखने के लिए छुएँ';
+  }
+
+  @override
+  String get socialSearchPeopleHint => 'उपनाम से खोजें…';
+
+  @override
+  String get socialSearchNoEmailNotice =>
+      'यहाँ ईमेल पते नहीं हैं: पाठक का चुना हुआ उपनाम खोजें।';
+
+  @override
+  String get socialPeopleFollowingSection => 'फ़ॉलो किए गए';
+
+  @override
+  String get socialPeopleEmpty =>
+      'आप अभी किसी को फ़ॉलो नहीं करते। उपनाम खोजें या रैंकिंग से किसी को खोलें।';
+
+  @override
+  String get socialSearchNone => 'इस उपनाम वाला कोई नहीं';
+
+  @override
+  String socialAffinityLabel(int percent) {
+    return '$percent% समानता';
+  }
+
+  @override
+  String get socialInCommonSection => 'साझा';
+
+  @override
+  String socialInCommonCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count शीर्षक साझा',
+      one: '1 शीर्षक साझा',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialFollow => 'फ़ॉलो करें';
+
+  @override
+  String get socialFollowBack => 'वापस फ़ॉलो करें';
+
+  @override
+  String get socialFollowing => 'फ़ॉलो किया';
+
+  @override
+  String get socialMutual => 'मित्र';
+
+  @override
+  String get socialUnavailableTitle => 'इस बैकएंड में समुदाय नहीं है';
+
+  @override
+  String get socialUnavailableBody =>
+      'आपके खाते से जुड़े सर्वर में समुदाय की तालिकाएँ नहीं हैं। ऐप का बाकी हिस्सा सामान्य रूप से चलता है।';
+
+  @override
+  String get socialNeedsAccount =>
+      'समुदाय के लिए खाता चाहिए: सेटिंग्स से साइन इन करें।';
+
+  @override
+  String get socialRefusedSnack => 'यह कार्रवाई पूरी नहीं हो सकी।';
+
+  @override
+  String get socialLoadError => 'अभी समुदाय नहीं पढ़ पा रहा।';
+
+  @override
+  String get socialRetry => 'फिर कोशिश करें';
+
+  @override
+  String get socialProfileUnavailable => 'प्रोफ़ाइल उपलब्ध नहीं';
+
+  @override
+  String get socialProfilePrivate => 'निजी प्रोफ़ाइल';
+
+  @override
+  String get socialProfileGenres => 'शैलियाँ';
+
+  @override
+  String get socialProfileActivity => 'पिछले 14 दिन';
+
+  @override
+  String get socialProfileSeriesTitles => 'सबसे ज़्यादा पढ़ी';
+
+  @override
+  String get socialStatChapters => 'अध्याय';
+
+  @override
+  String get socialStatSeries => 'सीरीज़';
+
+  @override
+  String get socialStatStreak => 'लगातार दिन';
+
+  @override
+  String get socialWrite => 'लिखें';
+
+  @override
+  String get socialComposeTitle => 'नई पोस्ट';
+
+  @override
+  String get socialComposeBodyHint => 'आप क्या सोचते हैं?';
+
+  @override
+  String get socialComposeSeries => 'सीरीज़';
+
+  @override
+  String get socialComposeNoSeries => 'कोई सीरीज़ नहीं';
+
+  @override
+  String get socialComposeRating => 'रेटिंग';
+
+  @override
+  String get socialComposeSpoiler => 'स्पॉइलर है';
+
+  @override
+  String get socialComposeSpoilerChapter => 'किस अध्याय तक (वैकल्पिक)';
+
+  @override
+  String get socialComposePublish => 'प्रकाशित करें';
+
+  @override
+  String get socialRefusalEmpty => 'प्रकाशित करने से पहले कुछ लिखें।';
+
+  @override
+  String get socialRefusalTooLong => 'टेक्स्ट बहुत लंबा है।';
+
+  @override
+  String get socialRefusalHiddenSeries =>
+      'यह सीरीज़ छिपी है: समुदाय में इसका नाम नहीं आता।';
+
+  @override
+  String get socialRefusalNeedsSeries =>
+      'समीक्षा या सुझाव किसी सीरीज़ के बारे में होता है: एक चुनें।';
+
+  @override
+  String get socialRefusalNeedsRating => '1 से 10 तक रेटिंग चुनें।';
+
+  @override
+  String socialCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count टिप्पणियाँ',
+      one: '1 टिप्पणी',
+      zero: 'टिप्पणी करें',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialCommentsTitle => 'टिप्पणियाँ';
+
+  @override
+  String get socialCommentsEmpty => 'अभी कोई टिप्पणी नहीं';
+
+  @override
+  String get socialCommentHint => 'टिप्पणी लिखें…';
+
+  @override
+  String socialReplyHint(String author) {
+    return '$author को जवाब दें…';
+  }
+
+  @override
+  String get socialReply => 'जवाब दें';
+
+  @override
+  String get socialCancelReply => 'जवाब रद्द करें';
+
+  @override
+  String get socialSend => 'भेजें';
+
+  @override
+  String get socialLike => 'पसंद';
+
+  @override
+  String get socialMoreActions => 'और विकल्प';
+
+  @override
+  String get socialMute => 'म्यूट करें';
+
+  @override
+  String get socialUnmute => 'म्यूट हटाएँ';
+
+  @override
+  String get socialFollowersSection => 'आपको फ़ॉलो करते हैं';
+
+  @override
+  String get socialMutedNote =>
+      'म्यूट: इसकी पोस्ट और टिप्पणियाँ यहाँ नहीं दिखेंगी।';
+
+  @override
+  String get socialRemovePost => 'पोस्ट हटाएँ';
+
+  @override
+  String get socialRemovePostConfirm =>
+      'पोस्ट अपनी टिप्पणियों और पसंद के साथ हट जाएगी। पोस्ट बदली नहीं जा सकती: चाहें तो दोबारा लिखें।';
+
+  @override
+  String get socialRemoveComment => 'हटाएँ';
+
+  @override
+  String get socialUnknownReader => 'एक पाठक';
+
+  @override
+  String get socialSeriesPostsTitle => 'समुदाय में';
+
+  @override
+  String get socialSeriesPostsEmpty => 'अभी किसी ने इसके बारे में नहीं लिखा';
+
+  @override
+  String get socialSeriesTalk => 'समुदाय में चर्चा करें';
+
+  @override
+  String socialBlockPerson(String name) {
+    return '$name को ब्लॉक करें';
+  }
+
+  @override
+  String get socialBlockAction => 'ब्लॉक करें';
+
+  @override
+  String get socialBlockConfirm =>
+      'आप दोनों में से कोई भी दूसरे की प्रोफ़ाइल, पोस्ट या टिप्पणियाँ नहीं देख पाएगा और न ही एक-दूसरे को लिख पाएगा। आपके बीच के सभी जुड़ाव हटा दिए जाएँगे। दूसरे व्यक्ति को सूचित नहीं किया जाएगा।';
+
+  @override
+  String get socialBlockedSnack => 'व्यक्ति को ब्लॉक किया गया।';
+
+  @override
+  String get socialReport => 'रिपोर्ट करें';
+
+  @override
+  String get socialReportIntro =>
+      'आप इसकी रिपोर्ट क्यों कर रहे हैं? जिसकी रिपोर्ट की गई है उसे पता नहीं चलेगा, और रिपोर्ट के साथ पाठ की एक प्रति जाती है।';
+
+  @override
+  String get socialReportReasonSpam => 'स्पैम या विज्ञापन';
+
+  @override
+  String get socialReportReasonHarassment => 'उत्पीड़न या बार-बार परेशान करना';
+
+  @override
+  String get socialReportReasonSpoiler => 'बिना चेतावनी के स्पॉइलर';
+
+  @override
+  String get socialReportReasonInappropriate => 'अनुचित सामग्री';
+
+  @override
+  String get socialReportReasonOther => 'अन्य';
+
+  @override
+  String get socialReportNoteHint => 'चाहें तो एक टिप्पणी (वैकल्पिक)';
+
+  @override
+  String get socialReportSend => 'भेजें';
+
+  @override
+  String get socialReportSent => 'रिपोर्ट भेज दी गई।';
+
+  @override
+  String get messagesTitle => 'संदेश';
+
+  @override
+  String get messagesWrite => 'संदेश लिखें';
+
+  @override
+  String get messagesEmpty =>
+      'अभी कोई बातचीत नहीं है। किसी की प्रोफ़ाइल से उन्हें संदेश लिखें।';
+
+  @override
+  String get messagesThreadEmpty => 'अभी कोई संदेश नहीं है।';
+
+  @override
+  String get messagesHint => 'संदेश लिखें';
+
+  @override
+  String get messagesSend => 'भेजें';
+
+  @override
+  String get messagesUnknownPerson => 'एक पाठक';
+
+  @override
+  String get messagesDeleteTitle => 'यह संदेश हटाएँ?';
+
+  @override
+  String get messagesDeleteBody => 'यह दोनों के लिए हट जाएगा।';
+
+  @override
+  String get messagesDeleteAction => 'हटाएँ';
+
+  @override
+  String messagesExtensionMine(String folder) {
+    return 'आपने «$folder» के लिए और समय माँगा।';
+  }
+
+  @override
+  String messagesExtensionTheirs(String name, String folder) {
+    return '$name «$folder» के लिए और समय माँग रहे हैं।';
+  }
+
+  @override
+  String get messagesRenew => 'नवीनीकृत करें';
+
+  @override
+  String messagesRenewed(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'साझाकरण $dateString तक नवीनीकृत किया गया।';
+  }
+
+  @override
+  String get messagesAskMore => 'और समय माँगें';
+
+  @override
+  String get messagesAskSent => 'अनुरोध भेज दिया गया।';
+
+  @override
+  String get privacyTitle => 'गोपनीयता और समुदाय';
+
+  @override
+  String get privacyEntryNote =>
+      'समुदाय, आपकी प्रोफ़ाइल कौन देखे, संदेश और ब्लॉक किए गए लोग';
+
+  @override
+  String get privacyOffNote =>
+      'समुदाय बंद होने पर फ़ोन से कुछ बाहर नहीं जाता। नीचे के विकल्प उसे चालू करने के बाद लागू होते हैं।';
+
+  @override
+  String get privacyNeedsName =>
+      'समुदाय चालू करने के लिए उपनाम और खाता चाहिए: खुलने वाली स्क्रीन में उपनाम चुनें।';
+
+  @override
+  String get privacyMessagesSection => 'मुझे कौन संदेश भेज सकता है';
+
+  @override
+  String get privacyMessagesNobody => 'कोई नहीं';
+
+  @override
+  String get privacyBlockedSection => 'ब्लॉक किए गए लोग';
+
+  @override
+  String get privacyBlockedEmpty => 'आपने किसी को ब्लॉक नहीं किया है।';
+
+  @override
+  String get privacyBlockedPerson => 'ब्लॉक किया गया व्यक्ति';
+
+  @override
+  String get privacyUnblock => 'अनब्लॉक करें';
+
+  @override
+  String messageNotificationTitle(String sender) {
+    return '$sender का नया संदेश';
+  }
+
+  @override
+  String driveExpiryNoticeTitle(String owner) {
+    return '$owner की लाइब्रेरी की अवधि जल्द समाप्त होगी';
+  }
+
+  @override
+  String driveExpiryNoticeText(String folder, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '«$folder» की अवधि $dateString को समाप्त होगी। अधिक समय माँगने के लिए Kagami खोलें।';
+  }
+
+  @override
+  String get settingsBackupFolder => 'बैकअप फ़ोल्डर';
+
+  @override
+  String settingsBackupFolderChosen(String path) {
+    return 'ऐप की अपनी जगह के अलावा, स्वचालित प्रति $path में भी जाती है';
+  }
+
+  @override
+  String get settingsBackupFolderNone =>
+      'कोई नहीं: प्रतियाँ सिर्फ़ ऐप की जगह में रहती हैं';
+
+  @override
+  String get settingsBackupFolderRefused =>
+      'यह फ़ोल्डर लाइब्रेरी के किसी स्रोत के अंदर है: लाइब्रेरी साझा होती है और प्रतियों में आपका निजी डेटा होता है। कोई दूसरा चुनें।';
+
+  @override
+  String get driveShareDownloadOption => 'डाउनलोड भी कर सकता है';
+
+  @override
+  String get driveShareDownloadNote =>
+      'यह ऐप्स के बीच का समझौता है, सुरक्षा नहीं: फ़ोल्डर तक पहुँच वाला कोई भी व्यक्ति Drive से, वेबसाइट से या किसी दूसरे ऐप से फ़ाइलें डाउनलोड कर सकता है। पाने वाले का Kagami तभी डाउनलोड करता है जब आप यहाँ अनुमति दें।';
+
+  @override
+  String get driveShareRowDownload => 'डाउनलोड भी';
+
+  @override
+  String get driveShareRowStreaming => 'सिर्फ़ स्ट्रीमिंग';
+
+  @override
+  String get driveShareDownloadAllow => 'डाउनलोड की अनुमति दें';
+
+  @override
+  String get driveShareDownloadDeny => 'सिर्फ़ स्ट्रीमिंग';
+
+  @override
+  String get driveShareDownloadUnavailable =>
+      'इस बैकएंड को अभी डाउनलोड की अनुमति नहीं आती: साझा करना सिर्फ़ स्ट्रीमिंग रहता है।';
+
+  @override
+  String get driveReceivedCanDownload => 'आप पढ़ और डाउनलोड कर सकते हैं';
+
+  @override
+  String get driveReceivedStreamOnly => 'आप सिर्फ़ स्ट्रीमिंग में पढ़ सकते हैं';
+
+  @override
+  String get seriesArchiveOwn => 'मेरे Drive में संग्रहित करें';
+
+  @override
+  String get seriesArchiveOwnSiteMissing =>
+      'इस सीरीज़ की साइट चाहिए: उसे सेटिंग्स → साइटें से इंस्टॉल करें; किसी और की लाइब्रेरी की साइटें अपने-आप इंस्टॉल नहीं होतीं।';
+
+  @override
+  String get seriesBringData => 'मेरा डेटा यहाँ लाएँ';
+
+  @override
+  String get seriesBringDataPick => 'किस सीरीज़ से?';
+
+  @override
+  String get seriesBringDataEmpty =>
+      'लाइब्रेरी में किसी और सीरीज़ में आपका लाने लायक डेटा नहीं है।';
+
+  @override
+  String seriesBringDataBody(String from, String to, int matched) {
+    String _temp0 = intl.Intl.pluralLogic(
+      matched,
+      locale: localeName,
+      other: 'एक ही नंबर वाले # पढ़े हुए अध्याय',
+      one: 'एक ही नंबर वाला # पढ़ा हुआ अध्याय',
+    );
+    return '«$from» → «$to»। स्थिति, रेटिंग, नोट्स और संग्रह लक्ष्य सीरीज़ में जाते हैं, साथ में $_temp0। ये पहले से मौजूद डेटा के साथ मिल जाते हैं: पढ़े हुए अध्याय जुड़ जाते हैं, बाकी में सबसे नया मान्य होता है। «$from» लाइब्रेरी में रहती है, आपके डेटा के बिना।';
+  }
+
+  @override
+  String seriesBringDataLost(int lost) {
+    String _temp0 = intl.Intl.pluralLogic(
+      lost,
+      locale: localeName,
+      other: '# पढ़े हुए अध्यायों के लिए उसी नंबर के अध्याय नहीं हैं: वे नहीं लाए जाते, और उनकी स्थितियाँ, इतिहास और बुकमार्क खो जाते हैं।',
+      one: '# पढ़े हुए अध्याय के लिए उसी नंबर का अध्याय नहीं है: वह नहीं लाया जाता, और उसकी स्थिति, इतिहास और बुकमार्क खो जाते हैं।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesBringDataConfirm => 'डेटा लाएँ';
+
+  @override
+  String seriesBringDataDone(String title) {
+    return 'डेटा «$title» में लाया गया।';
+  }
+
+  @override
+  String get seriesBringDataNoChapters =>
+      'अभी दोनों में से एक सीरीज़ के अध्याय नहीं पढ़े जा सकते: थोड़ी देर बाद फिर कोशिश करें।';
+
+  @override
+  String sitesUnconfirmed(String name) {
+    return 'पुष्टि करने तक $name ही रहेगा';
+  }
+
+  @override
+  String sitesConfirmReplace(String name) {
+    return '$name को बदलें';
+  }
+
+  @override
+  String get serverLinkTrust =>
+      'इस सर्वर को चलाने वाला व्यक्ति आपके Drive में लिख सकता है: Google जो अनुमति माँगता है वह उसी के हाथ में रहती है। केवल उसी सर्वर को जोड़ें जिस पर आप भरोसा करते हैं।';
+
+  @override
+  String get serverErrorUpdateServer =>
+      'इस सर्वर को अपडेट करना होगा: जब तक यह टिकट स्वीकार नहीं करता, आपका लॉग-इन उसे नहीं भेजा जाएगा।';
+
+  @override
+  String get serverErrorTicketsUnavailable =>
+      'बैकएंड सर्वरों के लिए टिकट जारी नहीं करता: आपका लॉग-इन किसी और के सर्वर को नहीं भेजा जाएगा।';
+
+  @override
+  String get serverErrorImpostor =>
+      'यह सर्वर दावा करता है कि वह किसी और पते से पहले से जुड़ा सर्वर है: उसे कुछ नहीं भेजा जाएगा।';
+
+  @override
+  String get serverErrorOtherServer =>
+      'इस पते पर अब कोई दूसरा सर्वर जवाब दे रहा है: उसे दोबारा जोड़ें।';
+
+  @override
+  String get serverErrorNotOwner =>
+      'यह Drive फ़ोल्डर आपका नहीं है: सर्वर कुछ भी कचरे में नहीं डालेगा।';
+
+  @override
+  String get sitesOriginBuiltIn => 'शामिल';
+
+  @override
+  String get sitesOriginCatalog => 'कैटलॉग';
+
+  @override
+  String get sitesOriginUser => 'आपका';
+
+  @override
+  String get sitesCatalogBroken => 'बंद है';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return 'बंद है: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'Kagami का नया संस्करण चाहिए';
+
+  @override
+  String get sitesCatalogSection => 'साइट कैटलॉग';
+
+  @override
+  String get sitesCatalogUse => 'कैटलॉग का उपयोग करें';
+
+  @override
+  String get sitesCatalogOff =>
+      'बंद: सिर्फ़ शामिल साइटें और आपकी अपनी साइटें चलती हैं, और ऐप इसके लिए कोई नेटवर्क अनुरोध नहीं करता।';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return 'संस्करण $serial, $date का';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return 'आखिरी जाँच: $when';
+  }
 }

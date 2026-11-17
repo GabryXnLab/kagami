@@ -151,4 +151,14 @@ void main() {
       expect(match(r, signals('a')), isFalse);
     });
   });
+
+  test('una regola con lo slug vecchio pesca il tag in forma canonica', () {
+    const r = CollectionRules(tags: {'overpowered-male-lead'});
+    expect(
+      collectionRulesMatch(
+          r, signals('a', tags: const ['Overpowered Male Lead'])),
+      isTrue,
+    );
+    expect(collectionRulesMatch(r, signals('b', tags: const ['Other'])), isFalse);
+  });
 }

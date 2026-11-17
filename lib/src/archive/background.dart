@@ -8,21 +8,29 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kagami_archive/http.dart';
+import 'package:kagami_archive/declarative.dart';
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/providers.dart' show installUserProviders;
+import 'package:kagami_archive/remote.dart' show ServerLink;
+import 'package:kagami_archive/renderer.dart' show installPageRenderer;
 import 'package:kagami_archive/runner.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import '../data/catalog_recheck.dart';
+import '../data/catalog_sync.dart';
 import '../data/drive.dart';
 import '../data/library_location.dart';
 import '../data/network.dart';
+import '../data/site_replacements.dart';
 import 'device.dart';
+import 'page_browser.dart' show NativePageBrowser;
 import 'phone_check.dart';
 
 /// Il lucchetto del giro: un file ritoccato ogni tanto, come quello della
 /// sincronizzazione. I motori stanno nello stesso processo, e un lucchetto
 /// del sistema li vedrebbe come la stessa persona.
-class _RunLock {
-  _RunLock(this.file);
+class RunLock {
+  RunLock(this.file);
 
   final File file;
   Timer? _beat;
@@ -38,6 +46,28 @@ class _RunLock {
   Future<void> release() async {
     _beat?.cancel();
     await file.delete().catchError((_) => file);
+  }
+}
+
+/// Installa nel motore di questo isolate i siti degli utenti in `providers/`
+/// della libreria che usa il giro (Drive prima della cartella del telefono, come
+/// [checkFromPhone]): l'isolate di sfondo non ha l'app che li carica. Una lettura
+/// fallita non ferma il giro, che va avanti coi soli siti inclusi.
+Future<void> installUserSitesForRun(ArchiveFiles files, ArchiveEnvironment environment) async {
+  try {
+    final scope = await files.scope();
+    final drive = scope.driveFolder;
+    final local = scope.localRoot;
+    final target = drive != null
+        ? ArchiveTarget(destination: ArchiveDestination.drive, folderId: drive)
+        : local != null
+            ? ArchiveTarget(destination: ArchiveDestination.phone, root: local)
+            : null;
+    if (target == null) return;
+    final confirmed = await SiteReplacements(File('${files.directory.path}/site-replacements.json')).read();
+    installUserProviders(SiteReplacements.usable(await loadSites(environment.storeFor(target)), confirmed));
+  } on Object {
+    // Solo gli inclusi: meglio un giro scarso che nessun giro.
   }
 }
 
@@ -58,20 +88,38 @@ Future<void> runBackgroundArchive({required bool check}) async {
   // giro finito.
   var gated = const <GatedSeries>[];
   DriveClient? client;
-  _RunLock? lock;
+  RunLock? lock;
   try {
     final directories = await AppDirectories.resolve();
     final files = ArchiveFiles(directories.support);
     await GoogleSignIn.instance.initialize();
     client = DriveClient(DriveAuth().writeToken, network: NetworkMonitor.instance);
     final environment = deviceEnvironment(files, client, directories.cache);
+    final catalogSync = await syncCatalogForRun(directories.support);
+    final recheck = catalogSync == null ? null : CatalogRecheck(sync: catalogSync);
+    await installUserSitesForRun(files, environment);
+    installPageRenderer(const NativePageBrowser());
     if (check) {
       try {
         const browser = NativePageBrowser();
-        final server = (await files.scope()).server;
-        gated = server != null
-            ? await passServerGated(server, browser)
-            : (await checkFromPhone(files, environment, browser: browser, cancelled: () => stopped)).gated;
+        final scope = await files.scope();
+        final server = scope.server;
+        gated = [
+          if (server != null)
+            ...await passServerGated(
+              ServerLink(Uri.parse(server), id: scope.serverId, owner: scope.serverOwner),
+              browser,
+            ),
+          // Col server, al telefono restano i siti degli utenti che lui non sa usare.
+          if (server == null || scope.userSitesOnPhone || scope.catalogOnPhone)
+            ...(await checkFromPhone(
+              files,
+              environment,
+              browser: browser,
+              cancelled: () => stopped,
+              onProviderChanged: recheck?.onChanged,
+            )).gated,
+        ];
       } on ProviderOffline {
         end = RunEnd.retry;
         checkFailed = true;
@@ -90,7 +138,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
     if (end == RunEnd.done && await files.running()) {
       end = RunEnd.retry;
     } else if (end == RunEnd.done) {
-      lock = _RunLock(files.runLock);
+      lock = RunLock(files.runLock);
       await lock.acquire();
       var lastProgress = DateTime.fromMillisecondsSinceEpoch(0);
       end = await ArchiveRunner(
@@ -98,6 +146,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
         environment,
         cancelled: () => stopped,
         onError: (error, stack) => Sentry.captureException(error, stackTrace: stack),
+        onProviderChanged: recheck?.onChanged,
         onStatus: (status) {
           final now = DateTime.now();
           if (now.difference(lastProgress) < const Duration(seconds: 1)) return;

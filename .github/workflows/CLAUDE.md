@@ -33,11 +33,14 @@ Valgono per `ci.yml` e per `build.yml`.
 
 | Secret | Senza | Con |
 | :--- | :--- | :--- |
-| `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Firebase |
-| `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
+| `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Google Cloud (client OAuth) |
+| `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata nel client OAuth Android e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
-| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega Kagami Server | il segreto del client «Web» del progetto Firebase, con cui l'app riscatta il permesso di Drive per il server (`docs/server.md`) |
+| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega Kagami Server | il segreto del client «Web» del progetto Google Cloud, con cui l'app riscatta il permesso di Drive per il server (`docs/server.md`) |
+| `BACKEND_URL`, `BACKEND_ANON_KEY` | niente dati personali sul backend né inviti ai server | indirizzo e chiave pubblica del proprio backend (`backend/README.md`) |
+| `GOOGLE_SERVER_CLIENT_ID` | `google_sign_in` ricava il client da `google-services.json` | l'id del client «Web», se serve passarlo esplicito |
+| `CATALOG_URLS`, `CATALOG_KEYS` | niente catalogo dei siti: valgono gli inclusi e quelli degli utenti | indirizzi e chiavi pubbliche del proprio catalogo firmato (`docs/catalogo.md`), passati all'app come `--dart-define` e all'immagine del server come build-arg |
 
 ### L'immagine del server
 
@@ -72,16 +75,16 @@ fallisce. Analisi e test non si ripetono: li fa `check` di `ci.yml` sullo stesso
 
 L'IPA non ha firma perché serve un account Apple Developer: lo firma chi lo installa,
 con AltStore o Sideloadly e il proprio Apple ID (un'app così dura sette giorni, poi
-va rifirmata). Su iOS account e Drive restano spenti (Firebase si accende solo su
+va rifirmata). Su iOS account e Drive restano spenti (l'accesso si accende solo su
 Android), quindi non serve `GoogleService-Info.plist`; Sentry sì, con `SENTRY_DSN`. I
 plugin passano da Swift Package Manager, già integrato nel progetto Xcode: niente
-`Podfile`, e il deployment target (15.0) è quello che chiedono i plugin Firebase.
+`Podfile`, e il deployment target (15.0) è quello che chiedono i plugin.
 
 `runner` è fisso a `github`: il self-hosted del manutentore non serve i repo pubblici,
 e questo workflow esiste perché la build non dipenda da lui. Per questo non ha
 nemmeno gli input `runner`, `max_workers` e `clear_cache` degli altri wrapper.
 
-`SENTRY_DSN` e `GOOGLE_SERVER_CLIENT_SECRET` arrivano al reusable come `DART_DEFINES` (separati da uno spazio): nel blocco `with:`
+`SENTRY_DSN`, `GOOGLE_SERVER_CLIENT_SECRET`, `BACKEND_URL`, `BACKEND_ANON_KEY` e `GOOGLE_SERVER_CLIENT_ID` arrivano al reusable come `DART_DEFINES` (separati da uno spazio): nel blocco `with:`
 di un reusable i secret non si possono usare. Telegram: senza i secret
 `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` (un fork, o questo repo se non li ha) la
 notifica non parte e il run non avvisa.
@@ -99,7 +102,11 @@ Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
 4. `publish` scarica gli artefatti di quel run (`Kagami-*-release*-<sha>`), rifiuta un
    APK firmato con una chiave di debug e crea la release con i quattro APK, l'IPA, un
    `kagami-<versione>.sha256` per tutti e, nelle note, quale scegliere e l'impronta
-   della firma.
+   della firma. Rifiuta anche ogni APK la cui SHA-1 non sia quella della variabile del
+   repo `ANDROID_RELEASE_SHA1` (la chiave di release attesa; senza la variabile si ferma);
+5. `cleanup`, solo se tutti i job precedenti sono riusciti, cancella gli artefatti
+   creati prima dell'inizio della run precedente: restano quelli della precedente e
+   della corrente (la quota degli artefatti è del repo, e piena fa fallire `publish`).
 
 Con `--split-per-abi` Flutter somma al `versionCode` mille per l'architettura (arm64
 2000): un APK per architettura si installa sopra l'universale, non il contrario. Le
@@ -138,6 +145,10 @@ risultato.
   cambiamenti che non vengono da un sync, e la PR successiva li cancellerebbe, il sync
   si ferma e prepara la patch da riportare nel privato. Una PR di un contributore si
   unisce qui come sempre; i sync riprendono quando la modifica è anche nel privato.
+
+## `catalog.yml` (**Catalog**): lo specchio del catalogo
+
+Su push al ramo `catalog` (che ha alla radice solo index.json, index.sig e sites/, gli stessi file del bucket di Hestia) e a mano: `dart run tool/catalog.dart verify` di `packages/kagami_archive` con il secret `CATALOG_KEYS`; senza secret (un fork) salta ed esce 0. Come `ci.yml`, in un repo privato parte solo a mano. `docs/catalogo.md`.
 
 ## Gli altri workflow
 

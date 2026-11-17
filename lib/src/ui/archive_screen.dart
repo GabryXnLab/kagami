@@ -26,6 +26,10 @@ import 'package:kagami_archive/tracking.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/phone_check.dart' show gatedSites;
+import '../archive/repair.dart';
+import '../archive/search_ranking.dart';
+import '../data/catalog_recheck.dart';
+import '../data/server_error_text.dart';
 import '../data/site_switch.dart' show titleKey;
 import '../format/malf.dart';
 import '../providers.dart';
@@ -36,6 +40,7 @@ import 'archive_series.dart';
 import 'archive_server.dart';
 import 'browser_check_page.dart';
 import '../l10n.dart';
+import 'sites_screen.dart';
 import 'sync_screen.dart' show clockOf;
 import 'theme.dart';
 import 'widgets/kit.dart';
@@ -151,8 +156,8 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         if (importText != null) {
           unawaited(ArchiveImportPage.open(context, text: importText));
         } else {
+          // Il link arriva da un'altra app: compila il campo e aspetta un tocco su «Verifica».
           _link.text = link!;
-          unawaited(_verify());
         }
       });
     }
@@ -265,11 +270,14 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       }
       http = fetcher;
     } else {
-      http = site = SiteHttp(provider.allowedHost);
+      http = site = SiteHttp(provider.allowedHost, publicOnly: !provider.builtIn);
     }
     _Found found;
     try {
-      found = _Found.results(await provider.search(query, http));
+      found = _Found.results(await ref.read(catalogRecheckProvider).guard(
+            provider.id,
+            () => (providerById(provider.id) ?? provider).search(query, http),
+          ));
     } on CloudflareChallenge {
       found = provider.needsBrowser
           ? const _Found.challenged()
@@ -277,7 +285,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on ProviderOffline {
       found = _Found.error(currentL10n().archiveErrOffline);
     } on ProviderError catch (error) {
-      found = _Found.error(error.message);
+      found = _Found.error(
+        error is ProviderChanged ? siteBrokenText(provider.name, error.message) : error.message,
+      );
     } finally {
       site?.close();
     }
@@ -341,7 +351,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on UnsupportedLink {
       if (mounted) setState(() => _unsupported = url);
     } on ProviderError catch (error) {
-      if (mounted) setState(() => _error = archiveErrorText(error));
+      if (mounted) setState(() => _error = archiveErrorText(error, url: url));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -622,47 +632,71 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     // pagina), quindi «già in libreria» è lo stesso sito e lo stesso titolo,
     // a meno di maiuscole e punteggiatura.
     bool inLibrary(SearchResult result) => owned[result.provider]?.contains(titleKey(result.title)) ?? false;
-    return [
+    final l10n = context.l10n;
+    final active = [
       for (final provider in providers)
-        if (_found[provider.id] case final found? when _filters.searches(provider)) ...[
-          const SizedBox(height: 18),
-          KSection(provider.name),
-          _siteResults(provider, found, inLibrary),
-        ],
+        if (_found[provider.id] != null && _filters.searches(provider)) provider,
+    ];
+    if (active.isEmpty) return const [];
+    // Una lista sola, mescolata e ordinata per pertinenza; i siti che non
+    // hanno (ancora) risultati da mostrare restano righe compatte sotto.
+    final byId = {for (final provider in active) provider.id: provider};
+    final perSite = <List<SearchResult>>[];
+    final notes = <Widget>[];
+    for (final provider in active) {
+      final found = _found[provider.id]!;
+      final results = found.results;
+      final shown = [
+        for (final result in results ?? const <SearchResult>[])
+          if (_filters.passes(result, owned: inLibrary(result))) result,
+      ];
+      perSite.add(shown);
+      final note = _siteNote(provider, found, shown.length);
+      if (note != null) notes.add(note);
+    }
+    final ranked = rankSearchResults(_query.text, perSite);
+    return [
+      const SizedBox(height: 18),
+      KSection(l10n.archiveResults),
+      if (ranked.isNotEmpty)
+        KGroup(
+          children: [
+            for (final result in ranked)
+              if (byId[result.provider] case final provider?)
+                ArchiveResultTile(
+                  result: result,
+                  referer: provider.home,
+                  inLibrary: inLibrary(result),
+                  details: [
+                    provider.name,
+                    if (inLibrary(result)) l10n.archiveInLibrary,
+                    if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
+                    if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
+                  ].join(' · '),
+                  onTap: _busy ? null : () => _pick(result),
+                ),
+          ],
+        ),
+      for (final note in notes) ...[
+        SizedBox(height: ranked.isEmpty ? 0 : 8),
+        note,
+      ],
     ];
   }
 
-  /// Cosa ha dato un sito, filtrato. Se i filtri nascondono tutto lo si
-  /// dice, altrimenti sembrerebbe che il sito non abbia la serie.
-  Widget _siteResults(Provider provider, _Found found, bool Function(SearchResult) inLibrary) {
+  /// Lo stato di un sito che non ha risultati da mostrare: caricamento,
+  /// verifica, errore, «nessun risultato» o «tutti nascosti dai filtri»;
+  /// `null` se ne ha e stanno nella lista.
+  Widget? _siteNote(Provider provider, _Found found, int shown) {
     final muted = context.tokens.muted;
     final l10n = context.l10n;
+    final style = KagamiType.body(12.5, color: muted);
     if (found.results case final results?) {
-      if (results.isEmpty) {
-        return Text(l10n.archiveNoResults(provider.name), style: KagamiType.body(12.5, color: muted));
-      }
-      final shown = [
-        for (final result in results)
-          if (_filters.passes(result, owned: inLibrary(result))) result,
-      ];
-      if (shown.isEmpty) {
-        return Text(l10n.archiveResultsFiltered(results.length), style: KagamiType.body(12.5, color: muted));
-      }
-      return KGroup(
-        children: [
-          for (final result in shown)
-            ArchiveResultTile(
-              result: result,
-              referer: provider.home,
-              inLibrary: inLibrary(result),
-              details: [
-                if (inLibrary(result)) l10n.archiveInLibrary,
-                if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
-                if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
-              ].join(' · '),
-              onTap: _busy ? null : () => _pick(result),
-            ),
-        ],
+      if (shown > 0) return null;
+      final text = results.isEmpty ? l10n.archiveNoResults(provider.name) : l10n.archiveResultsFiltered(results.length);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(results.isEmpty ? text : '${provider.name} · $text', style: style),
       );
     }
     if (found.challenged) {
@@ -679,9 +713,21 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       );
     }
     if (found.error case final error?) {
-      return Text(error, style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text('${provider.name} · $error', style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger)),
+      );
     }
-    return const LinearProgressIndicator(minHeight: 3);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(provider.name, style: style),
+          const SizedBox(width: 12),
+          const Expanded(child: LinearProgressIndicator(minHeight: 3)),
+        ],
+      ),
+    );
   }
 
   List<Widget> _queue(ArchiveView view) {
@@ -760,12 +806,24 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       KSection(l10n.archiveSites),
       KGroup(
         children: [
+          KTile(
+            icon: LucideIcons.layoutList,
+            title: l10n.sitesTitle,
+            subtitle: l10n.sitesEntrySubtitle,
+            trailing: const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SitesScreen())),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      KGroup(
+        children: [
           for (final provider in providers)
             KTile(
               icon: LucideIcons.globe,
               leading: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(provider.icon, width: 36, height: 36),
+                child: SiteIcon(provider, size: 36),
               ),
               title: provider.name,
               subtitle: Uri.parse(provider.home).host,
@@ -847,6 +905,9 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
           ],
         ),
       ..._gated(),
+      const BrokenSitesCard(),
+      const SiteRecoveryCard(),
+      ..._repair(),
       const SizedBox(height: 12),
       ArchiveFollowedTile(
         count: view.tracked.length,
@@ -854,6 +915,61 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
         tiles: _followedTiles,
       ),
     ];
+  }
+
+  /// «Ripara le serie archiviate»: dove il motore di adesso può farlo, una
+  /// riga che apre la scelta fra tutta la libreria e un sito; mentre gira,
+  /// il suo avanzamento.
+  List<Widget> _repair() {
+    if (!(ref.watch(repairAvailableProvider).value ?? false)) return const [];
+    final l10n = context.l10n;
+    final view = ref.watch(repairProvider);
+    return [
+      const SizedBox(height: 12),
+      KGroup(
+        children: [
+          KTile(
+            icon: LucideIcons.wrench,
+            title: l10n.archiveRepair,
+            subtitle: view.running && view.total > 0
+                ? l10n.archiveRepairRunning(view.done + 1, view.total, view.title)
+                : l10n.archiveRepairHint,
+            trailing: view.running
+                ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(LucideIcons.chevronRight, size: 18),
+            onTap: view.running ? null : _chooseRepair,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  Future<void> _chooseRepair() async {
+    final l10n = context.l10n;
+    final site = await showKagamiSheet<String?>(
+      context,
+      title: l10n.archiveRepair,
+      builder: (sheet) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+        child: KGroup(
+          children: [
+            KTile(
+              icon: LucideIcons.library,
+              title: l10n.archiveRepairAll,
+              onTap: () => Navigator.of(sheet).pop(''),
+            ),
+            for (final provider in providers)
+              KTile(
+                icon: LucideIcons.globe,
+                title: l10n.archiveRepairSite(provider.name),
+                onTap: () => Navigator.of(sheet).pop(provider.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (site == null || !mounted) return;
+    await startRepair(context, ref, site: site.isEmpty ? null : site);
   }
 
   /// Le serie ferme alla verifica di un sito, da chi controlla: una scheda
@@ -927,7 +1043,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     } on ProviderOffline {
       messenger.showSnackBar(SnackBar(content: Text(currentL10n().archiveNoConnection)));
     } on ServerException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      messenger.showSnackBar(SnackBar(content: Text(serverErrorText(error))));
     } finally {
       ref.invalidate(gatedSeriesProvider);
     }

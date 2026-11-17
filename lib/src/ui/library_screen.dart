@@ -1,4 +1,5 @@
-/// La libreria: griglia, ricerca, filtri, ordinamenti e raccolte automatiche.
+/// La libreria: griglia, ricerca, filtri, ordinamenti e raccolte, automatiche
+/// e dell'utente.
 ///
 /// La ricerca sta sopra la griglia e non è una destinazione a sé: cercare è un
 /// modo di guardare la libreria, non un posto dove andare.
@@ -13,6 +14,7 @@ import '../format/reading.dart';
 import '../l10n.dart';
 import '../providers.dart';
 import 'app_shell.dart';
+import 'collections_screen.dart';
 import 'series_screen.dart';
 import 'setup_screen.dart';
 import 'theme.dart';
@@ -284,6 +286,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ref.watch(libraryDisplayProvider).value ?? LibraryDisplay.comfortable;
     final selection = ref.watch(selectionProvider);
     final l10n = context.l10n;
+    final narrowed = filter.isFiltering ||
+        filter.auto != null ||
+        filter.collectionId != null;
 
     if (library == null) return const SizedBox.shrink();
 
@@ -310,13 +315,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   child: visible.isEmpty
                       ? KEmpty(
                           icon: LucideIcons.searchX,
-                          title: filter.isFiltering || filter.auto != null
+                          title: narrowed
                               ? l10n.libraryNoMatchTitle
                               : l10n.libraryEmptyTitle,
-                          message: filter.isFiltering || filter.auto != null
+                          message: narrowed
                               ? l10n.libraryNoMatchMessage
                               : l10n.libraryEmptyMessage,
-                          action: filter.isFiltering || filter.auto != null
+                          action: narrowed
                               ? KGhostButton(
                                   label: l10n.libraryClearFilters,
                                   icon: LucideIcons.eraser,
@@ -697,6 +702,14 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
             onPressed: () => _showDisplay(context, display),
           ),
           const SizedBox(width: 8),
+          KIconAction(
+            icon: LucideIcons.bookmark,
+            tooltip: context.l10n.collectionsTitle,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const CollectionsScreen()),
+            ),
+          ),
+          const SizedBox(width: 8),
           Badge(
             isLabelVisible: filter.activeCount > 0,
             label: Text('${filter.activeCount}'),
@@ -758,8 +771,10 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
       );
 }
 
-/// Le raccolte automatiche in cima alla griglia: sono le domande che l'utente
-/// si fa più spesso, e non vale la pena nasconderle dentro un filtro.
+/// Le raccolte in cima alla griglia, prima le automatiche e poi quelle
+/// dell'utente: sono le domande che l'utente si fa più spesso, e non vale la
+/// pena nasconderle dentro un filtro. Si creano e si modificano dal
+/// segnalibro accanto alla ricerca.
 class _ShelfStrip extends ConsumerWidget {
   const _ShelfStrip();
 
@@ -767,7 +782,8 @@ class _ShelfStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(libraryFilterProvider);
     final notifier = ref.read(libraryFilterProvider.notifier);
-    final all = ref.watch(librarySignalsProvider);
+    final all = ref.watch(shownSignalsProvider);
+    final collections = ref.watch(collectionsProvider);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: KChipBar(
@@ -791,6 +807,16 @@ class _ShelfStrip extends ConsumerWidget {
                           notifier.showAuto(filter.auto == auto ? null : auto),
                 );
               },
+            ),
+          for (final collection in collections)
+            KChip(
+              label: '${collection.name} (${collection.seriesKeys.length})',
+              icon: collection.traits.hidden ? LucideIcons.eyeOff : null,
+              tint: collection.color == null ? null : Color(collection.color!),
+              active: filter.collectionId == collection.id,
+              onTap: () => notifier.showCollection(
+                filter.collectionId == collection.id ? null : collection.id,
+              ),
             ),
         ],
       ),

@@ -25,7 +25,7 @@ export 'package:kagami_archive/drive.dart';
 /// sistema lo rinnova da sé e [token] lo ottiene senza mostrare niente.
 ///
 /// Il permesso si chiede per l'indirizzo che [account] dà — quello che
-/// Firebase ricorda — e non passando da `attemptLightweightAuthentication`:
+/// l'app ricorda — e non passando da `attemptLightweightAuthentication`:
 /// quella rifà l'accesso con Credential Manager, che a ogni avvio mostra il
 /// foglio «Accesso come…» o, peggio, la scelta dell'account. L'API pubblica
 /// di `google_sign_in` lega l'indirizzo solo a un account appena autenticato,
@@ -33,7 +33,7 @@ export 'package:kagami_archive/drive.dart';
 class DriveAuth {
   /// Senza [account] il sistema sceglie da sé: su un telefono con un solo
   /// account Google basta, ed è il caso della sincronizzazione programmata,
-  /// che gira senza Firebase.
+  /// che gira senza sessione del backend.
   DriveAuth({String? Function()? account}) : _account = account ?? _anyone;
 
   static String? _anyone() => null;
@@ -115,6 +115,26 @@ class DriveAuth {
   void forget() => _tokens.clear();
 }
 
+/// Il tetto ai byte di una tavola (o di una copertina) scaricata: 64 MiB.
+///
+/// Una striscia lunga dei siti inclusi (800-1600 px per 20-30 mila di altezza)
+/// in JPEG o WebP sta sotto i 20 MB, in PNG sotto i 50: 64 MiB lascia margine
+/// a quelle e ferma un file fatto apposta per riempire il disco o la memoria
+/// di chi apre la libreria di un altro.
+const int maxPageBytes = 64 << 20;
+
+/// Un file più grande di ciò che l'app accetta di tenere o decodificare.
+/// Non è un guasto di rete: nel lettore diventa l'errore di quella tavola.
+class OversizedFile implements Exception {
+  const OversizedFile(this.bytes, this.limit);
+
+  final int bytes;
+  final int limit;
+
+  @override
+  String toString() => 'File di $bytes byte, oltre il tetto di $limit';
+}
+
 /// Le tavole e le copertine scaricate, con un tetto di spazio.
 ///
 /// Quando lo spazio finisce esce prima chi vale meno — [rank], che sa cosa
@@ -123,10 +143,15 @@ class DriveAuth {
 /// aggiornare la data di ogni file a ogni lettura sarebbe una scrittura su
 /// disco per tavola.
 class DriveFileCache {
-  DriveFileCache(this.directory, {required this.limitBytes});
+  DriveFileCache(this.directory, {required this.limitBytes, this.maxEntryBytes = maxPageBytes});
 
   final Directory directory;
   int limitBytes;
+
+  /// Il file più grande che [store] accetta: oltre, il pezzo si butta e
+  /// l'errore è [OversizedFile]. Senza, un solo file potrebbe valere più
+  /// dell'intera cache e `_trim` butterebbe tutto il resto per farci posto.
+  final int maxEntryBytes;
 
   /// Quanto vale tenere un file. Senza, conta solo quando è stato usato.
   CacheRank Function(String key)? rank;
@@ -197,6 +222,8 @@ class DriveFileCache {
     final temporary = File('${target.path}$_partial');
     try {
       await write(temporary);
+      final written = await temporary.length();
+      if (written > maxEntryBytes) throw OversizedFile(written, maxEntryBytes);
       await temporary.rename(target.path);
     } on Object catch (error) {
       if (!isNetworkFailure(error)) {

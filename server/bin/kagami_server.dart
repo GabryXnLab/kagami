@@ -2,7 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
+import 'package:kagami_archive/catalog.dart' show catalogEngine;
+import 'package:kagami_archive/http.dart' show SiteHttp;
 import 'package:kagami_archive/jobs.dart';
+import 'package:kagami_archive/declarative.dart' show DeclarativeProvider, SiteDefinitionError;
+import 'package:kagami_archive/providers.dart' show Provider, providers;
 import 'package:kagami_archive/stores.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:path/path.dart' as p;
@@ -16,8 +20,21 @@ Uso: kagami-server [--data <cartella>] <comando>
                                   è --setup o KAGAMI_SETUP, generata dall'app
   users                           gli account ammessi e chi ha già collegato il suo Drive
   status                          per ogni account: lavoro in corso, coda, ultimi esiti
+  repair --user <email> [--site <id> | --keys k1,k2]
+                                  mette in attesa la riparazione della libreria di un account (tutta,
+                                  un sito o alcune serie); il server acceso la raccoglie entro un minuto
   ping [--port P]                 esce con 0 se il server risponde (controllo di salute di Docker)
+  probe [--json] [--canaries F] [--site ID] [--definition FILE] [--capture DIR] [--layers all]
+                                  la sentinella: per ogni sito ricerca, serie, tavole e prima immagine
+                                  di un canarino (default catalog/canaries.json); esce 0 se tutti ok,
+                                  1 se qualcuno no, 2 per un uso sbagliato; --definition prova quel
+                                  file al posto del registro (solo quel sito); --capture salva in
+                                  DIR/<sito>/<data>-guasto la cassetta di ogni sito non ok
+                                  --layers all prova a parte ogni strato del sito (catalogo e incluso)
   idle                            esce con 0 se nessun account sta scaricando
+  browser                         Chromium nel contenitore kagami-browser, guidato dal server
+                                  (KAGAMI_BROWSER); esce solo il proxy KAGAMI_BROWSER_PROXY
+                                  (default kagami-server:9223)
   update [--every M] [--container C]
                                   l'aggiornatore: ogni M minuti (default 60) scarica l'immagine del
                                   contenitore C (default kagami-server) e, se è cambiata, lo ricrea;
@@ -36,6 +53,18 @@ Future<void> main(List<String> arguments) async {
   parser.addCommand('ping', ArgParser()..addOption('port'));
   parser.addCommand('idle');
   parser.addCommand(
+    'probe',
+    ArgParser()
+      ..addFlag('json', negatable: false)
+      ..addOption('canaries', defaultsTo: 'catalog/canaries.json')
+      ..addOption('site')
+      ..addOption('definition')
+      ..addOption('capture')
+      ..addOption('layers', allowed: ['all']),
+  );
+  parser.addCommand('browser');
+  parser.addCommand('repair', ArgParser()..addOption('user')..addOption('site')..addOption('keys'));
+  parser.addCommand(
     'update',
     ArgParser()
       ..addOption('every', defaultsTo: '60')
@@ -47,6 +76,10 @@ Future<void> main(List<String> arguments) async {
   try {
     args = parser.parse(arguments);
   } on FormatException catch (error) {
+    if (arguments.contains('probe')) {
+      stderr.writeln('${error.message}\n\n$usage');
+      exit(2);
+    }
     fail('${error.message}\n\n$usage');
   }
   final command = args.command;
@@ -71,8 +104,14 @@ Future<void> main(List<String> arguments) async {
         await statusCommand(paths);
       case 'ping':
         await ping(paths, command.option('port'));
+      case 'repair':
+        await repairCommand(paths, command);
+      case 'probe':
+        exit(await probeCommand(paths, command));
       case 'idle':
         await idleCommand(paths);
+      case 'browser':
+        exit(await browserCommand(paths));
       case 'update':
         await updateCommand(command);
     }
@@ -125,6 +164,97 @@ Future<void> _status(ArchiveFiles files) async {
   for (final outcome in (await files.history()).take(5)) {
     stdout.writeln('${outcome.ok ? 'ok ' : 'err'} ${outcome.title}: ${outcome.message}');
   }
+}
+
+/// Scrive `repair.json` dell'account: il `serve` acceso lo raccoglie da sé.
+Future<void> repairCommand(ServerPaths paths, ArgResults command) async {
+  final email = command.option('user')?.trim().toLowerCase();
+  final site = command.option('site');
+  final keys = command.option('keys');
+  if (email == null || email.isEmpty) fail('Manca --user <email>.');
+  if (site != null && keys != null) fail('--site e --keys non vanno insieme.');
+  final list = keys == null ? null : {for (final key in keys.split(',')) if (key.trim().isNotEmpty) key.trim()};
+  if (list != null && list.isEmpty) fail('--keys vuole le chiavi delle serie separate da virgole.');
+  final (_, members) = await _members(paths);
+  final member = members.where((member) => member.email.toLowerCase() == email).firstOrNull;
+  if (member == null) fail('$email non è fra gli account del server (kagami-server users).');
+  final userSites = await readSiteIds(paths.user(member.email).path);
+  final known = {...providers.map((provider) => provider.id), ...?userSites};
+  if (site != null && !known.contains(site)) {
+    fail('--site è l\'id di uno dei siti: ${known.join(', ')}.'
+        '${userSites == null ? ' I siti dell\'utente si conoscono dopo il primo giro del server: aspetta e riprova.' : ''}');
+  }
+  final merged = await queueRepair(ArchiveFiles(paths.user(member.email).path), RepairRequest(site, list));
+  stdout.writeln('In attesa per ${member.email}: ${merged.all ? 'tutta la libreria' : merged.site != null ? 'il sito ${merged.site}' : '${merged.keys!.length} serie'}.');
+}
+
+/// La sentinella. Il catalogo è quello della cache del volume, aggiornato se
+/// configurato: si prova ciò che il server userebbe adesso.
+Future<int> probeCommand(ServerPaths paths, ArgResults command) async {
+  final asJson = command.flag('json');
+  final File file = File(command.option('canaries')!);
+  final Map<String, List<Canary>> canaries;
+  try {
+    canaries = Canary.parse(await file.readAsString());
+  } on Object catch (error) {
+    stderr.writeln('Canarini illeggibili (${file.path}): $error');
+    return 2;
+  }
+  final definition = command.option('definition');
+  final capture = command.option('capture');
+  final site = command.option('site');
+  final layers = command.option('layers') == 'all';
+  final List<Provider> sites;
+  ServerCatalog? catalog;
+  if (definition != null) {
+    if (site != null) {
+      stderr.writeln('--definition prova già solo quel sito: niente --site.');
+      return 2;
+    }
+    if (layers) {
+      stderr.writeln('--definition prova già una definizione sola: niente --layers.');
+      return 2;
+    }
+    try {
+      sites = [DeclarativeProvider.parse(await File(definition).readAsString())];
+    } on Object catch (error) {
+      stderr.writeln('Definizione illeggibile ($definition): ${error is SiteDefinitionError ? error.message : error}');
+      return 2;
+    }
+  } else {
+    catalog = ServerCatalog.fromEnvironment(Platform.environment, paths.catalog, log: stderr.writeln);
+    if (catalog != null) {
+      await catalog.load();
+      await catalog.refresh(force: true);
+    }
+    final chosen = [for (final provider in providers) if (site == null || provider.id == site) provider];
+    sites = layers ? probeLayers(chosen) : chosen;
+  }
+  if (sites.isEmpty) {
+    stderr.writeln('--site: nessun sito con quell\'id (${providers.map((provider) => provider.id).join(', ')}).');
+    return 2;
+  }
+  final clients = <SiteHttp>[];
+  final results = <SiteProbe>[];
+  try {
+    results.addAll(await probeSites(sites, canaries, (provider) {
+      final client = SiteHttp(provider.allowedHost, attempts: 2, publicOnly: true);
+      clients.add(client);
+      return client;
+    }, capture: capture == null ? null : Directory(capture), onResult: (result) {
+      if (!asJson) stdout.writeln(probeLine(result));
+    }));
+  } finally {
+    for (final client in clients) {
+      client.close();
+    }
+    catalog?.close();
+  }
+  if (asJson) {
+    stdout.writeln(jsonEncode(probeReport(results,
+        checkedAt: DateTime.now(), engine: catalogEngine, serial: catalog?.serial ?? 0)));
+  }
+  return results.any((result) => result.failed) ? 1 : 0;
 }
 
 /// Per l'aggiornatore, che non ricrea il server a metà di un download.

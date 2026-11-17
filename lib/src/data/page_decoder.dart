@@ -34,6 +34,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import 'drive.dart' show OversizedFile, maxPageBytes;
 import 'library.dart';
 import 'reader_probe.dart';
 
@@ -48,6 +49,13 @@ const MethodChannel pageDecoderChannel = MethodChannel('kagami/pages');
 /// il decodificatore a ritagli non c'è — e per quella il tetto è l'ultima
 /// difesa: meglio una tavola ridotta che l'app che sparisce.
 const int maxWholePagePixels = 8 * 1000 * 1000;
+
+/// Il tetto ai pixel di una tavola sorgente, prima di decodificarla: 64 Mpx.
+///
+/// Le strisce più alte dei siti inclusi fanno 1600 x 30000 (48 Mpx). Oltre
+/// il tetto la tavola è un errore, non una riduzione: un PNG si decodifica
+/// per intero prima di ridursi, e 64 Mpx sono già 256 MB.
+const int maxSourcePixels = 64 * 1000 * 1000;
 
 /// Le dimensioni reali di un'immagine appena decodificata.
 ///
@@ -108,7 +116,7 @@ class PageDecoder {
   ///
   /// [targetWidth] è un tetto: un file più stretto resta com'è.
   Future<DecodedBand> decodeImage(String address, {required int targetWidth}) async {
-    final path = await localFileOf(address);
+    final path = await _checkedFile(address);
     return _decodeWhole(path, 0, 0, targetWidth);
   }
 
@@ -127,13 +135,24 @@ class PageDecoder {
     int height = 0,
     required int targetWidth,
   }) async {
-    final path = await localFileOf(address);
+    final path = await _checkedFile(address);
     if (_native) {
       final band = await _decodeNative(path, top, height, targetWidth);
       if (band != null) return band;
     }
     ReaderProbe.instance.noteWholeDecode();
     return _decodeWhole(path, top, height, targetWidth);
+  }
+
+  /// Il file della tavola, se non supera [maxPageBytes]: vale anche per le
+  /// tavole di una cartella del telefono, che nessuna cache ha filtrato.
+  Future<String> _checkedFile(String address) async {
+    final path = await localFileOf(address);
+    // stat e non length: un file che non c'è non ha dimensione da rifiutare,
+    // e l'errore giusto lo dà la decodifica.
+    final size = (await File(path).stat()).size;
+    if (size > maxPageBytes) throw OversizedFile(size, maxPageBytes);
+    return path;
   }
 
   /// Restituisce al Kotlin una texture che nessuno mostra più.
@@ -248,6 +267,11 @@ class PageDecoder {
     final buffer = await ui.ImmutableBuffer.fromFilePath(path);
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
     final source = (width: descriptor.width, height: descriptor.height);
+    if (source.width * source.height > maxSourcePixels) {
+      descriptor.dispose();
+      buffer.dispose();
+      throw OversizedFile(source.width * source.height, maxSourcePixels);
+    }
     var width = targetWidth < source.width ? targetWidth : source.width;
     if (width < 1) width = 1;
     var tall = (source.height * width / source.width).round();

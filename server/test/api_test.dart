@@ -27,7 +27,8 @@ void main() {
   tearDown(() => server.close());
 
   Future<(int, Map<String, Object?>?)> call(String method, String path, {Object? body, String as = owner}) async {
-    final request = await http.openUrl(method, server.address.replace(path: path));
+    final target = Uri.parse(path);
+    final request = await http.openUrl(method, server.address.replace(path: target.path, query: target.hasQuery ? target.query : null));
     if (as.isNotEmpty) request.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${as.contains('@') ? 'tok:$as' : as}');
     if (body != null) {
       request.headers.contentType = ContentType.json;
@@ -66,7 +67,7 @@ void main() {
     expect(info!['me'], {
       'email': 'amico@example.com',
       'owner': false,
-      'drive': {'authorized': false, 'folderId': null, 'folderName': null},
+      'drive': {'authorized': false, 'folderId': null, 'folderName': null, 'owned': null},
     });
   });
 
@@ -80,13 +81,22 @@ void main() {
     expect(body['me'], {
       'email': owner,
       'owner': true,
-      'drive': {'authorized': true, 'folderId': 'cartella-$owner', 'folderName': 'Manga'},
+      'drive': {'authorized': true, 'folderId': 'cartella-$owner', 'folderName': 'Manga', 'owned': null},
     });
     expect(body['check'], {
-      'minutes': 240, 'time': 240, 'enabled': true, 'library': true, 'unfollowed': <Object?>[],
-      'checked': 0, 'queued': 0, 'failed': 0, 'gated': <Object?>[],
+      'minutes': 240, 'time': 240, 'enabled': true, 'library': true, 'unfollowed': <Object?>[], 'elsewhere': true,
+      'checked': 0, 'queued': 0, 'failed': 0, 'gated': <Object?>[], 'sites': <String, Object?>{},
     });
-    expect(body['features'], containsAll(['ahead', 'unfollowed', 'verify']));
+    expect(body['features'], containsAll(['ahead', 'unfollowed', 'verify', 'sites']));
+  });
+
+  test('un sito rotto compare in check.sites', () async {
+    await files.health.markBroken('coffeemanga', 'Formato cambiato.');
+    final (_, body) = await call('GET', '/v2/server');
+    final site = ((body!['check'] as Map)['sites'] as Map)['coffeemanga'] as Map;
+    expect(site['broken'], true);
+    expect(site['message'], 'Formato cambiato.');
+    expect(site['since'], isA<String>());
   });
 
   test('gli utenti sono del proprietario: gli altri ricevono owner_only', () async {
@@ -150,7 +160,7 @@ void main() {
       'folderId': 'https://drive.google.com/drive/folders/1XyZ?usp=sharing',
     });
     expect(status, 200);
-    expect(body!['drive'], {'authorized': true, 'folderId': '1XyZ', 'folderName': 'Scelta'});
+    expect(body!['drive'], {'authorized': true, 'folderId': '1XyZ', 'folderName': 'Scelta', 'owned': true});
     final space = server.spaces[friend]!;
     expect(space.drive.refresh, '1//buono');
     expect((await call('POST', '/v2/jobs', as: friend, body: {'url': 'https://mangak.io/x'})).$1, 201);
@@ -312,5 +322,75 @@ void main() {
     final body = jsonDecode(await utf8.decodeStream(response)) as Map<String, Object?>;
     expect((response.statusCode, code(body)), (503, 'not_configured'));
     await bare.close(force: true);
+  });
+
+  test('POST /v2/repair mette in attesa la riparazione, e la dichiara fra le features', () async {
+    final (_, about) = await call('GET', '/v2/server');
+    expect(about!['features'], contains('repair'));
+    drive.ready = false;
+    expect((await call('POST', '/v2/repair', body: {})).$1, 409);
+    drive.ready = true;
+    drive.folderId = 'root';
+    final (status, body) = await call('POST', '/v2/repair', body: {'site': 'mangak'});
+    expect(status, 202);
+    expect(body, {'repair': {'queued': true}});
+    expect((await call('POST', '/v2/repair', body: {'keys': ['mangak:A1']})).$1, 202);
+    expect((await call('POST', '/v2/repair', body: {})).$1, 202);
+    expect([for (final r in jobs.repairs) r.site], ['mangak', null, null]);
+    expect([for (final r in jobs.repairs) r.keys?.toList()], [null, ['mangak:A1'], null]);
+
+    for (final bad in <Object?>[
+      {'site': 'mangak', 'keys': ['mangak:A1']},
+      {'site': 'sconosciuto'},
+      {'site': 1},
+      {'keys': <Object?>[]},
+      {'keys': 'mangak:A1'},
+      {'keys': [1]},
+      {'keys': [for (var i = 0; i <= maxRepairKeys; i++) 'mangak:$i']},
+    ]) {
+      final (rejected, error) = await call('POST', '/v2/repair', body: bad);
+      expect(rejected, 400, reason: '$bad');
+      expect(code(error), 'bad_request');
+    }
+    expect(jobs.repairs, hasLength(3));
+  });
+
+  test('/v2/elsewhere: lettura con chiavi, richiesta, validazione e features', () async {
+    final (_, about) = await call('GET', '/v2/server');
+    expect(about!['features'], contains('elsewhere'));
+    expect((about['check'] as Map)['elsewhere'], isTrue);
+
+    final (status, body) = await call('GET', '/v2/elsewhere?keys=coffeemanga:a,mangak:B');
+    expect(status, 200);
+    expect((body!['series'] as Map).keys, ['coffeemanga:a']);
+    expect(jobs.elsewhereReads.last, {'coffeemanga:a', 'mangak:B'});
+    await call('GET', '/v2/elsewhere');
+    expect(jobs.elsewhereReads.last, isNull);
+    final tooMany = [for (var i = 0; i <= maxElsewhereRead; i++) 'mangak:$i'].join(',');
+    final (rejectedRead, readError) = await call('GET', '/v2/elsewhere?keys=$tooMany');
+    expect((rejectedRead, code(readError)), (400, 'bad_request'));
+
+    drive.ready = false;
+    expect(code((await call('POST', '/v2/elsewhere', body: {'keys': ['mangak:A1']})).$2), 'drive_not_ready');
+    drive.ready = true;
+    drive.folderId = 'root';
+    final (queued, answer) = await call('POST', '/v2/elsewhere', body: {'keys': ['mangak:A1', 'mangak:A1', 'mangak:A2']});
+    expect((queued, answer?['queued']), (202, 2));
+    expect(jobs.looks.single, {'mangak:A1', 'mangak:A2'});
+    for (final bad in <Object?>[
+      <String, Object?>{},
+      {'keys': <Object?>[]},
+      {'keys': 'mangak:A1'},
+      {'keys': [1]},
+      {'keys': [for (var i = 0; i <= maxElsewhereLook; i++) 'mangak:$i']},
+    ]) {
+      final (rejected, error) = await call('POST', '/v2/elsewhere', body: bad);
+      expect(rejected, 400, reason: '$bad');
+      expect(code(error), 'bad_request');
+    }
+    expect(jobs.looks, hasLength(1));
+
+    expect((await call('PUT', '/v2/check', body: {'elsewhere': false})).$2!['elsewhere'], isFalse);
+    expect((await call('PUT', '/v2/check', body: {'elsewhere': 'no'})).$1, 400);
   });
 }

@@ -21,12 +21,26 @@ import 'package:kagami_archive/tracking.dart';
 import '../archive/device.dart';
 import '../format/malf.dart';
 import 'drive_library.dart';
+import 'drive_ownership.dart';
 import 'folder_sync.dart';
 import 'library.dart';
 import 'library_repository.dart';
 
+/// Se una serie con questi [holders] si può togliere: serve almeno uno
+/// scaffale su cui l'app ha il diritto di cancellare, cioè il telefono o il
+/// Drive dell'account se la cartella è sua ([driveOwned] vero; senza
+/// scaffali noti non c'è niente da proteggere: toglie ciò che toglieva). Una
+/// serie che hanno soltanto le altre sorgenti remote (condivise da altri, in
+/// sola lettura) o un Drive non proprio non si propone e non si tocca.
+bool canRemoveSeries(List<LibraryShelf> holders, {required bool? driveOwned}) =>
+    holders.isEmpty ||
+    holders.any((shelf) => shelf is LibraryRepository) ||
+    (driveOwned == true && ownDriveShelf(holders) != null);
+
 /// Toglie [entry] da [holders]. Drive solo con [writer], che ha il permesso
-/// di scrivere, e [folderId], la cartella della libreria.
+/// di scrivere, [folderId], la cartella della libreria, e [driveOwned] vero:
+/// Kagami cancella solo dove l'utente possiede, mai dallo scaffale di una
+/// condivisione (FASE-5b §5).
 ///
 /// I lavori in coda per i link di [keepUrls] (già normalizzati) restano: chi
 /// toglie una scheda manuale per metterci al posto la serie vera li ha appena
@@ -39,6 +53,7 @@ Future<void> removeSeries(
   DriveFiles? drive,
   DriveClient? writer,
   String? folderId,
+  bool? driveOwned,
   Set<String> keepUrls = const {},
 }) async {
   // Prima ciò che la riscaricherebbe: un giro che finisse dopo riscriverebbe
@@ -67,7 +82,7 @@ Future<void> removeSeries(
     await const ArchiveScheduler().start();
   }
 
-  if (writer != null && folderId != null && holders.any((shelf) => shelf is DriveRepository)) {
+  if (writer != null && folderId != null && driveOwned == true && ownDriveShelf(holders) != null) {
     await sync?.release([entry.path], SyncSide.remote);
     await DriveStore(
       remote: DriveSyncRemote(writer),

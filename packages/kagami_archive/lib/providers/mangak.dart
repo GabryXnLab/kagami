@@ -22,14 +22,14 @@ final RegExp _chapterPath = RegExp(r'^/([a-z0-9]+(?:-[a-z0-9]+)*)/[a-z0-9]+(?:-[
 final RegExp _chapterSlug = RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$');
 final RegExp _mediaHost = RegExp(r'^rx\.qvzr[a-z]\.org$');
 
-Map<String, Object?> _payload(Uint8List body) {
+Map<String, Object?> _payload(Uint8List body, String phase) {
   final found = _nextData.firstMatch(utf8.decode(body, allowMalformed: true));
-  if (found == null) throw const ProviderError('Dati MangaK assenti dalla pagina.');
+  if (found == null) throw ProviderChanged('Dati MangaK assenti dalla pagina.', fault: SiteFault(phase));
   try {
     final data = jsonDecode(found[1]!) as Map<String, Object?>;
     return (data['props'] as Map<String, Object?>)['pageProps'] as Map<String, Object?>;
   } on Object {
-    throw const ProviderError('Formato della pagina MangaK cambiato.');
+    throw ProviderChanged('Formato della pagina MangaK cambiato.', fault: SiteFault(phase));
   }
 }
 
@@ -63,7 +63,7 @@ class MangaK extends Provider {
       throw const ProviderError('Inserisci il link della serie MangaK, non di un capitolo.');
     }
     final canonical = 'https://mangak.io${trimSlashes(Uri.parse(url).path)}';
-    final data = _payload((await http.get(canonical)).body);
+    final data = _payload((await http.get(canonical)).body, 'series');
     final manga = data['initialManga'];
     if (manga is! Map<String, Object?> || !_present(manga['id']) || !_present(manga['name'])) {
       throw const ProviderError('Serie MangaK non trovata.');
@@ -74,7 +74,7 @@ class MangaK extends Provider {
     final values = response['data'];
     final raw = response['success'] == true && values is Map ? values['chapters'] : null;
     if (raw is! List || raw.isEmpty) {
-      throw const ProviderError('Elenco completo dei capitoli MangaK non disponibile.');
+      throw ProviderChanged('Elenco completo dei capitoli MangaK non disponibile.', fault: SiteFault('chapters', field: 'series.chapters.items'));
     }
     final seriesUrl = manga['url'];
     // Non tutti i capitoli sono `chapter-…`: Kidnapped Dragons ha un
@@ -87,7 +87,7 @@ class MangaK extends Provider {
           !isText(item['id']) ||
           !isText(item['name']) ||
           !isText(item['url'])) {
-        throw const ProviderError('Capitolo MangaK incompleto.');
+        throw ProviderChanged('Capitolo MangaK incompleto.', fault: SiteFault('chapters', field: 'series.chapters.url'));
       }
       final chapterUrl = 'https://mangak.io${item['url']}';
       final itemUrl = item['url'] as String;
@@ -95,7 +95,7 @@ class MangaK extends Provider {
           !_chapterSlug.hasMatch(itemUrl.substring(prefix.length)) ||
           Uri.tryParse(chapterUrl)?.host != 'mangak.io' ||
           !seen.add(item['id'] as String)) {
-        throw const ProviderError('Elenco capitoli MangaK incoerente.');
+        throw ProviderChanged('Elenco capitoli MangaK incoerente.', fault: SiteFault('chapters', field: 'series.chapters.id'));
       }
       // `number` di MangaK è il posto nell'elenco, non il numero del
       // capitolo: resta nei metadati e basta. Un nome senza numero («Prologue»)
@@ -113,9 +113,10 @@ class MangaK extends Provider {
     final expected = stats is Map ? stats['chaptersCount'] : null;
     // Il conteggio sta nella pagina, che il sito tiene in cache, e l'elenco
     // arriva dall'API: quando esce un capitolo l'elenco ne ha uno in più per
-    // un po'. Uno in meno, invece, è un elenco tagliato.
-    if (expected is int && chapters.length < expected) {
-      throw ProviderError('Elenco incompleto: ${chapters.length} capitoli su $expected.');
+    // un po'. Pochi in meno sono buchi di numerazione del sito (come
+    // `expect` del catalogo, `chaptersTolerance`); molti sono un elenco tagliato.
+    if (expected is int && expected - chapters.length > chaptersTolerance(expected)) {
+      throw ProviderChanged('Elenco incompleto: ${chapters.length} capitoli su $expected.', fault: SiteFault('chapters', field: 'series.chapters.items'));
     }
     final cover = manga['cover'];
     if (isText(cover)) validateUrl(cover as String);
@@ -139,7 +140,7 @@ class MangaK extends Provider {
     }).toString());
     final data = response['data'];
     final items = response['success'] == true && data is Map ? data['items'] : null;
-    if (items is! List) throw const ProviderError('Risposta della ricerca MangaK cambiata.');
+    if (items is! List) throw ProviderChanged('Risposta della ricerca MangaK cambiata.', fault: SiteFault('search', field: 'search.items'));
     final results = <SearchResult>[];
     for (final item in items) {
       if (item is! Map<String, Object?> || !isText(item['name']) || !isText(item['url'])) continue;
@@ -165,22 +166,22 @@ class MangaK extends Provider {
 
   @override
   Future<ChapterContent> fetchPages(Chapter chapter, ProviderHttp http) async {
-    final data = _payload((await http.get(chapter.url)).body);
+    final data = _payload((await http.get(chapter.url)).body, 'pages');
     final raw = data['initialChapter'];
     if (raw is! Map<String, Object?> || raw['id'] != chapter.id) {
-      throw ProviderError('Capitolo non corrispondente: ${chapter.title}.');
+      throw ProviderChanged('Capitolo non corrispondente: ${chapter.title}.', fault: SiteFault('pages'));
     }
     final images = raw['images'];
     final details = raw['pages'];
     if (images is! List || images.isEmpty || details is! List || images.length != details.length) {
-      throw ProviderError('Elenco immagini incompleto: ${chapter.title}.');
+      throw ProviderChanged('Elenco immagini incompleto: ${chapter.title}.', fault: SiteFault('pages', field: 'chapter.pages.items'));
     }
     final pages = <Page>[];
     for (var i = 0; i < images.length; i++) {
       final image = images[i];
       final detail = details[i];
       if (detail is! Map || image is! String || image != detail['url']) {
-        throw ProviderError('Pagina non coerente: ${chapter.title}.');
+        throw ProviderChanged('Pagina non coerente: ${chapter.title}.', fault: SiteFault('pages', field: 'chapter.pages.url'));
       }
       validateUrl(image);
       pages.add(Page(

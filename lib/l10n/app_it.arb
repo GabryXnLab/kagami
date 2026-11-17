@@ -167,14 +167,27 @@
   "@seriesMuteMuted": {
     "description": "Messaggio temporaneo dopo aver silenziato le notifiche dei capitoli nuovi di una serie"
   },
-  "seriesCaughtUpMissing": "{count, plural, =1{In pari con quello che c'è sul telefono: manca un capitolo annunciato.} other{In pari con quello che c'è sul telefono: mancano {count} capitoli annunciati.}}",
-  "@seriesCaughtUpMissing": {
-    "description": "Riquadro di ripresa: tutto ciò che è sul telefono è letto, ma alcuni capitoli annunciati non sono stati scaricati",
+  "seriesWaitingChapters": "{count, plural, =1{Hai letto tutto quello che è scaricato: un capitolo da leggere non è ancora arrivato.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere non sono ancora arrivati.}}",
+  "@seriesWaitingChapters": {
+    "description": "Riquadro di ripresa: tutto ciò che è leggibile (telefono o Drive) è letto, ma restano capitoli da leggere annunciati e non scaricati",
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
+  },
+  "seriesWaitingQueued": "{count, plural, =1{Hai letto tutto quello che è scaricato: il prossimo capitolo è in coda.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere, i prossimi sono in coda.}}",
+  "@seriesWaitingQueued": {
+    "description": "Riquadro di ripresa: come sopra, ma i prossimi capitoli sono già in coda per lo scaricamento",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesFetchNext": "Scarica i prossimi",
+  "@seriesFetchNext": {
+    "description": "Pulsante del riquadro di ripresa: scarica dal sito i prossimi capitoli da leggere"
   },
   "seriesCaughtUpAll": "Letta tutta.",
   "@seriesCaughtUpAll": {
@@ -545,6 +558,10 @@
   "seriesChapterNotDownloaded": "Non scaricato",
   "@seriesChapterNotDownloaded": {
     "description": "Riga sotto il titolo di un capitolo annunciato ma non scaricato"
+  },
+  "seriesChapterUnlisted": "Non più sul sito",
+  "@seriesChapterUnlisted": {
+    "description": "Riga sotto il titolo di un capitolo archiviato e leggibile che il sito non elenca più"
   },
   "seriesChapterPages": "{count, plural, =1{1 tavola} other{{count} tavole}}",
   "@seriesChapterPages": {
@@ -1140,6 +1157,10 @@
       }
     }
   },
+  "archiveResults": "Risultati",
+  "@archiveResults": {
+    "description": "Titolo della sezione con i risultati della ricerca in Scarica un manga, mescolati fra i siti"
+  },
   "archiveNoResults": "Nessun risultato su {site}.",
   "@archiveNoResults": {
     "description": "Ricerca per titolo senza risultati su un sito",
@@ -1413,6 +1434,140 @@
   "archiveCheckNow": "Controlla adesso",
   "@archiveCheckNow": {
     "description": "Riga che avvia subito il controllo delle serie in corso"
+  },
+  "archiveRepair": "Ripara le serie archiviate",
+  "@archiveRepair": {
+    "description": "Archivio (serie seguite) e menu della serie: voce che lancia la riparazione delle serie archiviate"
+  },
+  "archiveRepairHint": "Rilegge ogni serie dal suo sito e corregge titolo, copertina e capitoli",
+  "@archiveRepairHint": {
+    "description": "Sotto la voce di riparazione: cosa fa"
+  },
+  "archiveRepairAll": "Tutta la libreria",
+  "@archiveRepairAll": {
+    "description": "Foglio della riparazione: ripara tutta la libreria"
+  },
+  "archiveRepairSite": "Solo le serie di {site}",
+  "@archiveRepairSite": {
+    "description": "Foglio della riparazione: ripara solo le serie di un sito; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairSeries": "Ripara la serie",
+  "@archiveRepairSeries": {
+    "description": "Scheda della serie: pulsante che ripara questa serie"
+  },
+  "archiveRepairRunning": "Riparo {done} di {total}: {title}",
+  "@archiveRepairRunning": {
+    "description": "Avanzamento della riparazione sul telefono; done e total sono numeri di serie, title il titolo della serie in corso",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairQueued": "Riparazione avviata sul server: gli esiti compaiono nella cronologia.",
+  "@archiveRepairQueued": {
+    "description": "Messaggio dopo aver lanciato la riparazione sul server"
+  },
+  "archiveRepairFinished": "{count, plural, =0{Nessuna serie da riparare.} =1{Riparata 1 serie.} other{Riparate {count} serie.}}",
+  "@archiveRepairFinished": {
+    "description": "Messaggio a riparazione finita sul telefono; count è quante serie sono state lette",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairNoLibrary": "Non c'è una libreria da riparare: scegli la cartella di Drive o del telefono.",
+  "@archiveRepairNoLibrary": {
+    "description": "Riparazione: non c'è né la cartella di Drive né quella del telefono"
+  },
+  "archiveRepairNoServer": "Il server non sa ancora riparare le serie: va aggiornato.",
+  "@archiveRepairNoServer": {
+    "description": "Riparazione: il server collegato non conosce la riparazione"
+  },
+  "archiveRepairFailed": "Riparazione non riuscita: {error}",
+  "@archiveRepairFailed": {
+    "description": "Riparazione non riuscita; error è il motivo",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairBusy": "Il telefono sta già riparando o scaricando: riprova fra poco.",
+  "@archiveRepairBusy": {
+    "description": "Riparazione: se ne chiede una mentre un'altra è in corso"
+  },
+  "archiveRepairRecovered": "Il sito {site} funziona di nuovo: ripara le sue serie",
+  "@archiveRepairRecovered": {
+    "description": "Proposta quando un sito rotto torna a funzionare; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "archiveRepairRecoveredAction": "Ripara",
+  "@archiveRepairRecoveredAction": {
+    "description": "Azione della proposta di riparazione: lancia la riparazione del sito"
+  },
+  "archiveRepairDismiss": "Ignora",
+  "@archiveRepairDismiss": {
+    "description": "Azione della proposta di riparazione: la scarta"
+  },
+  "archiveRepairNothing": "Niente da riparare",
+  "@archiveRepairNothing": {
+    "description": "Cronologia: esito di una riparazione che non ha cambiato niente"
+  },
+  "archiveRepairAdopted": "nuova chiave adottata",
+  "@archiveRepairAdopted": {
+    "description": "Cronologia, esito di riparazione: la serie ha adottato una nuova chiave (il sito ha cambiato identità)"
+  },
+  "archiveRepairRetitled": "titolo aggiornato",
+  "@archiveRepairRetitled": {
+    "description": "Cronologia, esito di riparazione: il titolo è cambiato"
+  },
+  "archiveRepairCover": "copertina aggiornata",
+  "@archiveRepairCover": {
+    "description": "Cronologia, esito di riparazione: la copertina è cambiata"
+  },
+  "archiveRepairAdded": "{count, plural, =1{1 capitolo nuovo} other{{count} capitoli nuovi}}",
+  "@archiveRepairAdded": {
+    "description": "Cronologia, esito di riparazione: capitoli che il sito elenca e l'archivio non aveva; count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairUnlisted": "{count, plural, =1{1 capitolo non più elencato} other{{count} capitoli non più elencati}}",
+  "@archiveRepairUnlisted": {
+    "description": "Cronologia, esito di riparazione: capitoli archiviati che il sito non elenca più (restano archiviati); count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "archiveRepairError": "Non riparata: {error}",
+  "@archiveRepairError": {
+    "description": "Cronologia, esito di riparazione: la serie non si è potuta riparare; error è il motivo",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "archiveNoTracked": "Nessuna serie da seguire, per ora",
   "@archiveNoTracked": {
@@ -1875,6 +2030,22 @@
   "@serverAddressExposed": {
     "description": "Avviso sotto il campo indirizzo quando è HTTP su un indirizzo pubblico"
   },
+  "serverDriveForeignTitle": "Dare il tuo Drive a questo server?",
+  "@serverDriveForeignTitle": {
+    "description": "Titolo della conferma prima di dare il permesso su Drive a un server che non è dell'utente"
+  },
+  "serverDriveForeignBody": "Questo server non è tuo: chi lo gestisce potrà leggere, scrivere e cancellare in tutto il tuo Drive, non solo nella cartella della libreria. Continua solo se ti fidi di lui.",
+  "@serverDriveForeignBody": {
+    "description": "Corpo della conferma: chi gestisce un server non proprio avrà accesso a tutto il Drive"
+  },
+  "serverDriveForeignConfirm": "Do il permesso",
+  "@serverDriveForeignConfirm": {
+    "description": "Pulsante che conferma il permesso su Drive a un server non proprio"
+  },
+  "serverDriveNeedsHttps": "Il permesso di Drive non si manda a un server in chiaro (http://) su un indirizzo pubblico: si leggerebbe per strada. Usa un indirizzo https:// o una rete privata come Tailscale.",
+  "@serverDriveNeedsHttps": {
+    "description": "Errore: il permesso di Drive non si manda a un server http:// su un indirizzo pubblico"
+  },
   "serverAddressSavedNote": "L'indirizzo viaggia col backup e con l'account, come la cartella di Drive.",
   "@serverAddressSavedNote": {
     "description": "Nota sotto il campo indirizzo nel foglio «Collega un server»"
@@ -2312,9 +2483,9 @@
   "@syncDescDownload": {
     "description": "Spiegazione della direzione Da Drive"
   },
-  "syncDescUpload": "Quello che c'è sul telefono sale su Drive — per esempio le copie dei dati in reading/backup. Gli indici della libreria restano quelli del server.",
+  "syncDescUpload": "Quello che c'è sul telefono sale su Drive. Gli indici della libreria restano quelli del server.",
   "@syncDescUpload": {
-    "description": "Spiegazione della direzione Verso Drive (reading/backup è un percorso)"
+    "description": "Spiegazione della direzione Verso Drive (sale su Drive solo ciò che è sul telefono)"
   },
   "syncDescBoth": "Quello che cambia da una parte arriva dall'altra; se è cambiato da tutt'e due, vince il più recente. Gli indici della libreria scendono e basta: sono del server.",
   "@syncDescBoth": {
@@ -2614,13 +2785,13 @@
   "@settingsDataNote": {
     "description": "Sottotitolo della voce «Dati» nella pagina principale delle impostazioni"
   },
-  "settingsAutoBackup": "Copia automatica nella libreria",
+  "settingsAutoBackup": "Copia automatica sul telefono",
   "@settingsAutoBackup": {
     "description": "Interruttore della copia di backup giornaliera"
   },
-  "settingsAutoBackupNote": "Una volta al giorno in reading/backup/, che la sincronizzazione porta su Drive insieme ai manga",
+  "settingsAutoBackupNote": "Una volta al giorno nello spazio dell'app, su questo telefono. Per averle altrove c'è l'account o «Esporta»",
   "@settingsAutoBackupNote": {
-    "description": "Sottotitolo dell'interruttore della copia automatica (reading/backup/ è un percorso)"
+    "description": "Sottotitolo dell'interruttore della copia automatica (le copie stanno nello spazio dell'app)"
   },
   "settingsExport": "Esporta i dati",
   "@settingsExport": {
@@ -2802,9 +2973,9 @@
   },
   "settingsAccountUnavailable": "Account non disponibile qui",
   "@settingsAccountUnavailable": {
-    "description": "Titolo mostrato nelle build senza Firebase"
+    "description": "Titolo mostrato nelle build senza backend"
   },
-  "settingsAccountUnavailableNote": "Questa build non ha Firebase: i dati restano dove sono, sul dispositivo",
+  "settingsAccountUnavailableNote": "Questa build non ha un backend: i dati restano dove sono, sul dispositivo",
   "@settingsAccountUnavailableNote": {
     "description": "Sottotitolo di «Account non disponibile qui»"
   },
@@ -2840,15 +3011,19 @@
   "@settingsAccountSignOut": {
     "description": "Riga che chiude la sessione con l'account Google"
   },
-  "settingsAccountSignOutNote": "Manda su l'ultima lettura, poi chiude la sessione",
+  "settingsAccountSignOutNote": "Manda su l'ultima lettura e chiude la sessione: sul telefono tornano i dati dell'uso senza account",
   "@settingsAccountSignOutNote": {
     "description": "Sottotitolo di «Esci»"
+  },
+  "settingsAccountSessionLostNote": "La sessione è scaduta: accedi di nuovo per sincronizzare, o esci per tornare ai dati dell'uso senza account",
+  "@settingsAccountSessionLostNote": {
+    "description": "Sottotitolo di «Esci» quando la sessione dell'account è scaduta ma a schermo restano i dati di quell'account"
   },
   "settingsAccountForget": "Smetti di tenerne copia",
   "@settingsAccountForget": {
     "description": "Riga che cancella i dati dall'account"
   },
-  "settingsAccountForgetNote": "Cancella i dati dall'account. Quelli di questo telefono restano dove sono",
+  "settingsAccountForgetNote": "Cancella i dati dall'account e torni all'uso senza account. Quelli dell'account restano nel suo file su questo telefono, nascosti finché non rientri",
   "@settingsAccountForgetNote": {
     "description": "Sottotitolo di «Smetti di tenerne copia»"
   },
@@ -2860,7 +3035,7 @@
   "@settingsAccountForgetSheetTitle": {
     "description": "Titolo del foglio di conferma della cancellazione dei dati dall'account"
   },
-  "settingsAccountForgetExplain": "Sparisce la copia tenuta per te, e l'accesso si chiude. Stato, voti, cronologia e raccolte di questo telefono restano dove sono — ma da un altro telefono non si vedranno più.",
+  "settingsAccountForgetExplain": "Sparisce la copia tenuta per te, e l'accesso si chiude. Sul telefono tornano i dati dell'uso senza account; stato, voti, cronologia e raccolte dell'account restano in un suo file su questo telefono, ma non si vedono finché non rientri con lo stesso account (e da un altro telefono non si vedranno più).",
   "@settingsAccountForgetExplain": {
     "description": "Avviso nel foglio di conferma della cancellazione dall'account"
   },
@@ -2936,9 +3111,9 @@
   "@settingsWhatItDoes": {
     "description": "Descrizione (tooltip) del pulsante info che spiega un'impostazione"
   },
-  "settingsBackupsTitle": "Copie nella libreria",
+  "settingsBackupsTitle": "Copie sul telefono",
   "@settingsBackupsTitle": {
-    "description": "Riga che elenca le copie di backup automatiche nella cartella della libreria"
+    "description": "Riga che elenca le copie di backup automatiche nello spazio dell'app"
   },
   "settingsBackupsNone": "Nessuna copia ancora: la prima si fa alla prossima apertura",
   "@settingsBackupsNone": {
@@ -3499,10 +3674,6 @@
   "@shellTabLibrary": {
     "description": "Barra di navigazione in basso: la libreria di manga"
   },
-  "shellTabCollections": "Raccolte",
-  "@shellTabCollections": {
-    "description": "Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici"
-  },
   "moreDownload": "Scarica un manga",
   "@moreDownload": {
     "description": "Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito"
@@ -3828,6 +3999,10 @@
   "removeSeriesDrive": "Su Drive la cartella va nel cestino: per trenta giorni si recupera da lì.",
   "@removeSeriesDrive": {
     "description": "Nota nel foglio di eliminazione quando la serie è anche su Drive"
+  },
+  "removeSeriesDriveNotOwned": "Su Drive la serie resta: la cartella della libreria non è del tuo account, o Drive non l'ha ancora confermato, e Kagami cancella solo dove possiedi.",
+  "@removeSeriesDriveNotOwned": {
+    "description": "Nota nel foglio di eliminazione (o avviso) quando la serie è nel Drive dell'account ma la cartella non è sua o la proprietà non è ancora nota: su Drive non si cancella"
   },
   "removeSeriesConfirm": "Elimina",
   "@removeSeriesConfirm": {
@@ -4235,7 +4410,7 @@
   },
   "dataCloudSignInNotEnabled": "L'accesso con Google non è ancora attivo su questo progetto",
   "@dataCloudSignInNotEnabled": {
-    "description": "Errore: il metodo di accesso con Google non è abilitato nel progetto Firebase."
+    "description": "Errore: il metodo di accesso con Google non è abilitato sul backend dell'account."
   },
   "dataCloudNoConnection": "Nessuna connessione",
   "@dataCloudNoConnection": {
@@ -4264,6 +4439,14 @@
   "dataCloudGoogleSignInFailed": "Accesso con Google non riuscito",
   "@dataCloudGoogleSignInFailed": {
     "description": "Errore generico dell'accesso con Google."
+  },
+  "dataCloudBackendUnavailable": "Funzione non disponibile sul backend di questa build",
+  "@dataCloudBackendUnavailable": {
+    "description": "Errore dell'account: il backend scelto da chi ha compilato l'app non ha la tabella o il permesso che serve (schema più vecchio dell'app)."
+  },
+  "dataCloudTooLarge": "I tuoi dati personali superano i 16 MiB che il backend accetta: restano su questo telefono, ma non si sincronizzano",
+  "@dataCloudTooLarge": {
+    "description": "Errore della sincronizzazione dell'account: il backend rifiuta la riga dei dati personali perché supera il suo tetto di 16 MiB."
   },
   "dataNewChaptersNotification": "{count, plural, =1{È arrivato un capitolo nuovo} other{Sono arrivati {count} capitoli nuovi}}",
   "@dataNewChaptersNotification": {
@@ -5247,6 +5430,10 @@
   "@settingsAutoCleanupReadNote": {
     "description": "Sottotitolo dell'interruttore dei capitoli letti: dove li toglie, e che lo stato di lettura resta"
   },
+  "settingsAutoCleanupSharedRead": "Un capitolo letto da una condivisione è letto: toglie anche la copia nel tuo Drive.",
+  "@settingsAutoCleanupSharedRead": {
+    "description": "Seconda riga del sottotitolo dei capitoli letti, con Drive collegato: un capitolo letto da una libreria condivisa da altri conta come letto e la regola toglie anche la copia nel Drive dell'utente"
+  },
   "settingsAutoCleanupIdle": "Togli i capitoli delle serie lasciate",
   "@settingsAutoCleanupIdle": {
     "description": "Interruttore: toglie dal telefono anche i capitoli da leggere delle serie che non si leggono da un po'"
@@ -5401,6 +5588,14 @@
   "@collectionPropsMuted": {
     "description": "Interruttore: niente notifiche né novità"
   },
+  "collectionTraitHidden": "Nascondi",
+  "@collectionTraitHidden": {
+    "description": "Interruttore nelle proprietà di una raccolta: la nasconde da home, libreria, statistiche e cronologia"
+  },
+  "collectionTraitHiddenHint": "Niente notifiche; le serie si vedono solo aprendo la raccolta",
+  "@collectionTraitHiddenHint": {
+    "description": "Sotto l'interruttore Nascondi delle proprietà di una raccolta"
+  },
   "collectionPropsKeepChapters": "Escludi dalla pulizia automatica",
   "@collectionPropsKeepChapters": {
     "description": "Interruttore: la pulizia automatica dei capitoli salta le serie della raccolta"
@@ -5428,5 +5623,1778 @@
   "settingsReadAheadWindowNote": "Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano",
   "@settingsReadAheadWindowNote": {
     "description": "Impostazioni → Libreria: spiegazione sotto «Capitoli da tenere pronti»"
+  },
+  "archiveSiteBroken": "Il sito {site} non funziona: è cambiato e Kagami va aggiornato.",
+  "@archiveSiteBroken": {
+    "description": "Scarica un manga, serie seguite, scheda della serie e ricerca: il sito intero non funziona perché è cambiato; sotto compare il messaggio tecnico; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "elsewhereTitle": "Su altri siti",
+  "@elsewhereTitle": {
+    "description": "Titolo della sezione nella scheda di una serie: la stessa serie sugli altri siti registrati"
+  },
+  "elsewhereChecking": "Cerco la serie sugli altri siti…",
+  "@elsewhereChecking": {
+    "description": "Sotto il titolo «Su altri siti» mentre la ricerca sugli altri siti è in corso"
+  },
+  "elsewhereChapters": "{count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@elsewhereChapters": {
+    "description": "Riga di un sito in «Su altri siti»: quanti capitoli elenca il sito; count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "elsewhereLatest": "Ultimo: capitolo {chapter}",
+  "@elsewhereLatest": {
+    "description": "Riga di un sito in «Su altri siti»: numero dell'ultimo capitolo; chapter è il numero",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "elsewhereLatestAt": "Ultimo: capitolo {chapter}, {date}",
+  "@elsewhereLatestAt": {
+    "description": "Riga di un sito in «Su altri siti»: numero e data dell'ultimo capitolo; chapter è il numero, date la data come la scrive il sito",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "elsewhereAhead": "{count, plural, =1{1 capitolo avanti} other{{count} capitoli avanti}}",
+  "@elsewhereAhead": {
+    "description": "«Su altri siti»: di quanti capitoli un sito è più avanti della serie in uso; count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "elsewhereBehind": "{count, plural, =1{1 capitolo indietro} other{{count} capitoli indietro}}",
+  "@elsewhereBehind": {
+    "description": "«Su altri siti»: di quanti capitoli un sito è più indietro della serie in uso; count è il numero",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "elsewhereSame": "Allo stesso capitolo",
+  "@elsewhereSame": {
+    "description": "«Su altri siti»: il sito è allo stesso capitolo della serie in uso"
+  },
+  "elsewhereMissing": "Qui non c'è",
+  "@elsewhereMissing": {
+    "description": "«Su altri siti»: la serie non c'è su questo sito"
+  },
+  "elsewhereBroken": "Sito non funzionante",
+  "@elsewhereBroken": {
+    "description": "«Su altri siti»: il sito è rotto (cambiato) e non è stato interrogato"
+  },
+  "elsewhereGated": "Chiede la verifica del browser",
+  "@elsewhereGated": {
+    "description": "«Su altri siti»: il sito chiede la verifica del browser e da qui non si passa"
+  },
+  "elsewhereError": "Non ha risposto",
+  "@elsewhereError": {
+    "description": "«Su altri siti»: il sito ha risposto con un errore, per questa volta non si sa"
+  },
+  "elsewhereSwitch": "Passa a questo sito",
+  "@elsewhereSwitch": {
+    "description": "Pulsante su una riga trovata di «Su altri siti»: passa la serie a quel sito, senza ripetere la ricerca di «Cambia provider»"
+  },
+  "elsewhereSiteAction": "Dove si leggono altrove",
+  "@elsewhereSiteAction": {
+    "description": "Azione nell'avviso di un sito rotto: apre l'elenco delle serie di quel sito con gli altri siti dove si trovano"
+  },
+  "elsewhereSiteTitle": "Serie di {site}",
+  "@elsewhereSiteTitle": {
+    "description": "Titolo della pagina con le serie di un sito rotto; site è il nome del sito",
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "elsewhereSiteEmpty": "Nessuna serie in libreria viene da questo sito.",
+  "@elsewhereSiteEmpty": {
+    "description": "Pagina delle serie di un sito rotto: nessuna serie in libreria viene da quel sito"
+  },
+  "elsewhereSiteUnknown": "Non ancora cercata altrove",
+  "@elsewhereSiteUnknown": {
+    "description": "Pagina delle serie di un sito rotto: per questa serie non si è ancora cercato sugli altri siti"
+  },
+  "elsewhereSiteNowhere": "Non risulta su altri siti",
+  "@elsewhereSiteNowhere": {
+    "description": "Pagina delle serie di un sito rotto: la serie non risulta su nessun altro sito"
+  },
+  "elsewhereSiteOffline": "Si vede ciò che era già stato trovato. Con un Kagami Server collegato la ricerca si fa per tutte le serie.",
+  "@elsewhereSiteOffline": {
+    "description": "Pagina delle serie di un sito rotto, senza server: si mostra solo ciò che l'app ha già in cache, senza cercare in massa dal telefono"
+  },
+  "sitesTitle": "Siti",
+  "@sitesTitle": {
+    "description": "Titolo della pagina Siti (Impostazioni, Scarica un manga) e della voce che la apre"
+  },
+  "sitesEntrySubtitle": "Quelli inclusi e quelli che aggiungi tu",
+  "@sitesEntrySubtitle": {
+    "description": "Sottotitolo della voce che apre la pagina Siti"
+  },
+  "sitesBuiltInSection": "Inclusi nell'app",
+  "@sitesBuiltInSection": {
+    "description": "Pagina Siti: sezione dei siti inclusi nell'app"
+  },
+  "sitesAddedSection": "Aggiunti",
+  "@sitesAddedSection": {
+    "description": "Pagina Siti: sezione dei siti aggiunti dall'utente"
+  },
+  "sitesNoneAdded": "Nessun sito aggiunto.",
+  "@sitesNoneAdded": {
+    "description": "Pagina Siti: nessun sito aggiunto"
+  },
+  "sitesNoLibrary": "Servono una cartella di Drive o una cartella del telefono come libreria: i siti si salvano lì.",
+  "@sitesNoLibrary": {
+    "description": "Pagina Siti: senza libreria non si possono aggiungere siti"
+  },
+  "sitesVersion": "versione {version}",
+  "@sitesVersion": {
+    "description": "Pagina Siti: versione del file di un sito",
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "sitesReplaces": "Sostituisce {name}",
+  "@sitesReplaces": {
+    "description": "Pagina Siti: il sito aggiunto prende il posto di un sito incluso",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesBroken": "File rovinato",
+  "@sitesBroken": {
+    "description": "Pagina Siti: il file del sito non si è potuto leggere"
+  },
+  "sitesUpdateNow": "Aggiorna ora",
+  "@sitesUpdateNow": {
+    "description": "Pagina Siti: azione per aggiornare subito il file di un sito"
+  },
+  "sitesUpdated": "Sito aggiornato.",
+  "@sitesUpdated": {
+    "description": "Pagina Siti: esito dell'aggiornamento, il sito è stato aggiornato"
+  },
+  "sitesUpToDate": "Niente di nuovo: il sito è già aggiornato.",
+  "@sitesUpToDate": {
+    "description": "Pagina Siti: esito dell'aggiornamento, non c'è niente di nuovo"
+  },
+  "sitesRemove": "Togli",
+  "@sitesRemove": {
+    "description": "Pagina Siti: azione per togliere un sito aggiunto"
+  },
+  "sitesRemoveTitle": "Togliere {name}?",
+  "@sitesRemoveTitle": {
+    "description": "Pagina Siti: titolo della conferma per togliere un sito",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesRemoveBody": "Le serie di questo sito restano in libreria, ma non si aggiornano finché il sito non torna.",
+  "@sitesRemoveBody": {
+    "description": "Pagina Siti: testo della conferma per togliere un sito"
+  },
+  "sitesAdd": "Aggiungi un sito",
+  "@sitesAdd": {
+    "description": "Pagina Siti: pulsante e titolo della pagina per aggiungere un sito"
+  },
+  "sitesAddHint": "Link al file o testo incollato",
+  "@sitesAddHint": {
+    "description": "Aggiungi un sito: segnaposto del campo del link o del testo"
+  },
+  "sitesAddCheck": "Controlla",
+  "@sitesAddCheck": {
+    "description": "Aggiungi un sito: pulsante che legge il file e mostra l'anteprima"
+  },
+  "sitesInvalid": "Il file non è valido",
+  "@sitesInvalid": {
+    "description": "Errore generico quando il file di un sito non è valido; sotto si mostra il messaggio tecnico"
+  },
+  "sitesFetchFailed": "Non si è riusciti a scaricare il file",
+  "@sitesFetchFailed": {
+    "description": "Errore quando il link del file di un sito non risponde"
+  },
+  "sitesPreviewHosts": "Chiederà le pagine a",
+  "@sitesPreviewHosts": {
+    "description": "Anteprima di un sito: elenco degli host a cui chiederà le pagine"
+  },
+  "sitesTryTitle": "Prova prima di installare (facoltativo)",
+  "@sitesTryTitle": {
+    "description": "Anteprima di un sito: titolo della prova facoltativa"
+  },
+  "sitesTryHint": "Una ricerca o il link di una serie",
+  "@sitesTryHint": {
+    "description": "Anteprima di un sito: segnaposto del campo della prova"
+  },
+  "sitesTry": "Prova",
+  "@sitesTry": {
+    "description": "Anteprima di un sito: pulsante che avvia la prova"
+  },
+  "sitesTrySeries": "{title}: {count, plural, =1{un capitolo} other{{count} capitoli}}",
+  "@sitesTrySeries": {
+    "description": "Prova di un sito: titolo della serie trovata e numero di capitoli",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sitesTryResults": "{count, plural, =0{Nessun risultato} =1{Un risultato: {first}} other{{count} risultati, il primo: {first}}}",
+  "@sitesTryResults": {
+    "description": "Prova di un sito: risultati di una ricerca",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "first": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesTryFailed": "La prova non è riuscita",
+  "@sitesTryFailed": {
+    "description": "Prova di un sito: errore; sotto il messaggio tecnico"
+  },
+  "sitesFault": "Fase: {phase} · campo: {field}",
+  "@sitesFault": {
+    "description": "Prova di un sito: fase e campo del guasto, sotto l'errore",
+    "placeholders": {
+      "phase": { "type": "String" },
+      "field": { "type": "String" }
+    }
+  },
+  "sitesFaultPhase": "Fase: {phase}",
+  "@sitesFaultPhase": {
+    "description": "Prova di un sito: fase e campo del guasto, sotto l'errore",
+    "placeholders": {
+      "phase": { "type": "String" }
+    }
+  },
+  "sitesInstall": "Installa",
+  "@sitesInstall": {
+    "description": "Anteprima di un sito: pulsante che installa il sito"
+  },
+  "sitesInstalled": "{name} installato.",
+  "@sitesInstalled": {
+    "description": "Esito: sito installato",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesKindManga": "Manga",
+  "@seriesKindManga": {
+    "description": "Famiglia di tipo: manga (giapponese), etichetta di un'opzione"
+  },
+  "seriesKindManhwa": "Manhwa",
+  "@seriesKindManhwa": {
+    "description": "Famiglia di tipo: manhwa (coreano e webtoon)"
+  },
+  "seriesKindManhua": "Manhua",
+  "@seriesKindManhua": {
+    "description": "Famiglia di tipo: manhua (cinese)"
+  },
+  "seriesKindOther": "Altro",
+  "@seriesKindOther": {
+    "description": "Famiglia di tipo: tutto il resto, anche senza tipo"
+  },
+  "collectionPropsBinding": "Vincolante",
+  "@collectionPropsBinding": {
+    "description": "Proprietà di una raccolta: interruttore che impedisce di tenere serie fuori dai criteri"
+  },
+  "collectionPropsBindingNote": "Solo le serie che rientrano nei criteri possono stare nella raccolta, anche aggiunte a mano.",
+  "@collectionPropsBindingNote": {
+    "description": "Spiegazione sotto l'interruttore «Vincolante»"
+  },
+  "collectionBindingWillRemove": "{count, plural, =1{Una serie che non rientra nei criteri uscirà dalla raccolta} other{{count} serie che non rientrano nei criteri usciranno dalla raccolta}}",
+  "@collectionBindingWillRemove": {
+    "description": "Foglio proprietà: quante serie attuali usciranno accendendo «Vincolante»",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionBindingRefused": "«{title}» non rientra nei criteri di «{collection}»",
+  "@collectionBindingRefused": {
+    "description": "SnackBar: aggiunta a mano rifiutata da una raccolta vincolante (una serie)",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "collection": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionBindingRefusedMany": "{count, plural, =1{Una serie non rientra} other{{count} serie non rientrano}} nei criteri di «{collection}»",
+  "@collectionBindingRefusedMany": {
+    "description": "SnackBar: aggiunta in blocco rifiutata da una raccolta vincolante (più serie)",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "collection": {
+        "type": "String"
+      }
+    }
+  },
+  "collectionBindingLockTip": "Raccolta vincolante",
+  "@collectionBindingLockTip": {
+    "description": "Tooltip del lucchetto sulla riga di una raccolta vincolante"
+  },
+  "accessDurationWeek": "Una settimana",
+  "@accessDurationWeek": {
+    "description": "Opzione del selettore di durata dell'accesso: sette giorni"
+  },
+  "accessDurationMonth": "Un mese",
+  "@accessDurationMonth": {
+    "description": "Opzione del selettore di durata dell'accesso: un mese (la proposta)"
+  },
+  "accessDurationQuarter": "Tre mesi",
+  "@accessDurationQuarter": {
+    "description": "Opzione del selettore di durata dell'accesso: tre mesi"
+  },
+  "accessDurationYear": "Un anno",
+  "@accessDurationYear": {
+    "description": "Opzione del selettore di durata dell'accesso: un anno"
+  },
+  "accessDurationNever": "Senza scadenza",
+  "@accessDurationNever": {
+    "description": "Opzione del selettore di durata dell'accesso: l'accesso non scade"
+  },
+  "serverUserExpires": "Scade il {date}",
+  "@serverUserExpires": {
+    "description": "Sottotitolo di un account ammesso al server nel foglio «Chi può usarlo»: quando scade il suo accesso. {date} è una data breve.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "serverUserExpired": "Scaduto",
+  "@serverUserExpired": {
+    "description": "Sottotitolo di un account ammesso: il suo accesso è scaduto"
+  },
+  "serverUserRenew": "Rinnova",
+  "@serverUserRenew": {
+    "description": "Pulsante che rinnova l'accesso scaduto o in scadenza di un account del server"
+  },
+  "serverUserRenewTitle": "Rinnova l'accesso di {email}",
+  "@serverUserRenewTitle": {
+    "description": "Titolo del foglio che chiede per quanto rinnovare l'accesso di un account",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "serverMyAccessExpires": "Il tuo accesso scade il {date}",
+  "@serverMyAccessExpires": {
+    "description": "Riga nella sezione Server, per chi è stato ammesso al server di un altro: quando scade il suo accesso",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "serverAccessExpired": "Accesso scaduto: chiedi a chi ha il server di rinnovarlo",
+  "@serverAccessExpired": {
+    "description": "Sezione Server, per chi è stato ammesso: l'accesso è scaduto e solo il proprietario del server può rinnovarlo"
+  },
+  "dataServerExpiryTitle": "Il tuo accesso a «{serverName}» sta per scadere",
+  "@dataServerExpiryTitle": {
+    "description": "Titolo della notifica che avvisa, tre giorni prima, che l'accesso al server di un altro sta per scadere",
+    "placeholders": {
+      "serverName": {
+        "type": "String"
+      }
+    }
+  },
+  "dataServerExpiryText": "Scade il {date}: chiedi a chi ha il server di rinnovarlo.",
+  "@dataServerExpiryText": {
+    "description": "Testo della notifica di accesso in scadenza",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "driveShareTitle": "Chi può leggere la mia libreria",
+  "@driveShareTitle": {
+    "description": "Titolo del foglio (e della voce in Impostazioni → Drive) in cui chi condivide la sua libreria su Drive vede chi può leggerla e fino a quando"
+  },
+  "driveShareEntryNote": "Chi vede la cartella su Drive e fino a quando",
+  "@driveShareEntryNote": {
+    "description": "Sottotitolo della voce in Impostazioni → Drive che apre il foglio di chi può leggere la libreria"
+  },
+  "driveShareIntro": "Aggiungi l'account Google di chi vuoi: potrà leggere la cartella «{folder}» su Drive, in sola lettura, per il tempo che scegli.",
+  "@driveShareIntro": {
+    "description": "Testo in cima al foglio di condivisione della libreria. {folder} è il nome della cartella di Drive",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareConsentTitle": "Serve un permesso in più su Drive",
+  "@driveShareConsentTitle": {
+    "description": "Titolo della finestra che precede la richiesta del permesso di scrivere su Drive, prima di gestire le condivisioni"
+  },
+  "driveShareConsentBody": "Chi aggiungi vedrà tutti i file della cartella «{folder}», non solo la libreria. Per gestire le condivisioni Google ti chiede un permesso in più. I tuoi dati di lettura che stanno nella cartella vanno nel cestino di Drive.",
+  "@driveShareConsentBody": {
+    "description": "Corpo della finestra del consenso: l'altra persona vedrà tutti i file della cartella {folder}, non solo la libreria",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareConsentContinue": "Continua",
+  "@driveShareConsentContinue": {
+    "description": "Pulsante che prosegue verso la richiesta di permesso di Google"
+  },
+  "driveShareAdd": "Condividi",
+  "@driveShareAdd": {
+    "description": "Pulsante che condivide la cartella con l'indirizzo scritto, per la durata scelta"
+  },
+  "driveShareInFolder": "Cartella «{name}»",
+  "@driveShareInFolder": {
+    "description": "Parte del sottotitolo di una condivisione che riguarda un'altra cartella di Drive, non quella attuale. {name} è il nome di quella cartella",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareFromDrive": "Condiviso da Drive",
+  "@driveShareFromDrive": {
+    "description": "Sottotitolo di una persona che ha accesso alla cartella perché condivisa a mano dal sito di Drive, senza termine registrato da Kagami"
+  },
+  "driveShareRemoveBody": "Non potrà più leggere la cartella.",
+  "@driveShareRemoveBody": {
+    "description": "Corpo della conferma prima di togliere a qualcuno l'accesso alla cartella di Drive"
+  },
+  "driveShareLinkAccess": "La cartella è leggibile anche da chi ha il link o da un dominio: si gestisce da Drive.",
+  "@driveShareLinkAccess": {
+    "description": "Avviso nel foglio di condivisione: la cartella è leggibile da chiunque abbia il link o da un dominio; Kagami non lo gestisce"
+  },
+  "driveShareDriveSilent": "Drive non ha risposto: l'elenco può essere incompleto.",
+  "@driveShareDriveSilent": {
+    "description": "Avviso nel foglio di condivisione: Drive non ha risposto, quindi l'elenco delle persone può essere incompleto (non vuol dire che non ce ne siano)"
+  },
+  "driveSharePersonalFound": "Nella cartella ci sono copie dei tuoi dati di lettura (reading/backup, state.json, collections.json): chi la legge può vederle.",
+  "@driveSharePersonalFound": {
+    "description": "Avviso nel foglio di condivisione: nella cartella condivisa restano copie dei dati di lettura dell'utente, visibili a chi la legge; accanto il pulsante per toglierle"
+  },
+  "driveSharePersonalRemove": "Togli",
+  "@driveSharePersonalRemove": {
+    "description": "Pulsante accanto all'avviso: sposta nel cestino di Drive le copie dei dati di lettura rimaste nella cartella"
+  },
+  "driveSharePersonalUnchecked": "Non ho potuto controllare se nella cartella restano copie dei tuoi dati di lettura.",
+  "@driveSharePersonalUnchecked": {
+    "description": "Avviso nel foglio di condivisione: non è stato possibile controllare se nella cartella restano copie dei dati di lettura (non vuol dire che non ci siano)"
+  },
+  "driveShareUnavailable": "Questo backend non ha la condivisione della libreria.",
+  "@driveShareUnavailable": {
+    "description": "Messaggio nel foglio di condivisione quando il backend dell'app non offre la funzione; senza campo di aggiunta"
+  },
+  "driveShareLoadFailed": "Non riesco a leggere chi ha accesso: {message}",
+  "@driveShareLoadFailed": {
+    "description": "Errore nel foglio di condivisione quando non si riesce a leggere chi ha accesso. {message} è la causa",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareNobody": "Nessuno, per ora.",
+  "@driveShareNobody": {
+    "description": "Riga nel foglio di condivisione quando nessuno ha accesso alla cartella"
+  },
+  "driveShareAdded": "{email} può leggere la libreria.",
+  "@driveShareAdded": {
+    "description": "Avviso dopo aver condiviso la libreria. {email} è l'indirizzo della persona",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareOffline": "Nessuna connessione: non è cambiato niente.",
+  "@driveShareOffline": {
+    "description": "Errore di rete in una scrittura del foglio di condivisione: lo stato di prima è intatto"
+  },
+  "driveShareFailed": "Non è andata: {message}",
+  "@driveShareFailed": {
+    "description": "Errore di una scrittura del foglio di condivisione. {message} è la causa",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "driveShareSelf": "È il tuo stesso indirizzo.",
+  "@driveShareSelf": {
+    "description": "Errore: l'indirizzo scritto è quello dell'account stesso"
+  },
+  "driveReceivedTitle": "Librerie condivise con me",
+  "@driveReceivedTitle": {
+    "description": "Titolo del foglio (e della voce in Impostazioni → Drive) con gli inviti e le librerie di Drive che altri hanno condiviso con l'utente"
+  },
+  "driveReceivedEntryNote": "Inviti e accessi alle librerie degli altri",
+  "@driveReceivedEntryNote": {
+    "description": "Sottotitolo della voce «Librerie condivise con me» in Impostazioni → Drive"
+  },
+  "driveReceivedInvite": "{owner} ti ha dato accesso in sola lettura alla libreria «{folder}».",
+  "@driveReceivedInvite": {
+    "description": "Riga di un invito nel foglio delle librerie condivise. {owner} è chi condivide (nome e indirizzo), {folder} il nome della cartella",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "driveReceivedAccept": "Accetta",
+  "@driveReceivedAccept": {
+    "description": "Pulsante per accettare l'invito a una libreria condivisa"
+  },
+  "driveReceivedDecline": "Rifiuta",
+  "@driveReceivedDecline": {
+    "description": "Pulsante per rifiutare l'invito a una libreria condivisa (solo sul telefono: chi ha condiviso non lo sa)"
+  },
+  "driveReceivedRemove": "Togli",
+  "@driveReceivedRemove": {
+    "description": "Pulsante per togliere dall'elenco una libreria condivisa già accettata (solo sul telefono)"
+  },
+  "driveReceivedUntil": "{owner} · fino al {date}",
+  "@driveReceivedUntil": {
+    "description": "Riga di una libreria condivisa con un termine. {owner} è chi ha condiviso, {date} il giorno in cui l'accesso finisce",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      },
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "driveReceivedNoLimit": "{owner} · senza scadenza",
+  "@driveReceivedNoLimit": {
+    "description": "Riga di una libreria condivisa senza scadenza. {owner} è chi ha condiviso",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "driveReceivedExpiredRow": "{owner} · accesso scaduto",
+  "@driveReceivedExpiredRow": {
+    "description": "Riga di una libreria condivisa il cui accesso è scaduto. {owner} è chi ha condiviso",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "driveReceivedEmpty": "Nessuna libreria condivisa con te, per ora.",
+  "@driveReceivedEmpty": {
+    "description": "Testo del foglio delle librerie condivise quando non c'è né un invito né una libreria"
+  },
+  "driveReceivedNotificationTitle": "{owner} ha condiviso una libreria con te",
+  "@driveReceivedNotificationTitle": {
+    "description": "Titolo della notifica di un invito a una libreria condivisa. {owner} è chi condivide",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "driveReceivedNotificationText": "Apri Kagami per accettare «{folder}».",
+  "@driveReceivedNotificationText": {
+    "description": "Testo della notifica di un invito a una libreria condivisa. {folder} è il nome della cartella",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "driveNoticeSharedExpired": "L'accesso alla libreria di {name} è scaduto.",
+  "@driveNoticeSharedExpired": {
+    "description": "Avviso sopra la libreria: l'accesso a una libreria condivisa è scaduto (le sue serie non compaiono più; lo stato di lettura resta). {name} è il nome di chi l'ha condivisa",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "driveNoticeSharedUnavailable": "La libreria di {name} non risponde: forse non è più condivisa con te.",
+  "@driveNoticeSharedUnavailable": {
+    "description": "Avviso sopra la libreria: Drive non lascia leggere una libreria condivisa (403 o 404). {name} è il nome di chi l'ha condivisa",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "driveNoticeSourcesUnreadable": "Le librerie condivise non si sono potute leggere.",
+  "@driveNoticeSourcesUnreadable": {
+    "description": "Avviso sopra la libreria: l'elenco delle librerie in più, salvato sul telefono, non si è potuto leggere"
+  },
+  "driveReceivedManage": "Gestisci",
+  "@driveReceivedManage": {
+    "description": "Pulsante dell'avviso sopra la libreria che apre il foglio delle librerie condivise"
+  },
+  "sourcesTitle": "Sorgenti",
+  "@sourcesTitle": {
+    "description": "Titolo della pagina Impostazioni → Libreria → Sorgenti e della voce che la apre"
+  },
+  "sourcesEntryNote": "Ordine di lettura e librerie in più",
+  "@sourcesEntryNote": {
+    "description": "Sottotitolo della voce «Sorgenti» in Impostazioni → Libreria"
+  },
+  "sourcesHelp": "Le serie di tutte le sorgenti si uniscono in una libreria. A parità di serie vince la prima.",
+  "@sourcesHelp": {
+    "description": "Riga d'aiuto in cima alla pagina Sorgenti"
+  },
+  "sourcesBuiltInFolder": "Cartella del telefono",
+  "@sourcesBuiltInFolder": {
+    "description": "Nome della sorgente «cartella scelta» nell'elenco Sorgenti"
+  },
+  "sourcesBuiltInApp": "Spazio dell'app",
+  "@sourcesBuiltInApp": {
+    "description": "Nome della sorgente «spazio dell'app» nell'elenco Sorgenti"
+  },
+  "sourcesBuiltInDrive": "Google Drive",
+  "@sourcesBuiltInDrive": {
+    "description": "Nome della sorgente «Drive dell'account» nell'elenco Sorgenti"
+  },
+  "sourcesKindWebdav": "WebDAV / NAS",
+  "@sourcesKindWebdav": {
+    "description": "Tipo di sorgente WebDAV nel foglio «Aggiungi sorgente» e nelle righe dell'elenco"
+  },
+  "sourcesKindSmb": "SMB",
+  "@sourcesKindSmb": {
+    "description": "Tipo di sorgente SMB nel foglio «Aggiungi sorgente» e nelle righe dell'elenco"
+  },
+  "sourcesComingSoon": "In arrivo",
+  "@sourcesComingSoon": {
+    "description": "Etichetta sul tipo di sorgente che non è ancora disponibile"
+  },
+  "sourcesStateReady": "Pronta",
+  "@sourcesStateReady": {
+    "description": "Stato di una sorgente che risponde"
+  },
+  "sourcesStateOffline": "Senza rete",
+  "@sourcesStateOffline": {
+    "description": "Stato di una sorgente che non risponde adesso"
+  },
+  "sourcesStateNeedsAuth": "Da ricollegare",
+  "@sourcesStateNeedsAuth": {
+    "description": "Stato di una sorgente a cui mancano le credenziali o che le ha rifiutate"
+  },
+  "sourcesStateExpired": "Scaduta il {date}",
+  "@sourcesStateExpired": {
+    "description": "Stato di una sorgente il cui accesso è scaduto; {date} è la data di scadenza",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesStateMissing": "Cartella sparita",
+  "@sourcesStateMissing": {
+    "description": "Stato di una sorgente la cui cartella non c'è più"
+  },
+  "sourcesStateOtherAccount": "Di un altro account",
+  "@sourcesStateOtherAccount": {
+    "description": "Stato di una libreria condivisa accettata da un altro account Google di quello entrato: resta in elenco ma non si legge"
+  },
+  "sourcesReadOnlyBadge": "Sola lettura",
+  "@sourcesReadOnlyBadge": {
+    "description": "Pastiglia su una sorgente da cui si può solo leggere"
+  },
+  "sourcesOwner": "Condivisa da {owner}",
+  "@sourcesOwner": {
+    "description": "Sottotitolo di una libreria Drive condivisa; {owner} è chi l'ha condivisa",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesAdd": "Aggiungi sorgente",
+  "@sourcesAdd": {
+    "description": "Pulsante e titolo del foglio per aggiungere una sorgente"
+  },
+  "sourcesWebdavFolderHint": "Cartella della libreria (es. /manga)",
+  "@sourcesWebdavFolderHint": {
+    "description": "Segnaposto del campo cartella della sorgente WebDAV"
+  },
+  "sourcesWebdavUserHint": "Utente",
+  "@sourcesWebdavUserHint": {
+    "description": "Segnaposto del campo utente della sorgente WebDAV"
+  },
+  "sourcesWebdavPasswordHint": "Password",
+  "@sourcesWebdavPasswordHint": {
+    "description": "Segnaposto del campo password della sorgente WebDAV"
+  },
+  "sourcesWebdavNameHint": "Nome (facoltativo, es. NAS di casa)",
+  "@sourcesWebdavNameHint": {
+    "description": "Segnaposto del campo nome della sorgente"
+  },
+  "sourcesSmbHostHint": "Indirizzo del computer (es. 192.168.1.10)",
+  "@sourcesSmbHostHint": {
+    "description": "Segnaposto del campo indirizzo del computer o NAS nel foglio per aggiungere una sorgente SMB"
+  },
+  "sourcesSmbShareHint": "Condivisione (es. manga)",
+  "@sourcesSmbShareHint": {
+    "description": "Segnaposto del campo nome della condivisione di rete (SMB) nel foglio per aggiungere una sorgente"
+  },
+  "sourcesSmbUserHint": "Utente (vuoto = ospite)",
+  "@sourcesSmbUserHint": {
+    "description": "Segnaposto del campo utente della sorgente SMB; lasciato vuoto si entra come ospite"
+  },
+  "sourcesSmbDomainHint": "Dominio (facoltativo)",
+  "@sourcesSmbDomainHint": {
+    "description": "Segnaposto del campo dominio (facoltativo) della sorgente SMB"
+  },
+  "sourcesSmbSealLabel": "Cifratura (SMB 3)",
+  "@sourcesSmbSealLabel": {
+    "description": "Interruttore nel foglio della sorgente SMB: usa la cifratura di SMB 3"
+  },
+  "sourcesSmbSealNote": "Fuori dalla rete di casa serve la cifratura: il computer deve parlare SMB 3.",
+  "@sourcesSmbSealNote": {
+    "description": "Nota sotto l'interruttore della cifratura SMB 3: serve fuori dalla rete di casa"
+  },
+  "sourcesSmbPlainWarning": "Senza cifratura password e file viaggiano in chiaro: va bene solo sulla rete di casa.",
+  "@sourcesSmbPlainWarning": {
+    "description": "Avviso nel foglio della sorgente SMB quando la cifratura è spenta"
+  },
+  "sourcesHttpPrivateWarning": "Indirizzo HTTP non cifrato sulla rete privata: utente e password viaggiano in chiaro. Usalo solo sul Wi-Fi di casa.",
+  "@sourcesHttpPrivateWarning": {
+    "description": "Avviso sotto l'indirizzo quando è http:// su una rete privata"
+  },
+  "sourcesHttpPublicWarning": "Indirizzo HTTP pubblico non sicuro: la password viaggerebbe in chiaro su Internet. Fuori dalla rete locale usa https://.",
+  "@sourcesHttpPublicWarning": {
+    "description": "Avviso sotto l'indirizzo quando è http:// su un indirizzo pubblico"
+  },
+  "sourcesProbeButton": "Prova connessione",
+  "@sourcesProbeButton": {
+    "description": "Pulsante che prova la connessione a una sorgente cercando library.json"
+  },
+  "sourcesProbing": "Prova in corso…",
+  "@sourcesProbing": {
+    "description": "Etichetta del pulsante di prova mentre la prova è in corso"
+  },
+  "sourcesProbeSuccess": "{count, plural, =1{Connessione riuscita: una serie trovata.} other{Connessione riuscita: {count} serie trovate.}}",
+  "@sourcesProbeSuccess": {
+    "description": "Esito riuscito della prova di connessione; {count} è il numero di serie trovate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sourcesProbeAuthFailed": "Credenziali rifiutate: controlla utente e password.",
+  "@sourcesProbeAuthFailed": {
+    "description": "Esito della prova di connessione: utente o password rifiutati"
+  },
+  "sourcesProbeUnreachable": "Non raggiungibile: controlla l'indirizzo e la connessione.",
+  "@sourcesProbeUnreachable": {
+    "description": "Esito della prova di connessione: il server non risponde"
+  },
+  "sourcesProbeNoLibrary": "Nessuna libreria qui: nella cartella manca library.json.",
+  "@sourcesProbeNoLibrary": {
+    "description": "Esito della prova di connessione: il server risponde ma la cartella non ha library.json"
+  },
+  "sourcesSave": "Salva",
+  "@sourcesSave": {
+    "description": "Pulsante che salva le modifiche di una sorgente nel foglio di dettaglio"
+  },
+  "sourcesPasswordRewriteHint": "Riscrivi la password (vuoto: resta com'è)",
+  "@sourcesPasswordRewriteHint": {
+    "description": "Segnaposto del campo password nel dettaglio di una sorgente: si riscrive, non si rilegge"
+  },
+  "sourcesSecretNote": "La password resta solo su questo telefono: non va nel backup né nell'account.",
+  "@sourcesSecretNote": {
+    "description": "Nota sotto il campo password: dove resta la password"
+  },
+  "sourcesRemove": "Rimuovi sorgente",
+  "@sourcesRemove": {
+    "description": "Azione che rimuove una sorgente, nel dettaglio e nella conferma"
+  },
+  "sourcesRemoveSubtitle": "Toglie configurazione, password e cache; lo stato di lettura resta.",
+  "@sourcesRemoveSubtitle": {
+    "description": "Sottotitolo dell'azione «Rimuovi sorgente»: cosa toglie e cosa no"
+  },
+  "sourcesRemoveConfirmTitle": "Rimuovere «{name}»?",
+  "@sourcesRemoveConfirmTitle": {
+    "description": "Titolo della conferma per rimuovere una sorgente; {name} è il suo nome",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sourcesRemoveConfirmBody": "Toglie configurazione, password e cache da questo telefono. Lo stato di lettura, i voti e la cronologia restano.",
+  "@sourcesRemoveConfirmBody": {
+    "description": "Corpo della conferma per rimuovere una sorgente"
+  },
+  "sourcesDismiss": "Togli",
+  "@sourcesDismiss": {
+    "description": "Pulsante nel dettaglio di una libreria Drive condivisa che la toglie da questo telefono"
+  },
+  "socialTitle": "Comunità",
+  "@socialTitle": {
+    "description": "Titolo della schermata e voce in Impostazioni: la parte social dell'app (profili, classifiche, post)"
+  },
+  "socialSubtitleOff": "Spenta: di te non esce niente",
+  "@socialSubtitleOff": {
+    "description": "Sottotitolo della voce Comunità in Impostazioni quando il social è spento"
+  },
+  "socialSubtitleOn": "Profilo, classifiche e note di lettura",
+  "@socialSubtitleOn": {
+    "description": "Sottotitolo della voce Comunità in Impostazioni quando il social è acceso"
+  },
+  "socialOffIntro": "La Comunità è spenta: dal tuo telefono non esce nulla e l'app non chiede nulla alla rete. Qui sotto vedi esattamente la scheda che gli altri lettori vedrebbero se decidessi di accenderla.",
+  "@socialOffIntro": {
+    "description": "Introduzione nella schermata Comunità quando è spenta, sopra l'anteprima del profilo"
+  },
+  "socialNameLabel": "Soprannome",
+  "@socialNameLabel": {
+    "description": "Etichetta del campo soprannome nella schermata di adesione alla Comunità"
+  },
+  "socialNameHint": "Da 2 a 24 caratteri (mai il tuo indirizzo email)",
+  "@socialNameHint": {
+    "description": "Suggerimento sotto il campo soprannome: limiti di lunghezza e che non è l'email"
+  },
+  "socialBioLabel": "Presentazione (facoltativa)",
+  "@socialBioLabel": {
+    "description": "Etichetta del campo presentazione (facoltativa, fino a 160 caratteri) nella schermata di adesione"
+  },
+  "socialAudienceSection": "Chi vede il tuo profilo e i tuoi post",
+  "@socialAudienceSection": {
+    "description": "Titolo della sezione che sceglie chi vede il profilo e i post"
+  },
+  "socialAudienceEveryone": "Tutti",
+  "@socialAudienceEveryone": {
+    "description": "Scelta del pubblico: tutti i lettori della Comunità; anche etichetta del feed con i post di tutti"
+  },
+  "socialAudienceFollowing": "Chi seguo",
+  "@socialAudienceFollowing": {
+    "description": "Scelta del pubblico: solo chi segue l'utente per primo; anche etichetta del feed con i post di chi si segue"
+  },
+  "socialAudienceMutual": "Amici reciproci",
+  "@socialAudienceMutual": {
+    "description": "Scelta del pubblico: solo chi si segue a vicenda"
+  },
+  "socialAudienceEveryoneNote": "Chiunque abbia la Comunità accesa su questo backend vede profilo, post e posizione in classifica.",
+  "@socialAudienceEveryoneNote": {
+    "description": "Nota sotto la scelta del pubblico «Tutti»"
+  },
+  "socialAudienceFollowingNote": "Solo le persone che segui tu per primo vedono il tuo profilo, i tuoi post e la tua riga in classifica.",
+  "@socialAudienceFollowingNote": {
+    "description": "Nota sotto la scelta del pubblico «Chi seguo»"
+  },
+  "socialAudienceMutualNote": "Solo chi segui e ti segue a sua volta vede il tuo profilo e i tuoi post. Chi segui riceve il tuo soprannome per poter ricambiare.",
+  "@socialAudienceMutualNote": {
+    "description": "Nota sotto la scelta del pubblico «Amici reciproci»"
+  },
+  "socialSwitchesSection": "Cosa mostrare oltre ai numeri e ai generi",
+  "@socialSwitchesSection": {
+    "description": "Titolo della sezione con gli interruttori di ciò che si mostra oltre ai numeri"
+  },
+  "socialShowPhoto": "Mostra la foto dell'account",
+  "@socialShowPhoto": {
+    "description": "Interruttore: pubblicare la foto dell'account; spento di partenza"
+  },
+  "socialShowSeries": "Mostra i titoli più letti",
+  "@socialShowSeries": {
+    "description": "Interruttore: pubblicare i titoli delle serie più lette; mai le serie nascoste"
+  },
+  "socialShowActivity": "Mostra l'attività degli ultimi 14 giorni",
+  "@socialShowActivity": {
+    "description": "Interruttore: pubblicare i capitoli letti giorno per giorno nelle ultime due settimane"
+  },
+  "socialPreviewSection": "Anteprima esatta di ciò che esce",
+  "@socialPreviewSection": {
+    "description": "Titolo della card che mostra il profilo come lo vedrebbero gli altri"
+  },
+  "socialPreviewHiddenExcluded": "Serie nascoste escluse",
+  "@socialPreviewHiddenExcluded": {
+    "description": "Nota nell'anteprima: le serie delle raccolte nascoste non sono incluse nei numeri"
+  },
+  "socialPreviewLocked": "{what}: non pubblicato",
+  "@socialPreviewLocked": {
+    "description": "Riga dell'anteprima per un dato che non esce perché il suo interruttore è spento; {what} è il nome del dato",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "socialPreviewPhoto": "Foto",
+  "@socialPreviewPhoto": {
+    "description": "Nome del dato «foto» nelle righe «non pubblicato» dell'anteprima"
+  },
+  "socialPreviewSeries": "Titoli",
+  "@socialPreviewSeries": {
+    "description": "Nome del dato «titoli» nelle righe «non pubblicato» dell'anteprima"
+  },
+  "socialPreviewActivity": "Attività",
+  "@socialPreviewActivity": {
+    "description": "Nome del dato «attività» nelle righe «non pubblicato» dell'anteprima"
+  },
+  "socialWipeWarning": "Spegnere la Comunità cancella tutto ciò che hai pubblicato sulla rete: profilo, post, commenti, mi piace, legami e messaggi (anche nelle conversazioni degli altri). I blocchi restano.",
+  "@socialWipeWarning": {
+    "description": "Avviso prima di accendere la Comunità e nel foglio di spegnimento: cosa cancella spegnerla"
+  },
+  "socialTurnOn": "Accendi la Comunità",
+  "@socialTurnOn": {
+    "description": "Pulsante principale che accende la Comunità e pubblica il profilo"
+  },
+  "socialTurnOff": "Spegni la Comunità e cancella tutto",
+  "@socialTurnOff": {
+    "description": "Azione distruttiva che spegne la Comunità e cancella tutto dalla rete"
+  },
+  "socialTabBoards": "Classifiche",
+  "@socialTabBoards": {
+    "description": "Scheda delle classifiche nella Comunità"
+  },
+  "socialTabFeed": "Feed",
+  "@socialTabFeed": {
+    "description": "Scheda del feed dei post nella Comunità"
+  },
+  "socialTabPeople": "Persone",
+  "@socialTabPeople": {
+    "description": "Scheda delle persone (ricerca e seguiti) nella Comunità"
+  },
+  "socialBoardWeek": "Settimana",
+  "@socialBoardWeek": {
+    "description": "Classifica della settimana"
+  },
+  "socialBoardMonth": "Mese",
+  "@socialBoardMonth": {
+    "description": "Classifica del mese"
+  },
+  "socialBoardAllTime": "Sempre",
+  "@socialBoardAllTime": {
+    "description": "Classifica di sempre"
+  },
+  "socialBoardStreak": "Giorni di fila",
+  "@socialBoardStreak": {
+    "description": "Classifica dei giorni di lettura consecutivi"
+  },
+  "socialYouBadge": "TU",
+  "@socialYouBadge": {
+    "description": "Pastiglia sulla propria riga in classifica"
+  },
+  "socialChapters": "{count, plural, =1{1 capitolo} other{{count} capitoli}}",
+  "@socialChapters": {
+    "description": "Capitoli letti di una persona in classifica o nel profilo",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "socialStreakDays": "{count, plural, =1{1 giorno} other{{count} giorni}}",
+  "@socialStreakDays": {
+    "description": "Giorni di lettura consecutivi di una persona in classifica",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "socialBoardEmpty": "Ancora nessuno in classifica",
+  "@socialBoardEmpty": {
+    "description": "Stato vuoto di una classifica: nessuno ha ancora pubblicato numeri visibili"
+  },
+  "socialFeedEmptyTitle": "Nessun post per ora",
+  "@socialFeedEmptyTitle": {
+    "description": "Titolo dello stato vuoto del feed"
+  },
+  "socialFeedEmptyMessage": "Le note, le recensioni e i consigli dei lettori compariranno qui.",
+  "@socialFeedEmptyMessage": {
+    "description": "Spiegazione dello stato vuoto del feed"
+  },
+  "socialPostKindNote": "Nota",
+  "@socialPostKindNote": {
+    "description": "Tipo di post: una nota"
+  },
+  "socialPostKindReview": "Recensione",
+  "@socialPostKindReview": {
+    "description": "Tipo di post: una recensione con voto"
+  },
+  "socialPostKindRecommendation": "Consiglio",
+  "@socialPostKindRecommendation": {
+    "description": "Tipo di post: un consiglio"
+  },
+  "socialSpoilerUpTo": "Contiene spoiler fino al cap. {chapter}",
+  "@socialSpoilerUpTo": {
+    "description": "Velo su un post con spoiler che racconta fino a un capitolo",
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
+  "socialSpoilerGeneric": "Contiene spoiler",
+  "@socialSpoilerGeneric": {
+    "description": "Velo su un post con spoiler senza capitolo dichiarato"
+  },
+  "socialSpoilerReveal": "Tocca per mostrare comunque",
+  "@socialSpoilerReveal": {
+    "description": "Sottotitolo del velo spoiler: come mostrare comunque il testo"
+  },
+  "socialFlaggedTitle": "Contenuto segnalato da più lettori",
+  "@socialFlaggedTitle": {
+    "description": "Velo su un post segnalato da più lettori"
+  },
+  "socialFlaggedReveal": "Di {author} · Tocca per vedere",
+  "@socialFlaggedReveal": {
+    "description": "Sottotitolo del velo del post segnalato; {author} è il soprannome dell'autore",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "socialSearchPeopleHint": "Cerca per soprannome…",
+  "@socialSearchPeopleHint": {
+    "description": "Segnaposto del campo di ricerca per soprannome nella scheda Persone"
+  },
+  "socialSearchNoEmailNotice": "Qui non ci sono indirizzi email: cerca il soprannome scelto dal lettore.",
+  "@socialSearchNoEmailNotice": {
+    "description": "Avviso quando nella ricerca si scrive un indirizzo email: la ricerca è solo per soprannome"
+  },
+  "socialPeopleFollowingSection": "Seguiti",
+  "@socialPeopleFollowingSection": {
+    "description": "Titolo della sezione con le persone che si seguono"
+  },
+  "socialPeopleEmpty": "Non segui ancora nessuno. Cerca un soprannome o apri una persona dalle classifiche.",
+  "@socialPeopleEmpty": {
+    "description": "Stato vuoto della scheda Persone: non si segue nessuno"
+  },
+  "socialSearchNone": "Nessuno con questo soprannome",
+  "@socialSearchNone": {
+    "description": "Risultato vuoto di una ricerca per soprannome"
+  },
+  "socialAffinityLabel": "{percent}% affinità",
+  "@socialAffinityLabel": {
+    "description": "Badge di affinità fra due lettori, calcolata sui generi in comune",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "socialInCommonSection": "In comune",
+  "@socialInCommonSection": {
+    "description": "Titolo della sezione dei titoli che due lettori mostrano entrambi"
+  },
+  "socialInCommonCount": "{count, plural, =1{1 titolo in comune} other{{count} titoli in comune}}",
+  "@socialInCommonCount": {
+    "description": "Quanti titoli due lettori hanno in comune",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "socialFollow": "Segui",
+  "@socialFollow": {
+    "description": "Pulsante: segui una persona"
+  },
+  "socialFollowBack": "Segui anche tu",
+  "@socialFollowBack": {
+    "description": "Pulsante: segui una persona che già ti segue"
+  },
+  "socialFollowing": "Seguito",
+  "@socialFollowing": {
+    "description": "Stato: segui già questa persona (toccando smetti)"
+  },
+  "socialMutual": "Amici",
+  "@socialMutual": {
+    "description": "Stato: vi seguite a vicenda"
+  },
+  "socialUnavailableTitle": "Questo backend non ha la Comunità",
+  "@socialUnavailableTitle": {
+    "description": "Titolo quando il backend non ha le tabelle del social"
+  },
+  "socialUnavailableBody": "Il server a cui è collegato l'account non ha le tabelle della Comunità. Il resto dell'app funziona normalmente.",
+  "@socialUnavailableBody": {
+    "description": "Spiegazione quando il backend non ha le tabelle del social; senza pulsante Riprova"
+  },
+  "socialNeedsAccount": "La Comunità ha bisogno di un account: accedi dalle Impostazioni.",
+  "@socialNeedsAccount": {
+    "description": "Messaggio quando manca un account: la Comunità vive sul backend dell'account"
+  },
+  "socialRefusedSnack": "Non è stato possibile completare l'azione.",
+  "@socialRefusedSnack": {
+    "description": "Avviso quando una scrittura è rifiutata; non dice mai il motivo (nemmeno un blocco)"
+  },
+  "socialLoadError": "Non riesco a leggere la Comunità adesso.",
+  "@socialLoadError": {
+    "description": "Errore di rete nella lettura della Comunità, con il pulsante Riprova"
+  },
+  "socialRetry": "Riprova",
+  "@socialRetry": {
+    "description": "Pulsante Riprova dopo un errore di lettura della Comunità"
+  },
+  "socialProfileUnavailable": "Profilo non disponibile",
+  "socialProfilePrivate": "Profilo privato",
+  "@socialProfilePrivate": {
+    "description": "Avviso toccando il soprannome di chi ha commentato col profilo chiuso a chi guarda: il commento porta il nome, il profilo resta privato"
+  },
+  "@socialProfileUnavailable": {
+    "description": "Pagina di un profilo che non si vede o non esiste (i due casi non si distinguono)"
+  },
+  "socialProfileGenres": "Generi",
+  "@socialProfileGenres": {
+    "description": "Titolo della sezione dei generi più letti in un profilo"
+  },
+  "socialProfileActivity": "Ultimi 14 giorni",
+  "@socialProfileActivity": {
+    "description": "Titolo della sezione con i capitoli letti negli ultimi 14 giorni"
+  },
+  "socialProfileSeriesTitles": "Più lette",
+  "@socialProfileSeriesTitles": {
+    "description": "Titolo della sezione con le serie più lette di un profilo"
+  },
+  "socialStatChapters": "Capitoli",
+  "@socialStatChapters": {
+    "description": "Etichetta del numero dei capitoli letti nel profilo"
+  },
+  "socialStatSeries": "Serie",
+  "@socialStatSeries": {
+    "description": "Etichetta del numero di serie nel profilo"
+  },
+  "socialStatStreak": "Giorni di fila",
+  "@socialStatStreak": {
+    "description": "Etichetta dei giorni consecutivi nel profilo"
+  },
+  "socialWrite": "Scrivi",
+  "@socialWrite": {
+    "description": "Pulsante del feed della Comunità che apre la scrittura di un nuovo post"
+  },
+  "socialComposeTitle": "Nuovo post",
+  "@socialComposeTitle": {
+    "description": "Titolo del foglio per scrivere un nuovo post nella Comunità"
+  },
+  "socialComposeBodyHint": "Che cosa ne pensi?",
+  "@socialComposeBodyHint": {
+    "description": "Suggerimento nel campo di testo di un nuovo post"
+  },
+  "socialComposeSeries": "Serie",
+  "@socialComposeSeries": {
+    "description": "Etichetta della scelta della serie di cui parla un post"
+  },
+  "socialComposeNoSeries": "Nessuna serie",
+  "@socialComposeNoSeries": {
+    "description": "Voce della scelta della serie: il post non parla di una serie"
+  },
+  "socialComposeRating": "Voto",
+  "@socialComposeRating": {
+    "description": "Etichetta della fila di voti da 1 a 10 di una recensione"
+  },
+  "socialComposeSpoiler": "Contiene spoiler",
+  "@socialComposeSpoiler": {
+    "description": "Interruttore: il post o il commento racconta qualcosa della trama"
+  },
+  "socialComposeSpoilerChapter": "Fino al capitolo (facoltativo)",
+  "@socialComposeSpoilerChapter": {
+    "description": "Campo numerico facoltativo: fino a quale capitolo racconta lo spoiler"
+  },
+  "socialComposePublish": "Pubblica",
+  "@socialComposePublish": {
+    "description": "Pulsante che pubblica il nuovo post"
+  },
+  "socialRefusalEmpty": "Scrivi qualcosa prima di pubblicare.",
+  "@socialRefusalEmpty": {
+    "description": "Avviso: il post è vuoto"
+  },
+  "socialRefusalTooLong": "Il testo è troppo lungo.",
+  "@socialRefusalTooLong": {
+    "description": "Avviso: il testo del post supera il limite"
+  },
+  "socialRefusalHiddenSeries": "Questa serie è nascosta: nella Comunità non si nomina.",
+  "@socialRefusalHiddenSeries": {
+    "description": "Avviso: la serie scelta sta in una raccolta nascosta e non esce mai nella Comunità"
+  },
+  "socialRefusalNeedsSeries": "Una recensione o un consiglio parlano di una serie: sceglila.",
+  "@socialRefusalNeedsSeries": {
+    "description": "Avviso: una recensione o un consiglio devono avere una serie"
+  },
+  "socialRefusalNeedsRating": "Scegli un voto da 1 a 10.",
+  "@socialRefusalNeedsRating": {
+    "description": "Avviso: una recensione deve avere un voto"
+  },
+  "socialCommentsCount": "{count, plural, =0{Commenta} =1{1 commento} other{{count} commenti}}",
+  "@socialCommentsCount": {
+    "description": "Pulsante sotto un post: quanti commenti ha, apre i commenti",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "socialCommentsTitle": "Commenti",
+  "@socialCommentsTitle": {
+    "description": "Titolo del foglio con i commenti di un post"
+  },
+  "socialCommentsEmpty": "Ancora nessun commento",
+  "@socialCommentsEmpty": {
+    "description": "Foglio dei commenti di un post che non ne ha ancora"
+  },
+  "socialCommentHint": "Scrivi un commento…",
+  "@socialCommentHint": {
+    "description": "Suggerimento nel campo per scrivere un commento"
+  },
+  "socialReplyHint": "Rispondi a {author}…",
+  "@socialReplyHint": {
+    "description": "Suggerimento nel campo del commento quando si risponde a qualcuno; {author} è il suo soprannome",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "socialReply": "Rispondi",
+  "@socialReply": {
+    "description": "Azione sotto un commento: rispondergli"
+  },
+  "socialCancelReply": "Non rispondere più",
+  "@socialCancelReply": {
+    "description": "Suggerimento del pulsante che annulla la risposta e torna a un commento normale"
+  },
+  "socialSend": "Invia",
+  "@socialSend": {
+    "description": "Suggerimento del pulsante che invia un commento"
+  },
+  "socialLike": "Mi piace",
+  "@socialLike": {
+    "description": "Suggerimento del pulsante «mi piace» sotto un post o un commento"
+  },
+  "socialMoreActions": "Altre azioni",
+  "@socialMoreActions": {
+    "description": "Suggerimento del menu con le altre azioni su un post"
+  },
+  "socialMute": "Silenzia",
+  "@socialMute": {
+    "description": "Voce di menu sul profilo: silenzia la persona (solo su questo telefono)"
+  },
+  "socialUnmute": "Riattiva",
+  "@socialUnmute": {
+    "description": "Voce di menu sul profilo: smetti di silenziare la persona"
+  },
+  "socialFollowersSection": "Ti seguono",
+  "@socialFollowersSection": {
+    "description": "Titolo della sezione Persone con chi segue l'utente, per ricambiare"
+  },
+  "socialMutedNote": "Silenziato: i suoi post e commenti non si vedono qui.",
+  "@socialMutedNote": {
+    "description": "Nota sul profilo di una persona silenziata"
+  },
+  "socialRemovePost": "Togli il post",
+  "@socialRemovePost": {
+    "description": "Voce del menu di un proprio post, e pulsante della conferma: toglierlo"
+  },
+  "socialRemovePostConfirm": "Il post se ne va con i suoi commenti e i mi piace. Un post non si modifica: se vuoi, lo riscrivi.",
+  "@socialRemovePostConfirm": {
+    "description": "Conferma prima di togliere un proprio post: i post non si modificano"
+  },
+  "socialRemoveComment": "Togli",
+  "@socialRemoveComment": {
+    "description": "Azione sotto un commento proprio, o di altri sotto un proprio post: toglierlo"
+  },
+  "socialUnknownReader": "Un lettore",
+  "@socialUnknownReader": {
+    "description": "Nome mostrato per chi ha scritto un commento ma ha un profilo che non si vede"
+  },
+  "socialSeriesPostsTitle": "Nella Comunità",
+  "@socialSeriesPostsTitle": {
+    "description": "Titolo del foglio con i post della Comunità su una serie"
+  },
+  "socialSeriesPostsEmpty": "Nessuno ne ha ancora parlato",
+  "@socialSeriesPostsEmpty": {
+    "description": "Foglio dei post su una serie quando nessuno ne ha scritto"
+  },
+  "socialSeriesTalk": "Parlane nella Comunità",
+  "@socialSeriesTalk": {
+    "description": "Suggerimento del pulsante sulla copertina di una serie che apre i suoi post nella Comunità"
+  },
+  "socialBlockPerson": "Blocca {name}",
+  "@socialBlockPerson": {
+    "description": "Voce di menu su un profilo, un post o un commento di un altro: bloccare la persona",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "socialBlockAction": "Blocca",
+  "@socialBlockAction": {
+    "description": "Pulsante di conferma del blocco di una persona"
+  },
+  "socialBlockConfirm": "Nessuno dei due vedrà più il profilo, i post o i commenti dell'altro, né potrà scrivergli. I legami tra voi due vengono rimossi. L'altra persona non verrà avvisata.",
+  "@socialBlockConfirm": {
+    "description": "Conferma prima di bloccare una persona: il blocco è reciproco, toglie i legami e l'altra persona non è avvisata"
+  },
+  "socialBlockedSnack": "Persona bloccata.",
+  "@socialBlockedSnack": {
+    "description": "Avviso dopo aver bloccato una persona"
+  },
+  "socialReport": "Segnala",
+  "@socialReport": {
+    "description": "Voce di menu e titolo del foglio per segnalare una persona, un post o un commento"
+  },
+  "socialReportIntro": "Perché la segnali? La persona segnalata non lo saprà, e la segnalazione porta con sé una copia del testo.",
+  "@socialReportIntro": {
+    "description": "Spiegazione nel foglio di segnalazione: la persona segnalata non lo sa e la segnalazione porta una copia del testo"
+  },
+  "socialReportReasonSpam": "Spam o pubblicità",
+  "@socialReportReasonSpam": {
+    "description": "Motivo di segnalazione: spam o pubblicità"
+  },
+  "socialReportReasonHarassment": "Molestie o insistenza",
+  "@socialReportReasonHarassment": {
+    "description": "Motivo di segnalazione: molestie o insistenza"
+  },
+  "socialReportReasonSpoiler": "Spoiler senza avviso",
+  "@socialReportReasonSpoiler": {
+    "description": "Motivo di segnalazione: spoiler senza avviso"
+  },
+  "socialReportReasonInappropriate": "Contenuto inappropriato",
+  "@socialReportReasonInappropriate": {
+    "description": "Motivo di segnalazione: contenuto inappropriato"
+  },
+  "socialReportReasonOther": "Altro",
+  "@socialReportReasonOther": {
+    "description": "Motivo di segnalazione: altro"
+  },
+  "socialReportNoteHint": "Una nota, se vuoi (facoltativa)",
+  "@socialReportNoteHint": {
+    "description": "Suggerimento del campo di testo facoltativo nel foglio di segnalazione"
+  },
+  "socialReportSend": "Invia",
+  "@socialReportSend": {
+    "description": "Pulsante che invia la segnalazione"
+  },
+  "socialReportSent": "Segnalazione inviata.",
+  "@socialReportSent": {
+    "description": "Avviso dopo aver inviato una segnalazione"
+  },
+  "messagesTitle": "Messaggi",
+  "@messagesTitle": {
+    "description": "Titolo della schermata delle conversazioni e tooltip del pulsante che la apre"
+  },
+  "messagesWrite": "Scrivi",
+  "@messagesWrite": {
+    "description": "Pulsante nel profilo di una persona per aprire la conversazione con lei"
+  },
+  "messagesEmpty": "Nessuna conversazione. Scrivi a qualcuno dal suo profilo.",
+  "@messagesEmpty": {
+    "description": "Elenco delle conversazioni vuoto"
+  },
+  "messagesThreadEmpty": "Ancora nessun messaggio.",
+  "@messagesThreadEmpty": {
+    "description": "Conversazione senza messaggi"
+  },
+  "messagesHint": "Scrivi un messaggio",
+  "@messagesHint": {
+    "description": "Suggerimento del campo di testo in fondo a una conversazione"
+  },
+  "messagesSend": "Invia",
+  "@messagesSend": {
+    "description": "Tooltip del pulsante che invia il messaggio"
+  },
+  "messagesUnknownPerson": "Un lettore",
+  "@messagesUnknownPerson": {
+    "description": "Nome mostrato quando il profilo di chi ha scritto non è visibile; non dice mai il motivo"
+  },
+  "messagesDeleteTitle": "Eliminare il messaggio?",
+  "@messagesDeleteTitle": {
+    "description": "Titolo della conferma per eliminare un messaggio (tenendolo premuto)"
+  },
+  "messagesDeleteBody": "Sparisce per tutti e due.",
+  "@messagesDeleteBody": {
+    "description": "Spiegazione della conferma: il messaggio sparisce anche all'altra persona"
+  },
+  "messagesDeleteAction": "Elimina",
+  "@messagesDeleteAction": {
+    "description": "Pulsante che conferma l'eliminazione di un messaggio"
+  },
+  "messagesExtensionMine": "Hai chiesto più tempo per «{folder}».",
+  "@messagesExtensionMine": {
+    "description": "Messaggio automatico nella conversazione: ho chiesto più tempo per una libreria condivisa. {folder} è il nome della cartella",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesExtensionTheirs": "{name} chiede più tempo per «{folder}».",
+  "@messagesExtensionTheirs": {
+    "description": "Messaggio automatico nella conversazione: un'altra persona chiede più tempo per una libreria che le ho condiviso. {name} è chi chiede, {folder} la cartella",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRenew": "Rinnova",
+  "@messagesRenew": {
+    "description": "Pulsante sulla richiesta di proroga: rinnova la condivisione per un mese"
+  },
+  "messagesRenewed": "Condivisione rinnovata fino al {date}.",
+  "@messagesRenewed": {
+    "description": "Avviso dopo il rinnovo dal messaggio. {date} è il nuovo termine",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "messagesAskMore": "Chiedi più tempo",
+  "@messagesAskMore": {
+    "description": "Pulsante su una libreria condivisa con me: scrive a chi l'ha condivisa per chiedere più tempo"
+  },
+  "messagesAskSent": "Richiesta inviata.",
+  "@messagesAskSent": {
+    "description": "Avviso dopo aver mandato la richiesta di proroga"
+  },
+  "privacyTitle": "Privacy e Comunità",
+  "@privacyTitle": {
+    "description": "Titolo della pagina Impostazioni e della voce che la apre: privacy e Comunità"
+  },
+  "privacyEntryNote": "Comunità, chi vede il tuo profilo, messaggi e persone bloccate",
+  "@privacyEntryNote": {
+    "description": "Sottotitolo della voce Impostazioni «Privacy e Comunità»"
+  },
+  "privacyOffNote": "Con la Comunità spenta non esce nulla dal telefono. Le scelte qui sotto valgono da quando la accendi.",
+  "@privacyOffNote": {
+    "description": "Nota nella pagina Privacy quando la Comunità è spenta: le scelte sotto valgono da quando la si accende"
+  },
+  "privacyNeedsName": "Per accendere la Comunità serve un soprannome e un account: scegli il soprannome nella schermata che si apre.",
+  "@privacyNeedsName": {
+    "description": "Avviso (snackbar) se si accende la Comunità dalla pagina Privacy senza un soprannome valido o senza account: si apre Comunità per sceglierlo"
+  },
+  "privacyMessagesSection": "Chi può scrivermi",
+  "@privacyMessagesSection": {
+    "description": "Titolo della sezione «chi può scrivermi messaggi privati»"
+  },
+  "privacyMessagesNobody": "Nessuno",
+  "@privacyMessagesNobody": {
+    "description": "Scelta di chi può scrivermi: nessuno"
+  },
+  "privacyBlockedSection": "Persone bloccate",
+  "@privacyBlockedSection": {
+    "description": "Titolo dell'elenco delle persone bloccate"
+  },
+  "privacyBlockedEmpty": "Non hai bloccato nessuno.",
+  "@privacyBlockedEmpty": {
+    "description": "Testo quando non si è bloccato nessuno"
+  },
+  "privacyBlockedPerson": "Persona bloccata",
+  "@privacyBlockedPerson": {
+    "description": "Nome mostrato per una persona bloccata di cui il telefono non ha il soprannome"
+  },
+  "privacyUnblock": "Sblocca",
+  "@privacyUnblock": {
+    "description": "Pulsante che sblocca una persona dall'elenco dei bloccati"
+  },
+  "messageNotificationTitle": "Nuovo messaggio da {sender}",
+  "@messageNotificationTitle": {
+    "description": "Titolo della notifica locale di un messaggio privato nuovo; il testo è l'anteprima del messaggio",
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "driveExpiryNoticeTitle": "La libreria di {owner} sta per scadere",
+  "@driveExpiryNoticeTitle": {
+    "description": "Titolo della notifica che dice a chi riceve una libreria di Drive che l'accesso sta per scadere (a 7 giorni e a 1 giorno dal termine). {owner} è chi condivide",
+    "placeholders": {
+      "owner": {
+        "type": "String"
+      }
+    }
+  },
+  "driveExpiryNoticeText": "«{folder}» scade il {date}. Apri Kagami per chiedere più tempo.",
+  "@driveExpiryNoticeText": {
+    "description": "Testo della notifica di scadenza vicina di una libreria condivisa; toccandola si apre il foglio con «Chiedi più tempo». {folder} è la cartella, {date} il termine",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      },
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "settingsBackupFolder": "Cartella delle copie",
+  "@settingsBackupFolder": {
+    "description": "Titolo della riga in Impostazioni → Dati dove si sceglie una cartella in più per le copie automatiche"
+  },
+  "settingsBackupFolderChosen": "Oltre che nello spazio dell'app, la copia automatica va anche in {path}",
+  "@settingsBackupFolderChosen": {
+    "description": "Sottotitolo della riga quando una cartella è scelta; {path} è il percorso",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsBackupFolderNone": "Nessuna: le copie restano solo nello spazio dell'app",
+  "@settingsBackupFolderNone": {
+    "description": "Sottotitolo della riga quando nessuna cartella è scelta"
+  },
+  "settingsBackupFolderRefused": "Questa cartella sta dentro una sorgente della libreria: la libreria si condivide e le copie contengono i tuoi dati personali. Scegline un'altra.",
+  "@settingsBackupFolderRefused": {
+    "description": "Messaggio breve quando la cartella scelta sta dentro la radice di una sorgente della libreria e viene rifiutata"
+  },
+  "driveShareDownloadOption": "Può anche scaricare",
+  "@driveShareDownloadOption": {
+    "description": "Foglio «Chi può leggere la mia libreria»: interruttore accanto al campo dell'indirizzo; se attivo chi riceve potrà anche scaricare i capitoli sul telefono, altrimenti solo streaming"
+  },
+  "driveShareDownloadNote": "È un patto fra app, non una protezione: chi ha accesso alla cartella può scaricare i file da Drive, dal sito o con un'altra app. Kagami di chi riceve scarica solo se lo permetti qui.",
+  "@driveShareDownloadNote": {
+    "description": "Foglio di condivisione, sotto l'interruttore: dice onestamente che il permesso di scaricare è un patto fra app e non una protezione"
+  },
+  "driveShareRowDownload": "anche scaricare",
+  "@driveShareRowDownload": {
+    "description": "Foglio di condivisione, riga di una persona, dopo la scadenza: ha il permesso di scaricare. Minuscolo, va dopo un «·»"
+  },
+  "driveShareRowStreaming": "solo streaming",
+  "@driveShareRowStreaming": {
+    "description": "Foglio di condivisione, riga di una persona, dopo la scadenza: può solo leggere in streaming. Minuscolo, va dopo un «·»"
+  },
+  "driveShareDownloadAllow": "Permetti di scaricare",
+  "@driveShareDownloadAllow": {
+    "description": "Descrizione del pulsante sulla riga di una persona che ha solo streaming: concede anche lo scaricamento"
+  },
+  "driveShareDownloadDeny": "Solo streaming",
+  "@driveShareDownloadDeny": {
+    "description": "Descrizione del pulsante sulla riga di una persona che può scaricare: lo riporta a solo streaming"
+  },
+  "driveShareDownloadUnavailable": "Questo backend non sa ancora il permesso di scaricare: la condivisione resta solo streaming.",
+  "@driveShareDownloadUnavailable": {
+    "description": "Errore nel foglio di condivisione: il backend non ha la colonna del permesso di scaricare, quindi non si può concedere"
+  },
+  "driveReceivedCanDownload": "puoi leggere e scaricare",
+  "@driveReceivedCanDownload": {
+    "description": "Foglio «Librerie condivise con me», riga di una libreria accettata: chi ha condiviso permette anche di scaricare. Minuscolo, va dopo un «·»"
+  },
+  "driveReceivedStreamOnly": "puoi solo leggere in streaming",
+  "@driveReceivedStreamOnly": {
+    "description": "Foglio «Librerie condivise con me», riga di una libreria accettata: si può solo leggere in streaming. Minuscolo, va dopo un «·»"
+  },
+  "seriesArchiveOwn": "Archivia nel mio Drive",
+  "@seriesArchiveOwn": {
+    "description": "Azione nella scheda di una serie che si legge solo da una libreria condivisa: la archivia nel proprio Drive, dal sito, col flusso «Scarica un manga»"
+  },
+  "seriesArchiveOwnSiteMissing": "Serve il sito di questa serie: installalo da Impostazioni → Siti, i siti di una libreria altrui non si installano da soli.",
+  "@seriesArchiveOwnSiteMissing": {
+    "description": "Motivo sotto «Archivia nel mio Drive» quando il sito della serie non è installato su questo telefono, per cui il pulsante è spento"
+  },
+  "seriesBringData": "Porta qui i miei dati",
+  "@seriesBringData": {
+    "description": "Azione nella scheda di una serie: porta qui lo stato di lettura di un'altra serie in libreria (la stessa opera da un altro sito)"
+  },
+  "seriesBringDataPick": "Da quale serie?",
+  "@seriesBringDataPick": {
+    "description": "Titolo del foglio in cui si sceglie la serie da cui portare i dati, aperto da «Porta qui i miei dati»"
+  },
+  "seriesBringDataEmpty": "Nessun'altra serie in libreria ha tuoi dati da portare.",
+  "@seriesBringDataEmpty": {
+    "description": "Nel foglio «Da quale serie?» quando nessun'altra serie ha dati personali"
+  },
+  "seriesBringDataBody": "«{from}» → «{to}». Stato, voto, note e raccolte passano alla serie di arrivo, insieme ai {matched, plural, one{# capitolo letto con lo stesso numero} other{# capitoli letti con lo stesso numero}}. Si fondono con ciò che c'è già: i letti si uniscono, sul resto vince il più recente. «{from}» resta in libreria, ma senza più i tuoi dati.",
+  "@seriesBringDataBody": {
+    "description": "Foglio di conferma di «Porta qui i miei dati»; from e to sono i titoli delle due serie, matched i capitoli letti abbinati per numero",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "matched": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesBringDataLost": "{lost, plural, one{# capitolo letto non ha un capitolo con lo stesso numero: non viene portato, e con lui vanno persi posizione, cronologia e segnalibri.} other{# capitoli letti non hanno un capitolo con lo stesso numero: non vengono portati, e con loro vanno persi posizioni, cronologia e segnalibri.}}",
+  "@seriesBringDataLost": {
+    "description": "Avviso nel foglio di conferma di «Porta qui i miei dati», solo se alcuni capitoli letti non hanno corrispondente",
+    "placeholders": {
+      "lost": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesBringDataConfirm": "Porta i dati",
+  "@seriesBringDataConfirm": {
+    "description": "Pulsante di conferma di «Porta qui i miei dati»"
+  },
+  "seriesBringDataDone": "Dati portati su «{title}».",
+  "@seriesBringDataDone": {
+    "description": "Snackbar dopo «Porta qui i miei dati»",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesBringDataNoChapters": "Ora non riesco a leggere i capitoli di una delle due serie: riprova fra poco.",
+  "@seriesBringDataNoChapters": {
+    "description": "Snackbar di «Porta qui i miei dati» quando l'elenco dei capitoli di una serie non si legge"
+  },
+  "sitesUnconfirmed": "Resta {name} finché non confermi",
+  "@sitesUnconfirmed": {
+    "description": "Pagina Siti: un sito della libreria ha lo stesso id di uno incluso e non è stato confermato, quindi vale ancora quello incluso",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesConfirmReplace": "Sostituisci {name}",
+  "@sitesConfirmReplace": {
+    "description": "Pagina Siti, azione sul sito: conferma che il sito della libreria prenda il posto di quello incluso",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverLinkTrust": "Chi gestisce questo server può scrivere nel tuo Drive: il permesso che Google ti chiede resta nelle sue mani. Collega solo un server di cui ti fidi.",
+  "@serverLinkTrust": {
+    "description": "Foglio «Collega un server»: avviso che chi gestisce il server può scrivere nel Drive dell'utente"
+  },
+  "serverErrorUpdateServer": "Questo server va aggiornato: finché non accetta i biglietti, non gli si manda il tuo accesso.",
+  "@serverErrorUpdateServer": {
+    "description": "Errore mostrato quando il server non accetta ancora i biglietti (codice update_server)"
+  },
+  "serverErrorTicketsUnavailable": "Il backend non rilascia biglietti per i server: a un server di altri non si manda il tuo accesso.",
+  "@serverErrorTicketsUnavailable": {
+    "description": "Errore mostrato quando il backend non rilascia biglietti per i server (codice tickets_unavailable)"
+  },
+  "serverErrorImpostor": "Questo server dice di essere uno già collegato con un altro indirizzo: non gli si manda niente.",
+  "@serverErrorImpostor": {
+    "description": "Errore mostrato quando un server dichiara l'identità di uno già collegato con un altro indirizzo (codice impostor)"
+  },
+  "serverErrorOtherServer": "A questo indirizzo ora risponde un altro server: ricollegalo.",
+  "@serverErrorOtherServer": {
+    "description": "Errore mostrato quando all'indirizzo del server collegato ora risponde un altro server (codice other_server)"
+  },
+  "serverErrorNotOwner": "Questa cartella di Drive non è tua: il server non sposta niente nel cestino.",
+  "@serverErrorNotOwner": {
+    "description": "Errore mostrato quando il server rifiuta di spostare nel cestino una cartella di Drive che non è dell'utente (403 not_owner)"
+  },
+  "sitesOriginBuiltIn": "Incluso",
+  "@sitesOriginBuiltIn": {
+    "description": "Pagina Siti: il sito è incluso nell'app"
+  },
+  "sitesOriginCatalog": "Catalogo",
+  "@sitesOriginCatalog": {
+    "description": "Pagina Siti: il sito viene dal catalogo firmato"
+  },
+  "sitesOriginUser": "Tuo",
+  "@sitesOriginUser": {
+    "description": "Pagina Siti: il sito l'ha aggiunto l'utente"
+  },
+  "sitesCatalogBroken": "Fuori uso",
+  "@sitesCatalogBroken": {
+    "description": "Pagina Siti: il manutentore ha segnato il sito del catalogo come guasto, senza messaggio"
+  },
+  "sitesCatalogBrokenWith": "Fuori uso: {message}",
+  "@sitesCatalogBrokenWith": {
+    "description": "Pagina Siti: sito del catalogo guasto; {message} è il testo scritto dal manutentore",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesNeedsNewer": "Serve Kagami più nuovo",
+  "@sitesNeedsNewer": {
+    "description": "Pagina Siti: il catalogo ha una versione del sito che questa versione dell'app non sa leggere"
+  },
+  "sitesCatalogSection": "Catalogo dei siti",
+  "@sitesCatalogSection": {
+    "description": "Pagina Siti: titolo della sezione del catalogo"
+  },
+  "sitesCatalogUse": "Usa il catalogo",
+  "@sitesCatalogUse": {
+    "description": "Pagina Siti: interruttore che accende o spegne il catalogo dei siti"
+  },
+  "sitesCatalogOff": "Spento: valgono solo i siti inclusi e i tuoi, e l'app non chiede niente in rete.",
+  "@sitesCatalogOff": {
+    "description": "Pagina Siti: spiegazione sotto l'interruttore del catalogo quando è spento"
+  },
+  "sitesCatalogIssue": "Edizione {serial} del {date}",
+  "@sitesCatalogIssue": {
+    "description": "Pagina Siti: edizione del catalogo adottata; {serial} è il numero progressivo, {date} la data di emissione",
+    "placeholders": {
+      "serial": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesCatalogChecked": "Ultimo controllo: {when}",
+  "@sitesCatalogChecked": {
+    "description": "Pagina Siti: quando l'app ha controllato il catalogo l'ultima volta; {when} è data e ora",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
   }
 }

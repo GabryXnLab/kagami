@@ -33,6 +33,13 @@ SeriesState state({Set<int> read = const {}, int? reading}) => SeriesState(
     );
 
 void main() {
+  test('il man mano lascia in pace una serie con un problema o di un sito rotto', () {
+    expect(aheadHeldBack(key: 'coffeemanga:a', problem: 'Serie non trovata.', brokenSites: const {}), isTrue);
+    expect(aheadHeldBack(key: 'coffeemanga:a', brokenSites: const {'coffeemanga'}), isTrue);
+    expect(aheadHeldBack(key: 'mangak:a', brokenSites: const {'coffeemanga'}), isFalse);
+    expect(aheadHeldBack(key: 'mangak:a', brokenSites: const {}), isFalse);
+  });
+
   test('con cinque capitoli pronti non serve niente', () {
     final plan = planAhead(chapters: chapters({10, 11, 12, 13, 14}), state: state(), pending: const {});
     expect(plan.enqueue, isEmpty);
@@ -94,5 +101,16 @@ void main() {
     final plan = planAhead(chapters: chapters(const {}), state: state(), pending: const {});
     expect(plan.enqueue, isEmpty);
     expect(plan.wanted, 0);
+  });
+
+  test('letto tutto ciò che è scaricato, i capitoli annunciati restano da leggere', () {
+    // Il caso della scheda: scaricati e letti i primi quindici, gli altri
+    // solo annunciati. Non è «in pari».
+    final have = {for (var i = 0; i < 15; i++) i};
+    expect(unreadUnavailable(chapters(have), state(read: have)), ['c15', 'c16', 'c17', 'c18', 'c19']);
+    // Un annunciato segnato letto (letto altrove) non conta.
+    expect(unreadUnavailable(chapters(have), state(read: {...have, 16})), ['c15', 'c17', 'c18', 'c19']);
+    // Tutto letto: in pari davvero.
+    expect(unreadUnavailable(chapters(have), state(read: {for (var i = 0; i < 20; i++) i})), isEmpty);
   });
 }

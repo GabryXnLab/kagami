@@ -1,0 +1,62 @@
+name: Catalog
+
+# Ripete la verifica della firma e degli indici sul ramo `catalog`, lo specchio del
+# catalogo dei siti accanto al bucket di Hestia (fonte primaria). Il ramo contiene solo
+# la cartella pubblicata (index.json, index.sig, sites/) alla radice. docs/catalogo.md.
+run-name: Catalog · ${{ github.ref_name }}
+
+on:
+  push:
+    branches: [catalog]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.47.4'
+
+jobs:
+  verify:
+    name: Verifica del catalogo
+    # Nel repo privato solo a mano, come ci.yml.
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    env:
+      CATALOG_KEYS: ${{ secrets.CATALOG_KEYS }}
+    steps:
+      - name: Senza CATALOG_KEYS non c'è nulla da verificare
+        id: keys
+        run: |
+          if [ -z "$CATALOG_KEYS" ]; then
+            echo "CATALOG_KEYS vuoto (un fork?): verifica saltata."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.run == 'true'
+        with:
+          ref: catalog
+          path: catalog
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.run == 'true'
+        with:
+          ref: main
+          path: main
+      - uses: subosito/flutter-action@v2
+        if: steps.keys.outputs.run == 'true'
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Verifica
+        if: steps.keys.outputs.run == 'true'
+        working-directory: main/packages/kagami_archive
+        run: |
+          dart pub get
+          dart run tool/catalog.dart verify "$GITHUB_WORKSPACE/catalog" --keys "$CATALOG_KEYS"

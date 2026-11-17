@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:kagami_archive/signature.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:test/test.dart';
 

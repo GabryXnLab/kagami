@@ -1,0 +1,82 @@
+{
+  "format": 2,
+  "id": "mangak",
+  "name": "MangaK",
+  "version": 3,
+  "home": "https://mangak.io",
+  "hosts": ["mangak.io", "api.mangak.io"],
+  "mediaHosts": ["rx.resmk.org", "rx.qvzr?.org"],
+  "series": {
+    "path": "^/([a-z0-9-]+)/?$",
+    "url": "https://mangak.io/{id}",
+    "vars": {
+      "data": {"css": "script#__NEXT_DATA__", "json": "props.pageProps"},
+      "mangaId": {"var": "data", "json": "initialManga.id"},
+      "cv": {"var": "data", "json": "initialManga.cv"}
+    },
+    "id": {"var": "data", "json": "initialManga.id"},
+    "title": {"var": "data", "json": "initialManga.name"},
+    "cover": {"var": "data", "json": "initialManga.cover"},
+    "description": {"var": "data", "json": "initialManga.summary", "html": true},
+    "status": {"var": "data", "json": "initialManga.status"},
+    "type": {"var": "data", "json": "initialManga.type.name"},
+    "genres": {"var": "data", "json": "initialManga.genres.name", "all": true},
+    "tags": {"var": "data", "json": "initialManga.tags.name", "all": true},
+    "authors": {"var": "data", "json": "initialManga.authors.name", "all": true},
+    "artists": {"var": "data", "json": "initialManga.artists.name", "all": true},
+    "alternativeTitles": {"var": "data", "json": "initialManga.altNames.name", "all": true},
+    "chapters": {
+      "api": {
+        "template": "https://api.mangak.io/titles/{mangaId}/chapters",
+        "query": {"cv": "{cv}"}
+      },
+      "expect": {"var": "data", "json": "initialManga.stats.chaptersCount"},
+      "items": {"json": "data.chapters"},
+      "vars": {"titleId": {"template": "{mangaId}"}},
+      "keep": ["titleId"],
+      "order": "newest-first",
+      "id": {"json": "id"},
+      "title": {"json": "name"},
+      "url": {
+        "json": "url",
+        "regex": "^/[a-z0-9-]+/[a-z0-9-]+$",
+        "base": "https://mangak.io"
+      }
+    }
+  },
+  "chapter": {
+    "path": "^/([a-z0-9-]+)/[a-z0-9-]+/?$",
+    "vars": {
+      "data": {"css": "script#__NEXT_DATA__", "json": "props.pageProps"}
+    },
+    "require": [
+      {"var": "data", "json": "initialChapter.id", "equals": "{chapterId}"}
+    ],
+    "pages": {
+      "items": {"var": "data", "json": "initialChapter.pages"},
+      "url": {"json": "url"},
+      "width": {"json": "width"},
+      "height": {"json": "height"}
+    },
+    "fallback": [
+      {
+        "api": "https://api.mangak.io/titles/{titleId}/chapters/{chapterId}/images",
+        "json": true,
+        "pages": {"items": {"json": "data.images"}}
+      }
+    ]
+  },
+  "search": {
+    "url": {
+      "template": "https://api.mangak.io/titles/search",
+      "query": {"q": "{query}", "limit": "10"}
+    },
+    "json": true,
+    "items": {"json": "data.items"},
+    "title": {"json": "name"},
+    "link": {"json": "url", "base": "https://mangak.io"},
+    "cover": {"json": "cover"},
+    "latest": {"json": "latest_chapters[0].name"},
+    "status": {"json": "status"}
+  }
+}

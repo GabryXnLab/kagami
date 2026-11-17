@@ -74,7 +74,7 @@ scarica solo ciò che gli chiedi. L'interfaccia è in italiano.
 
 ## Funzionalità
 
-Quattro destinazioni: **Home**, **Libreria**, **Raccolte** e **Impostazioni**
+Quattro destinazioni: **Home**, **Libreria** (con le raccolte), **Comunità** e **Impostazioni**
 (Scarica un manga, cronologia, statistiche, incognito e impostazioni). Tema scuro di
 partenza, perché si legge di sera; chiaro o come il sistema a scelta.
 
@@ -167,6 +167,9 @@ partenza, perché si legge di sera; chiaro o come il sistema a scelta.
   sincronizzano all'avvio, uscendo dall'app e a richiesta, non a ogni pagina
   girata. Su un telefono nuovo, al primo accesso, torna anche la libreria di
   Drive.
+  Ogni account ha il suo file di dati sul telefono, più uno per l'uso senza
+  account: uscendo si torna a quest'ultimo, e i dati dell'account tornano
+  rientrando. Niente si fonde fra utenti diversi.
 
 ### Notifiche
 
@@ -289,10 +292,10 @@ installerebbe comunque sopra quello ufficiale.
   correggere; l'app non ha un interruttore per spegnerlo. Una build compilata
   da sé senza `SENTRY_DSN` non manda niente.
 - **Account, solo se accedi.** I dati personali viaggiano come lo stesso file
-  del backup, compresso, in un documento Firestore che le
-  [regole](firestore.rules) lasciano leggere e scrivere soltanto a te. Nelle
-  release ufficiali il progetto Firebase è quello del manutentore; per usarne
-  uno tuo si [compila da sé](#compilare-da-sé).
+  del backup, compresso, in una riga del backend (un servizio compatibile
+  Supabase) che le [regole](backend/schema.sql) lasciano leggere e scrivere
+  soltanto a te. Nelle release ufficiali il backend è quello del manutentore;
+  per usarne uno tuo si [compila da sé](#compilare-da-sé).
 - **Google Drive** si legge con il tuo token e il permesso di sola lettura;
   quello di scrittura si chiede solo quando scegli una sincronizzazione che
   carica su Drive o un download con destinazione Drive.
@@ -381,14 +384,15 @@ con cui convivono sono in [docs/malf.md](docs/malf.md#chi-scrive).
 
 ## Compilare da sé
 
-Nel repo non c'è nessun servizio del manutentore: progetto Firebase, Sentry,
+Nel repo non c'è nessun servizio del manutentore: backend, progetto Google Cloud, Sentry,
 chiave di firma e server sono di chi compila. Tutto ciò che segue è
 facoltativo, e l'app si adatta a quello che trova.
 
 | Con | L'app ha |
 | :--- | :--- |
 | niente | libreria in una cartella del telefono, lettore, stato, voti, raccolte, cronologia, statistiche, backup su file, download dai siti sul telefono |
-| `android/app/google-services.json` | in più: accesso con Google, dati personali che seguono il lettore, libreria su Drive, sincronizzazione della cartella, download verso Drive |
+| `android/app/google-services.json` | in più: accesso con Google e libreria su Drive, sincronizzazione della cartella, download verso Drive |
+| `--dart-define=BACKEND_URL=…` e `BACKEND_ANON_KEY=…` | in più, con `google-services.json`: dati personali che seguono il lettore, inviti ai server ([il backend](backend/README.md)); `GOOGLE_SERVER_CLIENT_ID` è facoltativo |
 | `--dart-define=SENTRY_DSN=…` | in più: errori e crash sul proprio progetto Sentry |
 | `--dart-define=GOOGLE_SERVER_CLIENT_SECRET=…` | in più, con `google-services.json`: creare e collegare un Kagami Server, download fatti da un computer acceso invece che dal telefono ([cosa serve](docs/server.md#chi-compila-la-propria-app)) |
 
@@ -399,7 +403,7 @@ Java 17, oppure il devcontainer in `.devcontainer/` (Codespaces compreso):
 
 ```bash
 flutter pub get
-flutter build apk --release                             # --dart-define=SENTRY_DSN=… se vuoi Sentry
+flutter build apk --release                             # --dart-define=SENTRY_DSN=… (Sentry), BACKEND_URL=… e BACKEND_ANON_KEY=… (account)
 flutter build apk --release --split-per-abi             # un APK per architettura
 ```
 
@@ -425,39 +429,42 @@ firmata. I secret sono tutti facoltativi:
 
 | Secret | Senza | Con |
 | :--- | :--- | :--- |
-| `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Firebase |
-| `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata in Firebase e il run la scrive nel riepilogo |
+| `GOOGLE_SERVICES_JSON` | APK senza account né Drive | il contenuto di `google-services.json` del proprio progetto Google Cloud (il client OAuth Android) |
+| `ANDROID_KEYSTORE` | chiave nuova a ogni run: l'APK non si installa sopra il precedente e l'accesso con Google fallisce | il keystore con cui firmare, in base64 (`base64 -w0 <file>`); la sua SHA-1 va registrata nel client OAuth Android e il run la scrive nel riepilogo |
 | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | quelli di una chiave di debug (`android`, `androiddebugkey`) | quelli della propria chiave di release |
 | `SENTRY_DSN` | Sentry spento | errori e crash sul proprio progetto Sentry |
-| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega server | il segreto del client «Web» del progetto Firebase ([dove](docs/server.md#chi-compila-la-propria-app)) |
+| `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega server | il segreto del client «Web» del progetto Google Cloud ([dove](docs/server.md#chi-compila-la-propria-app)) |
+| `BACKEND_URL`, `BACKEND_ANON_KEY` | niente dati personali sul backend né inviti ai server | l'indirizzo e la chiave pubblica del proprio [backend](backend/README.md) |
+| `GOOGLE_SERVER_CLIENT_ID` | `google_sign_in` ricava il client «Web» da `google-services.json` | l'id del client «Web», se serve passarlo esplicito |
 
 I dettagli dei workflow sono in
 [.github/workflows/CLAUDE.md](.github/workflows/CLAUDE.md).
 
 </details>
 
-### Account e Drive: il proprio progetto Firebase
+### Account e Drive: il proprio progetto Google e il proprio backend
 
 <details>
-<summary>Sei passi, una volta sola</summary>
+<summary>Una volta sola</summary>
 
-1. Su <https://console.firebase.google.com> crea un progetto.
-2. *Authentication → Metodo di accesso*: attiva **Google**.
-3. *Firestore Database*: crea il database, poi carica le regole del repo, che
-   lasciano a ognuno solo il proprio documento:
-   `firebase deploy --only firestore:rules --project <id-del-progetto>`.
-4. *Impostazioni del progetto → Aggiungi app → Android*: pacchetto
+1. Il **backend**: un servizio compatibile Supabase con lo schema di
+   [`backend/`](backend/README.md) (come applicarlo e cambiarlo è lì). In
+   *Authentication* attiva il provider **Google**. Poi passa all'app
+   `--dart-define=BACKEND_URL=…` e `--dart-define=BACKEND_ANON_KEY=…`.
+2. Sulla [console di Google Cloud](https://console.cloud.google.com), in un
+   progetto tuo, crea il client OAuth **Android**: pacchetto
    `dev.local.kagami` e l'impronta SHA-1 della chiave con cui firmi l'APK.
    Per la chiave di debug:
    `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`.
    Una chiave diversa, una SHA-1 in più: con una chiave non registrata
-   l'accesso con Google fallisce.
-5. Scarica `google-services.json` (dopo il passo 2, perché contenga il client
-   di Google) e mettilo in `android/app/`. Git lo ignora.
-6. Per Drive, sulla [console di Google Cloud](https://console.cloud.google.com)
-   dello stesso progetto: abilita **Google Drive API**, e nella schermata di
-   consenso OAuth aggiungi gli scope `drive.readonly` e `drive` e il tuo
-   account fra gli utenti di test.
+   l'accesso con Google fallisce. Crea anche il client **Web** (il suo id è
+   quello che il backend usa per il provider Google).
+3. Scarica `google-services.json` (con i due client dentro) e mettilo in
+   `android/app/`. Git lo ignora: serve a `google_sign_in` per sapere quale
+   client usare.
+4. Per Drive, nello stesso progetto: abilita **Google Drive API**, e nella
+   schermata di consenso OAuth aggiungi gli scope `drive.readonly` e `drive` e
+   il tuo account fra gli utenti di test.
 
 Ricompila, e in *Impostazioni* compaiono il profilo dell'account e, in
 *Libreria*, «Google Drive».
@@ -521,7 +528,7 @@ docs/                    design, formato MALF, server e protocollo
 - **Drive si paga in richieste, non in byte.** All'apertura, due richieste per
   tutta la libreria; elenchi e indici su disco, un'istantanea che apre la
   griglia subito e Drive riletto dietro.
-- **L'account è il backup che va e torna.** Su Firestore va lo stesso file
+- **L'account è il backup che va e torna.** Sul backend va lo stesso file
   dell'esportazione, e due copie si fondono con le regole del ripristino, già
   provate.
 
@@ -553,6 +560,10 @@ Kagami è software libero sotto licenza [GPL-3.0](LICENSE).
 - Carattere [Figtree](https://github.com/erikdkennedy/figtree), sotto
   [SIL OFL 1.1](fonts/OFL.txt).
 - Icone [Lucide](https://lucide.dev), sotto licenza ISC.
+- Per leggere una libreria su SMB, [`dart_smb2`](https://pub.dev/packages/dart_smb2) (BSD-3-Clause)
+  porta [libsmb2](https://github.com/sahlberg/libsmb2) (LGPL-2.1 o successive) con OpenSSL
+  (Apache-2.0) dentro; i testi e il sorgente corrispondente sono nella pagina delle licenze
+  dell'app e nel rilascio `libsmb2-r12` di [dart_smb2](https://github.com/ales-drnz/dart_smb2/releases).
 - Le icone dei siti in `assets/providers/` sono marchi dei rispettivi
   proprietari, usati solo per riconoscerli.
 

@@ -69,10 +69,9 @@ reindex`). Kagami li riscrive solo per le serie che archivia lui.
 MangaArchive/
   library.json                    indice di libreria
   .nomedia                        tiene le tavole fuori dalla galleria Android
+  providers/                      siti degli utenti, uno per file (docs/siti.md)
   reading/                        spazio del client, scritto solo da lui
-    state.json                    stato utente storico, oggi di sola lettura
-    collections.json              raccolte storiche, oggi di sola lettura
-    backup/                       copie dei dati del client, compresse
+    downloads.json                indice delle serie scaricate sul telefono
   Dungeon Odyssey [mangak-KY55w5Y9]/
     series.json                   manifest completo (schemaVersion 3)
     index.json                    capitoli, senza pagine
@@ -84,6 +83,19 @@ MangaArchive/
         chapter.json
         0001.webp
 ```
+
+### Percorsi ammessi
+
+Ogni percorso scritto in un indice (`path` di serie e capitolo, `cover`,
+`coverThumbnail`, `file` di tavole e tessere) è **relativo** alla cartella che
+lo contiene: segmenti separati da `/`, non vuoti, né `.` né `..`, senza `\` né
+NUL, e senza `:` nel primo segmento (niente `C:`, `file:`, `content:`). È la
+regola del formato, non una cortesia: una libreria si condivide, e chi la legge
+non si fida di chi la scrive. Un lettore scarta la riga che non la rispetta (la
+copertina diventa assente, la serie, il capitolo o la tavola spariscono) e
+non lascia che una riga rotta svuoti l'indice intero; la controlla di nuovo
+prima di scrivere un file. La funzione è `isIndexPath` di
+`packages/kagami_archive/lib/transport.dart`.
 
 ## Identità
 
@@ -104,6 +116,89 @@ stesso modo da tutti quelli che scrivono (`chapterNumber` in Kagami,
 Il provider `manual` non è un sito: è quello delle schede manuali (vedi
 [Schede](#schede)), con chiave `manual:<id>`.
 
+### Cambi d'identità e riparazione
+
+Un sito può rifarsi e smettere di dare gli id di prima (Coffee Manga, 2026:
+la serie `7743` è diventata `the-house-without-time`, i capitoli `217607` …
+sono diventati `chapter-1` …). La serie archiviata resta la stessa: stesso
+`source`, stessi capitoli, stesse tavole. Chi archivia la **adotta** — prende
+la chiave nuova e tiene memoria di quella vecchia — invece di farne una
+seconda accanto alla prima, così chi legge sposta i dati personali invece di
+perderli.
+
+**Campi.** Tutti facoltativi; un client che non li conosce li ignora e vede
+una serie nuova.
+
+- `formerKeys` — in `series.json`, `index.json` e nella riga di
+  `library.json`: le chiavi che la serie ha avuto, dalla più vecchia, senza
+  doppioni e mai la chiave attuale. Una catena A → B → C dà `["A", "B"]` in C.
+  Sta anche nella riga perché è lì che il lettore guarda a ogni giro: trova
+  l'adozione senza aprire l'indice di ogni serie.
+- `formerIds` — nella voce del capitolo in `series.json` e in `index.json`: gli
+  id che il capitolo ha avuto, con le stesse regole. Non in `chapter.json`,
+  che porta solo l'id attuale: è la ricevuta del capitolo, e chi la confronta
+  (la ripresa di un download) deve trovarci l'id che il sito dà adesso.
+- `listed: false` — nella voce del capitolo in `series.json` e in
+  `index.json`: un capitolo archiviato che il sito non elenca più. Resta
+  nell'elenco, subito dopo il capitolo che lo precedeva, con il suo id, e conta
+  in `chapterCount` come gli altri: è un capitolo della serie che si può
+  leggere. Un capitolo non archiviato che il sito non elenca più esce
+  dall'elenco, perché non c'è niente da perdere.
+
+**Chi legge.** Trovando una serie con `formerKeys`, porta i dati personali di
+ogni chiave vecchia sulla nuova, una volta sola: dopo lo spostamento la chiave
+vecchia non ha più dati, quindi rileggere la stessa riga non sposta niente.
+Se anche la chiave nuova ha dati (la serie è stata aperta prima della
+riparazione) si fondono come in un ripristino: vince il record con
+`updatedAt` più recente e i capitoli letti si uniscono. I capitoli con
+`formerIds` traducono letti, posizioni e segnalibri dall'id vecchio al nuovo.
+Una riga di `library.json` con una chiave che compare nei `formerKeys` di
+un'altra è un avanzo di un archiviatore che non conosce questi campi: si
+ignora. Se i `formerKeys` vengono dalla libreria di un altro (una condivisione)
+valgono solo per le righe di quella libreria, e i dati di una chiave che il
+lettore ha anche in una libreria sua non si spostano.
+
+**Chi scrive.** Adozione, non sovrascrittura.
+
+- Si adotta solo rileggendo la serie dal suo `source` archiviato e ottenendo
+  dal provider un id diverso: è la stessa pagina, quindi la stessa serie. Un
+  provider che legge un altro sito non adotta niente: quello è il cambio di
+  sito, che fa il client.
+- I capitoli si abbinano prima per link (lo stesso sito tiene spesso i link
+  anche quando cambia gli id), poi per numero e, senza numero, per titolo
+  (`matchChapters`). Ogni capitolo del sito prende al più un capitolo vecchio,
+  il primo.
+- Una lettura fallita — rete, sito rotto o cambiato, verifica del browser,
+  Drive che non risponde, un `series.json` che non si legge — non è «la serie
+  non esiste più»: la riparazione di quella serie si ferma prima di scrivere e
+  le altre vanno avanti.
+- Non si cancellano capitoli né cartelle perché il sito non li elenca più:
+  restano con `listed: false`. Chi riscrive `series.json` più tardi (un
+  download) tiene le voci con `listed: false` che il sito continua a non
+  elencare, e i `formerKeys` e `formerIds` che trova.
+- Le cartelle si rinominano, non si copiano: la cartella della serie prende il
+  suffisso `[provider-id]` nuovo (`seriesFolderName`), quelle dei capitoli il
+  nome di `chapterFolderName`, e il `chapter.json` di ogni capitolo l'id, il
+  numero, il titolo e il link nuovi; le tavole non si toccano e non si
+  riscaricano. Se il nome nuovo è già preso da un'altra cartella la serie non
+  si tocca: due cartelle con lo stesso nome su Drive spezzano la libreria.
+  Un cambio del solo titolo non rinomina la cartella della serie (vedi «Chi
+  scrive»), ma quella di un capitolo sì: un download la cercherebbe col nome
+  nuovo e ne farebbe una seconda.
+- L'ordine delle scritture fa riprendere una riparazione interrotta: prima la
+  cartella della serie, poi i capitoli, poi `series.json`, infine indici e riga.
+  Una cartella che ha già il nome nuovo è una rinomina fatta; una serie che non
+  si trova più al percorso della riga si cerca per il suffisso nuovo.
+- La riga nuova di `library.json` prende il posto delle righe con le chiavi
+  di `formerKeys`.
+- Una riparazione che non trova niente da cambiare non scrive niente: né
+  `series.json` (`fetchedAt` resta quello di prima), né gli indici, né la riga.
+
+Una riparazione fa anche il resto del lavoro di manutenzione di una serie:
+riscrive titolo, metadati, `releaseStatus`, copertina (riscaricata se cambia
+la sorgente o il file manca), elenco, ordine, conteggi e firma, e indica i
+capitoli archiviati a metà perché tornino in coda.
+
 ## `library.json`
 
 Una riga per serie, con quanto basta a disegnare la griglia e a filtrare:
@@ -123,6 +218,28 @@ tutto il resto e serve solo alla scheda di dettaglio, che legge `series.json`.
 `signature` è uno SHA-256 troncato a 16 caratteri dei capitoli della serie:
 uguale in `library.json` e in `index.json`. Il client rilegge una serie solo
 quando la firma cambia, senza confrontare capitolo per capitolo.
+
+### Forma di `type`, generi e tag
+
+Perché filtri e raccolte funzionino uguale per ogni sito, chi scrive porta
+questi campi in forma canonica (`canonicalLabel`, `canonicalType` in
+`packages/kagami_archive/lib/model.dart`) e chi legge li applica anche a ciò
+che trova già scritto, senza aspettare una riscrittura:
+
+- `type`: minuscolo. Se nomina una famiglia (`manga`, `manhwa`, `manhua`; anche
+  «webtoon», «korean», «chinese», «japanese», «doujin») vale la famiglia. Se il
+  sito non lo dà, lo si deduce da un genere o tag che sia proprio il nome di una
+  famiglia; altrimenti manca.
+- `genres` e `tags`: etichette leggibili, spazi compressi; uno slug o un testo
+  tutto minuscolo diventa «Overpowered Male Lead» (parole piccole come «of»
+  restano minuscole). Sinonimi unificati: «Sci fi», «Sci-fi», «Science Fiction»
+  → «Sci-Fi»; «Shonen» → «Shounen»; «Shojo» → «Shoujo»; «Full colour»,
+  «Full-color» → «Full Color». Niente doppioni fra maiuscole e minuscole né fra
+  generi e tag: un tag uguale a un genere resta solo nei generi.
+- La famiglia del `type` compare anche fra i `genres` («Manhwa», «Manga»,
+  «Manhua»).
+- Un confronto fra etichette (regole di raccolta) si fa sulla forma canonica,
+  senza distinguere le maiuscole.
 
 ## `index.json` e `pages.json`
 
@@ -240,35 +357,52 @@ serie `manual`, né per i capitoli nuovi né per completarla, anche se il suo
 `source` è di un sito che conosce. Un client o un archiviatore che non conosce
 `manual` la tratta come una serie qualsiasi senza capitoli.
 
+## `providers/` — siti degli utenti
+
+Un file JSON per sito, `<id>.json`, nel formato di [docs/siti.md](siti.md):
+la descrizione di un sito che l'app non include, o che sostituisce uno di quelli
+inclusi con lo stesso id. Sta nella libreria perché la vedano tutti quelli che
+lavorano su di lei (telefono, server, una reinstallazione). Chi non sa
+interpretarla la ignora: le serie di quei siti restano serie MALF come le altre,
+solo senza aggiornamenti da chi non conosce il sito. La scrive Kagami quando
+l'utente installa, aggiorna o toglie un sito; un archiviatore non la riscrive.
+
 ## `reading/` — spazio del client
 
 Cartella riservata al client; nessun archiviatore la legge o la tocca. Il
 formato dice che è sua e non cosa ci mette: quali file ci siano è una scelta del
-client, e a oggi Kagami la usa per le copie di backup dei propri dati.
+client. **Non contiene dati personali**, perché la libreria si condivide con
+altre persone e si sincronizza su Drive. A oggi Kagami vi scrive solo
+`downloads.json`, l'indice delle serie scaricate sul telefono (chiavi, percorsi,
+conteggi).
 
-`state.json` e `collections.json` sono il suo passato, e restano descritti qui
-perché le librerie esistenti li contengono ancora e un client li deve saper
-**leggere**. `state.json` indicizza per chiave di serie: `status` (`reading`,
-`planned`, `completed`, `paused`, `dropped`), `rating` 0–10 o `null`,
-`favorite`, `readChapters` (id dei capitoli finiti), `progress` (`chapterId`,
-`page`, `pageCount`, `updatedAt`), `notes`, `updatedAt`. `collections.json`
-contiene le raccolte: `id`, `name`, `color`, `order` e le chiavi di serie.
+`state.json` e `collections.json` sono il passato del client, e restano
+descritti qui perché le librerie esistenti li contengono ancora e un client li
+deve saper **leggere**. `state.json` indicizza per chiave di serie: `status`
+(`reading`, `planned`, `completed`, `paused`, `dropped`), `rating` 0–10 o
+`null`, `favorite`, `readChapters` (id dei capitoli finiti), `progress`
+(`chapterId`, `page`, `pageCount`, `updatedAt`), `notes`, `updatedAt`.
+`collections.json` contiene le raccolte: `id`, `name`, `color`, `order` e le
+chiavi di serie.
 
 Kagami non li scrive più. Lo stato utente ha smesso di stare in un JSON quando
 gli è servita una cronologia: un capitolo letto con la sua data è una riga per
 capitolo, e ogni statistica per periodo un raggruppamento per data — cioè
 esattamente il lavoro per cui esistono gli indici, applicato ai dati
-dell'utente. Quei file vengono importati una volta sola e poi lasciati dov'erano
-(il client non cancella niente dalla libreria).
+dell'utente. Si importano **una volta sola, e solo dalla cartella del telefono**
+(mai da una libreria su Drive o da una sorgente altrui); poi il client li sposta
+fuori dalla libreria, nel proprio spazio, e la sua cartella `reading/backup/`
+con loro. Una libreria che li contiene ancora è una libreria MALF valida: un
+altro client può ignorarli.
 
-La conseguenza va detta: la libreria non porta più con sé lo stato di lettura, e
-due dispositivi non si sincronizzano più da soli. Al loro posto c'è il backup
-del client, che in `reading/backup/` scrive un archivio compresso dei propri
-dati; è la stessa cartella sincronizzata, quindi viaggia con i manga, ma il
-ripristino è un gesto esplicito. La vecchia regola di fusione resta valida ed è
-quella che il ripristino applica: vince il record con `updatedAt` più recente,
-tranne `readChapters`, che è l'unione dei due — un capitolo letto non torna mai
-non letto.
+La conseguenza va detta: la libreria non porta con sé lo stato di lettura, e
+due dispositivi non si sincronizzano attraverso di lei. Lo stato viaggia con
+l'account del lettore o con un file esportato dall'utente; le copie automatiche
+del client stanno nel suo spazio sul telefono. Il ripristino è un gesto
+esplicito. La vecchia regola di fusione resta valida ed è quella che il
+ripristino applica: vince il record con `updatedAt` più recente, tranne
+`readChapters`, che è l'unione dei due — un capitolo letto non torna mai non
+letto.
 
 ## Compatibilità
 
@@ -277,6 +411,14 @@ una libreria senza tessere è una libreria MALF 1 valida, come una con le
 tessere solo su una parte dei capitoli. Lo stesso vale per le schede e per il
 provider `manual`: sono serie MALF 1 con zero capitoli archiviati, o zero
 capitoli, che un lettore vecchio mostra come tali.
+
+`providers/` è una cartella in più, che un lettore vecchio ignora.
+
+`formerKeys`, `formerIds` e `listed` (vedi [Cambi d'identità e
+riparazione](#cambi-didentità-e-riparazione)) sono campi in più dello stesso
+tipo: un lettore vecchio vede la serie adottata come una serie nuova, con i
+dati personali rimasti sulla chiave di prima, e un capitolo con `listed: false`
+come un capitolo qualunque.
 
 `schemaVersion` 3 dei manifest e MALF 1 arrivano insieme. Le librerie scritte
 con lo schema 2 restano leggibili: non hanno gli indici né le miniature finché

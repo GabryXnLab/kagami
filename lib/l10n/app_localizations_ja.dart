@@ -147,15 +147,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get seriesMuteMuted => '新着話の通知をオフにしました。';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '端末内の話は読み終えました。告知済みの$count話が未ダウンロードです。',
-      one: '端末内の話は読み終えました。告知済みの1話が未ダウンロードです。',
+      other: 'ダウンロード済みの分はすべて読みました。未読の$count話がまだ届いていません。',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ダウンロード済みの分はすべて読みました。未読は$count話、次の分はキューに入っています。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => '次の話をダウンロード';
 
   @override
   String get seriesCaughtUpAll => '全話読了。';
@@ -438,6 +450,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get seriesChapterNotDownloaded => '未ダウンロード';
+
+  @override
+  String get seriesChapterUnlisted => 'サイトから削除済み';
 
   @override
   String seriesChapterPages(int count) {
@@ -894,6 +909,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get archiveResults => '検索結果';
+
+  @override
   String archiveNoResults(String site) {
     return '$siteでは見つかりませんでした。';
   }
@@ -1079,6 +1097,106 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get archiveCheckNow => '今すぐ確認';
+
+  @override
+  String get archiveRepair => 'アーカイブ済みシリーズを修復';
+
+  @override
+  String get archiveRepairHint => '各シリーズをサイトから読み直し、タイトル、表紙、話数を修正します';
+
+  @override
+  String get archiveRepairAll => 'ライブラリ全体';
+
+  @override
+  String archiveRepairSite(String site) {
+    return '$site のシリーズのみ';
+  }
+
+  @override
+  String get archiveRepairSeries => 'シリーズを修復';
+
+  @override
+  String archiveRepairRunning(int done, int total, String title) {
+    return '修復中 $done/$total: $title';
+  }
+
+  @override
+  String get archiveRepairQueued => 'サーバーで修復を開始しました。結果は履歴に表示されます。';
+
+  @override
+  String archiveRepairFinished(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件のシリーズを修復しました。',
+      zero: '修復するシリーズはありません。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get archiveRepairNoLibrary =>
+      '修復するライブラリがありません。Drive またはスマートフォンのフォルダを選んでください。';
+
+  @override
+  String get archiveRepairNoServer => 'サーバーはまだシリーズの修復に対応していません。更新が必要です。';
+
+  @override
+  String archiveRepairFailed(String error) {
+    return '修復に失敗しました: $error';
+  }
+
+  @override
+  String get archiveRepairBusy =>
+      'スマートフォンはすでに修復中またはダウンロード中です。しばらくしてからもう一度お試しください。';
+
+  @override
+  String archiveRepairRecovered(String site) {
+    return '$site が再び動作しています。このサイトのシリーズを修復しましょう';
+  }
+
+  @override
+  String get archiveRepairRecoveredAction => '修復';
+
+  @override
+  String get archiveRepairDismiss => '無視';
+
+  @override
+  String get archiveRepairNothing => '修復するものはありません';
+
+  @override
+  String get archiveRepairAdopted => '新しいキーを採用';
+
+  @override
+  String get archiveRepairRetitled => 'タイトルを更新';
+
+  @override
+  String get archiveRepairCover => '表紙を更新';
+
+  @override
+  String archiveRepairAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '新しい話 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairUnlisted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '一覧から消えた話 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String archiveRepairError(String error) {
+    return '修復できませんでした: $error';
+  }
 
   @override
   String get archiveNoTracked => '追跡中の作品はまだありません';
@@ -1403,6 +1521,20 @@ class AppLocalizationsJa extends AppLocalizations {
       '注意: 公開アドレスで暗号化されていないと、アカウントのトークンが通信経路で読み取られるおそれがあります。HTTPS(Tailscale Funnel、リバースプロキシ)またはTailscaleを使ってください。';
 
   @override
+  String get serverDriveForeignTitle => 'このサーバーに Drive を渡しますか?';
+
+  @override
+  String get serverDriveForeignBody =>
+      'このサーバーはあなたのものではありません。運営者は、ライブラリのフォルダだけでなく Drive 全体で読み取り・書き込み・削除ができるようになります。信頼できる場合のみ続けてください。';
+
+  @override
+  String get serverDriveForeignConfirm => '許可する';
+
+  @override
+  String get serverDriveNeedsHttps =>
+      '公開アドレスの暗号化されていない (http://) サーバーには Drive の権限を送りません。通信中に読み取られるおそれがあります。https:// のアドレスか、Tailscale のようなプライベートネットワークを使ってください。';
+
+  @override
   String get serverAddressSavedNote =>
       'アドレスはDriveのフォルダと同じく、バックアップとアカウントで引き継がれます。';
 
@@ -1725,7 +1857,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get syncDescUpload =>
-      '端末にあるもの(例: reading/backupのデータのコピー)がDriveにアップロードされます。ライブラリのインデックスはサーバーのものが維持されます。';
+      '端末にあるものがDriveにアップロードされます。ライブラリのインデックスはサーバーのものが維持されます。';
 
   @override
   String get syncDescBoth =>
@@ -1958,11 +2090,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsDataNote => 'バックアップ、復元、消去';
 
   @override
-  String get settingsAutoBackup => 'ライブラリへの自動コピー';
+  String get settingsAutoBackup => 'この端末への自動コピー';
 
   @override
   String get settingsAutoBackupNote =>
-      '1日1回reading/backup/に保存され、同期でマンガと一緒にDriveに送られます';
+      '1日1回、この端末のアプリ専用の領域に保存されます。ほかの場所に残すには、アカウントまたは「エクスポート」を使ってください';
 
   @override
   String get settingsExport => 'データを書き出す';
@@ -2099,7 +2231,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAccountUnavailableNote =>
-      'このビルドにはFirebaseがありません。データは端末内に残ります';
+      'このビルドにはバックエンドがありません。データは端末内に残ります';
 
   @override
   String get settingsAccountSignIn => 'Googleでログイン';
@@ -2123,13 +2255,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsAccountSignOut => 'ログアウト';
 
   @override
-  String get settingsAccountSignOutNote => '最新の読書データを送信してからログアウトします';
+  String get settingsAccountSignOutNote =>
+      '最新の読書データを送信してからログアウトします。端末はアカウントなしで使っていたときのデータに戻ります';
+
+  @override
+  String get settingsAccountSessionLostNote =>
+      'セッションの有効期限が切れました。同期するにはもう一度ログインしてください。ログアウトするとアカウントなしで使っていたときのデータに戻ります';
 
   @override
   String get settingsAccountForget => 'コピーの保存をやめる';
 
   @override
-  String get settingsAccountForgetNote => 'アカウントからデータを削除します。この端末のデータはそのまま残ります';
+  String get settingsAccountForgetNote =>
+      'アカウントからデータを削除し、アカウントなしの利用に戻ります。アカウントのデータはこの端末の専用ファイルに残り、再ログインするまで表示されません';
 
   @override
   String get settingsAccountErrorNote => 'この端末のデータには影響していません';
@@ -2139,7 +2277,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsAccountForgetExplain =>
-      'あなた用に保存されているコピーが消え、ログアウトされます。この端末の状態、評価、履歴、コレクションはそのまま残りますが、ほかの端末では見られなくなります。';
+      'あなた用に保存されているコピーが消え、ログアウトされます。端末はアカウントなしの利用のデータに戻ります。アカウントの状態、評価、履歴、コレクションはこの端末の専用ファイルに残りますが、同じアカウントで再ログインするまで表示されません（ほかの端末では見られなくなります）。';
 
   @override
   String get settingsAccountForgetConfirm => 'アカウントから削除';
@@ -2206,7 +2344,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsWhatItDoes => '説明';
 
   @override
-  String get settingsBackupsTitle => 'ライブラリ内のコピー';
+  String get settingsBackupsTitle => 'この端末のコピー';
 
   @override
   String get settingsBackupsNone => 'まだコピーはありません。最初のコピーは次回アプリを開いたときに作成されます';
@@ -2656,9 +2794,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shellTabLibrary => 'ライブラリ';
 
   @override
-  String get shellTabCollections => 'コレクション';
-
-  @override
   String get moreDownload => 'マンガをダウンロード';
 
   @override
@@ -2929,6 +3064,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get removeSeriesDrive => 'Drive のフォルダはゴミ箱に移動し、30日間はそこから復元できます。';
+
+  @override
+  String get removeSeriesDriveNotOwned =>
+      'Drive 上のシリーズは残ります。ライブラリのフォルダがあなたのアカウントの所有ではないか、Drive がまだ確認していないためです。Kagami は所有している場所でのみ削除します。';
 
   @override
   String get removeSeriesConfirm => '削除';
@@ -3272,6 +3411,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dataCloudGoogleSignInFailed => 'Googleログインに失敗しました';
+
+  @override
+  String get dataCloudBackendUnavailable => 'このビルドのバックエンドではこの機能を利用できません';
+
+  @override
+  String get dataCloudTooLarge =>
+      '個人データがバックエンドの上限 16 MiB を超えています。この端末には残りますが、同期されません';
 
   @override
   String dataNewChaptersNotification(int count) {
@@ -3965,6 +4111,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '端末と Drive（ゴミ箱へ）から自動で削除します。読書位置と既読の記録は残ります';
 
   @override
+  String get settingsAutoCleanupSharedRead =>
+      '共有から読んだ章も既読です。あなたの Drive にあるコピーも削除されます。';
+
+  @override
   String get settingsAutoCleanupIdle => '放置したシリーズの章を削除';
 
   @override
@@ -4087,6 +4237,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get collectionPropsMuted => '新着を通知しない';
 
   @override
+  String get collectionTraitHidden => '非表示';
+
+  @override
+  String get collectionTraitHiddenHint => '通知なし。シリーズはコレクションを開いたときだけ表示されます';
+
+  @override
   String get collectionPropsKeepChapters => '自動クリーンアップから除外';
 
   @override
@@ -4107,4 +4263,1312 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get settingsReadAheadWindowNote =>
       '読みながらダウンロードするすべての作品で、読んでいる話の先にダウンロード済みで置いておく話数';
+
+  @override
+  String archiveSiteBroken(String site) {
+    return 'サイト $site が動作していません。サイトが変更されたため、Kagami の更新が必要です。';
+  }
+
+  @override
+  String get elsewhereTitle => '他のサイトで';
+
+  @override
+  String get elsewhereChecking => '他のサイトでシリーズを探しています…';
+
+  @override
+  String elsewhereChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 話',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereLatest(String chapter) {
+    return '最新：第$chapter話';
+  }
+
+  @override
+  String elsewhereLatestAt(String chapter, String date) {
+    return '最新：第$chapter話、$date';
+  }
+
+  @override
+  String elsewhereAhead(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 話先行',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String elsewhereBehind(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 話遅れ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get elsewhereSame => '同じ話数';
+
+  @override
+  String get elsewhereMissing => 'ここにはありません';
+
+  @override
+  String get elsewhereBroken => 'サイトが動作していません';
+
+  @override
+  String get elsewhereGated => 'ブラウザ認証が必要です';
+
+  @override
+  String get elsewhereError => '応答がありませんでした';
+
+  @override
+  String get elsewhereSwitch => 'このサイトに切り替える';
+
+  @override
+  String get elsewhereSiteAction => '他のサイトで読める場所';
+
+  @override
+  String elsewhereSiteTitle(String site) {
+    return '$site のシリーズ';
+  }
+
+  @override
+  String get elsewhereSiteEmpty => 'このサイトのシリーズはライブラリにありません。';
+
+  @override
+  String get elsewhereSiteUnknown => 'まだ他のサイトで探していません';
+
+  @override
+  String get elsewhereSiteNowhere => '他のサイトには見つかりません';
+
+  @override
+  String get elsewhereSiteOffline =>
+      '見つかっている分だけを表示します。Kagami Server を接続すると、すべてのシリーズを検索します。';
+
+  @override
+  String get sitesTitle => 'サイト';
+
+  @override
+  String get sitesEntrySubtitle => '内蔵のサイトと追加したサイト';
+
+  @override
+  String get sitesBuiltInSection => 'アプリ内蔵';
+
+  @override
+  String get sitesAddedSection => '追加済み';
+
+  @override
+  String get sitesNoneAdded => '追加したサイトはありません。';
+
+  @override
+  String get sitesNoLibrary =>
+      'ライブラリとして Drive またはスマートフォンのフォルダが必要です。サイトはそこに保存されます。';
+
+  @override
+  String sitesVersion(int version) {
+    return 'バージョン $version';
+  }
+
+  @override
+  String sitesReplaces(String name) {
+    return '$name を置き換えます';
+  }
+
+  @override
+  String get sitesBroken => 'ファイルが壊れています';
+
+  @override
+  String get sitesUpdateNow => '今すぐ更新';
+
+  @override
+  String get sitesUpdated => 'サイトを更新しました。';
+
+  @override
+  String get sitesUpToDate => '新しい情報はありません。サイトは最新です。';
+
+  @override
+  String get sitesRemove => '削除';
+
+  @override
+  String sitesRemoveTitle(String name) {
+    return '$name を削除しますか?';
+  }
+
+  @override
+  String get sitesRemoveBody => 'このサイトの作品はライブラリに残りますが、サイトが戻るまで更新されません。';
+
+  @override
+  String get sitesAdd => 'サイトを追加';
+
+  @override
+  String get sitesAddHint => 'ファイルのリンクまたは貼り付けたテキスト';
+
+  @override
+  String get sitesAddCheck => '確認';
+
+  @override
+  String get sitesInvalid => 'ファイルが無効です';
+
+  @override
+  String get sitesFetchFailed => 'ファイルをダウンロードできませんでした';
+
+  @override
+  String get sitesPreviewHosts => 'ページの取得先';
+
+  @override
+  String get sitesTryTitle => 'インストール前に試す(任意)';
+
+  @override
+  String get sitesTryHint => '検索語または作品のリンク';
+
+  @override
+  String get sitesTry => '試す';
+
+  @override
+  String sitesTrySeries(String title, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 話',
+      one: '1 話',
+    );
+    return '$title：$_temp0';
+  }
+
+  @override
+  String sitesTryResults(int count, String first) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 件、最初:$first',
+      one: '1 件:$first',
+      zero: '結果なし',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sitesTryFailed => '試行に失敗しました';
+
+  @override
+  String sitesFault(String phase, String field) {
+    return '段階: $phase · フィールド: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return '段階: $phase';
+  }
+
+  @override
+  String get sitesInstall => 'インストール';
+
+  @override
+  String sitesInstalled(String name) {
+    return '$name をインストールしました。';
+  }
+
+  @override
+  String get seriesKindManga => 'マンガ';
+
+  @override
+  String get seriesKindManhwa => 'マンファ（韓国）';
+
+  @override
+  String get seriesKindManhua => 'マンファ（中国）';
+
+  @override
+  String get seriesKindOther => 'その他';
+
+  @override
+  String get collectionPropsBinding => '厳格に適用';
+
+  @override
+  String get collectionPropsBindingNote => '手動で追加する場合も、条件に合う作品だけがコレクションに入れます。';
+
+  @override
+  String collectionBindingWillRemove(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '条件に合わない$count作品がコレクションから外れます',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String collectionBindingRefused(String title, String collection) {
+    return '「$title」は「$collection」の条件に合いません';
+  }
+
+  @override
+  String collectionBindingRefusedMany(int count, String collection) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count作品が「$collection」の条件に合いません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get collectionBindingLockTip => '厳格なコレクション';
+
+  @override
+  String get accessDurationWeek => '1週間';
+
+  @override
+  String get accessDurationMonth => '1か月';
+
+  @override
+  String get accessDurationQuarter => '3か月';
+
+  @override
+  String get accessDurationYear => '1年';
+
+  @override
+  String get accessDurationNever => '無期限';
+
+  @override
+  String serverUserExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateStringに期限切れ';
+  }
+
+  @override
+  String get serverUserExpired => '期限切れ';
+
+  @override
+  String get serverUserRenew => '更新';
+
+  @override
+  String serverUserRenewTitle(String email) {
+    return '$emailのアクセスを更新';
+  }
+
+  @override
+  String serverMyAccessExpires(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'アクセスは$dateStringに期限切れになります';
+  }
+
+  @override
+  String get serverAccessExpired => 'アクセスの期限が切れました。サーバーの管理者に更新を依頼してください';
+
+  @override
+  String dataServerExpiryTitle(String serverName) {
+    return '「$serverName」へのアクセスがまもなく期限切れになります';
+  }
+
+  @override
+  String dataServerExpiryText(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateStringに期限切れ: サーバーの管理者に更新を依頼してください。';
+  }
+
+  @override
+  String get driveShareTitle => 'ライブラリを読める人';
+
+  @override
+  String get driveShareEntryNote => 'Drive上のフォルダを見られる人と期限';
+
+  @override
+  String driveShareIntro(String folder) {
+    return '共有したい人のGoogleアカウントを追加してください。選んだ期間、Drive上のフォルダ「$folder」を読み取り専用で読めます。';
+  }
+
+  @override
+  String get driveShareConsentTitle => 'Driveの権限がもう1つ必要です';
+
+  @override
+  String driveShareConsentBody(String folder) {
+    return '追加した人は、ライブラリだけでなくフォルダ「$folder」のすべてのファイルを見られます。共有を管理するため、Googleが追加の権限を求めます。 フォルダ内にある読書データのコピーはDriveのゴミ箱に移動します。';
+  }
+
+  @override
+  String get driveShareConsentContinue => '続ける';
+
+  @override
+  String get driveShareAdd => '共有';
+
+  @override
+  String driveShareInFolder(String name) {
+    return 'フォルダ「$name」';
+  }
+
+  @override
+  String get driveShareFromDrive => 'Driveから共有';
+
+  @override
+  String get driveShareRemoveBody => 'この人はフォルダを読めなくなります。';
+
+  @override
+  String get driveShareLinkAccess =>
+      'リンクを知っている人やドメインでもこのフォルダを読めます。Driveで管理してください。';
+
+  @override
+  String get driveShareDriveSilent => 'Driveから応答がありませんでした。一覧が不完全な可能性があります。';
+
+  @override
+  String get driveSharePersonalFound =>
+      'フォルダに読書データのコピー（reading/backup、state.json、collections.json）があります。フォルダを読める人はそれを見られます。';
+
+  @override
+  String get driveSharePersonalRemove => '削除';
+
+  @override
+  String get driveSharePersonalUnchecked => 'フォルダに読書データのコピーが残っているか確認できませんでした。';
+
+  @override
+  String get driveShareUnavailable => 'このバックエンドにはライブラリの共有機能がありません。';
+
+  @override
+  String driveShareLoadFailed(String message) {
+    return 'アクセスできる人を読み込めません: $message';
+  }
+
+  @override
+  String get driveShareNobody => '今は誰もいません。';
+
+  @override
+  String driveShareAdded(String email) {
+    return '$emailがライブラリを読めます。';
+  }
+
+  @override
+  String get driveShareOffline => '接続がありません。何も変わっていません。';
+
+  @override
+  String driveShareFailed(String message) {
+    return '失敗しました: $message';
+  }
+
+  @override
+  String get driveShareSelf => 'ご自身のアドレスです。';
+
+  @override
+  String get driveReceivedTitle => '共有されたライブラリ';
+
+  @override
+  String get driveReceivedEntryNote => '他の人のライブラリへの招待とアクセス';
+
+  @override
+  String driveReceivedInvite(String owner, String folder) {
+    return '$owner さんがライブラリ「$folder」への読み取り専用アクセスを共有しました。';
+  }
+
+  @override
+  String get driveReceivedAccept => '承諾';
+
+  @override
+  String get driveReceivedDecline => '辞退';
+
+  @override
+  String get driveReceivedRemove => '削除';
+
+  @override
+  String driveReceivedUntil(String owner, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$owner · $dateString まで';
+  }
+
+  @override
+  String driveReceivedNoLimit(String owner) {
+    return '$owner · 期限なし';
+  }
+
+  @override
+  String driveReceivedExpiredRow(String owner) {
+    return '$owner · アクセス期限切れ';
+  }
+
+  @override
+  String get driveReceivedEmpty => '現在、共有されているライブラリはありません。';
+
+  @override
+  String driveReceivedNotificationTitle(String owner) {
+    return '$owner さんがライブラリを共有しました';
+  }
+
+  @override
+  String driveReceivedNotificationText(String folder) {
+    return 'Kagami を開いて「$folder」を承諾してください。';
+  }
+
+  @override
+  String driveNoticeSharedExpired(String name) {
+    return '$name さんのライブラリへのアクセスは期限切れです。';
+  }
+
+  @override
+  String driveNoticeSharedUnavailable(String name) {
+    return '$name さんのライブラリが応答しません。共有が解除された可能性があります。';
+  }
+
+  @override
+  String get driveNoticeSourcesUnreadable => '共有ライブラリを読み込めませんでした。';
+
+  @override
+  String get driveReceivedManage => '管理';
+
+  @override
+  String get sourcesTitle => 'ソース';
+
+  @override
+  String get sourcesEntryNote => '読み込み順と追加ライブラリ';
+
+  @override
+  String get sourcesHelp =>
+      'すべてのソースのシリーズは1つのライブラリにまとめられます。同じシリーズが複数にある場合は先頭のソースが優先されます。';
+
+  @override
+  String get sourcesBuiltInFolder => 'スマートフォンのフォルダ';
+
+  @override
+  String get sourcesBuiltInApp => 'アプリ内ストレージ';
+
+  @override
+  String get sourcesBuiltInDrive => 'Google Drive';
+
+  @override
+  String get sourcesKindWebdav => 'WebDAV / NAS';
+
+  @override
+  String get sourcesKindSmb => 'SMB';
+
+  @override
+  String get sourcesComingSoon => '近日対応';
+
+  @override
+  String get sourcesStateReady => '利用可能';
+
+  @override
+  String get sourcesStateOffline => 'オフライン';
+
+  @override
+  String get sourcesStateNeedsAuth => '再接続が必要';
+
+  @override
+  String sourcesStateExpired(String date) {
+    return '$date に期限切れ';
+  }
+
+  @override
+  String get sourcesStateMissing => 'フォルダが見つかりません';
+
+  @override
+  String get sourcesStateOtherAccount => '別のアカウントのもの';
+
+  @override
+  String get sourcesReadOnlyBadge => '読み取り専用';
+
+  @override
+  String sourcesOwner(String owner) {
+    return '$owner が共有';
+  }
+
+  @override
+  String get sourcesAdd => 'ソースを追加';
+
+  @override
+  String get sourcesWebdavFolderHint => 'ライブラリのフォルダ（例: /manga）';
+
+  @override
+  String get sourcesWebdavUserHint => 'ユーザー';
+
+  @override
+  String get sourcesWebdavPasswordHint => 'パスワード';
+
+  @override
+  String get sourcesWebdavNameHint => '名前（任意、例: 自宅NAS）';
+
+  @override
+  String get sourcesSmbHostHint => 'コンピューターのアドレス（例: 192.168.1.10）';
+
+  @override
+  String get sourcesSmbShareHint => '共有名（例: manga）';
+
+  @override
+  String get sourcesSmbUserHint => 'ユーザー（空欄 = ゲスト）';
+
+  @override
+  String get sourcesSmbDomainHint => 'ドメイン（任意）';
+
+  @override
+  String get sourcesSmbSealLabel => '暗号化（SMB 3）';
+
+  @override
+  String get sourcesSmbSealNote =>
+      '自宅ネットワークの外では暗号化が必要です。コンピューターが SMB 3 に対応している必要があります。';
+
+  @override
+  String get sourcesSmbPlainWarning =>
+      '暗号化なしではパスワードとファイルが平文で流れます。自宅ネットワーク内でのみ使えます。';
+
+  @override
+  String get sourcesHttpPrivateWarning =>
+      'プライベートネットワーク上の暗号化されていないHTTPアドレスです。ユーザー名とパスワードは平文で送られます。自宅のWi-Fiでのみ使ってください。';
+
+  @override
+  String get sourcesHttpPublicWarning =>
+      '安全でない公開HTTPアドレスです。パスワードがインターネット上で平文で送られます。ローカルネットワーク外ではhttps://を使ってください。';
+
+  @override
+  String get sourcesProbeButton => '接続をテスト';
+
+  @override
+  String get sourcesProbing => 'テスト中…';
+
+  @override
+  String sourcesProbeSuccess(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '接続できました: $count 件のシリーズが見つかりました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourcesProbeAuthFailed => '認証が拒否されました。ユーザーとパスワードを確認してください。';
+
+  @override
+  String get sourcesProbeUnreachable => '接続できません。アドレスとネットワークを確認してください。';
+
+  @override
+  String get sourcesProbeNoLibrary => 'ここにライブラリはありません。フォルダにlibrary.jsonがありません。';
+
+  @override
+  String get sourcesSave => '保存';
+
+  @override
+  String get sourcesPasswordRewriteHint => 'パスワードを再入力（空欄: 変更しない）';
+
+  @override
+  String get sourcesSecretNote => 'パスワードはこの端末にだけ残り、バックアップやアカウントには含まれません。';
+
+  @override
+  String get sourcesRemove => 'ソースを削除';
+
+  @override
+  String get sourcesRemoveSubtitle => '設定・パスワード・キャッシュを削除します。読書の進捗は残ります。';
+
+  @override
+  String sourcesRemoveConfirmTitle(String name) {
+    return '「$name」を削除しますか？';
+  }
+
+  @override
+  String get sourcesRemoveConfirmBody =>
+      'この端末から設定・パスワード・キャッシュを削除します。読書の進捗・評価・履歴は残ります。';
+
+  @override
+  String get sourcesDismiss => '外す';
+
+  @override
+  String get socialTitle => 'コミュニティ';
+
+  @override
+  String get socialSubtitleOff => 'オフ：あなたの情報は外に出ません';
+
+  @override
+  String get socialSubtitleOn => 'プロフィール、ランキング、読書メモ';
+
+  @override
+  String get socialOffIntro =>
+      'コミュニティはオフです。端末から何も送信されず、アプリもネットワークに何も問い合わせません。オンにした場合に他の読者が見るカードを、そのまま下に表示します。';
+
+  @override
+  String get socialNameLabel => 'ニックネーム';
+
+  @override
+  String get socialNameHint => '2〜24文字（メールアドレスは使えません）';
+
+  @override
+  String get socialBioLabel => '自己紹介（任意）';
+
+  @override
+  String get socialAudienceSection => 'プロフィールと投稿を見られる人';
+
+  @override
+  String get socialAudienceEveryone => '全員';
+
+  @override
+  String get socialAudienceFollowing => 'フォロー中';
+
+  @override
+  String get socialAudienceMutual => '相互フォロー';
+
+  @override
+  String get socialAudienceEveryoneNote =>
+      'このバックエンドでコミュニティをオンにしている人なら誰でも、プロフィール・投稿・順位を見られます。';
+
+  @override
+  String get socialAudienceFollowingNote =>
+      'あなたが先にフォローした人だけが、プロフィール・投稿・順位を見られます。';
+
+  @override
+  String get socialAudienceMutualNote =>
+      'あなたがフォローし、相手もフォローし返している人だけが見られます。相手には、フォローし返せるようにニックネームが届きます。';
+
+  @override
+  String get socialSwitchesSection => '数値とジャンル以外に表示するもの';
+
+  @override
+  String get socialShowPhoto => 'アカウントの写真を表示';
+
+  @override
+  String get socialShowSeries => 'よく読む作品名を表示';
+
+  @override
+  String get socialShowActivity => '直近14日間の活動を表示';
+
+  @override
+  String get socialPreviewSection => '公開される内容のプレビュー';
+
+  @override
+  String get socialPreviewHiddenExcluded => '非表示の作品は除外';
+
+  @override
+  String socialPreviewLocked(String what) {
+    return '$what：非公開';
+  }
+
+  @override
+  String get socialPreviewPhoto => '写真';
+
+  @override
+  String get socialPreviewSeries => '作品名';
+
+  @override
+  String get socialPreviewActivity => '活動';
+
+  @override
+  String get socialWipeWarning =>
+      'コミュニティをオフにすると、公開したプロフィール・投稿・コメント・いいね・フォロー・メッセージ（他の人の会話内も）がすべて削除されます。ブロックは残ります。';
+
+  @override
+  String get socialTurnOn => 'コミュニティをオンにする';
+
+  @override
+  String get socialTurnOff => 'コミュニティをオフにしてすべて削除';
+
+  @override
+  String get socialTabBoards => 'ランキング';
+
+  @override
+  String get socialTabFeed => 'フィード';
+
+  @override
+  String get socialTabPeople => 'ユーザー';
+
+  @override
+  String get socialBoardWeek => '週';
+
+  @override
+  String get socialBoardMonth => '月';
+
+  @override
+  String get socialBoardAllTime => '通算';
+
+  @override
+  String get socialBoardStreak => '連続日数';
+
+  @override
+  String get socialYouBadge => 'あなた';
+
+  @override
+  String socialChapters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count話',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String socialStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialBoardEmpty => 'まだ誰もランキングにいません';
+
+  @override
+  String get socialFeedEmptyTitle => 'まだ投稿はありません';
+
+  @override
+  String get socialFeedEmptyMessage => '読者のメモ、レビュー、おすすめがここに表示されます。';
+
+  @override
+  String get socialPostKindNote => 'メモ';
+
+  @override
+  String get socialPostKindReview => 'レビュー';
+
+  @override
+  String get socialPostKindRecommendation => 'おすすめ';
+
+  @override
+  String socialSpoilerUpTo(String chapter) {
+    return '第$chapter話までのネタバレあり';
+  }
+
+  @override
+  String get socialSpoilerGeneric => 'ネタバレあり';
+
+  @override
+  String get socialSpoilerReveal => 'タップして表示';
+
+  @override
+  String get socialFlaggedTitle => '複数の読者が報告した内容';
+
+  @override
+  String socialFlaggedReveal(String author) {
+    return '$author · タップして表示';
+  }
+
+  @override
+  String get socialSearchPeopleHint => 'ニックネームで検索…';
+
+  @override
+  String get socialSearchNoEmailNotice =>
+      'ここにメールアドレスはありません。読者が付けたニックネームで検索してください。';
+
+  @override
+  String get socialPeopleFollowingSection => 'フォロー中';
+
+  @override
+  String get socialPeopleEmpty => 'まだ誰もフォローしていません。ニックネームで検索するか、ランキングから開いてください。';
+
+  @override
+  String get socialSearchNone => '該当するユーザーはいません';
+
+  @override
+  String socialAffinityLabel(int percent) {
+    return '相性 $percent%';
+  }
+
+  @override
+  String get socialInCommonSection => '共通';
+
+  @override
+  String socialInCommonCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '共通の作品 $count 件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialFollow => 'フォロー';
+
+  @override
+  String get socialFollowBack => 'フォローし返す';
+
+  @override
+  String get socialFollowing => 'フォロー中';
+
+  @override
+  String get socialMutual => '相互';
+
+  @override
+  String get socialUnavailableTitle => 'このバックエンドにはコミュニティがありません';
+
+  @override
+  String get socialUnavailableBody =>
+      'アカウントが接続しているサーバーにはコミュニティ用のテーブルがありません。アプリのほかの機能は通常どおり使えます。';
+
+  @override
+  String get socialNeedsAccount => 'コミュニティにはアカウントが必要です。設定からサインインしてください。';
+
+  @override
+  String get socialRefusedSnack => '操作を完了できませんでした。';
+
+  @override
+  String get socialLoadError => '今はコミュニティを読み込めません。';
+
+  @override
+  String get socialRetry => '再試行';
+
+  @override
+  String get socialProfileUnavailable => 'プロフィールを表示できません';
+
+  @override
+  String get socialProfilePrivate => '非公開のプロフィール';
+
+  @override
+  String get socialProfileGenres => 'ジャンル';
+
+  @override
+  String get socialProfileActivity => '直近14日間';
+
+  @override
+  String get socialProfileSeriesTitles => 'よく読む作品';
+
+  @override
+  String get socialStatChapters => '話数';
+
+  @override
+  String get socialStatSeries => '作品';
+
+  @override
+  String get socialStatStreak => '連続日数';
+
+  @override
+  String get socialWrite => '書く';
+
+  @override
+  String get socialComposeTitle => '新しい投稿';
+
+  @override
+  String get socialComposeBodyHint => 'どう思いましたか？';
+
+  @override
+  String get socialComposeSeries => 'シリーズ';
+
+  @override
+  String get socialComposeNoSeries => 'シリーズなし';
+
+  @override
+  String get socialComposeRating => '評価';
+
+  @override
+  String get socialComposeSpoiler => 'ネタバレを含む';
+
+  @override
+  String get socialComposeSpoilerChapter => '何話まで（任意）';
+
+  @override
+  String get socialComposePublish => '投稿する';
+
+  @override
+  String get socialRefusalEmpty => '投稿する前に何か書いてください。';
+
+  @override
+  String get socialRefusalTooLong => '文章が長すぎます。';
+
+  @override
+  String get socialRefusalHiddenSeries => 'このシリーズは非表示です。コミュニティでは名前を出せません。';
+
+  @override
+  String get socialRefusalNeedsSeries => 'レビューやおすすめにはシリーズが必要です。選んでください。';
+
+  @override
+  String get socialRefusalNeedsRating => '1〜10で評価を選んでください。';
+
+  @override
+  String socialCommentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'コメント $count 件',
+      zero: 'コメントする',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get socialCommentsTitle => 'コメント';
+
+  @override
+  String get socialCommentsEmpty => 'まだコメントはありません';
+
+  @override
+  String get socialCommentHint => 'コメントを書く…';
+
+  @override
+  String socialReplyHint(String author) {
+    return '$author さんに返信…';
+  }
+
+  @override
+  String get socialReply => '返信';
+
+  @override
+  String get socialCancelReply => '返信をやめる';
+
+  @override
+  String get socialSend => '送信';
+
+  @override
+  String get socialLike => 'いいね';
+
+  @override
+  String get socialMoreActions => 'その他の操作';
+
+  @override
+  String get socialMute => 'ミュート';
+
+  @override
+  String get socialUnmute => 'ミュートを解除';
+
+  @override
+  String get socialFollowersSection => 'フォロワー';
+
+  @override
+  String get socialMutedNote => 'ミュート中：この人の投稿とコメントはここに表示されません。';
+
+  @override
+  String get socialRemovePost => '投稿を削除';
+
+  @override
+  String get socialRemovePostConfirm =>
+      '投稿はコメントといいねと一緒に消えます。投稿は編集できないので、必要なら書き直してください。';
+
+  @override
+  String get socialRemoveComment => '削除';
+
+  @override
+  String get socialUnknownReader => '読者';
+
+  @override
+  String get socialSeriesPostsTitle => 'コミュニティで';
+
+  @override
+  String get socialSeriesPostsEmpty => 'まだ誰も話題にしていません';
+
+  @override
+  String get socialSeriesTalk => 'コミュニティで話す';
+
+  @override
+  String socialBlockPerson(String name) {
+    return '$nameをブロック';
+  }
+
+  @override
+  String get socialBlockAction => 'ブロック';
+
+  @override
+  String get socialBlockConfirm =>
+      'お互いのプロフィール、投稿、コメントは表示されなくなり、メッセージも送れなくなります。2人の間のフォロー関係は解除されます。相手には通知されません。';
+
+  @override
+  String get socialBlockedSnack => 'ブロックしました。';
+
+  @override
+  String get socialReport => '報告';
+
+  @override
+  String get socialReportIntro => 'なぜ報告しますか？報告された人には知らされず、報告には本文のコピーが添えられます。';
+
+  @override
+  String get socialReportReasonSpam => 'スパムまたは宣伝';
+
+  @override
+  String get socialReportReasonHarassment => '嫌がらせまたはしつこい行為';
+
+  @override
+  String get socialReportReasonSpoiler => '警告のないネタバレ';
+
+  @override
+  String get socialReportReasonInappropriate => '不適切な内容';
+
+  @override
+  String get socialReportReasonOther => 'その他';
+
+  @override
+  String get socialReportNoteHint => 'メモ（任意）';
+
+  @override
+  String get socialReportSend => '送信';
+
+  @override
+  String get socialReportSent => '報告を送信しました。';
+
+  @override
+  String get messagesTitle => 'メッセージ';
+
+  @override
+  String get messagesWrite => 'メッセージを送る';
+
+  @override
+  String get messagesEmpty => '会話はまだありません。相手のプロフィールからメッセージを送ってみましょう。';
+
+  @override
+  String get messagesThreadEmpty => 'まだメッセージはありません。';
+
+  @override
+  String get messagesHint => 'メッセージを入力';
+
+  @override
+  String get messagesSend => '送信';
+
+  @override
+  String get messagesUnknownPerson => 'ある読者';
+
+  @override
+  String get messagesDeleteTitle => 'メッセージを削除しますか？';
+
+  @override
+  String get messagesDeleteBody => '二人の画面から消えます。';
+
+  @override
+  String get messagesDeleteAction => '削除';
+
+  @override
+  String messagesExtensionMine(String folder) {
+    return '「$folder」の期限延長をリクエストしました。';
+  }
+
+  @override
+  String messagesExtensionTheirs(String name, String folder) {
+    return '$nameさんが「$folder」の期限延長を希望しています。';
+  }
+
+  @override
+  String get messagesRenew => '更新';
+
+  @override
+  String messagesRenewed(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '共有を$dateStringまで更新しました。';
+  }
+
+  @override
+  String get messagesAskMore => '期限延長をリクエスト';
+
+  @override
+  String get messagesAskSent => 'リクエストを送信しました。';
+
+  @override
+  String get privacyTitle => 'プライバシーとコミュニティ';
+
+  @override
+  String get privacyEntryNote => 'コミュニティ、プロフィールの公開範囲、メッセージ、ブロックした人';
+
+  @override
+  String get privacyOffNote =>
+      'コミュニティがオフの間、端末から何も送信されません。以下の設定はオンにした時から有効になります。';
+
+  @override
+  String get privacyNeedsName =>
+      'コミュニティをオンにするにはニックネームとアカウントが必要です。開く画面でニックネームを決めてください。';
+
+  @override
+  String get privacyMessagesSection => 'メッセージを送れる人';
+
+  @override
+  String get privacyMessagesNobody => '誰も送れない';
+
+  @override
+  String get privacyBlockedSection => 'ブロックした人';
+
+  @override
+  String get privacyBlockedEmpty => 'ブロックしている人はいません。';
+
+  @override
+  String get privacyBlockedPerson => 'ブロックした人';
+
+  @override
+  String get privacyUnblock => 'ブロック解除';
+
+  @override
+  String messageNotificationTitle(String sender) {
+    return '$senderさんからの新着メッセージ';
+  }
+
+  @override
+  String driveExpiryNoticeTitle(String owner) {
+    return '$owner さんのライブラリがまもなく期限切れになります';
+  }
+
+  @override
+  String driveExpiryNoticeText(String folder, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '「$folder」は $dateString に期限切れになります。Kagami を開いて延長を依頼してください。';
+  }
+
+  @override
+  String get settingsBackupFolder => 'コピーの保存フォルダ';
+
+  @override
+  String settingsBackupFolderChosen(String path) {
+    return 'アプリ内の保存場所に加えて、自動コピーを $path にも保存します';
+  }
+
+  @override
+  String get settingsBackupFolderNone => 'なし：コピーはアプリ内にのみ保存されます';
+
+  @override
+  String get settingsBackupFolderRefused =>
+      'このフォルダはライブラリのソース内にあります。ライブラリは共有され、コピーには個人データが含まれます。別のフォルダを選んでください。';
+
+  @override
+  String get driveShareDownloadOption => 'ダウンロードも許可';
+
+  @override
+  String get driveShareDownloadNote =>
+      'これはアプリ間の取り決めであり、保護ではありません。フォルダにアクセスできる人は、Drive、ウェブサイト、別のアプリからファイルをダウンロードできます。受け取る側のKagamiは、ここで許可した場合のみダウンロードします。';
+
+  @override
+  String get driveShareRowDownload => 'ダウンロード可';
+
+  @override
+  String get driveShareRowStreaming => 'ストリーミングのみ';
+
+  @override
+  String get driveShareDownloadAllow => 'ダウンロードを許可';
+
+  @override
+  String get driveShareDownloadDeny => 'ストリーミングのみ';
+
+  @override
+  String get driveShareDownloadUnavailable =>
+      'このバックエンドはまだダウンロード許可に対応していません。共有はストリーミングのみのままです。';
+
+  @override
+  String get driveReceivedCanDownload => '閲覧とダウンロードが可能';
+
+  @override
+  String get driveReceivedStreamOnly => 'ストリーミングでの閲覧のみ';
+
+  @override
+  String get seriesArchiveOwn => '自分のDriveにアーカイブ';
+
+  @override
+  String get seriesArchiveOwnSiteMissing =>
+      'このシリーズのサイトが必要です。設定 → サイトからインストールしてください。他人のライブラリのサイトは自動ではインストールされません。';
+
+  @override
+  String get seriesBringData => '自分のデータをここに移す';
+
+  @override
+  String get seriesBringDataPick => 'どのシリーズから？';
+
+  @override
+  String get seriesBringDataEmpty => '移せるあなたのデータを持つシリーズがライブラリにありません。';
+
+  @override
+  String seriesBringDataBody(String from, String to, int matched) {
+    String _temp0 = intl.Intl.pluralLogic(
+      matched,
+      locale: localeName,
+      other: '同じ番号の既読話 # 件',
+    );
+    return '「$from」→「$to」。状態、評価、メモ、コレクションが移動先のシリーズに移り、$_temp0も一緒に移ります。既存のデータと統合され、既読はまとめられ、それ以外は新しい方が優先されます。「$from」はデータなしでライブラリに残ります。';
+  }
+
+  @override
+  String seriesBringDataLost(int lost) {
+    String _temp0 = intl.Intl.pluralLogic(
+      lost,
+      locale: localeName,
+      other: '同じ番号の話がない既読話が # 件あります。移されず、位置・履歴・ブックマークは失われます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesBringDataConfirm => 'データを移す';
+
+  @override
+  String seriesBringDataDone(String title) {
+    return '「$title」にデータを移しました。';
+  }
+
+  @override
+  String get seriesBringDataNoChapters =>
+      'いま二つのシリーズのどちらかの話を読み込めません。少ししてからもう一度お試しください。';
+
+  @override
+  String sitesUnconfirmed(String name) {
+    return '確認するまで $name のままです';
+  }
+
+  @override
+  String sitesConfirmReplace(String name) {
+    return '$name を置き換える';
+  }
+
+  @override
+  String get serverLinkTrust =>
+      'このサーバーの管理者はあなたの Drive に書き込めます。Google が求める許可は管理者の手に残ります。信頼できるサーバーだけを連携してください。';
+
+  @override
+  String get serverErrorUpdateServer =>
+      'このサーバーは更新が必要です。チケットに対応するまで、あなたのログイン情報は送られません。';
+
+  @override
+  String get serverErrorTicketsUnavailable =>
+      'バックエンドはサーバー用のチケットを発行しません。他の人のサーバーにはログイン情報を送りません。';
+
+  @override
+  String get serverErrorImpostor =>
+      'このサーバーは、別のアドレスで連携済みのサーバーだと名乗っています。何も送りません。';
+
+  @override
+  String get serverErrorOtherServer => 'このアドレスでは別のサーバーが応答しています。連携し直してください。';
+
+  @override
+  String get serverErrorNotOwner =>
+      'この Drive フォルダはあなたのものではありません。サーバーは何もゴミ箱へ移しません。';
+
+  @override
+  String get sitesOriginBuiltIn => '内蔵';
+
+  @override
+  String get sitesOriginCatalog => 'カタログ';
+
+  @override
+  String get sitesOriginUser => '自分のサイト';
+
+  @override
+  String get sitesCatalogBroken => '故障中';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return '故障中: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'Kagami を新しいバージョンに更新する必要があります';
+
+  @override
+  String get sitesCatalogSection => 'サイトカタログ';
+
+  @override
+  String get sitesCatalogUse => 'カタログを使う';
+
+  @override
+  String get sitesCatalogOff => 'オフ: 内蔵サイトと自分のサイトだけが有効になり、アプリはこのための通信を行いません。';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return '第 $serial 版（$date）';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return '最終確認: $when';
+  }
 }

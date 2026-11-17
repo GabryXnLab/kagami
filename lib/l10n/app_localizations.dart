@@ -328,11 +328,23 @@ abstract class AppLocalizations {
   /// **'Notifiche dei capitoli nuovi silenziate.'**
   String get seriesMuteMuted;
 
-  /// Riquadro di ripresa: tutto ciò che è sul telefono è letto, ma alcuni capitoli annunciati non sono stati scaricati
+  /// Riquadro di ripresa: tutto ciò che è leggibile (telefono o Drive) è letto, ma restano capitoli da leggere annunciati e non scaricati
   ///
   /// In it, this message translates to:
-  /// **'{count, plural, =1{In pari con quello che c\'è sul telefono: manca un capitolo annunciato.} other{In pari con quello che c\'è sul telefono: mancano {count} capitoli annunciati.}}'**
-  String seriesCaughtUpMissing(int count);
+  /// **'{count, plural, =1{Hai letto tutto quello che è scaricato: un capitolo da leggere non è ancora arrivato.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere non sono ancora arrivati.}}'**
+  String seriesWaitingChapters(int count);
+
+  /// Riquadro di ripresa: come sopra, ma i prossimi capitoli sono già in coda per lo scaricamento
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Hai letto tutto quello che è scaricato: il prossimo capitolo è in coda.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere, i prossimi sono in coda.}}'**
+  String seriesWaitingQueued(int count);
+
+  /// Pulsante del riquadro di ripresa: scarica dal sito i prossimi capitoli da leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica i prossimi'**
+  String get seriesFetchNext;
 
   /// Riquadro di ripresa: la serie è stata letta per intero
   ///
@@ -789,6 +801,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Non scaricato'**
   String get seriesChapterNotDownloaded;
+
+  /// Riga sotto il titolo di un capitolo archiviato e leggibile che il sito non elenca più
+  ///
+  /// In it, this message translates to:
+  /// **'Non più sul sito'**
+  String get seriesChapterUnlisted;
 
   /// Riga sotto il titolo di un capitolo: numero di pagine (tavole)
   ///
@@ -1498,6 +1516,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Scarica 1 capitolo} other{Scarica {count} capitoli}}'**
   String archiveDownloadPicked(int count);
 
+  /// Titolo della sezione con i risultati della ricerca in Scarica un manga, mescolati fra i siti
+  ///
+  /// In it, this message translates to:
+  /// **'Risultati'**
+  String get archiveResults;
+
   /// Ricerca per titolo senza risultati su un sito
   ///
   /// In it, this message translates to:
@@ -1773,6 +1797,138 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Controlla adesso'**
   String get archiveCheckNow;
+
+  /// Archivio (serie seguite) e menu della serie: voce che lancia la riparazione delle serie archiviate
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara le serie archiviate'**
+  String get archiveRepair;
+
+  /// Sotto la voce di riparazione: cosa fa
+  ///
+  /// In it, this message translates to:
+  /// **'Rilegge ogni serie dal suo sito e corregge titolo, copertina e capitoli'**
+  String get archiveRepairHint;
+
+  /// Foglio della riparazione: ripara tutta la libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Tutta la libreria'**
+  String get archiveRepairAll;
+
+  /// Foglio della riparazione: ripara solo le serie di un sito; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le serie di {site}'**
+  String archiveRepairSite(String site);
+
+  /// Scheda della serie: pulsante che ripara questa serie
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara la serie'**
+  String get archiveRepairSeries;
+
+  /// Avanzamento della riparazione sul telefono; done e total sono numeri di serie, title il titolo della serie in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Riparo {done} di {total}: {title}'**
+  String archiveRepairRunning(int done, int total, String title);
+
+  /// Messaggio dopo aver lanciato la riparazione sul server
+  ///
+  /// In it, this message translates to:
+  /// **'Riparazione avviata sul server: gli esiti compaiono nella cronologia.'**
+  String get archiveRepairQueued;
+
+  /// Messaggio a riparazione finita sul telefono; count è quante serie sono state lette
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessuna serie da riparare.} =1{Riparata 1 serie.} other{Riparate {count} serie.}}'**
+  String archiveRepairFinished(int count);
+
+  /// Riparazione: non c'è né la cartella di Drive né quella del telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Non c\'è una libreria da riparare: scegli la cartella di Drive o del telefono.'**
+  String get archiveRepairNoLibrary;
+
+  /// Riparazione: il server collegato non conosce la riparazione
+  ///
+  /// In it, this message translates to:
+  /// **'Il server non sa ancora riparare le serie: va aggiornato.'**
+  String get archiveRepairNoServer;
+
+  /// Riparazione non riuscita; error è il motivo
+  ///
+  /// In it, this message translates to:
+  /// **'Riparazione non riuscita: {error}'**
+  String archiveRepairFailed(String error);
+
+  /// Riparazione: se ne chiede una mentre un'altra è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Il telefono sta già riparando o scaricando: riprova fra poco.'**
+  String get archiveRepairBusy;
+
+  /// Proposta quando un sito rotto torna a funzionare; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Il sito {site} funziona di nuovo: ripara le sue serie'**
+  String archiveRepairRecovered(String site);
+
+  /// Azione della proposta di riparazione: lancia la riparazione del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Ripara'**
+  String get archiveRepairRecoveredAction;
+
+  /// Azione della proposta di riparazione: la scarta
+  ///
+  /// In it, this message translates to:
+  /// **'Ignora'**
+  String get archiveRepairDismiss;
+
+  /// Cronologia: esito di una riparazione che non ha cambiato niente
+  ///
+  /// In it, this message translates to:
+  /// **'Niente da riparare'**
+  String get archiveRepairNothing;
+
+  /// Cronologia, esito di riparazione: la serie ha adottato una nuova chiave (il sito ha cambiato identità)
+  ///
+  /// In it, this message translates to:
+  /// **'nuova chiave adottata'**
+  String get archiveRepairAdopted;
+
+  /// Cronologia, esito di riparazione: il titolo è cambiato
+  ///
+  /// In it, this message translates to:
+  /// **'titolo aggiornato'**
+  String get archiveRepairRetitled;
+
+  /// Cronologia, esito di riparazione: la copertina è cambiata
+  ///
+  /// In it, this message translates to:
+  /// **'copertina aggiornata'**
+  String get archiveRepairCover;
+
+  /// Cronologia, esito di riparazione: capitoli che il sito elenca e l'archivio non aveva; count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo nuovo} other{{count} capitoli nuovi}}'**
+  String archiveRepairAdded(int count);
+
+  /// Cronologia, esito di riparazione: capitoli archiviati che il sito non elenca più (restano archiviati); count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo non più elencato} other{{count} capitoli non più elencati}}'**
+  String archiveRepairUnlisted(int count);
+
+  /// Cronologia, esito di riparazione: la serie non si è potuta riparare; error è il motivo
+  ///
+  /// In it, this message translates to:
+  /// **'Non riparata: {error}'**
+  String archiveRepairError(String error);
 
   /// Sotto «Serie seguite» quando non ce n'è nessuna
   ///
@@ -2241,6 +2397,30 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Attenzione: in chiaro su un indirizzo pubblico il token del tuo account si legge per strada. Usa HTTPS (Tailscale Funnel, un reverse proxy) o Tailscale.'**
   String get serverAddressExposed;
+
+  /// Titolo della conferma prima di dare il permesso su Drive a un server che non è dell'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Dare il tuo Drive a questo server?'**
+  String get serverDriveForeignTitle;
+
+  /// Corpo della conferma: chi gestisce un server non proprio avrà accesso a tutto il Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Questo server non è tuo: chi lo gestisce potrà leggere, scrivere e cancellare in tutto il tuo Drive, non solo nella cartella della libreria. Continua solo se ti fidi di lui.'**
+  String get serverDriveForeignBody;
+
+  /// Pulsante che conferma il permesso su Drive a un server non proprio
+  ///
+  /// In it, this message translates to:
+  /// **'Do il permesso'**
+  String get serverDriveForeignConfirm;
+
+  /// Errore: il permesso di Drive non si manda a un server http:// su un indirizzo pubblico
+  ///
+  /// In it, this message translates to:
+  /// **'Il permesso di Drive non si manda a un server in chiaro (http://) su un indirizzo pubblico: si leggerebbe per strada. Usa un indirizzo https:// o una rete privata come Tailscale.'**
+  String get serverDriveNeedsHttps;
 
   /// Nota sotto il campo indirizzo nel foglio «Collega un server»
   ///
@@ -2782,10 +2962,10 @@ abstract class AppLocalizations {
   /// **'Quello che arriva su Drive scende sul telefono. Dal telefono non sale niente.'**
   String get syncDescDownload;
 
-  /// Spiegazione della direzione Verso Drive (reading/backup è un percorso)
+  /// Spiegazione della direzione Verso Drive (sale su Drive solo ciò che è sul telefono)
   ///
   /// In it, this message translates to:
-  /// **'Quello che c\'è sul telefono sale su Drive — per esempio le copie dei dati in reading/backup. Gli indici della libreria restano quelli del server.'**
+  /// **'Quello che c\'è sul telefono sale su Drive. Gli indici della libreria restano quelli del server.'**
   String get syncDescUpload;
 
   /// Spiegazione della direzione Entrambe
@@ -3145,13 +3325,13 @@ abstract class AppLocalizations {
   /// Interruttore della copia di backup giornaliera
   ///
   /// In it, this message translates to:
-  /// **'Copia automatica nella libreria'**
+  /// **'Copia automatica sul telefono'**
   String get settingsAutoBackup;
 
-  /// Sottotitolo dell'interruttore della copia automatica (reading/backup/ è un percorso)
+  /// Sottotitolo dell'interruttore della copia automatica (le copie stanno nello spazio dell'app)
   ///
   /// In it, this message translates to:
-  /// **'Una volta al giorno in reading/backup/, che la sincronizzazione porta su Drive insieme ai manga'**
+  /// **'Una volta al giorno nello spazio dell\'app, su questo telefono. Per averle altrove c\'è l\'account o «Esporta»'**
   String get settingsAutoBackupNote;
 
   /// Riga che esporta i dati personali in un file
@@ -3394,7 +3574,7 @@ abstract class AppLocalizations {
   /// **'La libreria torna a essere la cartella del telefono. I capitoli scaricati restano'**
   String get settingsDriveDisconnectNote;
 
-  /// Titolo mostrato nelle build senza Firebase
+  /// Titolo mostrato nelle build senza backend
   ///
   /// In it, this message translates to:
   /// **'Account non disponibile qui'**
@@ -3403,7 +3583,7 @@ abstract class AppLocalizations {
   /// Sottotitolo di «Account non disponibile qui»
   ///
   /// In it, this message translates to:
-  /// **'Questa build non ha Firebase: i dati restano dove sono, sul dispositivo'**
+  /// **'Questa build non ha un backend: i dati restano dove sono, sul dispositivo'**
   String get settingsAccountUnavailableNote;
 
   /// Riga che fa accedere con l'account Google
@@ -3445,8 +3625,14 @@ abstract class AppLocalizations {
   /// Sottotitolo di «Esci»
   ///
   /// In it, this message translates to:
-  /// **'Manda su l\'ultima lettura, poi chiude la sessione'**
+  /// **'Manda su l\'ultima lettura e chiude la sessione: sul telefono tornano i dati dell\'uso senza account'**
   String get settingsAccountSignOutNote;
+
+  /// Sottotitolo di «Esci» quando la sessione dell'account è scaduta ma a schermo restano i dati di quell'account
+  ///
+  /// In it, this message translates to:
+  /// **'La sessione è scaduta: accedi di nuovo per sincronizzare, o esci per tornare ai dati dell\'uso senza account'**
+  String get settingsAccountSessionLostNote;
 
   /// Riga che cancella i dati dall'account
   ///
@@ -3457,7 +3643,7 @@ abstract class AppLocalizations {
   /// Sottotitolo di «Smetti di tenerne copia»
   ///
   /// In it, this message translates to:
-  /// **'Cancella i dati dall\'account. Quelli di questo telefono restano dove sono'**
+  /// **'Cancella i dati dall\'account e torni all\'uso senza account. Quelli dell\'account restano nel suo file su questo telefono, nascosti finché non rientri'**
   String get settingsAccountForgetNote;
 
   /// Sottotitolo sotto un errore dell'account
@@ -3475,7 +3661,7 @@ abstract class AppLocalizations {
   /// Avviso nel foglio di conferma della cancellazione dall'account
   ///
   /// In it, this message translates to:
-  /// **'Sparisce la copia tenuta per te, e l\'accesso si chiude. Stato, voti, cronologia e raccolte di questo telefono restano dove sono — ma da un altro telefono non si vedranno più.'**
+  /// **'Sparisce la copia tenuta per te, e l\'accesso si chiude. Sul telefono tornano i dati dell\'uso senza account; stato, voti, cronologia e raccolte dell\'account restano in un suo file su questo telefono, ma non si vedono finché non rientri con lo stesso account (e da un altro telefono non si vedranno più).'**
   String get settingsAccountForgetExplain;
 
   /// Pulsante di conferma della cancellazione dei dati dall'account
@@ -3586,10 +3772,10 @@ abstract class AppLocalizations {
   /// **'Cosa fa'**
   String get settingsWhatItDoes;
 
-  /// Riga che elenca le copie di backup automatiche nella cartella della libreria
+  /// Riga che elenca le copie di backup automatiche nello spazio dell'app
   ///
   /// In it, this message translates to:
-  /// **'Copie nella libreria'**
+  /// **'Copie sul telefono'**
   String get settingsBackupsTitle;
 
   /// Sottotitolo di «Copie nella libreria» quando non ce ne sono
@@ -4282,12 +4468,6 @@ abstract class AppLocalizations {
   /// **'Libreria'**
   String get shellTabLibrary;
 
-  /// Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici
-  ///
-  /// In it, this message translates to:
-  /// **'Raccolte'**
-  String get shellTabCollections;
-
   /// Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito
   ///
   /// In it, this message translates to:
@@ -4653,6 +4833,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Su Drive la cartella va nel cestino: per trenta giorni si recupera da lì.'**
   String get removeSeriesDrive;
+
+  /// Nota nel foglio di eliminazione (o avviso) quando la serie è nel Drive dell'account ma la cartella non è sua o la proprietà non è ancora nota: su Drive non si cancella
+  ///
+  /// In it, this message translates to:
+  /// **'Su Drive la serie resta: la cartella della libreria non è del tuo account, o Drive non l\'ha ancora confermato, e Kagami cancella solo dove possiedi.'**
+  String get removeSeriesDriveNotOwned;
 
   /// Pulsante che conferma l'eliminazione delle serie
   ///
@@ -5122,7 +5308,7 @@ abstract class AppLocalizations {
   /// **'Scegli la cartella della libreria manga'**
   String get dataPickLibraryFolderTitle;
 
-  /// Errore: il metodo di accesso con Google non è abilitato nel progetto Firebase.
+  /// Errore: il metodo di accesso con Google non è abilitato sul backend dell'account.
   ///
   /// In it, this message translates to:
   /// **'L\'accesso con Google non è ancora attivo su questo progetto'**
@@ -5169,6 +5355,18 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Accesso con Google non riuscito'**
   String get dataCloudGoogleSignInFailed;
+
+  /// Errore dell'account: il backend scelto da chi ha compilato l'app non ha la tabella o il permesso che serve (schema più vecchio dell'app).
+  ///
+  /// In it, this message translates to:
+  /// **'Funzione non disponibile sul backend di questa build'**
+  String get dataCloudBackendUnavailable;
+
+  /// Errore della sincronizzazione dell'account: il backend rifiuta la riga dei dati personali perché supera il suo tetto di 16 MiB.
+  ///
+  /// In it, this message translates to:
+  /// **'I tuoi dati personali superano i 16 MiB che il backend accetta: restano su questo telefono, ma non si sincronizzano'**
+  String get dataCloudTooLarge;
 
   /// Testo della notifica Android che avvisa di capitoli nuovi in una serie (il titolo della notifica è il nome della serie).
   ///
@@ -6151,6 +6349,12 @@ abstract class AppLocalizations {
   /// **'Dal telefono e da Drive, nel cestino, da soli. Dove si è arrivati e i capitoli letti restano'**
   String get settingsAutoCleanupReadNote;
 
+  /// Seconda riga del sottotitolo dei capitoli letti, con Drive collegato: un capitolo letto da una libreria condivisa da altri conta come letto e la regola toglie anche la copia nel Drive dell'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Un capitolo letto da una condivisione è letto: toglie anche la copia nel tuo Drive.'**
+  String get settingsAutoCleanupSharedRead;
+
   /// Interruttore: toglie dal telefono anche i capitoli da leggere delle serie che non si leggono da un po'
   ///
   /// In it, this message translates to:
@@ -6337,6 +6541,18 @@ abstract class AppLocalizations {
   /// **'Silenzia le novità'**
   String get collectionPropsMuted;
 
+  /// Interruttore nelle proprietà di una raccolta: la nasconde da home, libreria, statistiche e cronologia
+  ///
+  /// In it, this message translates to:
+  /// **'Nascondi'**
+  String get collectionTraitHidden;
+
+  /// Sotto l'interruttore Nascondi delle proprietà di una raccolta
+  ///
+  /// In it, this message translates to:
+  /// **'Niente notifiche; le serie si vedono solo aprendo la raccolta'**
+  String get collectionTraitHiddenHint;
+
   /// Interruttore: la pulizia automatica dei capitoli salta le serie della raccolta
   ///
   /// In it, this message translates to:
@@ -6378,6 +6594,2112 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Quanti capitoli scaricati restano davanti a quello che leggi, in tutte le serie scaricate man mano'**
   String get settingsReadAheadWindowNote;
+
+  /// Scarica un manga, serie seguite, scheda della serie e ricerca: il sito intero non funziona perché è cambiato; sotto compare il messaggio tecnico; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Il sito {site} non funziona: è cambiato e Kagami va aggiornato.'**
+  String archiveSiteBroken(String site);
+
+  /// Titolo della sezione nella scheda di una serie: la stessa serie sugli altri siti registrati
+  ///
+  /// In it, this message translates to:
+  /// **'Su altri siti'**
+  String get elsewhereTitle;
+
+  /// Sotto il titolo «Su altri siti» mentre la ricerca sugli altri siti è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Cerco la serie sugli altri siti…'**
+  String get elsewhereChecking;
+
+  /// Riga di un sito in «Su altri siti»: quanti capitoli elenca il sito; count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo} other{{count} capitoli}}'**
+  String elsewhereChapters(int count);
+
+  /// Riga di un sito in «Su altri siti»: numero dell'ultimo capitolo; chapter è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimo: capitolo {chapter}'**
+  String elsewhereLatest(String chapter);
+
+  /// Riga di un sito in «Su altri siti»: numero e data dell'ultimo capitolo; chapter è il numero, date la data come la scrive il sito
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimo: capitolo {chapter}, {date}'**
+  String elsewhereLatestAt(String chapter, String date);
+
+  /// «Su altri siti»: di quanti capitoli un sito è più avanti della serie in uso; count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo avanti} other{{count} capitoli avanti}}'**
+  String elsewhereAhead(int count);
+
+  /// «Su altri siti»: di quanti capitoli un sito è più indietro della serie in uso; count è il numero
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo indietro} other{{count} capitoli indietro}}'**
+  String elsewhereBehind(int count);
+
+  /// «Su altri siti»: il sito è allo stesso capitolo della serie in uso
+  ///
+  /// In it, this message translates to:
+  /// **'Allo stesso capitolo'**
+  String get elsewhereSame;
+
+  /// «Su altri siti»: la serie non c'è su questo sito
+  ///
+  /// In it, this message translates to:
+  /// **'Qui non c\'è'**
+  String get elsewhereMissing;
+
+  /// «Su altri siti»: il sito è rotto (cambiato) e non è stato interrogato
+  ///
+  /// In it, this message translates to:
+  /// **'Sito non funzionante'**
+  String get elsewhereBroken;
+
+  /// «Su altri siti»: il sito chiede la verifica del browser e da qui non si passa
+  ///
+  /// In it, this message translates to:
+  /// **'Chiede la verifica del browser'**
+  String get elsewhereGated;
+
+  /// «Su altri siti»: il sito ha risposto con un errore, per questa volta non si sa
+  ///
+  /// In it, this message translates to:
+  /// **'Non ha risposto'**
+  String get elsewhereError;
+
+  /// Pulsante su una riga trovata di «Su altri siti»: passa la serie a quel sito, senza ripetere la ricerca di «Cambia provider»
+  ///
+  /// In it, this message translates to:
+  /// **'Passa a questo sito'**
+  String get elsewhereSwitch;
+
+  /// Azione nell'avviso di un sito rotto: apre l'elenco delle serie di quel sito con gli altri siti dove si trovano
+  ///
+  /// In it, this message translates to:
+  /// **'Dove si leggono altrove'**
+  String get elsewhereSiteAction;
+
+  /// Titolo della pagina con le serie di un sito rotto; site è il nome del sito
+  ///
+  /// In it, this message translates to:
+  /// **'Serie di {site}'**
+  String elsewhereSiteTitle(String site);
+
+  /// Pagina delle serie di un sito rotto: nessuna serie in libreria viene da quel sito
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna serie in libreria viene da questo sito.'**
+  String get elsewhereSiteEmpty;
+
+  /// Pagina delle serie di un sito rotto: per questa serie non si è ancora cercato sugli altri siti
+  ///
+  /// In it, this message translates to:
+  /// **'Non ancora cercata altrove'**
+  String get elsewhereSiteUnknown;
+
+  /// Pagina delle serie di un sito rotto: la serie non risulta su nessun altro sito
+  ///
+  /// In it, this message translates to:
+  /// **'Non risulta su altri siti'**
+  String get elsewhereSiteNowhere;
+
+  /// Pagina delle serie di un sito rotto, senza server: si mostra solo ciò che l'app ha già in cache, senza cercare in massa dal telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Si vede ciò che era già stato trovato. Con un Kagami Server collegato la ricerca si fa per tutte le serie.'**
+  String get elsewhereSiteOffline;
+
+  /// Titolo della pagina Siti (Impostazioni, Scarica un manga) e della voce che la apre
+  ///
+  /// In it, this message translates to:
+  /// **'Siti'**
+  String get sitesTitle;
+
+  /// Sottotitolo della voce che apre la pagina Siti
+  ///
+  /// In it, this message translates to:
+  /// **'Quelli inclusi e quelli che aggiungi tu'**
+  String get sitesEntrySubtitle;
+
+  /// Pagina Siti: sezione dei siti inclusi nell'app
+  ///
+  /// In it, this message translates to:
+  /// **'Inclusi nell\'app'**
+  String get sitesBuiltInSection;
+
+  /// Pagina Siti: sezione dei siti aggiunti dall'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiunti'**
+  String get sitesAddedSection;
+
+  /// Pagina Siti: nessun sito aggiunto
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun sito aggiunto.'**
+  String get sitesNoneAdded;
+
+  /// Pagina Siti: senza libreria non si possono aggiungere siti
+  ///
+  /// In it, this message translates to:
+  /// **'Servono una cartella di Drive o una cartella del telefono come libreria: i siti si salvano lì.'**
+  String get sitesNoLibrary;
+
+  /// Pagina Siti: versione del file di un sito
+  ///
+  /// In it, this message translates to:
+  /// **'versione {version}'**
+  String sitesVersion(int version);
+
+  /// Pagina Siti: il sito aggiunto prende il posto di un sito incluso
+  ///
+  /// In it, this message translates to:
+  /// **'Sostituisce {name}'**
+  String sitesReplaces(String name);
+
+  /// Pagina Siti: il file del sito non si è potuto leggere
+  ///
+  /// In it, this message translates to:
+  /// **'File rovinato'**
+  String get sitesBroken;
+
+  /// Pagina Siti: azione per aggiornare subito il file di un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiorna ora'**
+  String get sitesUpdateNow;
+
+  /// Pagina Siti: esito dell'aggiornamento, il sito è stato aggiornato
+  ///
+  /// In it, this message translates to:
+  /// **'Sito aggiornato.'**
+  String get sitesUpdated;
+
+  /// Pagina Siti: esito dell'aggiornamento, non c'è niente di nuovo
+  ///
+  /// In it, this message translates to:
+  /// **'Niente di nuovo: il sito è già aggiornato.'**
+  String get sitesUpToDate;
+
+  /// Pagina Siti: azione per togliere un sito aggiunto
+  ///
+  /// In it, this message translates to:
+  /// **'Togli'**
+  String get sitesRemove;
+
+  /// Pagina Siti: titolo della conferma per togliere un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Togliere {name}?'**
+  String sitesRemoveTitle(String name);
+
+  /// Pagina Siti: testo della conferma per togliere un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie di questo sito restano in libreria, ma non si aggiornano finché il sito non torna.'**
+  String get sitesRemoveBody;
+
+  /// Pagina Siti: pulsante e titolo della pagina per aggiungere un sito
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi un sito'**
+  String get sitesAdd;
+
+  /// Aggiungi un sito: segnaposto del campo del link o del testo
+  ///
+  /// In it, this message translates to:
+  /// **'Link al file o testo incollato'**
+  String get sitesAddHint;
+
+  /// Aggiungi un sito: pulsante che legge il file e mostra l'anteprima
+  ///
+  /// In it, this message translates to:
+  /// **'Controlla'**
+  String get sitesAddCheck;
+
+  /// Errore generico quando il file di un sito non è valido; sotto si mostra il messaggio tecnico
+  ///
+  /// In it, this message translates to:
+  /// **'Il file non è valido'**
+  String get sitesInvalid;
+
+  /// Errore quando il link del file di un sito non risponde
+  ///
+  /// In it, this message translates to:
+  /// **'Non si è riusciti a scaricare il file'**
+  String get sitesFetchFailed;
+
+  /// Anteprima di un sito: elenco degli host a cui chiederà le pagine
+  ///
+  /// In it, this message translates to:
+  /// **'Chiederà le pagine a'**
+  String get sitesPreviewHosts;
+
+  /// Anteprima di un sito: titolo della prova facoltativa
+  ///
+  /// In it, this message translates to:
+  /// **'Prova prima di installare (facoltativo)'**
+  String get sitesTryTitle;
+
+  /// Anteprima di un sito: segnaposto del campo della prova
+  ///
+  /// In it, this message translates to:
+  /// **'Una ricerca o il link di una serie'**
+  String get sitesTryHint;
+
+  /// Anteprima di un sito: pulsante che avvia la prova
+  ///
+  /// In it, this message translates to:
+  /// **'Prova'**
+  String get sitesTry;
+
+  /// Prova di un sito: titolo della serie trovata e numero di capitoli
+  ///
+  /// In it, this message translates to:
+  /// **'{title}: {count, plural, =1{un capitolo} other{{count} capitoli}}'**
+  String sitesTrySeries(String title, int count);
+
+  /// Prova di un sito: risultati di una ricerca
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Nessun risultato} =1{Un risultato: {first}} other{{count} risultati, il primo: {first}}}'**
+  String sitesTryResults(int count, String first);
+
+  /// Prova di un sito: errore; sotto il messaggio tecnico
+  ///
+  /// In it, this message translates to:
+  /// **'La prova non è riuscita'**
+  String get sitesTryFailed;
+
+  /// Prova di un sito: fase e campo del guasto, sotto l'errore
+  ///
+  /// In it, this message translates to:
+  /// **'Fase: {phase} · campo: {field}'**
+  String sitesFault(String phase, String field);
+
+  /// Prova di un sito: fase e campo del guasto, sotto l'errore
+  ///
+  /// In it, this message translates to:
+  /// **'Fase: {phase}'**
+  String sitesFaultPhase(String phase);
+
+  /// Anteprima di un sito: pulsante che installa il sito
+  ///
+  /// In it, this message translates to:
+  /// **'Installa'**
+  String get sitesInstall;
+
+  /// Esito: sito installato
+  ///
+  /// In it, this message translates to:
+  /// **'{name} installato.'**
+  String sitesInstalled(String name);
+
+  /// Famiglia di tipo: manga (giapponese), etichetta di un'opzione
+  ///
+  /// In it, this message translates to:
+  /// **'Manga'**
+  String get seriesKindManga;
+
+  /// Famiglia di tipo: manhwa (coreano e webtoon)
+  ///
+  /// In it, this message translates to:
+  /// **'Manhwa'**
+  String get seriesKindManhwa;
+
+  /// Famiglia di tipo: manhua (cinese)
+  ///
+  /// In it, this message translates to:
+  /// **'Manhua'**
+  String get seriesKindManhua;
+
+  /// Famiglia di tipo: tutto il resto, anche senza tipo
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get seriesKindOther;
+
+  /// Proprietà di una raccolta: interruttore che impedisce di tenere serie fuori dai criteri
+  ///
+  /// In it, this message translates to:
+  /// **'Vincolante'**
+  String get collectionPropsBinding;
+
+  /// Spiegazione sotto l'interruttore «Vincolante»
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le serie che rientrano nei criteri possono stare nella raccolta, anche aggiunte a mano.'**
+  String get collectionPropsBindingNote;
+
+  /// Foglio proprietà: quante serie attuali usciranno accendendo «Vincolante»
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Una serie che non rientra nei criteri uscirà dalla raccolta} other{{count} serie che non rientrano nei criteri usciranno dalla raccolta}}'**
+  String collectionBindingWillRemove(int count);
+
+  /// SnackBar: aggiunta a mano rifiutata da una raccolta vincolante (una serie)
+  ///
+  /// In it, this message translates to:
+  /// **'«{title}» non rientra nei criteri di «{collection}»'**
+  String collectionBindingRefused(String title, String collection);
+
+  /// SnackBar: aggiunta in blocco rifiutata da una raccolta vincolante (più serie)
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Una serie non rientra} other{{count} serie non rientrano}} nei criteri di «{collection}»'**
+  String collectionBindingRefusedMany(int count, String collection);
+
+  /// Tooltip del lucchetto sulla riga di una raccolta vincolante
+  ///
+  /// In it, this message translates to:
+  /// **'Raccolta vincolante'**
+  String get collectionBindingLockTip;
+
+  /// Opzione del selettore di durata dell'accesso: sette giorni
+  ///
+  /// In it, this message translates to:
+  /// **'Una settimana'**
+  String get accessDurationWeek;
+
+  /// Opzione del selettore di durata dell'accesso: un mese (la proposta)
+  ///
+  /// In it, this message translates to:
+  /// **'Un mese'**
+  String get accessDurationMonth;
+
+  /// Opzione del selettore di durata dell'accesso: tre mesi
+  ///
+  /// In it, this message translates to:
+  /// **'Tre mesi'**
+  String get accessDurationQuarter;
+
+  /// Opzione del selettore di durata dell'accesso: un anno
+  ///
+  /// In it, this message translates to:
+  /// **'Un anno'**
+  String get accessDurationYear;
+
+  /// Opzione del selettore di durata dell'accesso: l'accesso non scade
+  ///
+  /// In it, this message translates to:
+  /// **'Senza scadenza'**
+  String get accessDurationNever;
+
+  /// Sottotitolo di un account ammesso al server nel foglio «Chi può usarlo»: quando scade il suo accesso. {date} è una data breve.
+  ///
+  /// In it, this message translates to:
+  /// **'Scade il {date}'**
+  String serverUserExpires(DateTime date);
+
+  /// Sottotitolo di un account ammesso: il suo accesso è scaduto
+  ///
+  /// In it, this message translates to:
+  /// **'Scaduto'**
+  String get serverUserExpired;
+
+  /// Pulsante che rinnova l'accesso scaduto o in scadenza di un account del server
+  ///
+  /// In it, this message translates to:
+  /// **'Rinnova'**
+  String get serverUserRenew;
+
+  /// Titolo del foglio che chiede per quanto rinnovare l'accesso di un account
+  ///
+  /// In it, this message translates to:
+  /// **'Rinnova l\'accesso di {email}'**
+  String serverUserRenewTitle(String email);
+
+  /// Riga nella sezione Server, per chi è stato ammesso al server di un altro: quando scade il suo accesso
+  ///
+  /// In it, this message translates to:
+  /// **'Il tuo accesso scade il {date}'**
+  String serverMyAccessExpires(DateTime date);
+
+  /// Sezione Server, per chi è stato ammesso: l'accesso è scaduto e solo il proprietario del server può rinnovarlo
+  ///
+  /// In it, this message translates to:
+  /// **'Accesso scaduto: chiedi a chi ha il server di rinnovarlo'**
+  String get serverAccessExpired;
+
+  /// Titolo della notifica che avvisa, tre giorni prima, che l'accesso al server di un altro sta per scadere
+  ///
+  /// In it, this message translates to:
+  /// **'Il tuo accesso a «{serverName}» sta per scadere'**
+  String dataServerExpiryTitle(String serverName);
+
+  /// Testo della notifica di accesso in scadenza
+  ///
+  /// In it, this message translates to:
+  /// **'Scade il {date}: chiedi a chi ha il server di rinnovarlo.'**
+  String dataServerExpiryText(DateTime date);
+
+  /// Titolo del foglio (e della voce in Impostazioni → Drive) in cui chi condivide la sua libreria su Drive vede chi può leggerla e fino a quando
+  ///
+  /// In it, this message translates to:
+  /// **'Chi può leggere la mia libreria'**
+  String get driveShareTitle;
+
+  /// Sottotitolo della voce in Impostazioni → Drive che apre il foglio di chi può leggere la libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Chi vede la cartella su Drive e fino a quando'**
+  String get driveShareEntryNote;
+
+  /// Testo in cima al foglio di condivisione della libreria. {folder} è il nome della cartella di Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi l\'account Google di chi vuoi: potrà leggere la cartella «{folder}» su Drive, in sola lettura, per il tempo che scegli.'**
+  String driveShareIntro(String folder);
+
+  /// Titolo della finestra che precede la richiesta del permesso di scrivere su Drive, prima di gestire le condivisioni
+  ///
+  /// In it, this message translates to:
+  /// **'Serve un permesso in più su Drive'**
+  String get driveShareConsentTitle;
+
+  /// Corpo della finestra del consenso: l'altra persona vedrà tutti i file della cartella {folder}, non solo la libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Chi aggiungi vedrà tutti i file della cartella «{folder}», non solo la libreria. Per gestire le condivisioni Google ti chiede un permesso in più. I tuoi dati di lettura che stanno nella cartella vanno nel cestino di Drive.'**
+  String driveShareConsentBody(String folder);
+
+  /// Pulsante che prosegue verso la richiesta di permesso di Google
+  ///
+  /// In it, this message translates to:
+  /// **'Continua'**
+  String get driveShareConsentContinue;
+
+  /// Pulsante che condivide la cartella con l'indirizzo scritto, per la durata scelta
+  ///
+  /// In it, this message translates to:
+  /// **'Condividi'**
+  String get driveShareAdd;
+
+  /// Parte del sottotitolo di una condivisione che riguarda un'altra cartella di Drive, non quella attuale. {name} è il nome di quella cartella
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella «{name}»'**
+  String driveShareInFolder(String name);
+
+  /// Sottotitolo di una persona che ha accesso alla cartella perché condivisa a mano dal sito di Drive, senza termine registrato da Kagami
+  ///
+  /// In it, this message translates to:
+  /// **'Condiviso da Drive'**
+  String get driveShareFromDrive;
+
+  /// Corpo della conferma prima di togliere a qualcuno l'accesso alla cartella di Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Non potrà più leggere la cartella.'**
+  String get driveShareRemoveBody;
+
+  /// Avviso nel foglio di condivisione: la cartella è leggibile da chiunque abbia il link o da un dominio; Kagami non lo gestisce
+  ///
+  /// In it, this message translates to:
+  /// **'La cartella è leggibile anche da chi ha il link o da un dominio: si gestisce da Drive.'**
+  String get driveShareLinkAccess;
+
+  /// Avviso nel foglio di condivisione: Drive non ha risposto, quindi l'elenco delle persone può essere incompleto (non vuol dire che non ce ne siano)
+  ///
+  /// In it, this message translates to:
+  /// **'Drive non ha risposto: l\'elenco può essere incompleto.'**
+  String get driveShareDriveSilent;
+
+  /// Avviso nel foglio di condivisione: nella cartella condivisa restano copie dei dati di lettura dell'utente, visibili a chi la legge; accanto il pulsante per toglierle
+  ///
+  /// In it, this message translates to:
+  /// **'Nella cartella ci sono copie dei tuoi dati di lettura (reading/backup, state.json, collections.json): chi la legge può vederle.'**
+  String get driveSharePersonalFound;
+
+  /// Pulsante accanto all'avviso: sposta nel cestino di Drive le copie dei dati di lettura rimaste nella cartella
+  ///
+  /// In it, this message translates to:
+  /// **'Togli'**
+  String get driveSharePersonalRemove;
+
+  /// Avviso nel foglio di condivisione: non è stato possibile controllare se nella cartella restano copie dei dati di lettura (non vuol dire che non ci siano)
+  ///
+  /// In it, this message translates to:
+  /// **'Non ho potuto controllare se nella cartella restano copie dei tuoi dati di lettura.'**
+  String get driveSharePersonalUnchecked;
+
+  /// Messaggio nel foglio di condivisione quando il backend dell'app non offre la funzione; senza campo di aggiunta
+  ///
+  /// In it, this message translates to:
+  /// **'Questo backend non ha la condivisione della libreria.'**
+  String get driveShareUnavailable;
+
+  /// Errore nel foglio di condivisione quando non si riesce a leggere chi ha accesso. {message} è la causa
+  ///
+  /// In it, this message translates to:
+  /// **'Non riesco a leggere chi ha accesso: {message}'**
+  String driveShareLoadFailed(String message);
+
+  /// Riga nel foglio di condivisione quando nessuno ha accesso alla cartella
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno, per ora.'**
+  String get driveShareNobody;
+
+  /// Avviso dopo aver condiviso la libreria. {email} è l'indirizzo della persona
+  ///
+  /// In it, this message translates to:
+  /// **'{email} può leggere la libreria.'**
+  String driveShareAdded(String email);
+
+  /// Errore di rete in una scrittura del foglio di condivisione: lo stato di prima è intatto
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna connessione: non è cambiato niente.'**
+  String get driveShareOffline;
+
+  /// Errore di una scrittura del foglio di condivisione. {message} è la causa
+  ///
+  /// In it, this message translates to:
+  /// **'Non è andata: {message}'**
+  String driveShareFailed(String message);
+
+  /// Errore: l'indirizzo scritto è quello dell'account stesso
+  ///
+  /// In it, this message translates to:
+  /// **'È il tuo stesso indirizzo.'**
+  String get driveShareSelf;
+
+  /// Titolo del foglio (e della voce in Impostazioni → Drive) con gli inviti e le librerie di Drive che altri hanno condiviso con l'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Librerie condivise con me'**
+  String get driveReceivedTitle;
+
+  /// Sottotitolo della voce «Librerie condivise con me» in Impostazioni → Drive
+  ///
+  /// In it, this message translates to:
+  /// **'Inviti e accessi alle librerie degli altri'**
+  String get driveReceivedEntryNote;
+
+  /// Riga di un invito nel foglio delle librerie condivise. {owner} è chi condivide (nome e indirizzo), {folder} il nome della cartella
+  ///
+  /// In it, this message translates to:
+  /// **'{owner} ti ha dato accesso in sola lettura alla libreria «{folder}».'**
+  String driveReceivedInvite(String owner, String folder);
+
+  /// Pulsante per accettare l'invito a una libreria condivisa
+  ///
+  /// In it, this message translates to:
+  /// **'Accetta'**
+  String get driveReceivedAccept;
+
+  /// Pulsante per rifiutare l'invito a una libreria condivisa (solo sul telefono: chi ha condiviso non lo sa)
+  ///
+  /// In it, this message translates to:
+  /// **'Rifiuta'**
+  String get driveReceivedDecline;
+
+  /// Pulsante per togliere dall'elenco una libreria condivisa già accettata (solo sul telefono)
+  ///
+  /// In it, this message translates to:
+  /// **'Togli'**
+  String get driveReceivedRemove;
+
+  /// Riga di una libreria condivisa con un termine. {owner} è chi ha condiviso, {date} il giorno in cui l'accesso finisce
+  ///
+  /// In it, this message translates to:
+  /// **'{owner} · fino al {date}'**
+  String driveReceivedUntil(String owner, DateTime date);
+
+  /// Riga di una libreria condivisa senza scadenza. {owner} è chi ha condiviso
+  ///
+  /// In it, this message translates to:
+  /// **'{owner} · senza scadenza'**
+  String driveReceivedNoLimit(String owner);
+
+  /// Riga di una libreria condivisa il cui accesso è scaduto. {owner} è chi ha condiviso
+  ///
+  /// In it, this message translates to:
+  /// **'{owner} · accesso scaduto'**
+  String driveReceivedExpiredRow(String owner);
+
+  /// Testo del foglio delle librerie condivise quando non c'è né un invito né una libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna libreria condivisa con te, per ora.'**
+  String get driveReceivedEmpty;
+
+  /// Titolo della notifica di un invito a una libreria condivisa. {owner} è chi condivide
+  ///
+  /// In it, this message translates to:
+  /// **'{owner} ha condiviso una libreria con te'**
+  String driveReceivedNotificationTitle(String owner);
+
+  /// Testo della notifica di un invito a una libreria condivisa. {folder} è il nome della cartella
+  ///
+  /// In it, this message translates to:
+  /// **'Apri Kagami per accettare «{folder}».'**
+  String driveReceivedNotificationText(String folder);
+
+  /// Avviso sopra la libreria: l'accesso a una libreria condivisa è scaduto (le sue serie non compaiono più; lo stato di lettura resta). {name} è il nome di chi l'ha condivisa
+  ///
+  /// In it, this message translates to:
+  /// **'L\'accesso alla libreria di {name} è scaduto.'**
+  String driveNoticeSharedExpired(String name);
+
+  /// Avviso sopra la libreria: Drive non lascia leggere una libreria condivisa (403 o 404). {name} è il nome di chi l'ha condivisa
+  ///
+  /// In it, this message translates to:
+  /// **'La libreria di {name} non risponde: forse non è più condivisa con te.'**
+  String driveNoticeSharedUnavailable(String name);
+
+  /// Avviso sopra la libreria: l'elenco delle librerie in più, salvato sul telefono, non si è potuto leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Le librerie condivise non si sono potute leggere.'**
+  String get driveNoticeSourcesUnreadable;
+
+  /// Pulsante dell'avviso sopra la libreria che apre il foglio delle librerie condivise
+  ///
+  /// In it, this message translates to:
+  /// **'Gestisci'**
+  String get driveReceivedManage;
+
+  /// Titolo della pagina Impostazioni → Libreria → Sorgenti e della voce che la apre
+  ///
+  /// In it, this message translates to:
+  /// **'Sorgenti'**
+  String get sourcesTitle;
+
+  /// Sottotitolo della voce «Sorgenti» in Impostazioni → Libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Ordine di lettura e librerie in più'**
+  String get sourcesEntryNote;
+
+  /// Riga d'aiuto in cima alla pagina Sorgenti
+  ///
+  /// In it, this message translates to:
+  /// **'Le serie di tutte le sorgenti si uniscono in una libreria. A parità di serie vince la prima.'**
+  String get sourcesHelp;
+
+  /// Nome della sorgente «cartella scelta» nell'elenco Sorgenti
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella del telefono'**
+  String get sourcesBuiltInFolder;
+
+  /// Nome della sorgente «spazio dell'app» nell'elenco Sorgenti
+  ///
+  /// In it, this message translates to:
+  /// **'Spazio dell\'app'**
+  String get sourcesBuiltInApp;
+
+  /// Nome della sorgente «Drive dell'account» nell'elenco Sorgenti
+  ///
+  /// In it, this message translates to:
+  /// **'Google Drive'**
+  String get sourcesBuiltInDrive;
+
+  /// Tipo di sorgente WebDAV nel foglio «Aggiungi sorgente» e nelle righe dell'elenco
+  ///
+  /// In it, this message translates to:
+  /// **'WebDAV / NAS'**
+  String get sourcesKindWebdav;
+
+  /// Tipo di sorgente SMB nel foglio «Aggiungi sorgente» e nelle righe dell'elenco
+  ///
+  /// In it, this message translates to:
+  /// **'SMB'**
+  String get sourcesKindSmb;
+
+  /// Etichetta sul tipo di sorgente che non è ancora disponibile
+  ///
+  /// In it, this message translates to:
+  /// **'In arrivo'**
+  String get sourcesComingSoon;
+
+  /// Stato di una sorgente che risponde
+  ///
+  /// In it, this message translates to:
+  /// **'Pronta'**
+  String get sourcesStateReady;
+
+  /// Stato di una sorgente che non risponde adesso
+  ///
+  /// In it, this message translates to:
+  /// **'Senza rete'**
+  String get sourcesStateOffline;
+
+  /// Stato di una sorgente a cui mancano le credenziali o che le ha rifiutate
+  ///
+  /// In it, this message translates to:
+  /// **'Da ricollegare'**
+  String get sourcesStateNeedsAuth;
+
+  /// Stato di una sorgente il cui accesso è scaduto; {date} è la data di scadenza
+  ///
+  /// In it, this message translates to:
+  /// **'Scaduta il {date}'**
+  String sourcesStateExpired(String date);
+
+  /// Stato di una sorgente la cui cartella non c'è più
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella sparita'**
+  String get sourcesStateMissing;
+
+  /// Stato di una libreria condivisa accettata da un altro account Google di quello entrato: resta in elenco ma non si legge
+  ///
+  /// In it, this message translates to:
+  /// **'Di un altro account'**
+  String get sourcesStateOtherAccount;
+
+  /// Pastiglia su una sorgente da cui si può solo leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Sola lettura'**
+  String get sourcesReadOnlyBadge;
+
+  /// Sottotitolo di una libreria Drive condivisa; {owner} è chi l'ha condivisa
+  ///
+  /// In it, this message translates to:
+  /// **'Condivisa da {owner}'**
+  String sourcesOwner(String owner);
+
+  /// Pulsante e titolo del foglio per aggiungere una sorgente
+  ///
+  /// In it, this message translates to:
+  /// **'Aggiungi sorgente'**
+  String get sourcesAdd;
+
+  /// Segnaposto del campo cartella della sorgente WebDAV
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella della libreria (es. /manga)'**
+  String get sourcesWebdavFolderHint;
+
+  /// Segnaposto del campo utente della sorgente WebDAV
+  ///
+  /// In it, this message translates to:
+  /// **'Utente'**
+  String get sourcesWebdavUserHint;
+
+  /// Segnaposto del campo password della sorgente WebDAV
+  ///
+  /// In it, this message translates to:
+  /// **'Password'**
+  String get sourcesWebdavPasswordHint;
+
+  /// Segnaposto del campo nome della sorgente
+  ///
+  /// In it, this message translates to:
+  /// **'Nome (facoltativo, es. NAS di casa)'**
+  String get sourcesWebdavNameHint;
+
+  /// Segnaposto del campo indirizzo del computer o NAS nel foglio per aggiungere una sorgente SMB
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo del computer (es. 192.168.1.10)'**
+  String get sourcesSmbHostHint;
+
+  /// Segnaposto del campo nome della condivisione di rete (SMB) nel foglio per aggiungere una sorgente
+  ///
+  /// In it, this message translates to:
+  /// **'Condivisione (es. manga)'**
+  String get sourcesSmbShareHint;
+
+  /// Segnaposto del campo utente della sorgente SMB; lasciato vuoto si entra come ospite
+  ///
+  /// In it, this message translates to:
+  /// **'Utente (vuoto = ospite)'**
+  String get sourcesSmbUserHint;
+
+  /// Segnaposto del campo dominio (facoltativo) della sorgente SMB
+  ///
+  /// In it, this message translates to:
+  /// **'Dominio (facoltativo)'**
+  String get sourcesSmbDomainHint;
+
+  /// Interruttore nel foglio della sorgente SMB: usa la cifratura di SMB 3
+  ///
+  /// In it, this message translates to:
+  /// **'Cifratura (SMB 3)'**
+  String get sourcesSmbSealLabel;
+
+  /// Nota sotto l'interruttore della cifratura SMB 3: serve fuori dalla rete di casa
+  ///
+  /// In it, this message translates to:
+  /// **'Fuori dalla rete di casa serve la cifratura: il computer deve parlare SMB 3.'**
+  String get sourcesSmbSealNote;
+
+  /// Avviso nel foglio della sorgente SMB quando la cifratura è spenta
+  ///
+  /// In it, this message translates to:
+  /// **'Senza cifratura password e file viaggiano in chiaro: va bene solo sulla rete di casa.'**
+  String get sourcesSmbPlainWarning;
+
+  /// Avviso sotto l'indirizzo quando è http:// su una rete privata
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo HTTP non cifrato sulla rete privata: utente e password viaggiano in chiaro. Usalo solo sul Wi-Fi di casa.'**
+  String get sourcesHttpPrivateWarning;
+
+  /// Avviso sotto l'indirizzo quando è http:// su un indirizzo pubblico
+  ///
+  /// In it, this message translates to:
+  /// **'Indirizzo HTTP pubblico non sicuro: la password viaggerebbe in chiaro su Internet. Fuori dalla rete locale usa https://.'**
+  String get sourcesHttpPublicWarning;
+
+  /// Pulsante che prova la connessione a una sorgente cercando library.json
+  ///
+  /// In it, this message translates to:
+  /// **'Prova connessione'**
+  String get sourcesProbeButton;
+
+  /// Etichetta del pulsante di prova mentre la prova è in corso
+  ///
+  /// In it, this message translates to:
+  /// **'Prova in corso…'**
+  String get sourcesProbing;
+
+  /// Esito riuscito della prova di connessione; {count} è il numero di serie trovate
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Connessione riuscita: una serie trovata.} other{Connessione riuscita: {count} serie trovate.}}'**
+  String sourcesProbeSuccess(int count);
+
+  /// Esito della prova di connessione: utente o password rifiutati
+  ///
+  /// In it, this message translates to:
+  /// **'Credenziali rifiutate: controlla utente e password.'**
+  String get sourcesProbeAuthFailed;
+
+  /// Esito della prova di connessione: il server non risponde
+  ///
+  /// In it, this message translates to:
+  /// **'Non raggiungibile: controlla l\'indirizzo e la connessione.'**
+  String get sourcesProbeUnreachable;
+
+  /// Esito della prova di connessione: il server risponde ma la cartella non ha library.json
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna libreria qui: nella cartella manca library.json.'**
+  String get sourcesProbeNoLibrary;
+
+  /// Pulsante che salva le modifiche di una sorgente nel foglio di dettaglio
+  ///
+  /// In it, this message translates to:
+  /// **'Salva'**
+  String get sourcesSave;
+
+  /// Segnaposto del campo password nel dettaglio di una sorgente: si riscrive, non si rilegge
+  ///
+  /// In it, this message translates to:
+  /// **'Riscrivi la password (vuoto: resta com\'è)'**
+  String get sourcesPasswordRewriteHint;
+
+  /// Nota sotto il campo password: dove resta la password
+  ///
+  /// In it, this message translates to:
+  /// **'La password resta solo su questo telefono: non va nel backup né nell\'account.'**
+  String get sourcesSecretNote;
+
+  /// Azione che rimuove una sorgente, nel dettaglio e nella conferma
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovi sorgente'**
+  String get sourcesRemove;
+
+  /// Sottotitolo dell'azione «Rimuovi sorgente»: cosa toglie e cosa no
+  ///
+  /// In it, this message translates to:
+  /// **'Toglie configurazione, password e cache; lo stato di lettura resta.'**
+  String get sourcesRemoveSubtitle;
+
+  /// Titolo della conferma per rimuovere una sorgente; {name} è il suo nome
+  ///
+  /// In it, this message translates to:
+  /// **'Rimuovere «{name}»?'**
+  String sourcesRemoveConfirmTitle(String name);
+
+  /// Corpo della conferma per rimuovere una sorgente
+  ///
+  /// In it, this message translates to:
+  /// **'Toglie configurazione, password e cache da questo telefono. Lo stato di lettura, i voti e la cronologia restano.'**
+  String get sourcesRemoveConfirmBody;
+
+  /// Pulsante nel dettaglio di una libreria Drive condivisa che la toglie da questo telefono
+  ///
+  /// In it, this message translates to:
+  /// **'Togli'**
+  String get sourcesDismiss;
+
+  /// Titolo della schermata e voce in Impostazioni: la parte social dell'app (profili, classifiche, post)
+  ///
+  /// In it, this message translates to:
+  /// **'Comunità'**
+  String get socialTitle;
+
+  /// Sottotitolo della voce Comunità in Impostazioni quando il social è spento
+  ///
+  /// In it, this message translates to:
+  /// **'Spenta: di te non esce niente'**
+  String get socialSubtitleOff;
+
+  /// Sottotitolo della voce Comunità in Impostazioni quando il social è acceso
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo, classifiche e note di lettura'**
+  String get socialSubtitleOn;
+
+  /// Introduzione nella schermata Comunità quando è spenta, sopra l'anteprima del profilo
+  ///
+  /// In it, this message translates to:
+  /// **'La Comunità è spenta: dal tuo telefono non esce nulla e l\'app non chiede nulla alla rete. Qui sotto vedi esattamente la scheda che gli altri lettori vedrebbero se decidessi di accenderla.'**
+  String get socialOffIntro;
+
+  /// Etichetta del campo soprannome nella schermata di adesione alla Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Soprannome'**
+  String get socialNameLabel;
+
+  /// Suggerimento sotto il campo soprannome: limiti di lunghezza e che non è l'email
+  ///
+  /// In it, this message translates to:
+  /// **'Da 2 a 24 caratteri (mai il tuo indirizzo email)'**
+  String get socialNameHint;
+
+  /// Etichetta del campo presentazione (facoltativa, fino a 160 caratteri) nella schermata di adesione
+  ///
+  /// In it, this message translates to:
+  /// **'Presentazione (facoltativa)'**
+  String get socialBioLabel;
+
+  /// Titolo della sezione che sceglie chi vede il profilo e i post
+  ///
+  /// In it, this message translates to:
+  /// **'Chi vede il tuo profilo e i tuoi post'**
+  String get socialAudienceSection;
+
+  /// Scelta del pubblico: tutti i lettori della Comunità; anche etichetta del feed con i post di tutti
+  ///
+  /// In it, this message translates to:
+  /// **'Tutti'**
+  String get socialAudienceEveryone;
+
+  /// Scelta del pubblico: solo chi segue l'utente per primo; anche etichetta del feed con i post di chi si segue
+  ///
+  /// In it, this message translates to:
+  /// **'Chi seguo'**
+  String get socialAudienceFollowing;
+
+  /// Scelta del pubblico: solo chi si segue a vicenda
+  ///
+  /// In it, this message translates to:
+  /// **'Amici reciproci'**
+  String get socialAudienceMutual;
+
+  /// Nota sotto la scelta del pubblico «Tutti»
+  ///
+  /// In it, this message translates to:
+  /// **'Chiunque abbia la Comunità accesa su questo backend vede profilo, post e posizione in classifica.'**
+  String get socialAudienceEveryoneNote;
+
+  /// Nota sotto la scelta del pubblico «Chi seguo»
+  ///
+  /// In it, this message translates to:
+  /// **'Solo le persone che segui tu per primo vedono il tuo profilo, i tuoi post e la tua riga in classifica.'**
+  String get socialAudienceFollowingNote;
+
+  /// Nota sotto la scelta del pubblico «Amici reciproci»
+  ///
+  /// In it, this message translates to:
+  /// **'Solo chi segui e ti segue a sua volta vede il tuo profilo e i tuoi post. Chi segui riceve il tuo soprannome per poter ricambiare.'**
+  String get socialAudienceMutualNote;
+
+  /// Titolo della sezione con gli interruttori di ciò che si mostra oltre ai numeri
+  ///
+  /// In it, this message translates to:
+  /// **'Cosa mostrare oltre ai numeri e ai generi'**
+  String get socialSwitchesSection;
+
+  /// Interruttore: pubblicare la foto dell'account; spento di partenza
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra la foto dell\'account'**
+  String get socialShowPhoto;
+
+  /// Interruttore: pubblicare i titoli delle serie più lette; mai le serie nascoste
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra i titoli più letti'**
+  String get socialShowSeries;
+
+  /// Interruttore: pubblicare i capitoli letti giorno per giorno nelle ultime due settimane
+  ///
+  /// In it, this message translates to:
+  /// **'Mostra l\'attività degli ultimi 14 giorni'**
+  String get socialShowActivity;
+
+  /// Titolo della card che mostra il profilo come lo vedrebbero gli altri
+  ///
+  /// In it, this message translates to:
+  /// **'Anteprima esatta di ciò che esce'**
+  String get socialPreviewSection;
+
+  /// Nota nell'anteprima: le serie delle raccolte nascoste non sono incluse nei numeri
+  ///
+  /// In it, this message translates to:
+  /// **'Serie nascoste escluse'**
+  String get socialPreviewHiddenExcluded;
+
+  /// Riga dell'anteprima per un dato che non esce perché il suo interruttore è spento; {what} è il nome del dato
+  ///
+  /// In it, this message translates to:
+  /// **'{what}: non pubblicato'**
+  String socialPreviewLocked(String what);
+
+  /// Nome del dato «foto» nelle righe «non pubblicato» dell'anteprima
+  ///
+  /// In it, this message translates to:
+  /// **'Foto'**
+  String get socialPreviewPhoto;
+
+  /// Nome del dato «titoli» nelle righe «non pubblicato» dell'anteprima
+  ///
+  /// In it, this message translates to:
+  /// **'Titoli'**
+  String get socialPreviewSeries;
+
+  /// Nome del dato «attività» nelle righe «non pubblicato» dell'anteprima
+  ///
+  /// In it, this message translates to:
+  /// **'Attività'**
+  String get socialPreviewActivity;
+
+  /// Avviso prima di accendere la Comunità e nel foglio di spegnimento: cosa cancella spegnerla
+  ///
+  /// In it, this message translates to:
+  /// **'Spegnere la Comunità cancella tutto ciò che hai pubblicato sulla rete: profilo, post, commenti, mi piace, legami e messaggi (anche nelle conversazioni degli altri). I blocchi restano.'**
+  String get socialWipeWarning;
+
+  /// Pulsante principale che accende la Comunità e pubblica il profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Accendi la Comunità'**
+  String get socialTurnOn;
+
+  /// Azione distruttiva che spegne la Comunità e cancella tutto dalla rete
+  ///
+  /// In it, this message translates to:
+  /// **'Spegni la Comunità e cancella tutto'**
+  String get socialTurnOff;
+
+  /// Scheda delle classifiche nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Classifiche'**
+  String get socialTabBoards;
+
+  /// Scheda del feed dei post nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Feed'**
+  String get socialTabFeed;
+
+  /// Scheda delle persone (ricerca e seguiti) nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Persone'**
+  String get socialTabPeople;
+
+  /// Classifica della settimana
+  ///
+  /// In it, this message translates to:
+  /// **'Settimana'**
+  String get socialBoardWeek;
+
+  /// Classifica del mese
+  ///
+  /// In it, this message translates to:
+  /// **'Mese'**
+  String get socialBoardMonth;
+
+  /// Classifica di sempre
+  ///
+  /// In it, this message translates to:
+  /// **'Sempre'**
+  String get socialBoardAllTime;
+
+  /// Classifica dei giorni di lettura consecutivi
+  ///
+  /// In it, this message translates to:
+  /// **'Giorni di fila'**
+  String get socialBoardStreak;
+
+  /// Pastiglia sulla propria riga in classifica
+  ///
+  /// In it, this message translates to:
+  /// **'TU'**
+  String get socialYouBadge;
+
+  /// Capitoli letti di una persona in classifica o nel profilo
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 capitolo} other{{count} capitoli}}'**
+  String socialChapters(int count);
+
+  /// Giorni di lettura consecutivi di una persona in classifica
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 giorno} other{{count} giorni}}'**
+  String socialStreakDays(int count);
+
+  /// Stato vuoto di una classifica: nessuno ha ancora pubblicato numeri visibili
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessuno in classifica'**
+  String get socialBoardEmpty;
+
+  /// Titolo dello stato vuoto del feed
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun post per ora'**
+  String get socialFeedEmptyTitle;
+
+  /// Spiegazione dello stato vuoto del feed
+  ///
+  /// In it, this message translates to:
+  /// **'Le note, le recensioni e i consigli dei lettori compariranno qui.'**
+  String get socialFeedEmptyMessage;
+
+  /// Tipo di post: una nota
+  ///
+  /// In it, this message translates to:
+  /// **'Nota'**
+  String get socialPostKindNote;
+
+  /// Tipo di post: una recensione con voto
+  ///
+  /// In it, this message translates to:
+  /// **'Recensione'**
+  String get socialPostKindReview;
+
+  /// Tipo di post: un consiglio
+  ///
+  /// In it, this message translates to:
+  /// **'Consiglio'**
+  String get socialPostKindRecommendation;
+
+  /// Velo su un post con spoiler che racconta fino a un capitolo
+  ///
+  /// In it, this message translates to:
+  /// **'Contiene spoiler fino al cap. {chapter}'**
+  String socialSpoilerUpTo(String chapter);
+
+  /// Velo su un post con spoiler senza capitolo dichiarato
+  ///
+  /// In it, this message translates to:
+  /// **'Contiene spoiler'**
+  String get socialSpoilerGeneric;
+
+  /// Sottotitolo del velo spoiler: come mostrare comunque il testo
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca per mostrare comunque'**
+  String get socialSpoilerReveal;
+
+  /// Velo su un post segnalato da più lettori
+  ///
+  /// In it, this message translates to:
+  /// **'Contenuto segnalato da più lettori'**
+  String get socialFlaggedTitle;
+
+  /// Sottotitolo del velo del post segnalato; {author} è il soprannome dell'autore
+  ///
+  /// In it, this message translates to:
+  /// **'Di {author} · Tocca per vedere'**
+  String socialFlaggedReveal(String author);
+
+  /// Segnaposto del campo di ricerca per soprannome nella scheda Persone
+  ///
+  /// In it, this message translates to:
+  /// **'Cerca per soprannome…'**
+  String get socialSearchPeopleHint;
+
+  /// Avviso quando nella ricerca si scrive un indirizzo email: la ricerca è solo per soprannome
+  ///
+  /// In it, this message translates to:
+  /// **'Qui non ci sono indirizzi email: cerca il soprannome scelto dal lettore.'**
+  String get socialSearchNoEmailNotice;
+
+  /// Titolo della sezione con le persone che si seguono
+  ///
+  /// In it, this message translates to:
+  /// **'Seguiti'**
+  String get socialPeopleFollowingSection;
+
+  /// Stato vuoto della scheda Persone: non si segue nessuno
+  ///
+  /// In it, this message translates to:
+  /// **'Non segui ancora nessuno. Cerca un soprannome o apri una persona dalle classifiche.'**
+  String get socialPeopleEmpty;
+
+  /// Risultato vuoto di una ricerca per soprannome
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno con questo soprannome'**
+  String get socialSearchNone;
+
+  /// Badge di affinità fra due lettori, calcolata sui generi in comune
+  ///
+  /// In it, this message translates to:
+  /// **'{percent}% affinità'**
+  String socialAffinityLabel(int percent);
+
+  /// Titolo della sezione dei titoli che due lettori mostrano entrambi
+  ///
+  /// In it, this message translates to:
+  /// **'In comune'**
+  String get socialInCommonSection;
+
+  /// Quanti titoli due lettori hanno in comune
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{1 titolo in comune} other{{count} titoli in comune}}'**
+  String socialInCommonCount(int count);
+
+  /// Pulsante: segui una persona
+  ///
+  /// In it, this message translates to:
+  /// **'Segui'**
+  String get socialFollow;
+
+  /// Pulsante: segui una persona che già ti segue
+  ///
+  /// In it, this message translates to:
+  /// **'Segui anche tu'**
+  String get socialFollowBack;
+
+  /// Stato: segui già questa persona (toccando smetti)
+  ///
+  /// In it, this message translates to:
+  /// **'Seguito'**
+  String get socialFollowing;
+
+  /// Stato: vi seguite a vicenda
+  ///
+  /// In it, this message translates to:
+  /// **'Amici'**
+  String get socialMutual;
+
+  /// Titolo quando il backend non ha le tabelle del social
+  ///
+  /// In it, this message translates to:
+  /// **'Questo backend non ha la Comunità'**
+  String get socialUnavailableTitle;
+
+  /// Spiegazione quando il backend non ha le tabelle del social; senza pulsante Riprova
+  ///
+  /// In it, this message translates to:
+  /// **'Il server a cui è collegato l\'account non ha le tabelle della Comunità. Il resto dell\'app funziona normalmente.'**
+  String get socialUnavailableBody;
+
+  /// Messaggio quando manca un account: la Comunità vive sul backend dell'account
+  ///
+  /// In it, this message translates to:
+  /// **'La Comunità ha bisogno di un account: accedi dalle Impostazioni.'**
+  String get socialNeedsAccount;
+
+  /// Avviso quando una scrittura è rifiutata; non dice mai il motivo (nemmeno un blocco)
+  ///
+  /// In it, this message translates to:
+  /// **'Non è stato possibile completare l\'azione.'**
+  String get socialRefusedSnack;
+
+  /// Errore di rete nella lettura della Comunità, con il pulsante Riprova
+  ///
+  /// In it, this message translates to:
+  /// **'Non riesco a leggere la Comunità adesso.'**
+  String get socialLoadError;
+
+  /// Pulsante Riprova dopo un errore di lettura della Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Riprova'**
+  String get socialRetry;
+
+  /// Pagina di un profilo che non si vede o non esiste (i due casi non si distinguono)
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo non disponibile'**
+  String get socialProfileUnavailable;
+
+  /// Avviso toccando il soprannome di chi ha commentato col profilo chiuso a chi guarda: il commento porta il nome, il profilo resta privato
+  ///
+  /// In it, this message translates to:
+  /// **'Profilo privato'**
+  String get socialProfilePrivate;
+
+  /// Titolo della sezione dei generi più letti in un profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Generi'**
+  String get socialProfileGenres;
+
+  /// Titolo della sezione con i capitoli letti negli ultimi 14 giorni
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimi 14 giorni'**
+  String get socialProfileActivity;
+
+  /// Titolo della sezione con le serie più lette di un profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Più lette'**
+  String get socialProfileSeriesTitles;
+
+  /// Etichetta del numero dei capitoli letti nel profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Capitoli'**
+  String get socialStatChapters;
+
+  /// Etichetta del numero di serie nel profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Serie'**
+  String get socialStatSeries;
+
+  /// Etichetta dei giorni consecutivi nel profilo
+  ///
+  /// In it, this message translates to:
+  /// **'Giorni di fila'**
+  String get socialStatStreak;
+
+  /// Pulsante del feed della Comunità che apre la scrittura di un nuovo post
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi'**
+  String get socialWrite;
+
+  /// Titolo del foglio per scrivere un nuovo post nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo post'**
+  String get socialComposeTitle;
+
+  /// Suggerimento nel campo di testo di un nuovo post
+  ///
+  /// In it, this message translates to:
+  /// **'Che cosa ne pensi?'**
+  String get socialComposeBodyHint;
+
+  /// Etichetta della scelta della serie di cui parla un post
+  ///
+  /// In it, this message translates to:
+  /// **'Serie'**
+  String get socialComposeSeries;
+
+  /// Voce della scelta della serie: il post non parla di una serie
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna serie'**
+  String get socialComposeNoSeries;
+
+  /// Etichetta della fila di voti da 1 a 10 di una recensione
+  ///
+  /// In it, this message translates to:
+  /// **'Voto'**
+  String get socialComposeRating;
+
+  /// Interruttore: il post o il commento racconta qualcosa della trama
+  ///
+  /// In it, this message translates to:
+  /// **'Contiene spoiler'**
+  String get socialComposeSpoiler;
+
+  /// Campo numerico facoltativo: fino a quale capitolo racconta lo spoiler
+  ///
+  /// In it, this message translates to:
+  /// **'Fino al capitolo (facoltativo)'**
+  String get socialComposeSpoilerChapter;
+
+  /// Pulsante che pubblica il nuovo post
+  ///
+  /// In it, this message translates to:
+  /// **'Pubblica'**
+  String get socialComposePublish;
+
+  /// Avviso: il post è vuoto
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi qualcosa prima di pubblicare.'**
+  String get socialRefusalEmpty;
+
+  /// Avviso: il testo del post supera il limite
+  ///
+  /// In it, this message translates to:
+  /// **'Il testo è troppo lungo.'**
+  String get socialRefusalTooLong;
+
+  /// Avviso: la serie scelta sta in una raccolta nascosta e non esce mai nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Questa serie è nascosta: nella Comunità non si nomina.'**
+  String get socialRefusalHiddenSeries;
+
+  /// Avviso: una recensione o un consiglio devono avere una serie
+  ///
+  /// In it, this message translates to:
+  /// **'Una recensione o un consiglio parlano di una serie: sceglila.'**
+  String get socialRefusalNeedsSeries;
+
+  /// Avviso: una recensione deve avere un voto
+  ///
+  /// In it, this message translates to:
+  /// **'Scegli un voto da 1 a 10.'**
+  String get socialRefusalNeedsRating;
+
+  /// Pulsante sotto un post: quanti commenti ha, apre i commenti
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =0{Commenta} =1{1 commento} other{{count} commenti}}'**
+  String socialCommentsCount(int count);
+
+  /// Titolo del foglio con i commenti di un post
+  ///
+  /// In it, this message translates to:
+  /// **'Commenti'**
+  String get socialCommentsTitle;
+
+  /// Foglio dei commenti di un post che non ne ha ancora
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessun commento'**
+  String get socialCommentsEmpty;
+
+  /// Suggerimento nel campo per scrivere un commento
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi un commento…'**
+  String get socialCommentHint;
+
+  /// Suggerimento nel campo del commento quando si risponde a qualcuno; {author} è il suo soprannome
+  ///
+  /// In it, this message translates to:
+  /// **'Rispondi a {author}…'**
+  String socialReplyHint(String author);
+
+  /// Azione sotto un commento: rispondergli
+  ///
+  /// In it, this message translates to:
+  /// **'Rispondi'**
+  String get socialReply;
+
+  /// Suggerimento del pulsante che annulla la risposta e torna a un commento normale
+  ///
+  /// In it, this message translates to:
+  /// **'Non rispondere più'**
+  String get socialCancelReply;
+
+  /// Suggerimento del pulsante che invia un commento
+  ///
+  /// In it, this message translates to:
+  /// **'Invia'**
+  String get socialSend;
+
+  /// Suggerimento del pulsante «mi piace» sotto un post o un commento
+  ///
+  /// In it, this message translates to:
+  /// **'Mi piace'**
+  String get socialLike;
+
+  /// Suggerimento del menu con le altre azioni su un post
+  ///
+  /// In it, this message translates to:
+  /// **'Altre azioni'**
+  String get socialMoreActions;
+
+  /// Voce di menu sul profilo: silenzia la persona (solo su questo telefono)
+  ///
+  /// In it, this message translates to:
+  /// **'Silenzia'**
+  String get socialMute;
+
+  /// Voce di menu sul profilo: smetti di silenziare la persona
+  ///
+  /// In it, this message translates to:
+  /// **'Riattiva'**
+  String get socialUnmute;
+
+  /// Titolo della sezione Persone con chi segue l'utente, per ricambiare
+  ///
+  /// In it, this message translates to:
+  /// **'Ti seguono'**
+  String get socialFollowersSection;
+
+  /// Nota sul profilo di una persona silenziata
+  ///
+  /// In it, this message translates to:
+  /// **'Silenziato: i suoi post e commenti non si vedono qui.'**
+  String get socialMutedNote;
+
+  /// Voce del menu di un proprio post, e pulsante della conferma: toglierlo
+  ///
+  /// In it, this message translates to:
+  /// **'Togli il post'**
+  String get socialRemovePost;
+
+  /// Conferma prima di togliere un proprio post: i post non si modificano
+  ///
+  /// In it, this message translates to:
+  /// **'Il post se ne va con i suoi commenti e i mi piace. Un post non si modifica: se vuoi, lo riscrivi.'**
+  String get socialRemovePostConfirm;
+
+  /// Azione sotto un commento proprio, o di altri sotto un proprio post: toglierlo
+  ///
+  /// In it, this message translates to:
+  /// **'Togli'**
+  String get socialRemoveComment;
+
+  /// Nome mostrato per chi ha scritto un commento ma ha un profilo che non si vede
+  ///
+  /// In it, this message translates to:
+  /// **'Un lettore'**
+  String get socialUnknownReader;
+
+  /// Titolo del foglio con i post della Comunità su una serie
+  ///
+  /// In it, this message translates to:
+  /// **'Nella Comunità'**
+  String get socialSeriesPostsTitle;
+
+  /// Foglio dei post su una serie quando nessuno ne ha scritto
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno ne ha ancora parlato'**
+  String get socialSeriesPostsEmpty;
+
+  /// Suggerimento del pulsante sulla copertina di una serie che apre i suoi post nella Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Parlane nella Comunità'**
+  String get socialSeriesTalk;
+
+  /// Voce di menu su un profilo, un post o un commento di un altro: bloccare la persona
+  ///
+  /// In it, this message translates to:
+  /// **'Blocca {name}'**
+  String socialBlockPerson(String name);
+
+  /// Pulsante di conferma del blocco di una persona
+  ///
+  /// In it, this message translates to:
+  /// **'Blocca'**
+  String get socialBlockAction;
+
+  /// Conferma prima di bloccare una persona: il blocco è reciproco, toglie i legami e l'altra persona non è avvisata
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno dei due vedrà più il profilo, i post o i commenti dell\'altro, né potrà scrivergli. I legami tra voi due vengono rimossi. L\'altra persona non verrà avvisata.'**
+  String get socialBlockConfirm;
+
+  /// Avviso dopo aver bloccato una persona
+  ///
+  /// In it, this message translates to:
+  /// **'Persona bloccata.'**
+  String get socialBlockedSnack;
+
+  /// Voce di menu e titolo del foglio per segnalare una persona, un post o un commento
+  ///
+  /// In it, this message translates to:
+  /// **'Segnala'**
+  String get socialReport;
+
+  /// Spiegazione nel foglio di segnalazione: la persona segnalata non lo sa e la segnalazione porta una copia del testo
+  ///
+  /// In it, this message translates to:
+  /// **'Perché la segnali? La persona segnalata non lo saprà, e la segnalazione porta con sé una copia del testo.'**
+  String get socialReportIntro;
+
+  /// Motivo di segnalazione: spam o pubblicità
+  ///
+  /// In it, this message translates to:
+  /// **'Spam o pubblicità'**
+  String get socialReportReasonSpam;
+
+  /// Motivo di segnalazione: molestie o insistenza
+  ///
+  /// In it, this message translates to:
+  /// **'Molestie o insistenza'**
+  String get socialReportReasonHarassment;
+
+  /// Motivo di segnalazione: spoiler senza avviso
+  ///
+  /// In it, this message translates to:
+  /// **'Spoiler senza avviso'**
+  String get socialReportReasonSpoiler;
+
+  /// Motivo di segnalazione: contenuto inappropriato
+  ///
+  /// In it, this message translates to:
+  /// **'Contenuto inappropriato'**
+  String get socialReportReasonInappropriate;
+
+  /// Motivo di segnalazione: altro
+  ///
+  /// In it, this message translates to:
+  /// **'Altro'**
+  String get socialReportReasonOther;
+
+  /// Suggerimento del campo di testo facoltativo nel foglio di segnalazione
+  ///
+  /// In it, this message translates to:
+  /// **'Una nota, se vuoi (facoltativa)'**
+  String get socialReportNoteHint;
+
+  /// Pulsante che invia la segnalazione
+  ///
+  /// In it, this message translates to:
+  /// **'Invia'**
+  String get socialReportSend;
+
+  /// Avviso dopo aver inviato una segnalazione
+  ///
+  /// In it, this message translates to:
+  /// **'Segnalazione inviata.'**
+  String get socialReportSent;
+
+  /// Titolo della schermata delle conversazioni e tooltip del pulsante che la apre
+  ///
+  /// In it, this message translates to:
+  /// **'Messaggi'**
+  String get messagesTitle;
+
+  /// Pulsante nel profilo di una persona per aprire la conversazione con lei
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi'**
+  String get messagesWrite;
+
+  /// Elenco delle conversazioni vuoto
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna conversazione. Scrivi a qualcuno dal suo profilo.'**
+  String get messagesEmpty;
+
+  /// Conversazione senza messaggi
+  ///
+  /// In it, this message translates to:
+  /// **'Ancora nessun messaggio.'**
+  String get messagesThreadEmpty;
+
+  /// Suggerimento del campo di testo in fondo a una conversazione
+  ///
+  /// In it, this message translates to:
+  /// **'Scrivi un messaggio'**
+  String get messagesHint;
+
+  /// Tooltip del pulsante che invia il messaggio
+  ///
+  /// In it, this message translates to:
+  /// **'Invia'**
+  String get messagesSend;
+
+  /// Nome mostrato quando il profilo di chi ha scritto non è visibile; non dice mai il motivo
+  ///
+  /// In it, this message translates to:
+  /// **'Un lettore'**
+  String get messagesUnknownPerson;
+
+  /// Titolo della conferma per eliminare un messaggio (tenendolo premuto)
+  ///
+  /// In it, this message translates to:
+  /// **'Eliminare il messaggio?'**
+  String get messagesDeleteTitle;
+
+  /// Spiegazione della conferma: il messaggio sparisce anche all'altra persona
+  ///
+  /// In it, this message translates to:
+  /// **'Sparisce per tutti e due.'**
+  String get messagesDeleteBody;
+
+  /// Pulsante che conferma l'eliminazione di un messaggio
+  ///
+  /// In it, this message translates to:
+  /// **'Elimina'**
+  String get messagesDeleteAction;
+
+  /// Messaggio automatico nella conversazione: ho chiesto più tempo per una libreria condivisa. {folder} è il nome della cartella
+  ///
+  /// In it, this message translates to:
+  /// **'Hai chiesto più tempo per «{folder}».'**
+  String messagesExtensionMine(String folder);
+
+  /// Messaggio automatico nella conversazione: un'altra persona chiede più tempo per una libreria che le ho condiviso. {name} è chi chiede, {folder} la cartella
+  ///
+  /// In it, this message translates to:
+  /// **'{name} chiede più tempo per «{folder}».'**
+  String messagesExtensionTheirs(String name, String folder);
+
+  /// Pulsante sulla richiesta di proroga: rinnova la condivisione per un mese
+  ///
+  /// In it, this message translates to:
+  /// **'Rinnova'**
+  String get messagesRenew;
+
+  /// Avviso dopo il rinnovo dal messaggio. {date} è il nuovo termine
+  ///
+  /// In it, this message translates to:
+  /// **'Condivisione rinnovata fino al {date}.'**
+  String messagesRenewed(DateTime date);
+
+  /// Pulsante su una libreria condivisa con me: scrive a chi l'ha condivisa per chiedere più tempo
+  ///
+  /// In it, this message translates to:
+  /// **'Chiedi più tempo'**
+  String get messagesAskMore;
+
+  /// Avviso dopo aver mandato la richiesta di proroga
+  ///
+  /// In it, this message translates to:
+  /// **'Richiesta inviata.'**
+  String get messagesAskSent;
+
+  /// Titolo della pagina Impostazioni e della voce che la apre: privacy e Comunità
+  ///
+  /// In it, this message translates to:
+  /// **'Privacy e Comunità'**
+  String get privacyTitle;
+
+  /// Sottotitolo della voce Impostazioni «Privacy e Comunità»
+  ///
+  /// In it, this message translates to:
+  /// **'Comunità, chi vede il tuo profilo, messaggi e persone bloccate'**
+  String get privacyEntryNote;
+
+  /// Nota nella pagina Privacy quando la Comunità è spenta: le scelte sotto valgono da quando la si accende
+  ///
+  /// In it, this message translates to:
+  /// **'Con la Comunità spenta non esce nulla dal telefono. Le scelte qui sotto valgono da quando la accendi.'**
+  String get privacyOffNote;
+
+  /// Avviso (snackbar) se si accende la Comunità dalla pagina Privacy senza un soprannome valido o senza account: si apre Comunità per sceglierlo
+  ///
+  /// In it, this message translates to:
+  /// **'Per accendere la Comunità serve un soprannome e un account: scegli il soprannome nella schermata che si apre.'**
+  String get privacyNeedsName;
+
+  /// Titolo della sezione «chi può scrivermi messaggi privati»
+  ///
+  /// In it, this message translates to:
+  /// **'Chi può scrivermi'**
+  String get privacyMessagesSection;
+
+  /// Scelta di chi può scrivermi: nessuno
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuno'**
+  String get privacyMessagesNobody;
+
+  /// Titolo dell'elenco delle persone bloccate
+  ///
+  /// In it, this message translates to:
+  /// **'Persone bloccate'**
+  String get privacyBlockedSection;
+
+  /// Testo quando non si è bloccato nessuno
+  ///
+  /// In it, this message translates to:
+  /// **'Non hai bloccato nessuno.'**
+  String get privacyBlockedEmpty;
+
+  /// Nome mostrato per una persona bloccata di cui il telefono non ha il soprannome
+  ///
+  /// In it, this message translates to:
+  /// **'Persona bloccata'**
+  String get privacyBlockedPerson;
+
+  /// Pulsante che sblocca una persona dall'elenco dei bloccati
+  ///
+  /// In it, this message translates to:
+  /// **'Sblocca'**
+  String get privacyUnblock;
+
+  /// Titolo della notifica locale di un messaggio privato nuovo; il testo è l'anteprima del messaggio
+  ///
+  /// In it, this message translates to:
+  /// **'Nuovo messaggio da {sender}'**
+  String messageNotificationTitle(String sender);
+
+  /// Titolo della notifica che dice a chi riceve una libreria di Drive che l'accesso sta per scadere (a 7 giorni e a 1 giorno dal termine). {owner} è chi condivide
+  ///
+  /// In it, this message translates to:
+  /// **'La libreria di {owner} sta per scadere'**
+  String driveExpiryNoticeTitle(String owner);
+
+  /// Testo della notifica di scadenza vicina di una libreria condivisa; toccandola si apre il foglio con «Chiedi più tempo». {folder} è la cartella, {date} il termine
+  ///
+  /// In it, this message translates to:
+  /// **'«{folder}» scade il {date}. Apri Kagami per chiedere più tempo.'**
+  String driveExpiryNoticeText(String folder, DateTime date);
+
+  /// Titolo della riga in Impostazioni → Dati dove si sceglie una cartella in più per le copie automatiche
+  ///
+  /// In it, this message translates to:
+  /// **'Cartella delle copie'**
+  String get settingsBackupFolder;
+
+  /// Sottotitolo della riga quando una cartella è scelta; {path} è il percorso
+  ///
+  /// In it, this message translates to:
+  /// **'Oltre che nello spazio dell\'app, la copia automatica va anche in {path}'**
+  String settingsBackupFolderChosen(String path);
+
+  /// Sottotitolo della riga quando nessuna cartella è scelta
+  ///
+  /// In it, this message translates to:
+  /// **'Nessuna: le copie restano solo nello spazio dell\'app'**
+  String get settingsBackupFolderNone;
+
+  /// Messaggio breve quando la cartella scelta sta dentro la radice di una sorgente della libreria e viene rifiutata
+  ///
+  /// In it, this message translates to:
+  /// **'Questa cartella sta dentro una sorgente della libreria: la libreria si condivide e le copie contengono i tuoi dati personali. Scegline un\'altra.'**
+  String get settingsBackupFolderRefused;
+
+  /// Foglio «Chi può leggere la mia libreria»: interruttore accanto al campo dell'indirizzo; se attivo chi riceve potrà anche scaricare i capitoli sul telefono, altrimenti solo streaming
+  ///
+  /// In it, this message translates to:
+  /// **'Può anche scaricare'**
+  String get driveShareDownloadOption;
+
+  /// Foglio di condivisione, sotto l'interruttore: dice onestamente che il permesso di scaricare è un patto fra app e non una protezione
+  ///
+  /// In it, this message translates to:
+  /// **'È un patto fra app, non una protezione: chi ha accesso alla cartella può scaricare i file da Drive, dal sito o con un\'altra app. Kagami di chi riceve scarica solo se lo permetti qui.'**
+  String get driveShareDownloadNote;
+
+  /// Foglio di condivisione, riga di una persona, dopo la scadenza: ha il permesso di scaricare. Minuscolo, va dopo un «·»
+  ///
+  /// In it, this message translates to:
+  /// **'anche scaricare'**
+  String get driveShareRowDownload;
+
+  /// Foglio di condivisione, riga di una persona, dopo la scadenza: può solo leggere in streaming. Minuscolo, va dopo un «·»
+  ///
+  /// In it, this message translates to:
+  /// **'solo streaming'**
+  String get driveShareRowStreaming;
+
+  /// Descrizione del pulsante sulla riga di una persona che ha solo streaming: concede anche lo scaricamento
+  ///
+  /// In it, this message translates to:
+  /// **'Permetti di scaricare'**
+  String get driveShareDownloadAllow;
+
+  /// Descrizione del pulsante sulla riga di una persona che può scaricare: lo riporta a solo streaming
+  ///
+  /// In it, this message translates to:
+  /// **'Solo streaming'**
+  String get driveShareDownloadDeny;
+
+  /// Errore nel foglio di condivisione: il backend non ha la colonna del permesso di scaricare, quindi non si può concedere
+  ///
+  /// In it, this message translates to:
+  /// **'Questo backend non sa ancora il permesso di scaricare: la condivisione resta solo streaming.'**
+  String get driveShareDownloadUnavailable;
+
+  /// Foglio «Librerie condivise con me», riga di una libreria accettata: chi ha condiviso permette anche di scaricare. Minuscolo, va dopo un «·»
+  ///
+  /// In it, this message translates to:
+  /// **'puoi leggere e scaricare'**
+  String get driveReceivedCanDownload;
+
+  /// Foglio «Librerie condivise con me», riga di una libreria accettata: si può solo leggere in streaming. Minuscolo, va dopo un «·»
+  ///
+  /// In it, this message translates to:
+  /// **'puoi solo leggere in streaming'**
+  String get driveReceivedStreamOnly;
+
+  /// Azione nella scheda di una serie che si legge solo da una libreria condivisa: la archivia nel proprio Drive, dal sito, col flusso «Scarica un manga»
+  ///
+  /// In it, this message translates to:
+  /// **'Archivia nel mio Drive'**
+  String get seriesArchiveOwn;
+
+  /// Motivo sotto «Archivia nel mio Drive» quando il sito della serie non è installato su questo telefono, per cui il pulsante è spento
+  ///
+  /// In it, this message translates to:
+  /// **'Serve il sito di questa serie: installalo da Impostazioni → Siti, i siti di una libreria altrui non si installano da soli.'**
+  String get seriesArchiveOwnSiteMissing;
+
+  /// Azione nella scheda di una serie: porta qui lo stato di lettura di un'altra serie in libreria (la stessa opera da un altro sito)
+  ///
+  /// In it, this message translates to:
+  /// **'Porta qui i miei dati'**
+  String get seriesBringData;
+
+  /// Titolo del foglio in cui si sceglie la serie da cui portare i dati, aperto da «Porta qui i miei dati»
+  ///
+  /// In it, this message translates to:
+  /// **'Da quale serie?'**
+  String get seriesBringDataPick;
+
+  /// Nel foglio «Da quale serie?» quando nessun'altra serie ha dati personali
+  ///
+  /// In it, this message translates to:
+  /// **'Nessun\'altra serie in libreria ha tuoi dati da portare.'**
+  String get seriesBringDataEmpty;
+
+  /// Foglio di conferma di «Porta qui i miei dati»; from e to sono i titoli delle due serie, matched i capitoli letti abbinati per numero
+  ///
+  /// In it, this message translates to:
+  /// **'«{from}» → «{to}». Stato, voto, note e raccolte passano alla serie di arrivo, insieme ai {matched, plural, one{# capitolo letto con lo stesso numero} other{# capitoli letti con lo stesso numero}}. Si fondono con ciò che c\'è già: i letti si uniscono, sul resto vince il più recente. «{from}» resta in libreria, ma senza più i tuoi dati.'**
+  String seriesBringDataBody(String from, String to, int matched);
+
+  /// Avviso nel foglio di conferma di «Porta qui i miei dati», solo se alcuni capitoli letti non hanno corrispondente
+  ///
+  /// In it, this message translates to:
+  /// **'{lost, plural, one{# capitolo letto non ha un capitolo con lo stesso numero: non viene portato, e con lui vanno persi posizione, cronologia e segnalibri.} other{# capitoli letti non hanno un capitolo con lo stesso numero: non vengono portati, e con loro vanno persi posizioni, cronologia e segnalibri.}}'**
+  String seriesBringDataLost(int lost);
+
+  /// Pulsante di conferma di «Porta qui i miei dati»
+  ///
+  /// In it, this message translates to:
+  /// **'Porta i dati'**
+  String get seriesBringDataConfirm;
+
+  /// Snackbar dopo «Porta qui i miei dati»
+  ///
+  /// In it, this message translates to:
+  /// **'Dati portati su «{title}».'**
+  String seriesBringDataDone(String title);
+
+  /// Snackbar di «Porta qui i miei dati» quando l'elenco dei capitoli di una serie non si legge
+  ///
+  /// In it, this message translates to:
+  /// **'Ora non riesco a leggere i capitoli di una delle due serie: riprova fra poco.'**
+  String get seriesBringDataNoChapters;
+
+  /// Pagina Siti: un sito della libreria ha lo stesso id di uno incluso e non è stato confermato, quindi vale ancora quello incluso
+  ///
+  /// In it, this message translates to:
+  /// **'Resta {name} finché non confermi'**
+  String sitesUnconfirmed(String name);
+
+  /// Pagina Siti, azione sul sito: conferma che il sito della libreria prenda il posto di quello incluso
+  ///
+  /// In it, this message translates to:
+  /// **'Sostituisci {name}'**
+  String sitesConfirmReplace(String name);
+
+  /// Foglio «Collega un server»: avviso che chi gestisce il server può scrivere nel Drive dell'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Chi gestisce questo server può scrivere nel tuo Drive: il permesso che Google ti chiede resta nelle sue mani. Collega solo un server di cui ti fidi.'**
+  String get serverLinkTrust;
+
+  /// Errore mostrato quando il server non accetta ancora i biglietti (codice update_server)
+  ///
+  /// In it, this message translates to:
+  /// **'Questo server va aggiornato: finché non accetta i biglietti, non gli si manda il tuo accesso.'**
+  String get serverErrorUpdateServer;
+
+  /// Errore mostrato quando il backend non rilascia biglietti per i server (codice tickets_unavailable)
+  ///
+  /// In it, this message translates to:
+  /// **'Il backend non rilascia biglietti per i server: a un server di altri non si manda il tuo accesso.'**
+  String get serverErrorTicketsUnavailable;
+
+  /// Errore mostrato quando un server dichiara l'identità di uno già collegato con un altro indirizzo (codice impostor)
+  ///
+  /// In it, this message translates to:
+  /// **'Questo server dice di essere uno già collegato con un altro indirizzo: non gli si manda niente.'**
+  String get serverErrorImpostor;
+
+  /// Errore mostrato quando all'indirizzo del server collegato ora risponde un altro server (codice other_server)
+  ///
+  /// In it, this message translates to:
+  /// **'A questo indirizzo ora risponde un altro server: ricollegalo.'**
+  String get serverErrorOtherServer;
+
+  /// Errore mostrato quando il server rifiuta di spostare nel cestino una cartella di Drive che non è dell'utente (403 not_owner)
+  ///
+  /// In it, this message translates to:
+  /// **'Questa cartella di Drive non è tua: il server non sposta niente nel cestino.'**
+  String get serverErrorNotOwner;
+
+  /// Pagina Siti: il sito è incluso nell'app
+  ///
+  /// In it, this message translates to:
+  /// **'Incluso'**
+  String get sitesOriginBuiltIn;
+
+  /// Pagina Siti: il sito viene dal catalogo firmato
+  ///
+  /// In it, this message translates to:
+  /// **'Catalogo'**
+  String get sitesOriginCatalog;
+
+  /// Pagina Siti: il sito l'ha aggiunto l'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Tuo'**
+  String get sitesOriginUser;
+
+  /// Pagina Siti: il manutentore ha segnato il sito del catalogo come guasto, senza messaggio
+  ///
+  /// In it, this message translates to:
+  /// **'Fuori uso'**
+  String get sitesCatalogBroken;
+
+  /// Pagina Siti: sito del catalogo guasto; {message} è il testo scritto dal manutentore
+  ///
+  /// In it, this message translates to:
+  /// **'Fuori uso: {message}'**
+  String sitesCatalogBrokenWith(String message);
+
+  /// Pagina Siti: il catalogo ha una versione del sito che questa versione dell'app non sa leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Serve Kagami più nuovo'**
+  String get sitesNeedsNewer;
+
+  /// Pagina Siti: titolo della sezione del catalogo
+  ///
+  /// In it, this message translates to:
+  /// **'Catalogo dei siti'**
+  String get sitesCatalogSection;
+
+  /// Pagina Siti: interruttore che accende o spegne il catalogo dei siti
+  ///
+  /// In it, this message translates to:
+  /// **'Usa il catalogo'**
+  String get sitesCatalogUse;
+
+  /// Pagina Siti: spiegazione sotto l'interruttore del catalogo quando è spento
+  ///
+  /// In it, this message translates to:
+  /// **'Spento: valgono solo i siti inclusi e i tuoi, e l\'app non chiede niente in rete.'**
+  String get sitesCatalogOff;
+
+  /// Pagina Siti: edizione del catalogo adottata; {serial} è il numero progressivo, {date} la data di emissione
+  ///
+  /// In it, this message translates to:
+  /// **'Edizione {serial} del {date}'**
+  String sitesCatalogIssue(int serial, String date);
+
+  /// Pagina Siti: quando l'app ha controllato il catalogo l'ultima volta; {when} è data e ora
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimo controllo: {when}'**
+  String sitesCatalogChecked(String when);
 }
 
 class _AppLocalizationsDelegate

@@ -27,8 +27,10 @@ import 'package:path/path.dart' as p;
 
 import '../format/malf.dart';
 import '../format/reading.dart';
+import 'cloud.dart';
 import 'drive.dart';
 import 'drive_library.dart';
+import 'drive_ownership.dart';
 import 'folder_sync.dart';
 import 'library.dart';
 import 'library_location.dart';
@@ -292,6 +294,18 @@ Future<List<StoredChapter>> phoneChaptersOf(
   return found;
 }
 
+/// I capitoli di [entry] che la pulizia può togliere da Drive: solo dallo
+/// scaffale del Drive dell'account, mai da quello di una condivisione, e solo
+/// se la cartella è sua ([owned] vero; non letta o falsa, niente).
+Future<List<StoredChapter>> cleanupDriveChapters(
+  SeriesEntry entry,
+  List<LibraryShelf> holders, {
+  required bool? owned,
+}) async {
+  final drive = owned == true ? ownDriveShelf(holders) : null;
+  return drive == null ? const [] : driveChaptersOf(entry, drive);
+}
+
 /// I capitoli di una serie che Drive serve ancora: quelli del suo indice
 /// meno quelli già tolti.
 Future<List<StoredChapter>> driveChaptersOf(SeriesEntry entry, DriveRepository drive) async {
@@ -312,8 +326,9 @@ Future<List<StoredChapter>> driveChaptersOf(SeriesEntry entry, DriveRepository d
 }
 
 /// Il piano su disco, nello spazio dell'app: lo scrive l'app, lo legge anche
-/// il lavoro programmato. Porta la cartella di Drive, perché il lavoro sappia
-/// dove togliere senza le impostazioni dell'app.
+/// il lavoro programmato. Porta l'account e la cartella di Drive, perché il
+/// lavoro sappia dove togliere senza le impostazioni dell'app, e perché non
+/// tolga niente da un Drive che non è più quello dell'app.
 class AutoCleanupFiles {
   AutoCleanupFiles(String supportDirectory) : directory = Directory(p.join(supportDirectory, 'cleanup'));
 
@@ -321,12 +336,13 @@ class AutoCleanupFiles {
 
   File get plan => File(p.join(directory.path, 'plan.json'));
 
-  Future<({String? folder, List<CleanupItem> items})> readPlan() async {
-    const empty = (folder: null, items: <CleanupItem>[]);
+  Future<({String? account, String? folder, List<CleanupItem> items})> readPlan() async {
+    const empty = (account: null, folder: null, items: <CleanupItem>[]);
     try {
       final json = jsonDecode(await plan.readAsString());
       if (json is! Map<String, Object?>) return empty;
       return (
+        account: json['account'] as String?,
         folder: json['folder'] as String?,
         items: [
           for (final row in json['items'] as List? ?? const [])
@@ -344,11 +360,12 @@ class AutoCleanupFiles {
 
   /// Scritto a parte e poi rinominato, come i file della sincronizzazione:
   /// l'altro motore lo può leggere proprio ora.
-  Future<void> writePlan(List<CleanupItem> items, {String? folder}) async {
+  Future<void> writePlan(List<CleanupItem> items, {String? account, String? folder}) async {
     await directory.create(recursive: true);
     final pending = File('${plan.path}.part');
     await pending.writeAsString(
       jsonEncode({
+        'account': ?account,
         'folder': ?folder,
         'items': [for (final item in items) item.toJson()],
       }),
@@ -362,13 +379,18 @@ class AutoCleanupFiles {
 /// [seriesPath] ([DriveRepository.withdrawPaths]).
 typedef DriveWithdraw = Future<void> Function(String seriesPath, List<String> paths);
 
+/// L'account e la cartella di Drive di adesso: i capitoli su Drive del piano
+/// si tolgono solo se sono quelli con cui il piano è stato scritto.
+typedef DriveTarget = ({String account, String folder});
+
 /// Com'è andato un giro: i capitoli tolti, per serie, e quando scade il
 /// prossimo (`null`, niente in attesa).
 typedef AutoCleanupOutcome = ({Map<String, Set<String>> removed, Map<String, Set<String>> fromDrive, DateTime? next});
 
 /// Toglie i capitoli del piano scaduti a [now], tranne quelli delle serie in
 /// [hold] (aperte nel lettore), e riscrive il piano con ciò che resta. Quelli
-/// su Drive solo con [withdraw]; senza, aspettano l'app.
+/// su Drive solo con [withdraw] e se [target] è l'account e la cartella del
+/// piano; altrimenti restano e aspettano l'app, che rifà il piano.
 ///
 /// Con un giro di sincronizzazione in corso aspettano le cartelle
 /// sincronizzate e Drive, come nel foglio: il giro le potrebbe riscrivere o
@@ -380,14 +402,18 @@ Future<AutoCleanupOutcome> runAutoCleanup(
   DateTime? now,
   Set<String> hold = const {},
   DriveWithdraw? withdraw,
+  DriveTarget? target,
   Duration retry = const Duration(minutes: 30),
 }) async {
   final at = (now ?? DateTime.now()).toUtc();
   final plan = await files.readPlan();
   final items = plan.items;
+  final drive = target != null && plan.account == target.account && plan.folder == target.folder
+      ? withdraw
+      : null;
   final due = [
     for (final item in items)
-      if (!item.due.isAfter(at) && !hold.contains(item.series) && (!item.onDrive || withdraw != null)) item,
+      if (!item.due.isAfter(at) && !hold.contains(item.series) && (!item.onDrive || drive != null)) item,
   ];
   if (due.isEmpty) return (removed: const <String, Set<String>>{}, fromDrive: const <String, Set<String>>{}, next: _next(items, at));
   final busy = due.any((item) => item.synced != null) && await sync.busy();
@@ -418,7 +444,7 @@ Future<AutoCleanupOutcome> runAutoCleanup(
   for (final MapEntry(key: seriesPath, value: group) in remote.entries) {
     try {
       await sync.release([for (final item in group) ?item.synced], SyncSide.remote);
-      await withdraw!(seriesPath, [for (final item in group) item.remote!]);
+      await drive!(seriesPath, [for (final item in group) item.remote!]);
       done.addAll(group);
     } on DriveAuthRequired {
       // Il permesso di scrivere lo chiede l'app, accendendo la regola:
@@ -433,7 +459,7 @@ Future<AutoCleanupOutcome> runAutoCleanup(
     for (final item in items)
       if (!done.contains(item)) item,
   ];
-  await files.writePlan(left, folder: plan.folder);
+  await files.writePlan(left, account: plan.account, folder: plan.folder);
   final next = _next(left, at);
   Map<String, Set<String>> bySeries(Iterable<CleanupItem> items) {
     final result = <String, Set<String>>{};
@@ -486,7 +512,11 @@ class AutoCleanupScheduler {
 ///
 /// Drive si apre solo se c'è qualcosa da togliere lì: il token lo dà
 /// `google_sign_in` senza attività, dal permesso di scrivere già concesso
-/// accendendo la regola.
+/// accendendo la regola, per l'account del piano. Il lavoro non ha la sessione
+/// del backend né le impostazioni: la parte di Drive salta se dal telefono si
+/// è usciti, e prima di togliere richiede a Drive se la cartella è
+/// dell'account. Un account o una cartella cambiati nell'app li sistema l'app,
+/// che riscrive il piano ([AutoCleanup]).
 Future<void> runScheduledAutoCleanup() async {
   const channel = MethodChannel('kagami/cleanup-worker');
   DateTime? next;
@@ -494,20 +524,30 @@ Future<void> runScheduledAutoCleanup() async {
   try {
     final directories = await AppDirectories.resolve();
     final files = AutoCleanupFiles(directories.support);
-    final folder = (await files.readPlan()).folder;
+    final plan = await files.readPlan();
+    final account = plan.account;
+    final folder = plan.folder;
+    final target = account == null || folder == null || await CloudAuth.signedOutOnPhone()
+        ? null
+        : (account: account, folder: folder);
     DriveRepository? repository;
     final outcome = await runAutoCleanup(
       files,
       SyncFiles(directories.support),
-      withdraw: folder == null
+      target: target,
+      withdraw: target == null
           ? null
           : (seriesPath, paths) async {
               if (repository == null) {
-                await GoogleSignIn.instance.initialize();
-                client = DriveClient(DriveAuth().writeToken, network: NetworkMonitor.instance);
+                if (client == null) {
+                  await GoogleSignIn.instance.initialize();
+                  client = DriveClient(DriveAuth(account: () => target.account).writeToken, network: NetworkMonitor.instance);
+                }
+                // Non la propria: il piano resta, e l'app lo rifà senza Drive.
+                if (!await client!.owned(target.folder)) throw const DriveAuthRequired();
                 repository = DriveRepository(
                   client: client!,
-                  folderId: folder,
+                  folderId: target.folder,
                   stateDirectory: p.join(directories.support, 'drive'),
                   // Togliere capitoli non passa dalla cache: il limite non conta.
                   files: DriveFileCache(Directory(p.join(directories.cache, 'drive')), limitBytes: 1 << 30),

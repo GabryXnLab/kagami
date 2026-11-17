@@ -20,9 +20,11 @@
 /// ([PageBrowser]) seguono da lì.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'fallback.dart' show withFallback;
 import 'http.dart';
 import 'model.dart';
 import 'providers/asurascans.dart';
@@ -40,6 +42,21 @@ abstract class Provider {
 
   /// L'icona del sito, fra gli asset dell'app.
   String get icon => 'assets/providers/$id.png';
+
+  /// L'icona di un sito degli utenti, in rete: non c'è fra gli asset.
+  String? get iconUrl => null;
+
+  /// Se il sito è incluso nell'app; `false` per quelli descritti da un file
+  /// (`declarative.dart`), del catalogo o degli utenti.
+  bool get builtIn => true;
+
+  /// Lo strato del registro da cui viene il sito ([providers]).
+  ProviderOrigin get origin => ProviderOrigin.builtIn;
+
+  /// Il provider che definisce il sito: sé stesso, o il sito del catalogo
+  /// dentro un ripiego (`fallback.dart`). Per chi ne chiede il tipo, come la
+  /// versione di un sito descritto da un file.
+  Provider get unwrapped => this;
 
   /// Se [url] è il link di una serie di questo sito.
   bool accepts(String url);
@@ -61,8 +78,8 @@ abstract class Provider {
   Future<ChapterContent> fetchPages(Chapter chapter, ProviderHttp http);
 
   /// Le serie che la ricerca del sito dà per [query], nello stesso ordine:
-  /// è la barra di ricerca del sito, chiamata come la chiama lui. Serve solo
-  /// all'app per scegliere cosa scaricare, e il server non ce l'ha.
+  /// è la barra di ricerca del sito, chiamata come la chiama lui. Serve
+  /// all'app per scegliere cosa scaricare e a «Su altri siti» (`findElsewhere`).
   Future<List<SearchResult>> search(String query, ProviderHttp http);
 
   void validateUrl(String url) => checkUrl(url, allowedHost);
@@ -192,7 +209,78 @@ class SearchResult {
 /// tendina, non di una pagina di risultati.
 const int searchLimit = 10;
 
-final List<Provider> providers = [MangaK(), ManhwaRead(), AsuraScans(), CoffeeManga()];
+/// I siti inclusi nell'app.
+final List<Provider> builtInProviders = [MangaK(), ManhwaRead(), AsuraScans(), CoffeeManga()];
+
+/// Lo strato del registro di un sito: un sito di uno strato sostituisce quello
+/// con lo stesso id degli strati prima (`docs/catalogo.md` § «Il registro: chi
+/// vince»).
+enum ProviderOrigin { builtIn, catalog, user }
+
+/// Inclusi con sopra il catalogo: ricalcolato solo da [installCatalogProviders],
+/// perché [providers] si chiede a ogni operazione.
+List<Provider> _baseProviders = builtInProviders;
+List<Provider> _userProviders = const [];
+const Symbol _zoneProviders = #kagamiUserProviders;
+
+/// I siti che l'app conosce, in tre strati: gli inclusi, sopra quelli del
+/// catalogo ([installCatalogProviders]), sopra quelli degli utenti. Con lo
+/// stesso id vince lo strato più alto, al posto di quello di sotto; gli id
+/// nuovi seguono, prima del catalogo poi degli utenti. Il server dà a ogni
+/// account i suoi con [withUserProviders]; il telefono li installa per tutti
+/// con [installUserProviders].
+List<Provider> get providers {
+  final user = switch (Zone.current[_zoneProviders]) {
+    final List<Provider> sites => sites,
+    final List<Provider> Function() source => source(),
+    _ => _userProviders,
+  };
+  return _layered(_baseProviders, user);
+}
+
+List<Provider> _layered(List<Provider> below, List<Provider> above) {
+  if (above.isEmpty) return below;
+  final byId = {for (final provider in above) provider.id: provider};
+  return [
+    for (final provider in below) byId.remove(provider.id) ?? provider,
+    ...byId.values,
+  ];
+}
+
+/// I siti del catalogo di questo processo, al posto di quelli di prima; una
+/// lista vuota spegne il catalogo. Uno per processo anche sul server, perché
+/// il catalogo è dell'immagine e non degli account: la zona di
+/// [withUserProviders] resta sopra.
+/// Un sito del catalogo che sostituisce un incluso lo avvolge col ripiego
+/// ([withFallback]), salvo `builtin: "off"` nell'indice.
+void installCatalogProviders(List<Provider> sites) {
+  _catalogSites = List.unmodifiable(sites);
+  _baseProviders = _layered(builtInProviders, List.unmodifiable(sites.map(withFallback)));
+}
+
+List<Provider> _catalogSites = const [];
+
+/// Gli strati di [id] che questo processo ha, dall'alto, senza ripiego:
+/// il sito del catalogo e l'incluso (`probe --layers all`). Quelli degli
+/// utenti stanno per account e qui non ci sono.
+List<Provider> siteLayers(String id) => [
+      ..._catalogSites.where((provider) => provider.id == id),
+      ...builtInProviders.where((provider) => provider.id == id),
+    ];
+
+/// I siti degli utenti di questo processo, al posto di quelli di prima.
+void installUserProviders(List<Provider> sites) => _userProviders = List.unmodifiable(sites);
+
+/// Esegue [body] con [sites] come siti degli utenti: tutto ciò che [body] fa,
+/// anche dopo un `await`, vede [providers] con quelli. Il server lo usa per
+/// account, perché due account possono avere siti diversi con lo stesso id.
+R withUserProviders<R>(List<Provider> sites, R Function() body) =>
+    runZoned(body, zoneValues: {_zoneProviders: List<Provider>.unmodifiable(sites)});
+
+/// Come [withUserProviders], ma i siti si chiedono a [source] ogni volta: il
+/// giro di un account dura giorni e i suoi siti cambiano mentre gira.
+R withUserProviderSource<R>(List<Provider> Function() source, R Function() body) =>
+    runZoned(body, zoneValues: {_zoneProviders: source});
 
 final RegExp chapterNumberPattern =
     RegExp(r'\bchapter\s*0*(\d+)(?:[.,](\d+))?\b', caseSensitive: false);

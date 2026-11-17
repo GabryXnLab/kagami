@@ -1,0 +1,81 @@
+{
+  "format": 2,
+  "id": "manhwaread",
+  "name": "ManhwaRead",
+  "version": 1,
+  "home": "https://manhwaread.com",
+  "hosts": ["manhwaread.com", "www.manhwaread.com"],
+  "mediaHosts": ["manread.xyz", "mancover.xyz"],
+  "browser": {
+    "hosts": ["manhwaread.com", "www.manhwaread.com"],
+    "seriesReady": "#chaptersList, #groupChapterList, .chapters-list, li.wp-manga-chapter",
+    "searchReady": "#inputQuickSearch"
+  },
+  "series": {
+    "path": "^/manhwa/([a-z0-9-]+)/?$",
+    "url": "https://manhwaread.com/manhwa/{id}/",
+    "vars": {
+      "mangaId": {"css": "body", "attr": "class", "regex": "\\bpostid-(\\d+)\\b"}
+    },
+    "title": {"first": [
+      "h1.text-primary",
+      "h1.clipboard-copy",
+      "h1.entry-title",
+      {"css": "script[type=\"application/ld+json\"]", "json": "name"},
+      {"css": "meta[property=\"og:title\"]", "attr": "content"},
+      "h1"
+    ]},
+    "cover": {"css": "meta[property=\"og:image\"]", "attr": "content"},
+    "description": {"first": [
+      {"css": "meta[name=\"description\"]", "attr": "content"},
+      {"css": "meta[property=\"og:description\"]", "attr": "content"}
+    ]},
+    "chapters": {
+      "items": {"first": [
+        {"css": "#chaptersList a[href]", "all": true},
+        {"css": "#groupChapterList a[href]", "all": true},
+        {"css": ".chapters-list a[href]", "all": true},
+        {"css": "li.wp-manga-chapter a[href]", "all": true}
+      ]},
+      "vars": {
+        "chapterKey": {"attr": "data-id"},
+        "titleId": {"template": "{mangaId}"}
+      },
+      "keep": ["titleId", "chapterKey"],
+      "order": "newest-first",
+      "url": {"attr": "href"},
+      "title": {"first": [".chapter-item__name", "span:not(.chapter-item__date)"]},
+      "date": ".chapter-item__date"
+    }
+  },
+  "chapter": {
+    "path": "^/manhwa/([a-z0-9-]+)/[a-z0-9-]+/?$",
+    "vars": {
+      "data": {"css": "script", "all": true, "jsonAt": "\\bchapterData\\s*=\\s*"},
+      "cdn": {"var": "data", "json": "base", "filters": [{"replace": ["/+$", ""]}]}
+    },
+    "recipe": [
+      {"let": "encoded", "get": {"var": "data", "json": "data"}, "check": "^[A-Za-z0-9+/=]+$"},
+      {"let": "bytes", "base64": "{encoded}"},
+      {"let": "images", "json": "{bytes}"}
+    ],
+    "pages": {
+      "items": {"var": "images"},
+      "url": {"json": "src", "base": "{cdn}/"},
+      "width": {"json": "w"},
+      "height": {"json": "h"}
+    }
+  },
+  "search": {
+    "url": {"template": "https://manhwaread.com/", "query": {"s": "{query}"}},
+    "items": {"css": ".manga-item", "all": true},
+    "title": {"first": [".manga-item__link", "img"]},
+    "link": {"first": [
+      {"css": "a.manga-item__link", "attr": "href"},
+      {"css": "a", "attr": "href"}
+    ]},
+    "cover": {"css": "img", "attr": ["data-src", "data-lazy-src", "src"]},
+    "latest": ".chapter-item",
+    "status": {"css": "[data-status]", "attr": "data-status"}
+  }
+}

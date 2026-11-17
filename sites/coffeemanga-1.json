@@ -1,0 +1,115 @@
+{
+  "format": 2,
+  "id": "coffeemanga",
+  "name": "Coffee Manga",
+  "version": 1,
+  "home": "https://coffeemanga.net",
+  "hosts": ["coffeemanga.net", "www.coffeemanga.net"],
+  "mediaHosts": ["i.coffeemanga.net"],
+  "series": {
+    "path": "^/manga/([a-z0-9-]+)/?$",
+    "url": "https://coffeemanga.net/manga/{id}/",
+    "vars": {
+      "data": {"css": "script[data-page=\"app\"]", "json": "props"}
+    },
+    "require": [
+      {"css": "script[data-page=\"app\"]", "json": "component", "equals": "Catalog/Series"}
+    ],
+    "id": {"var": "data", "json": "series.slug", "regex": "^[a-z0-9-]+$"},
+    "title": {"var": "data", "json": "series.title"},
+    "cover": {"first": [
+      {"var": "data", "json": "series.cover_canonical"},
+      {"var": "data", "json": "series.cover_lg"},
+      {"var": "data", "json": "series.cover"}
+    ]},
+    "description": {"var": "data", "json": "series.synopsis"},
+    "status": {"var": "data", "json": "series.status"},
+    "type": {"var": "data", "json": "series.type"},
+    "genres": {"var": "data", "json": "series.genres.name", "all": true},
+    "tags": {"var": "data", "json": "series.tags.name", "all": true},
+    "authors": {"var": "data", "json": "series.authors.name", "all": true},
+    "artists": {"var": "data", "json": "series.artists.name", "all": true},
+    "alternativeTitles": {"var": "data", "json": "series.alt_titles", "all": true, "split": " / "},
+    "chapters": {
+      "api": "https://coffeemanga.net/manga/{id}/chapters.json",
+      "expect": {"var": "data", "json": "chapters_pagination.total"},
+      "items": {"json": "items"},
+      "skip": [{"json": "locked", "equals": true}],
+      "order": "newest-first",
+      "vars": {"slug": {"json": "slug", "regex": "^[a-z0-9-]+$"}},
+      "id": {"template": "{slug}"},
+      "title": {"json": "label"},
+      "url": {"template": "https://coffeemanga.net/manga/{id}/{slug}/"}
+    }
+  },
+  "chapter": {
+    "path": "^/manga/([a-z0-9-]+)/[a-z0-9-]+/?$",
+    "vars": {
+      "page": {"css": "script[data-page=\"app\"]", "json": "props"},
+      "numId": {"var": "page", "json": "chapter.id"},
+      "seriesSlug": {"var": "page", "json": "series.slug"},
+      "total": {"var": "page", "json": "total"},
+      "x": {"var": "page", "json": "reader.x"}
+    },
+    "require": [
+      {"css": "script[data-page=\"app\"]", "json": "component", "equals": "Reader/Chapter"},
+      {"var": "page", "json": "chapter.slug", "equals": "{chapterId}"}
+    ],
+    "locked": {"var": "page", "json": "chapter.locked", "equals": true},
+    "recipe": [
+      {"let": "key", "hex": "143d17cc4fbf2e4e9441e493c4765c915ce55d6d0f7bf1b45af32f5d76a7699c"},
+      {"let": "secret", "hmacSha256": {"key": "{key}", "message": "rk|coffeemanga.net|{numId}"}},
+      {"let": "cipher", "base64": "{x}", "url": true},
+      {"let": "mask", "range": {"count": "(len(cipher) + 31) / 32", "max": 256, "as": "b"},
+        "do": {"hmacSha256": {"key": "{secret}", "message": "ks|{b}"}}},
+      {"let": "plain", "xor": {"data": "{cipher}", "key": "{mask}"}},
+      {"let": "manifest", "json": "{plain}"},
+      {"let": "endpoint", "get": {"var": "manifest", "json": "e"}, "check": "^[A-Za-z0-9_-]+$"},
+      {"let": "q", "get": {"var": "manifest", "json": "q"}, "check": "^[A-Za-z0-9_-]+$"},
+      {"let": "p0", "get": {"var": "manifest", "json": "p[0]"}, "check": "^[A-Za-z0-9_-]+$"},
+      {"let": "p2", "get": {"var": "manifest", "json": "p[2]"}, "check": "^[A-Za-z0-9_-]+$"},
+      {"let": "v", "get": {"var": "manifest", "json": "v"}, "check": "^[0-8]$"},
+      {"let": "mode", "intExpr": "v / 3"},
+      {"let": "sub", "intExpr": "v % 3"},
+      {"let": "resp", "fetch": "https://coffeemanga.net/{endpoint}/{numId}?{p0}={seriesSlug}&{p2}={q}"},
+      {"let": "d0", "when": "mode == 0", "get": {"var": "resp", "jsonAt": "^", "json": "d"}},
+      {"let": "d1", "when": "mode == 1", "get": {"var": "resp", "jsonAt": "^", "json": "[2]"}},
+      {"let": "d2", "when": "mode == 2", "get": {"var": "resp", "jsonAt": "^", "json": "r.d"}},
+      {"let": "d", "switch": "{mode}", "cases": {"0": "{d0}", "1": "{d1}", "2": "{d2}"}, "check": "."},
+      {"let": "c0", "when": "mode == 0", "get": {"var": "resp", "jsonAt": "^", "json": "c"}},
+      {"let": "c1", "when": "mode == 1", "get": {"var": "resp", "jsonAt": "^", "json": "[0]"}},
+      {"let": "c2", "when": "mode == 2", "get": {"var": "resp", "jsonAt": "^", "json": "r.c"}},
+      {"let": "c", "switch": "{mode}", "cases": {"0": "{c0}", "1": "{c1}", "2": "{c2}"}, "check": "^[0-9]+$"},
+      {"let": "raw", "when": "sub != 0", "base64": "{d}", "url": true},
+      {"let": "t1", "when": "sub == 1", "utf8": "{raw}"},
+      {"let": "kHex", "when": "sub == 2", "get": {"var": "manifest", "json": "k"}, "check": "^(?:[0-9a-fA-F]{2})+$"},
+      {"let": "k", "when": "sub == 2", "hex": "{kHex}"},
+      {"let": "x2", "when": "sub == 2", "xor": {"data": "{raw}", "key": "{k}"}},
+      {"let": "t2", "when": "sub == 2", "utf8": "{x2}"},
+      {"let": "text", "switch": "{sub}", "cases": {"0": "{d}", "1": "{t1}", "2": "{t2}"}},
+      {"let": "images", "json": "{text}"},
+      {"let": "complete", "intExpr": "c == numId && total > 0 && len(images) == total", "check": "^1$"}
+    ],
+    "pages": {
+      "items": {"var": "images"},
+      "url": {"first": [
+        {"json": "srcset", "regex": "(?:^|,)\\s*([^\\s,]+/raw:1/[^\\s,]+|[^\\s,]+(?=\\s+\\d+w\\s*$))"},
+        {"json": "src"}
+      ]},
+      "width": {"json": "width"},
+      "height": {"json": "height"}
+    }
+  },
+  "search": {
+    "url": {"template": "https://coffeemanga.net/search", "query": {"q": "{query}"}},
+    "require": [
+      {"css": "script[data-page=\"app\"]", "json": "component", "equals": "Catalog/Search"}
+    ],
+    "items": {"css": "script[data-page=\"app\"]", "json": "props.series"},
+    "title": {"json": "title"},
+    "link": {"json": "url", "base": "https://coffeemanga.net"},
+    "cover": {"json": "cover"},
+    "latest": {"json": "chapters[0].label"},
+    "status": {"json": "status"}
+  }
+}

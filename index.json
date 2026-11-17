@@ -1,0 +1,51 @@
+{
+  "catalog": 1,
+  "serial": 1,
+  "issuedAt": "2026-11-17T07:30:09Z",
+  "sites": {
+    "asurascans": {
+      "state": "ok",
+      "variants": [
+        {
+          "version": 2,
+          "minEngine": 7,
+          "sha256": "6277d164750a48eebae78ebadeeccc0acfe23f98508172a4a876f96e42431e98",
+          "path": "sites/asurascans-2.json"
+        }
+      ]
+    },
+    "coffeemanga": {
+      "state": "ok",
+      "variants": [
+        {
+          "version": 1,
+          "minEngine": 15,
+          "sha256": "873c21e127696db09d880ee17dcda8f243168b3d993c4eb25afa6505fcda2d23",
+          "path": "sites/coffeemanga-1.json"
+        }
+      ]
+    },
+    "mangak": {
+      "state": "ok",
+      "variants": [
+        {
+          "version": 2,
+          "minEngine": 9,
+          "sha256": "e0346ea9c396f1e52bba4cd7383f7eefee30287f103d3cd0b1c8923b65fa0312",
+          "path": "sites/mangak-2.json"
+        }
+      ]
+    },
+    "manhwaread": {
+      "state": "ok",
+      "variants": [
+        {
+          "version": 1,
+          "minEngine": 11,
+          "sha256": "db637cb04691b4da4216a148eef7a6221752835d0456c1cf1b13ddc65cdae99e",
+          "path": "sites/manhwaread-1.json"
+        }
+      ]
+    }
+  }
+}

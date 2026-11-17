@@ -49,6 +49,19 @@ DeclarativeProvider _site(String id) {
 List<(String, String, String, String)> _chapters(Series series) =>
     [for (final c in series.chapters) (c.id, c.number, c.url, c.title)];
 
+/// I metadati normalizzati che la libreria legge, non i grezzi: il catalogo
+/// sostituisce il provider incluso, e una serie riparata con la definizione
+/// perderebbe tipo, stato, generi e tag se mancassero.
+Map<String, Object?> _classified(Series series, [Set<String> except = const {}]) {
+  final metadata = normalizeMetadata(series.metadata);
+  return {
+    for (final field in const [
+      'type', 'status', 'releaseStatus', 'genres', 'tags', 'authors', 'artists', 'alternativeTitles', 'description',
+    ])
+      if (!except.contains(field)) field: metadata[field],
+  };
+}
+
 List<(String, int?, int?)> _pages(ChapterContent content) =>
     [for (final page in content.pages) (page.url, page.width, page.height)];
 
@@ -63,6 +76,7 @@ Future<void> _sameSeries(
   ProviderHttp Function() fake,
   String url, {
   bool sameUrl = true,
+  Set<String> exceptMetadata = const {},
 }) async {
   final expected = await dart.fetchSeries(url, fake());
   final actual = await site.fetchSeries(url, _ApiAsGet(fake()));
@@ -71,6 +85,7 @@ Future<void> _sameSeries(
   expect(actual.coverUrl, expected.coverUrl);
   if (sameUrl) expect(actual.url, expected.url);
   expect(_chapters(actual), _chapters(expected));
+  expect(_classified(actual, exceptMetadata), _classified(expected, exceptMetadata));
 }
 
 Future<void> _samePages(
@@ -89,6 +104,34 @@ Future<void> _samePages(
     final fromSite = await site.fetchPages(actual.chapters[i], siteHttp);
     expect(_pages(fromSite), _pages(fromDart), reason: chapter.title);
   }
+}
+
+/// ManhwaRead con i dati strutturati nella testa della pagina (JSON-LD e
+/// `keywords`): le fonti che il Dart e il catalogo leggono uguali. Le coppie
+/// etichetta-valore del corpo le legge solo il Dart.
+class _ManhwaReadHead implements ProviderHttp {
+  _ManhwaReadHead(this.inner);
+
+  final ProviderHttp inner;
+
+  @override
+  Future<HttpResult> get(String url, {int limit = 2000000, String? referer}) async {
+    final result = await inner.get(url, limit: limit, referer: referer);
+    if (url != FakeManhwaRead.url) return result;
+    final head = '<meta name="keywords" content="Action, Fantasy">'
+        '<script type="application/ld+json">${jsonEncode({
+      'genre': ['Adventure'],
+      'author': {'@type': 'Person', 'name': 'Writer'},
+      'artist': 'Illustrator',
+    })}</script></head>';
+    return (body: utf8.encode(utf8.decode(result.body).replaceFirst('</head>', head)), contentType: result.contentType);
+  }
+
+  @override
+  Future<Map<String, Object?>> json(String url) => inner.json(url);
+
+  @override
+  Future<bool> imageExists(String url, {required String referer}) => inner.imageExists(url, referer: referer);
 }
 
 void main() {
@@ -116,7 +159,10 @@ void main() {
     });
 
     test('serie e capitoli, senza quelli VIP', () async {
-      await _sameSeries(dart, site, FakeCoffeeManga.new, url);
+      // Gli autori scritti come testo (non `{name}`) il catalogo non li legge: docs/siti.md.
+      await _sameSeries(dart, site, FakeCoffeeManga.new, url, exceptMetadata: const {'authors'});
+      final series = await site.fetchSeries(url, _ApiAsGet(FakeCoffeeManga()));
+      expect(normalizeMetadata(series.metadata)['authors'], ['Writer']);
     });
 
     test('tavole dal manifest cifrato, in ogni forma e codifica', () async {
@@ -371,7 +417,7 @@ void main() {
 
     test('serie: titolo, copertina e capitoli, con i due contenitori', () async {
       for (final alternate in [false, true]) {
-        await _sameSeries(dart, site, () => FakeManhwaRead(alternate: alternate), url);
+        await _sameSeries(dart, site, () => _ManhwaReadHead(FakeManhwaRead(alternate: alternate)), url);
       }
       final series = await site.fetchSeries(url, FakeManhwaRead());
       expect(series.chapters.map((c) => c.id), ['chapter-01', 'chapter-02', 'side-story-1']);

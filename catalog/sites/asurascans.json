@@ -2,7 +2,7 @@
   "format": 2,
   "id": "asurascans",
   "name": "Asura Scans",
-  "version": 2,
+  "version": 3,
   "home": "https://asurascans.com",
   "hosts": ["asurascans.com", "www.asurascans.com", "api.asurascans.com"],
   "mediaHosts": ["cdn.asurascans.com"],
@@ -28,6 +28,16 @@
     "id": {"json": "series.slug"},
     "title": {"json": "series.title"},
     "cover": {"json": "series.cover"},
+    "description": {"json": "series.description", "html": true},
+    "status": {"json": "series.status"},
+    "type": {"json": "series.type"},
+    "genres": {"json": "series.genres.name", "all": true},
+    "authors": {"json": "series.author"},
+    "artists": {"json": "series.artist"},
+    "alternativeTitles": {"first": [
+      {"json": "series.alt_titles", "all": true},
+      {"json": "series.alternative_titles"}
+    ]},
     "chapters": {
       "api": "https://api.asurascans.com/api/series/{id}/chapters",
       "items": {"json": "data"},

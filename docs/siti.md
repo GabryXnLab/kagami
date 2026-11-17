@@ -915,6 +915,32 @@ sapere se le primitive bastano; la parità sulle fixture la provano le voci P5.
   lettura euristica delle etichette dei metadati (`_labels`), che diventa un
   selettore per campo.
 
+#### Metadati della serie nei quattro siti
+
+La definizione sostituisce il provider incluso, quindi deve dare gli stessi
+metadati normalizzati (`type`, `status`, `genres`, `tags`, `authors`, `artists`,
+`alternativeTitles`, `description`): una serie riparata o aggiornata col
+catalogo, altrimenti, perde tipo e tag. `catalog_parity_test.dart` li confronta
+dopo `normalizeMetadata` per ogni sito. Fonti:
+
+- **MangaK** (v3): `initialManga` di `__NEXT_DATA__`: `summary` (con `html`, che
+  tiene i paragrafi), `status`, `type.name`, `genres`, `tags`, `authors`,
+  `artists` (`name`), `altNames.name`. Identico all'incluso, anche dal vivo.
+- **Asura Scans** (v3): `series.*` dell'API: `description` (`html`), `status`,
+  `type`, `genres.name`, `author`, `artist`, `alt_titles` con ripiego su
+  `alternative_titles` (testo unico, come il Dart). Identico all'incluso, anche
+  dal vivo.
+- **ManhwaRead** (v2): solo le fonti strutturate che il Dart legge e che si
+  dicono con un selettore: `keywords` della testa (poi `keywords` del JSON-LD)
+  per i tag, `genre`, `author`, `artist` del JSON-LD. Differenza ammessa: il
+  Dart legge anche le coppie etichetta-valore del corpo (`_labels`: stato,
+  tipo, titoli alternativi, autori, artisti, generi e tag scritti nella
+  pagina), che il formato non sa dire; la pagina vera non si è potuta vedere
+  (Cloudflare, nessuna cassetta), quindi finché non c'è una cattura dal PC di
+  casa il catalogo dà di ManhwaRead solo ciò che sta nella testa.
+- **Coffee Manga**: già in parità, tranne gli autori scritti come testo
+  (sotto).
+
 #### Coffee Manga: cosa entra e cosa no
 
 Il manifest delle tavole entra: `hmacSha256` della chiave su

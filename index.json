@@ -1,7 +1,7 @@
 {
   "catalog": 1,
-  "serial": 2,
-  "issuedAt": "2026-11-17T08:33:12Z",
+  "serial": 3,
+  "issuedAt": "2026-11-17T10:03:25Z",
   "sites": {
     "asurascans": {
       "state": "ok",
@@ -51,6 +51,12 @@
     "manhwaread": {
       "state": "ok",
       "variants": [
+        {
+          "version": 3,
+          "minEngine": 11,
+          "sha256": "692a70c95825e9a1ac5062db3603fd94c19cc9dc2c77985b0f19e449093540e3",
+          "path": "sites/manhwaread-3.json"
+        },
         {
           "version": 2,
           "minEngine": 11,

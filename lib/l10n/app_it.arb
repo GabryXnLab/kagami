@@ -167,14 +167,27 @@
   "@seriesMuteMuted": {
     "description": "Messaggio temporaneo dopo aver silenziato le notifiche dei capitoli nuovi di una serie"
   },
-  "seriesCaughtUpMissing": "{count, plural, =1{In pari con quello che c'è sul telefono: manca un capitolo annunciato.} other{In pari con quello che c'è sul telefono: mancano {count} capitoli annunciati.}}",
-  "@seriesCaughtUpMissing": {
-    "description": "Riquadro di ripresa: tutto ciò che è sul telefono è letto, ma alcuni capitoli annunciati non sono stati scaricati",
+  "seriesWaitingChapters": "{count, plural, =1{Hai letto tutto quello che è scaricato: un capitolo da leggere non è ancora arrivato.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere non sono ancora arrivati.}}",
+  "@seriesWaitingChapters": {
+    "description": "Riquadro di ripresa: tutto ciò che è leggibile (telefono o Drive) è letto, ma restano capitoli da leggere annunciati e non scaricati",
     "placeholders": {
       "count": {
         "type": "int"
       }
     }
+  },
+  "seriesWaitingQueued": "{count, plural, =1{Hai letto tutto quello che è scaricato: il prossimo capitolo è in coda.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere, i prossimi sono in coda.}}",
+  "@seriesWaitingQueued": {
+    "description": "Riquadro di ripresa: come sopra, ma i prossimi capitoli sono già in coda per lo scaricamento",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesFetchNext": "Scarica i prossimi",
+  "@seriesFetchNext": {
+    "description": "Pulsante del riquadro di ripresa: scarica dal sito i prossimi capitoli da leggere"
   },
   "seriesCaughtUpAll": "Letta tutta.",
   "@seriesCaughtUpAll": {
@@ -1143,6 +1156,10 @@
         "type": "int"
       }
     }
+  },
+  "archiveResults": "Risultati",
+  "@archiveResults": {
+    "description": "Titolo della sezione con i risultati della ricerca in Scarica un manga, mescolati fra i siti"
   },
   "archiveNoResults": "Nessun risultato su {site}.",
   "@archiveNoResults": {
@@ -3657,10 +3674,6 @@
   "@shellTabLibrary": {
     "description": "Barra di navigazione in basso: la libreria di manga"
   },
-  "shellTabCollections": "Raccolte",
-  "@shellTabCollections": {
-    "description": "Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici"
-  },
   "moreDownload": "Scarica un manga",
   "@moreDownload": {
     "description": "Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito"
@@ -5868,6 +5881,21 @@
   "@sitesTryFailed": {
     "description": "Prova di un sito: errore; sotto il messaggio tecnico"
   },
+  "sitesFault": "Fase: {phase} · campo: {field}",
+  "@sitesFault": {
+    "description": "Prova di un sito: fase e campo del guasto, sotto l'errore",
+    "placeholders": {
+      "phase": { "type": "String" },
+      "field": { "type": "String" }
+    }
+  },
+  "sitesFaultPhase": "Fase: {phase}",
+  "@sitesFaultPhase": {
+    "description": "Prova di un sito: fase e campo del guasto, sotto l'errore",
+    "placeholders": {
+      "phase": { "type": "String" }
+    }
+  },
   "sitesInstall": "Installa",
   "@sitesInstall": {
     "description": "Anteprima di un sito: pulsante che installa il sito"
@@ -7306,5 +7334,67 @@
   "serverErrorNotOwner": "Questa cartella di Drive non è tua: il server non sposta niente nel cestino.",
   "@serverErrorNotOwner": {
     "description": "Errore mostrato quando il server rifiuta di spostare nel cestino una cartella di Drive che non è dell'utente (403 not_owner)"
+  },
+  "sitesOriginBuiltIn": "Incluso",
+  "@sitesOriginBuiltIn": {
+    "description": "Pagina Siti: il sito è incluso nell'app"
+  },
+  "sitesOriginCatalog": "Catalogo",
+  "@sitesOriginCatalog": {
+    "description": "Pagina Siti: il sito viene dal catalogo firmato"
+  },
+  "sitesOriginUser": "Tuo",
+  "@sitesOriginUser": {
+    "description": "Pagina Siti: il sito l'ha aggiunto l'utente"
+  },
+  "sitesCatalogBroken": "Fuori uso",
+  "@sitesCatalogBroken": {
+    "description": "Pagina Siti: il manutentore ha segnato il sito del catalogo come guasto, senza messaggio"
+  },
+  "sitesCatalogBrokenWith": "Fuori uso: {message}",
+  "@sitesCatalogBrokenWith": {
+    "description": "Pagina Siti: sito del catalogo guasto; {message} è il testo scritto dal manutentore",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesNeedsNewer": "Serve Kagami più nuovo",
+  "@sitesNeedsNewer": {
+    "description": "Pagina Siti: il catalogo ha una versione del sito che questa versione dell'app non sa leggere"
+  },
+  "sitesCatalogSection": "Catalogo dei siti",
+  "@sitesCatalogSection": {
+    "description": "Pagina Siti: titolo della sezione del catalogo"
+  },
+  "sitesCatalogUse": "Usa il catalogo",
+  "@sitesCatalogUse": {
+    "description": "Pagina Siti: interruttore che accende o spegne il catalogo dei siti"
+  },
+  "sitesCatalogOff": "Spento: valgono solo i siti inclusi e i tuoi, e l'app non chiede niente in rete.",
+  "@sitesCatalogOff": {
+    "description": "Pagina Siti: spiegazione sotto l'interruttore del catalogo quando è spento"
+  },
+  "sitesCatalogIssue": "Edizione {serial} del {date}",
+  "@sitesCatalogIssue": {
+    "description": "Pagina Siti: edizione del catalogo adottata; {serial} è il numero progressivo, {date} la data di emissione",
+    "placeholders": {
+      "serial": {
+        "type": "int"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sitesCatalogChecked": "Ultimo controllo: {when}",
+  "@sitesCatalogChecked": {
+    "description": "Pagina Siti: quando l'app ha controllato il catalogo l'ultima volta; {when} è data e ora",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
   }
 }

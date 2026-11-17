@@ -24,6 +24,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
 import '../archive/repair.dart';
+import '../data/catalog_sync.dart' show catalogProvider;
+import '../data/catalog_recheck.dart';
 import '../data/server_error_text.dart';
 import '../data/cloud.dart';
 import '../data/drive.dart';
@@ -244,6 +246,17 @@ Future<InspectedSeries> inspectArchiveLink(
   String url, {
   BrowserFetcher? background,
 }) async {
+  final String site;
+  try {
+    site = resolveLink(url).provider.id;
+  } on ProviderError {
+    return _inspectArchiveLink(context, url, background);
+  }
+  final recheck = ProviderScope.containerOf(context, listen: false).read(catalogRecheckProvider);
+  return recheck.guard(site, () => _inspectArchiveLink(context, url, background));
+}
+
+Future<InspectedSeries> _inspectArchiveLink(BuildContext context, String url, BrowserFetcher? background) async {
   final link = resolveLink(url);
   final provider = link.provider;
   final seriesUrl = link.seriesUrl;
@@ -353,7 +366,12 @@ List<ArchiveWhere> archiveDestinations(WidgetRef ref, {String? siteId}) {
   final base = ref.read(archiveEngineProvider);
   final engine = siteId == null
       ? base
-      : engineForSite(base, siteId, serverHasUserSites: ref.read(serverUserSitesProvider).value ?? false);
+      : engineForSite(
+          base,
+          siteId,
+          server: ref.read(serverSitesProvider).value ?? noServerSites,
+          phoneCatalogSerial: ref.read(catalogProvider).serial,
+        );
   return [
     if (engine == ArchiveEngine.server) ArchiveWhere.server,
     ...drive ? const [ArchiveWhere.drive, ArchiveWhere.driveAndPhone] : const [ArchiveWhere.phone],
@@ -428,8 +446,9 @@ Future<ArchiveChoice?> chooseArchive(
 /// con le stesse scelte.
 ///
 /// Messa in coda, la serie entra nella raccolta della scelta
-/// ([ArchiveChoice.collection]): le raccolte sono per chiave, come lo stato,
-/// e non aspettano che la serie esista.
+/// ([ArchiveChoice.collection]) e prende lo stato scelto
+/// ([ArchiveChoice.status]): raccolte e stato sono per chiave e non
+/// aspettano che la serie esista.
 ///
 /// Una scheda ([ArchiveChoice.card]) va solo al telefono: appena è in coda
 /// se ne scrive anche lo stato dell'utente ([saveArchiveCard]), così la
@@ -449,6 +468,7 @@ Future<bool> enqueueArchive(
     final sent = await _sendToServer(context, ref, inspected, choice);
     if (sent) {
       await _addToCollection(messenger, ref, inspected.series.key, choice.collection);
+      await _setStatus(ref, inspected.series.key, choice.status);
       await _markBeforeAhead(ref, inspected.series, choice);
     }
     return sent;
@@ -457,6 +477,7 @@ Future<bool> enqueueArchive(
   if (target == null) return false;
   await queueArchiveJob(ref, inspected, choice, target);
   await _addToCollection(messenger, ref, inspected.series.key, choice.collection);
+  await _setStatus(ref, inspected.series.key, choice.status);
   await _markBeforeAhead(ref, inspected.series, choice);
   final l10n = currentL10n();
   // Un lavoro senza capitoli è una scheda anche quando non porta uno stato
@@ -491,6 +512,10 @@ Future<void> _addToCollection(ScaffoldMessengerState messenger, WidgetRef ref, S
   if (target == null) return;
   final outcome = await ref.read(readingProvider.notifier).setSeriesInCollection(target.id, key, true);
   if (outcome == CollectionJoin.refused) noticeBindingRefused(ref, messenger, target.name, [key]);
+}
+
+Future<void> _setStatus(WidgetRef ref, String key, ShelfStatus? status) async {
+  if (status != null) await ref.read(readingProvider.notifier).setStatus(key, status);
 }
 
 /// Dove scrive un lavoro del telefono verso [destination]: chiede, se

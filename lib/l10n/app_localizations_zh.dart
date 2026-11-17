@@ -144,15 +144,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seriesMuteMuted => '已静音新章节通知。';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '手机上已有的都读完了：还有 $count 个已公布的章节未下载。',
-      one: '手机上已有的都读完了：还有 1 个已公布的章节未下载。',
+      other: '已下载的内容都读完了：还有 $count 个未读章节尚未下载。',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已下载的内容都读完了：还有 $count 个章节待读，接下来的已在队列中。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => '下载接下来的章节';
 
   @override
   String get seriesCaughtUpAll => '已全部读完。';
@@ -895,6 +907,9 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get archiveResults => '搜索结果';
 
   @override
   String archiveNoResults(String site) {
@@ -2767,9 +2782,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shellTabLibrary => '书库';
 
   @override
-  String get shellTabCollections => '合集';
-
-  @override
   String get moreDownload => '下载漫画';
 
   @override
@@ -4422,6 +4434,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sitesTryFailed => '试用失败';
 
   @override
+  String sitesFault(String phase, String field) {
+    return '阶段：$phase · 字段：$field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return '阶段：$phase';
+  }
+
+  @override
   String get sitesInstall => '安装';
 
   @override
@@ -5465,4 +5487,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serverErrorNotOwner => '此 Drive 文件夹不属于你：服务器不会把任何内容移到回收站。';
+
+  @override
+  String get sitesOriginBuiltIn => '内置';
+
+  @override
+  String get sitesOriginCatalog => '目录';
+
+  @override
+  String get sitesOriginUser => '你的';
+
+  @override
+  String get sitesCatalogBroken => '暂时不可用';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return '暂时不可用：$message';
+  }
+
+  @override
+  String get sitesNeedsNewer => '需要更新版本的 Kagami';
+
+  @override
+  String get sitesCatalogSection => '网站目录';
+
+  @override
+  String get sitesCatalogUse => '使用目录';
+
+  @override
+  String get sitesCatalogOff => '已关闭：只有内置网站和你自己的网站生效，应用不会为此发起任何网络请求。';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return '第 $serial 版（$date）';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return '上次检查：$when';
+  }
 }

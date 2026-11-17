@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kagami/l10n/app_localizations.dart';
+import 'package:kagami/src/data/catalog_config.dart';
+import 'package:kagami/src/data/catalog_sync.dart';
 import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/site_replacements.dart';
 import 'package:kagami/src/data/user_sites.dart';
@@ -56,6 +58,7 @@ void main() {
       userSitesAccessProvider.overrideWithValue(({required write}) async => (store: LocalStore(root.path), close: () {})),
       siteFetcherProvider.overrideWithValue((url) async => throw const SocketException('offline')),
       userSitesServerSyncProvider.overrideWithValue(() async {}),
+      catalogSyncProvider.overrideWithValue(CatalogSync(directory: Directory('${root.path}/catalog'), config: const CatalogConfig())),
     ]);
     addTearDown(container.dispose);
     // La lettura iniziale usa timer veri: va fatta fuori dal tempo finto.
@@ -81,7 +84,7 @@ void main() {
     await open(tester);
 
     expect(find.text('Example examplescans'), findsOneWidget);
-    expect(find.text('versione 3'), findsOneWidget);
+    expect(find.text('Tuo · versione 3'), findsOneWidget);
     expect(find.text('bad'), findsOneWidget);
     expect(find.text('File rovinato'), findsOneWidget);
   });

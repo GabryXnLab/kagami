@@ -1,0 +1,54 @@
+{
+  "format": 2,
+  "series": {
+    "path": "^/manga/([a-z0-9-]+)/?$",
+    "title": {"first": ["h1.entry-title", "h1[itemprop=name]", "h1"]},
+    "cover": {"first": [
+      {"css": "meta[property=\"og:image\"]", "attr": "content"},
+      {"css": "div.thumb img", "attr": ["data-src", "data-lazy-src", "src"]}
+    ]},
+    "description": {"first": [
+      {"css": "div[itemprop=description]", "html": true},
+      {"css": "meta[property=\"og:description\"]", "attr": "content"}
+    ]},
+    "genres": {"css": "div.seriestugenre a", "all": true},
+    "chapters": {
+      "items": {"first": ["#chapterlist li", "div.eplister li", "ul.clstyle li"]},
+      "url": {"css": "a", "attr": "href"},
+      "title": {"first": ["span.chapternum", "a"]},
+      "order": "newest-first",
+      "fallback": [
+        {
+          "items": "div.eplister a[href]",
+          "url": {"attr": "href"},
+          "title": {"regex": "^(.+)$"}
+        }
+      ]
+    }
+  },
+  "chapter": {
+    "path": "^/([a-z0-9-]+)-chapter-[a-z0-9-]+/?$",
+    "pages": {
+      "items": {"first": [
+        {"css": "script", "all": true, "jsonAt": "ts_reader\\.run\\(\\s*", "json": "sources[0].images"},
+        "#readerarea img"
+      ]},
+      "url": {"first": [{"attr": ["data-src", "data-lazy-src", "src"]}, {"regex": "^(https?://.+)$"}]}
+    },
+    "fallback": [
+      {
+        "pages": {
+          "items": "div.rdminimal img",
+          "url": {"attr": ["data-src", "data-lazy-src", "src"]}
+        }
+      }
+    ]
+  },
+  "search": {
+    "items": {"first": ["div.listupd div.bsx", "div.bs div.bsx"]},
+    "title": {"first": ["div.tt", {"css": "a", "attr": "title"}]},
+    "link": {"css": "a", "attr": "href"},
+    "cover": {"css": "img", "attr": ["data-src", "data-lazy-src", "src"]},
+    "latest": "div.epxs"
+  }
+}

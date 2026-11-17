@@ -36,6 +36,7 @@ import 'dart:io';
 
 import 'package:kagami_archive/http.dart' show AddressLookup, isPrivateAddress;
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/renderer.dart';
 
 import 'browser_container.dart' show browserDebugPort, browserProxyPort;
 import 'browser_proxy.dart';
@@ -83,7 +84,9 @@ Future<void> clearProfileLocks(Directory profile) async {
   }
 }
 
-class HeadlessBrowser implements PageBrowser {
+/// È anche il [PageRenderer] del server (`browser.pages` dei siti, `docs/siti.md`):
+/// stessa coda, stesse guardie, l'attesa e il tempo che chiede il motore.
+class HeadlessBrowser implements PageBrowser, PageRenderer {
   HeadlessBrowser(
     String this.executable,
     Directory this.profile, {
@@ -156,18 +159,24 @@ class HeadlessBrowser implements PageBrowser {
   Timer? _sleep;
 
   @override
-  Future<String?> seriesPage(String url, BrowserGate gate) {
-    final result = _turn.then((_) => _open(url, gate));
+  Future<String?> seriesPage(String url, BrowserGate gate) => _queue(url, gate.hosts, gate.seriesReady, timeout);
+
+  @override
+  Future<String?> render(String url, {required List<String> hosts, required String ready, required Duration timeout}) =>
+      _queue(url, hosts, ready, timeout);
+
+  Future<String?> _queue(String url, List<String> hosts, String ready, Duration timeout) {
+    final result = _turn.then((_) => _open(url, hosts, ready, timeout));
     _turn = result.then((_) {}, onError: (Object _) {});
     return result;
   }
 
   /// Perché [url] non si apre, o `null`: solo `https` su un host del sito,
   /// che non risolve in un indirizzo privato.
-  Future<String?> _refused(String url, BrowserGate gate) async {
+  Future<String?> _refused(String url, List<String> hosts) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https' || uri.hasPort || uri.userInfo.isNotEmpty) return 'non è https';
-    if (!gate.hosts.contains(uri.host)) return 'host fuori dal sito';
+    if (!hosts.contains(uri.host)) return 'host fuori dal sito';
     return _unreachable(uri.host);
   }
 
@@ -197,8 +206,8 @@ class HeadlessBrowser implements PageBrowser {
     }
   }
 
-  Future<String?> _open(String url, BrowserGate gate) async {
-    final refused = guard ? await _refused(url, gate) : null;
+  Future<String?> _open(String url, List<String> hosts, String ready, Duration timeout) async {
+    final refused = guard ? await _refused(url, hosts) : null;
     if (refused != null) {
       log('Browser: $url rifiutata ($refused).');
       return null;
@@ -208,7 +217,7 @@ class HeadlessBrowser implements PageBrowser {
     try {
       final chromium = _chromium ??= await _start();
       connecting = false;
-      final page = await chromium.read(url, gate.seriesReady, timeout);
+      final page = await chromium.read(url, ready, timeout);
       if (page == null) {
         log('Browser: la verifica di $url non è passata da sola.');
         return null;
@@ -216,7 +225,7 @@ class HeadlessBrowser implements PageBrowser {
       // Un reindirizzamento può finire su un altro host pubblico: la sua
       // pagina non è del sito, e non va nell'archivio.
       final landed = Uri.tryParse(page.url);
-      if (landed == null || !gate.hosts.contains(landed.host) || (guard && landed.scheme != 'https')) {
+      if (landed == null || !hosts.contains(landed.host) || (guard && landed.scheme != 'https')) {
         log('Browser: $url è finita fuori dal sito (${page.url}).');
         return null;
       }

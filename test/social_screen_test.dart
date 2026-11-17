@@ -49,7 +49,7 @@ void main() {
 
   setUp(() {
     db = KagamiDatabase.forTesting(NativeDatabase.memory());
-    network = MemorySocial('me');
+    network = MemorySocial('me', clock: () => DateTime(2026, 11, 14)); // lo stesso giorno di _profileOf: la classifica «Settimana» non dipende dall'orologio vero
   });
 
   tearDown(() => db.close());

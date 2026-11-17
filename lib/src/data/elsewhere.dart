@@ -17,7 +17,7 @@ import 'package:kagami_archive/model.dart' show ProviderError;
 import 'package:kagami_archive/health.dart' show SiteWatch;
 import 'package:kagami_archive/remote.dart';
 
-import '../archive/phone_check.dart' show NativePageBrowser;
+import '../archive/page_browser.dart' show platformPageBrowser;
 import '../format/malf.dart';
 import '../providers.dart';
 
@@ -166,7 +166,7 @@ final phoneElsewhereProvider = Provider<ElsewhereSearch>((ref) {
           clients.add(http);
           return http;
         },
-        browser: Platform.isAndroid ? const NativePageBrowser() : null,
+        browser: platformPageBrowser(),
         health: await files.health.load(),
         watch: SiteWatch(files.health),
         previous: previous,

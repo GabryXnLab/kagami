@@ -269,7 +269,7 @@ class ManhwaRead extends Provider {
     final preferred = headings.where((node) =>
         _classes(node).intersection(const {'text-primary', 'clipboard-copy', 'entry-title'}).isNotEmpty);
     final title = [...preferred, ...headings].map(_text).firstWhere((t) => t.isNotEmpty, orElse: () => '');
-    if (title.isEmpty) throw const ProviderChanged('Titolo ManhwaRead assente dalla pagina.');
+    if (title.isEmpty) throw ProviderChanged('Titolo ManhwaRead assente dalla pagina.', fault: SiteFault('series', field: 'series.title'));
     String? cover = nodes
         .where((node) =>
             node.localName == 'meta' &&
@@ -320,7 +320,7 @@ class ManhwaRead extends Provider {
             .map(_text)
             .firstWhere((t) => t.isNotEmpty, orElse: () => _text(link));
       }
-      if (label.isEmpty) throw const ProviderChanged('Nome di un capitolo ManhwaRead assente.');
+      if (label.isEmpty) throw ProviderChanged('Nome di un capitolo ManhwaRead assente.', fault: SiteFault('chapters', field: 'series.chapters.title'));
       seen.add(chapterUrl);
       final date = _walk(link)
           .where((node) => _classes(node).contains('chapter-item__date'))
@@ -336,7 +336,7 @@ class ManhwaRead extends Provider {
       chapters.add(Chapter(rest, label, chapterNumber(label) ?? label, chapterUrl, chapterMetadata));
     }
     if (chapters.isEmpty) {
-      throw const ProviderChanged('Elenco capitoli ManhwaRead assente o incompleto.');
+      throw ProviderChanged('Elenco capitoli ManhwaRead assente o incompleto.', fault: SiteFault('chapters', field: 'series.chapters.items'));
     }
     return Series(
       provider: id,
@@ -436,30 +436,30 @@ class ManhwaRead extends Provider {
       try {
         data = _jsonPrefix(source, start);
       } on FormatException {
-        throw const ProviderChanged('Dati immagini ManhwaRead non validi.');
+        throw ProviderChanged('Dati immagini ManhwaRead non validi.', fault: SiteFault('pages', field: 'chapter.pages.url'));
       }
       break;
     }
-    if (data is! Map) throw const ProviderChanged('Elenco immagini ManhwaRead assente dal capitolo.');
+    if (data is! Map) throw ProviderChanged('Elenco immagini ManhwaRead assente dal capitolo.', fault: SiteFault('pages', field: 'chapter.pages.items'));
     final encoded = data['data'];
     var base = data['base'];
     if (encoded is! String || encoded.isEmpty || encoded.length > 2000000 || base is! String) {
-      throw const ProviderChanged('Dati immagini ManhwaRead incompleti.');
+      throw ProviderChanged('Dati immagini ManhwaRead incompleti.', fault: SiteFault('pages', field: 'chapter.pages.url'));
     }
     if (base.startsWith('//')) base = 'https:$base';
     validateUrl(base);
     if (Uri.parse(base).host != 'manread.xyz') {
-      throw const ProviderChanged('CDN immagini ManhwaRead non riconosciuto.');
+      throw ProviderChanged('CDN immagini ManhwaRead non riconosciuto.', fault: SiteFault('pages', field: 'chapter.pages.url'));
     }
     final Object? images;
     try {
       final padded = encoded + '=' * ((4 - encoded.length % 4) % 4);
       images = jsonDecode(utf8.decode(base64.decode(padded)));
     } on FormatException {
-      throw const ProviderChanged('Elenco immagini ManhwaRead non valido.');
+      throw ProviderChanged('Elenco immagini ManhwaRead non valido.', fault: SiteFault('pages', field: 'chapter.pages.items'));
     }
     if (images is! List || images.isEmpty) {
-      throw const ProviderChanged('Elenco immagini ManhwaRead vuoto.');
+      throw ProviderChanged('Elenco immagini ManhwaRead vuoto.', fault: SiteFault('pages', field: 'chapter.pages.items'));
     }
     var root = base;
     while (root.endsWith('/')) {
@@ -476,7 +476,7 @@ class ManhwaRead extends Provider {
           src.startsWith('https:') ||
           src.split('/').contains('..') ||
           src.contains('\x00')) {
-        throw const ProviderChanged('Pagina ManhwaRead non valida.');
+        throw ProviderChanged('Pagina ManhwaRead non valida.', fault: SiteFault('pages', field: 'chapter.pages.url'));
       }
       final imageUrl = '$root/$src';
       validateUrl(imageUrl);
@@ -495,8 +495,9 @@ class ManhwaRead extends Provider {
     final chapterId = chapter.metadata['chapter_id'];
     final decimal = RegExp(r'^\d+$');
     if (mangaId is! String || !decimal.hasMatch(mangaId) || chapterId is! String || !decimal.hasMatch(chapterId)) {
-      throw const ProviderChanged(
+      throw ProviderChanged(
         'Il capitolo richiede la pagina del sito o gli id del CDN nella pagina della serie.',
+        fault: SiteFault('pages'),
       );
     }
     String address(int number) =>

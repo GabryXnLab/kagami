@@ -1,0 +1,118 @@
+# Kagami Server come «progetto dell'utente» (modulo) di Iris: Iris lo installa come quadlet Podman rootless, lo
+# aggiorna, lo sorveglia e lo riaccende (custode). Formato: `format = 1` di iris-modules (ARCHITETTURA §13 di Iris,
+# §13.14 per rete isolata, init, porte da parametro e subentro). Si valida col metodo RPC `module_plan` di iris-agent
+# (protocollo ≥ 12): piano «ready», nulla cambia sull'host.
+#
+# Nessun valore personale: KAGAMI_SETUP, backend, porte e indirizzi sono di chi installa (parametri). Corrisponde al
+# comando `docker run` dell'app (packages/kagami_archive/lib/remote.dart) senza `kagami-updater`: gli aggiornamenti li
+# fa Iris (configurazione di aggiornamento modulo + registry), quindi il socket dell'engine non entra in nessun
+# contenitore e il digest qui sotto non va rincorso a mano.
+#
+# Subentro a un'installazione Docker fatta col comando dell'app: `replaces` ferma i container `kagami-server` e
+# `kagami-browser` (politica `no`, mai cancellati), `import_from` copia il loro /data nei volumi del modulo e
+# `[[retire]]` ferma `kagami-updater`. Su un host senza quei container le chiavi non fanno niente.
+format = 1
+
+[module]
+id = "kagami"
+name = "Kagami Server"
+version = "0.1.0"
+description = "Archiviatore di Kagami su un computer acceso: scarica le serie e le carica su Google Drive al posto del telefono"
+
+[[param]]
+name = "setup"
+type = "secret"
+required = true
+description = "KAGAMI_SETUP generato dall'app (Impostazioni → Scarica un manga → Server → Crea il tuo server): contiene il permesso di scrivere sul Drive del proprietario"
+
+[[param]]
+name = "backend_url"
+type = "url"
+required = true
+description = "Indirizzo del backend degli account compatibile Supabase di chi ha compilato l'app (KAGAMI_BACKEND_URL)"
+
+[[param]]
+name = "backend_anon_key"
+type = "secret"
+required = true
+description = "Chiave anon del backend degli account (KAGAMI_BACKEND_ANON_KEY)"
+
+[[param]]
+name = "port"
+type = "port"
+default = 8080
+description = "Porta dell'host su cui risponde il server (quella a cui punta il reverse proxy)"
+
+[[param]]
+name = "bind"
+type = "string"
+default = "127.0.0.1"
+description = "Indirizzo dell'host della porta: loopback dietro un reverse proxy, 0.0.0.0 per esporla in rete"
+
+[[param]]
+name = "second_port"
+type = "port"
+default = 8081
+description = "Seconda porta dell'host per lo stesso server, ad esempio sull'indirizzo di una VPN mesh"
+
+[[param]]
+name = "second_bind"
+type = "string"
+default = "127.0.0.1"
+description = "Indirizzo dell'host della seconda porta (es. l'IP della VPN mesh)"
+
+[[param]]
+name = "tz"
+type = "string"
+default = "Europe/Rome"
+description = "Fuso orario del controllo giornaliero dei capitoli nuovi (TZ)"
+
+# Il vecchio aggiornatore Docker: con Iris non serve più (e teneva il socket dell'engine).
+[[retire]]
+container = "kagami-updater"
+engine = "docker"
+
+# Chromium senza schermo, in un contenitore suo: ha solo il proprio profilo, mai il volume dei dati né KAGAMI_SETUP.
+# `isolated`: nessuna uscita verso internet (come la rete Docker `--internal`), esce solo dal proxy del server.
+# `init`: raccoglie gli zombie di Chromium.
+[[component]]
+id = "browser"
+kind = "container"
+isolated = true
+init = true
+replaces = { container = "kagami-browser", engine = "docker" }
+image = "ghcr.io/gabryxnlab/kagami-server@sha256:509cd0c3e9d85217f1a93349ea92ad0187b7e2a0cac623792432d74083bd230a"
+command = ["browser"]
+env = { KAGAMI_BROWSER_PROXY = "server:9223" }
+volumes = [{ name = "profile", target = "/data", import_from = { component_path = "/data" } }]
+
+[[component]]
+id = "server"
+kind = "container"
+image = "ghcr.io/gabryxnlab/kagami-server@sha256:509cd0c3e9d85217f1a93349ea92ad0187b7e2a0cac623792432d74083bd230a"
+command = ["serve"]
+depends_on = ["browser"]
+init = true
+replaces = { container = "kagami-server", engine = "docker" }
+ports = [
+    { name = "http", container = 8080, host = { param = "port" }, bind = { param = "bind" } },
+    { name = "http2", container = 8080, host = { param = "second_port" }, bind = { param = "second_bind" } },
+]
+volumes = [{ name = "data", target = "/data", backup = true, import_from = { component_path = "/data" } }]
+env = { KAGAMI_SETUP = { param = "setup" }, KAGAMI_BROWSER = "browser", KAGAMI_BACKEND_URL = { param = "backend_url" }, KAGAMI_BACKEND_ANON_KEY = { param = "backend_anon_key" }, TZ = { param = "tz" } }
+readiness = { endpoint = "health", timeout_s = 120 }
+
+# `GET /` è l'unica risposta senza token: 200 con {"service":"kagami-server", …}. Letta dalla porta pubblicata
+# sul loopback, cioè dallo stesso punto da cui la legge il reverse proxy.
+[[endpoint]]
+id = "health"
+kind = "health"
+component = "server"
+port = "http"
+path = "/"
+interval_s = 30
+
+# Code, account, id del server e serie seguite: senza questo volume i biglietti dell'app non valgono più.
+[[backup]]
+component = "server"
+volumes = ["data"]

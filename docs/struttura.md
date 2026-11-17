@@ -10,6 +10,7 @@ lib/
     archive/device.dart        il motore sul telefono: immagini dal Kotlin (+ ArchiveImages.kt),
                                destinazioni, avvio del lavoro (+ ArchiveWorker.kt)
     archive/background.dart    il giro nel motore senza schermo
+    archive/page_browser.dart  il browser invisibile per piattaforma: Kotlin su Android, WKWebView su iOS e macOS
     archive/manual_card.dart   salvare una scheda manuale senza interfaccia: store, dati personali, link già presenti
     archive/bulk_import.dart   tanti link in una volta: testo o JSON, righe senza doppioni, strada di ognuna
     format/reading.dart        stato di lettura, raccolte, merge dei conflitti
@@ -66,7 +67,7 @@ lib/
     ui/library_screen.dart     griglia, ricerca, filtri; griglia riusabile
     ui/series_screen.dart      scheda: metadati, capitoli, stato e voto
     ui/reader_screen.dart      lettore continuo e paginato
-    ui/collections_screen.dart raccolte automatiche e manuali
+    ui/collections_screen.dart raccolte automatiche e manuali, aperte dalla libreria
     ui/history_screen.dart     cronologia per giorno e incognito
     ui/statistics_screen.dart  numeri e grafici della lettura
     ui/settings_screen.dart    la quarta destinazione: profilo, scaricare, cronologia, statistiche,
@@ -98,6 +99,11 @@ packages/kagami_archive/       l'archiviatore, Dart puro: lo usano l'app e il se
   lib/providers.dart           registro dei siti, `Provider`, `BrowserGate`
   lib/providers/kit.dart       attrezzi comuni dei siti: link, testi, ordine dei capitoli
   lib/providers/               un file per sito: MangaK, ManhwaRead, Asura Scans, Coffee Manga
+  lib/declarative.dart         siti degli utenti e del catalogo: il file JSON interpretato (`docs/siti.md`)
+  lib/declarative_vars.dart    variabili, modelli e indirizzi composti del formato 2 (`part` del precedente)
+  lib/declarative_filters.dart filtri e condizioni del formato 2 (`filters`, `skip`, `require`, `locked`; `part`)
+  lib/site_engine.dart         `siteMinEngine`: l'`engine` che serve a una definizione di sito
+  lib/renderer.dart            `PageRenderer`: il browser iniettato per le pagine rese (`browser.pages`)
   lib/archiver.dart            dal sito alla libreria: manifest, ripresa, tessere
   lib/indexes.dart             index.json, pages.json, riga di libreria, firma
   lib/stores.dart              destinazioni: cartella, Drive (ricevuta MD5)

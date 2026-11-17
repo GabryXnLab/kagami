@@ -135,6 +135,13 @@ void main() {
     expect(seen, ['POST /v2/providers']);
   });
 
+  test('catalog: engine e serial si leggono dal campo catalog, assenti sono null', () {
+    final info = ServerInfo.fromJson({'features': ['catalog'], 'catalog': {'engine': 2, 'serial': 42}});
+    expect((info.catalogEngine, info.catalogSerial), (2, 42));
+    final none = ServerInfo.fromJson({});
+    expect((none.catalogEngine, none.catalogSerial), (null, null));
+  });
+
   test('shares si legge dalle features e replaceShares manda l\'elenco intero a PUT /v2/me/shares', () async {
     expect(ServerInfo.fromJson({'features': ['shares']}).shares, isTrue);
     expect(ServerInfo.fromJson({'features': ['expiry']}).shares, isFalse);

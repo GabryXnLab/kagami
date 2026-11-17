@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:kagami_archive/catalog.dart' show catalogEngine;
 import 'package:kagami_archive/drive.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart';
@@ -21,6 +22,7 @@ import 'package:kagami_archive/stores.dart' show FolderNotOwned;
 import 'package:kagami_archive/tracking.dart';
 import 'package:path/path.dart' as p;
 
+import 'catalog.dart';
 import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
@@ -73,7 +75,11 @@ class ServerApi {
     this.log = _stderr,
     this.id,
     this.tickets,
+    this.catalog,
   });
+
+  /// Il catalogo dei siti; `null` se non è configurato.
+  final ServerCatalog? catalog;
 
   final String name;
 
@@ -207,7 +213,7 @@ class ServerApi {
   /// una funzione solo a un server che la elenca.
   List<String> get _features =>
       ['ahead', 'unfollowed', 'verify', 'sites', 'repair', 'elsewhere', 'userProviders', 'expiry', 'shares', 'owner', if (browser) 'browser',
-        if (tickets != null) 'tickets'];
+        if (tickets != null) 'tickets', if (catalog != null) 'catalog'];
 
   /// Chi chiama, se il token vale e l'account è ammesso.
   Future<Member> _authenticate(HttpRequest request, IdentityVerifier identity, Accounts accounts) async {
@@ -270,6 +276,7 @@ class ServerApi {
         if (me.jobs.sitesErrors.isNotEmpty) 'sitesErrors': me.jobs.sitesErrors,
         'images': images,
         'features': _features,
+        if (catalog != null) 'catalog': {'engine': catalogEngine, 'serial': catalog!.serial},
         'check': {
           ..._checkJson(await me.jobs.checkSettings()),
           'gated': [for (final entry in await me.jobs.gated()) entry.toJson()],
@@ -556,7 +563,8 @@ class ServerApi {
             'id': provider.id,
             'name': provider.name,
             if (!provider.builtIn) 'builtIn': false,
-            if (provider is DeclarativeProvider) 'version': provider.version,
+            if (provider.origin == ProviderOrigin.catalog) 'origin': 'catalog',
+            if (provider.unwrapped case final DeclarativeProvider site) 'version': site.version,
           },
       ];
 

@@ -192,6 +192,11 @@ rete di sempre. Chromium esce solo dal proxy del server
 contenitore del browser e applica la guardia sugli indirizzi privati di
 sopra. Il server lo trova con `KAGAMI_BROWSER=kagami-browser`.
 
+Catalogo dei siti (facoltativo, `docs/catalogo.md`): `KAGAMI_CATALOG_URLS` e `KAGAMI_CATALOG_KEYS`
+(vuoti o assenti: nessun catalogo; vincono sulle `CATALOG_*` dell'immagine, anche vuoti). La cache sta
+in `catalog/` del volume. Chi compila l'immagine ne fissa il catalogo con
+`docker build --build-arg CATALOG_URLS=… --build-arg CATALOG_KEYS=…`; senza, è vuoto.
+
 Se il contenitore del browser manca o non risponde, il server non ripiega
 sul Chromium locale: il log dice che il contenitore del browser non risponde
 e le serie dietro la verifica restano col loro errore, come quando la
@@ -217,6 +222,70 @@ docker logs kagami-updater                         # controlli e aggiornamenti
 Spegnendolo, i lavori in corso si fermano e restano in coda; alla
 riaccensione ripartono da dove erano, senza riscaricare ciò che è già su
 Drive.
+
+## La sentinella dei siti
+
+```bash
+kagami-server probe [--json] [--canaries catalog/canaries.json] [--site <id>]
+```
+
+Per ogni sito del registro (i provider inclusi, e quelli del catalogo se
+`CATALOG_URLS`/`CATALOG_KEYS` sono configurati: usa la cache del volume e la
+aggiorna) prova ricerca, serie, tavole del primo capitolo e i primi byte della
+prima immagine, con il canarino del sito in `catalog/canaries.json` (una
+`query` e/o l'`url` di una serie pubblica). Un sito senza canarino è `skipped`.
+Esito per sito: `ok`, `changed` (`ProviderChanged`, risultati vuoti, struttura o
+immagine inattesa, 4xx), `offline` (rete, timeout, 429/5xx), `gated` (verifica
+di Cloudflare o 403), con la fase (`search`, `series`, `pages`, `image`).
+Uscita: 0 se tutti ok, 1 se qualcuno no, 2 per un uso sbagliato. Senza `--json`
+una riga per sito; con `--json` un solo oggetto
+`{checkedAt, engine, serial, sites: [{site, status, phase, message, durationMs, version, origin}]}`
+(`version` è la versione della definizione, `null` per i siti inclusi).
+
+### Guasto, degradato, più canarini
+
+Voci R1.3 e R2.2 di `handoff/siti-robusti/`, fatte; `kagami-server probe
+--definition`, `--capture` e `--layers all` (R5.1) sono in
+`server/lib/src/probe_run.dart`. I campi nuovi si aggiungono a quelli di ora, che restano,
+così chi legge il JSON di prima continua a capirlo.
+
+Per sito, nel JSON:
+
+- `fault`: `{phase, field, detail}`, il guasto del `ProviderChanged`
+  (`docs/siti.md` § «Diagnosi»), presente quando lo stato non è `ok`. `phase`
+  aggiunge `chapters` a quelle di prima; per un 4xx la sonda lo scrive da sé,
+  con la fase e `detail: "HTTP 404"`. `url` non c'è: la sonda conosce già il
+  canarino, e l'indirizzo esatto sta nella cassetta di `--capture`.
+- `degraded`: lista, vuota se niente è degradato. Con `ok` dice quali
+  alternative di `first`/`try` hanno vinto senza essere le prime
+  (`["series.title#2"]`): il sito va, ma la ridondanza si sta consumando.
+
+Canarini multipli: in `catalog/canaries.json` un sito può avere fino a 3
+canarini, una lista al posto dell'oggetto singolo, che resta valido. Ognuno
+può dire `minChapters`: meno capitoli di così è `changed`, perché un elenco
+tagliato dall'API passa altrimenti per buono.
+
+```json
+"mangak": [
+  {"query": "solo leveling", "url": "https://mangak.io/solo-leveling", "minChapters": 200},
+  {"url": "https://mangak.io/omniscient-reader", "minChapters": 150}
+]
+```
+
+Lo stato del sito è il migliore fra i suoi canarini: un canarino che fallisce
+da solo è più spesso una serie tolta che un sito cambiato. I canarini falliti
+finiscono in `degraded` come `canary#<n>` (contati da 1), con il loro `fault`
+in `canaries: [{n, status, fault}]`, così l'avviso li mostra senza spegnere il
+sito. L'immagine contiene `catalog/canaries.json`, e il default di
+`--canaries` funziona anche dentro il contenitore.
+
+Opzioni nuove:
+
+| Opzione | Cosa |
+|---|---|
+| `--definition <file>` | prova una definizione dal file, al posto di quella del registro con lo stesso id: una correzione si prova dal vivo prima di firmarla. Esclude `--layers` |
+| `--capture <dir>` | per ogni sito non `ok` registra il giro in una cassetta in `<dir>/<id>/<data>-guasto/` (formato in `docs/manutenzione-siti.md` § «Cassette»): la pagina del guasto com'era in quel momento |
+| `--layers all` | prova ogni strato del sito separatamente (catalogo e incluso), una voce per strato con il suo `origin`, invece del solo strato che vince nel registro. Serve a sapere se l'auto-ripiego ha ancora un incluso che funziona (`docs/catalogo.md` § «Il registro: chi vince») |
 
 ## Aggiornamenti
 

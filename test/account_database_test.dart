@@ -258,6 +258,57 @@ void main() {
     });
   });
 
+  group('claimLegacy (passaggio a Hestia)', () {
+    Future<void> putRead(File file) async {
+      final db = KagamiDatabase.forTesting(NativeDatabase(file));
+      await db.customStatement(
+        "INSERT INTO collection_rows (id, profile_id, name, updated_at) VALUES ('c1', 'default', 'Preferiti', 0)",
+      );
+      await db.close();
+    }
+
+    Future<int> collections(File file) async {
+      final db = KagamiDatabase.forTesting(NativeDatabase(file));
+      final rows = await db.customSelect('SELECT 1 FROM collection_rows').get();
+      await db.close();
+      return rows.length;
+    }
+
+    setUp(() async {
+      await putRead(legacy);
+      await accounts.adoptLegacy('guest');
+    });
+
+    test('il primo account con il file vuoto prende i dati di guest', () async {
+      // Il file vuoto mandato su dal primo accesso: solo impostazioni.
+      await _putSetting(accounts.fileFor('u-a'), 'cloud.lastSync', 'x');
+      expect(await accounts.claimLegacy('u-a'), isTrue);
+      expect(await collections(accounts.fileFor('u-a')), 1);
+      expect(await collections(accounts.fileFor('guest')), 1);
+      // Una volta sola: il secondo account parte vuoto.
+      expect(await accounts.claimLegacy('u-b'), isFalse);
+      expect(accounts.fileFor('u-b').existsSync(), isFalse);
+    });
+
+    test('un account con dati suoi non viene toccato', () async {
+      await _putSetting(accounts.fileFor('u-a'), 'k', 'suo');
+      final db = KagamiDatabase.forTesting(NativeDatabase(accounts.fileFor('u-a')));
+      await db.customStatement(
+        "INSERT INTO collection_rows (id, profile_id, name, updated_at) VALUES ('c9', 'default', 'Sua', 0)",
+      );
+      await db.close();
+      expect(await accounts.claimLegacy('u-a'), isFalse);
+      expect(await _setting(accounts.fileFor('u-a'), 'k'), 'suo');
+      expect(await accounts.claimLegacy('u-b'), isFalse);
+    });
+
+    test('lo switch da guest a un account fa la copia', () async {
+      final slots = AccountSlots(accounts, AccountDatabases.guest);
+      await slots.switchTo('u-a');
+      expect(await collections(accounts.fileFor('u-a')), 1);
+    });
+  });
+
   group('slot che segue l\'account (F9.5)', () {
     late AccountSlots slots;
     late StreamController<String?> auth;

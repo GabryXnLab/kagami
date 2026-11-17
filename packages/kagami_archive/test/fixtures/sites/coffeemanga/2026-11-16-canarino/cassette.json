@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-11-16T21:27:52.435650Z",
+  "entries": {
+    "https://coffeemanga.net/search?q=the+house+without+time": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "b5a7f5671194.html"
+    },
+    "https://coffeemanga.net/manga/the-house-without-time/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "0255ed7ed89c.html"
+    },
+    "https://coffeemanga.net/manga/the-house-without-time/chapters.json": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "2f730a6f5806.json"
+    },
+    "https://coffeemanga.net/manga/the-house-without-time/chapter-1/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "dd65387c053e.html"
+    },
+    "https://coffeemanga.net/wnsauvrmt6/183196?pca54mc=the-house-without-time&pnot4zl=xfvvllkfs7ikxuyx": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "63b1ca3ec5ea.json"
+    }
+  }
+}

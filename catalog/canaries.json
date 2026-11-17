@@ -1,0 +1,8 @@
+{
+  "sites": {
+    "mangak": {"query": "solo leveling"},
+    "manhwaread": {"query": "disfarming", "url": "https://manhwaread.com/manhwa/disfarming/"},
+    "asurascans": {"query": "nano machine", "url": "https://asurascans.com/comics/nano-machine"},
+    "coffeemanga": {"query": "the house without time", "url": "https://www.coffeemanga.net/manga/the-house-without-time"}
+  }
+}

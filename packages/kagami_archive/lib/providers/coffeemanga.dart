@@ -84,7 +84,7 @@ List<String> _names(Object? value) => [
 /// dare una chiave sbagliata.
 Uint8List coffeeMangaKey(String source) {
   final head = RegExp(
-    r'function \w+\(\)\{const (\w+)=new Uint8Array\(32\),(\w+)=document\.documentElement\.tagName;return ',
+    r'function [\w$]+\(\)\{(?:const|let|var) (\w+)=new Uint8Array\(32\),(\w+)=document\.documentElement\.tagName;return ',
   ).firstMatch(source);
   if (head == null) throw _changed;
   final out = head[1]!;
@@ -110,6 +110,17 @@ Uint8List coffeeMangaKey(String source) {
   }
   if (set.length != 32) throw _changed;
   return key;
+}
+
+/// L'indirizzo del bundle `app-*.js` di una pagina del sito, dove sta `TE()`.
+String coffeeMangaBundle(String page) {
+  final provider = CoffeeManga();
+  for (final script in html.parse(page).querySelectorAll('script[type="module"][src]')) {
+    final source = script.attributes['src']!;
+    final uri = Uri.parse(source).hasScheme ? Uri.parse(source) : Uri.parse(provider.home).resolve(source);
+    if (_bundleSource.hasMatch(uri.path) && provider.allows(uri.toString())) return uri.toString();
+  }
+  throw _changed;
 }
 
 class _Expressions {
@@ -261,14 +272,14 @@ class CoffeeManga extends Provider {
       rethrow;
     }
     final page = _inertia(result.body);
-    if (page.component != 'Catalog/Series') throw const ProviderChanged('Serie Coffee Manga non trovata.');
+    if (page.component != 'Catalog/Series') throw ProviderChanged('Serie Coffee Manga non trovata.', fault: SiteFault('series'));
     final props = page.props;
     final series = _map(props['series']);
     final slug = _string(series['slug']);
     final title = series['title'];
     if (!_slug.hasMatch(slug)) throw _changed;
     if (!isText(title) || (title as String).trim().isEmpty) {
-      throw const ProviderChanged('Titolo Coffee Manga assente dalla pagina.');
+      throw ProviderChanged('Titolo Coffee Manga assente dalla pagina.', fault: SiteFault('series', field: 'series.title'));
     }
 
     final pagination = _map(props['chapters_pagination']);
@@ -292,11 +303,11 @@ class CoffeeManga extends Provider {
       final label = item['label'];
       final path = item['url'];
       if (chapterSlug is! String || !_slug.hasMatch(chapterSlug) || !isText(label) || path is! String) {
-        throw const ProviderChanged('Capitolo Coffee Manga incompleto.');
+        throw ProviderChanged('Capitolo Coffee Manga incompleto.', fault: SiteFault('chapters', field: 'series.chapters.url'));
       }
       final target = siteMatch('$home$path', hosts: _siteHosts, path: _chapterPath);
       if (target == null || target[1] != slug || target[2] != chapterSlug) {
-        throw const ProviderChanged('Elenco capitoli Coffee Manga incoerente.');
+        throw ProviderChanged('Elenco capitoli Coffee Manga incoerente.', fault: SiteFault('chapters', field: 'series.chapters.id'));
       }
       // Un capitolo VIP non ha tavole per chi non paga: resta fuori finché
       // non si libera, e allora arriva come capitolo nuovo.
@@ -394,7 +405,7 @@ class CoffeeManga extends Provider {
     final total = _int(props['total']);
     final encrypted = _string(_map(props['reader'])['x']);
 
-    final bundle = _bundleUrl(utf8.decode(body, allowMalformed: true));
+    final bundle = coffeeMangaBundle(utf8.decode(body, allowMalformed: true));
     final cached = _keys[bundle];
     List<Object?> items;
     try {
@@ -447,15 +458,6 @@ class CoffeeManga extends Provider {
     final src = item['src'];
     if (isText(src)) return src as String;
     return widest ?? (throw _changed);
-  }
-
-  String _bundleUrl(String page) {
-    for (final script in html.parse(page).querySelectorAll('script[type="module"][src]')) {
-      final source = script.attributes['src']!;
-      final uri = Uri.parse(source).hasScheme ? Uri.parse(source) : Uri.parse(home).resolve(source);
-      if (_bundleSource.hasMatch(uri.path) && allows(uri.toString())) return uri.toString();
-    }
-    throw _changed;
   }
 
   Future<Uint8List> _readKey(String bundle, ProviderHttp http) async {

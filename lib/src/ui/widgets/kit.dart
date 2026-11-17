@@ -8,7 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kagami_archive/providers.dart' show Provider, builtInProviders;
+import 'package:kagami_archive/providers.dart' show Provider, ProviderOrigin, builtInProviders;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../l10n.dart';
@@ -1091,7 +1091,7 @@ class SiteIcon extends StatelessWidget {
         child: Icon(LucideIcons.globe, size: size * 0.6, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
-    if (site.builtIn || (url == null && builtInProviders.any((built) => built.id == site.id))) {
+    if (site.origin == ProviderOrigin.builtIn || (url == null && builtInProviders.any((built) => built.id == site.id))) {
       return Image.asset(site.icon, width: size, height: size, errorBuilder: (_, _, _) => fallback);
     }
     if (url == null) return fallback;

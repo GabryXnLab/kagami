@@ -100,6 +100,7 @@ class ArchiveChoice {
     this.ahead,
     this.card,
     this.collection,
+    this.status,
   });
 
   /// Solo la scheda: [ids] vuoto, nessun capitolo, e lo stato da scrivere.
@@ -110,6 +111,7 @@ class ArchiveChoice {
     this.collection,
   })
       : start = null,
+        status = null,
         ids = const {},
         ahead = null;
 
@@ -129,6 +131,10 @@ class ArchiveChoice {
 
   /// La raccolta in cui mettere la serie; `null`, nessuna.
   final String? collection;
+
+  /// Lo stato da dare alla serie scaricandola; `null`, quello che ha già. La
+  /// scheda porta il suo in [card].
+  final ShelfStatus? status;
 }
 
 String archiveStatusLabel(AppLocalizations l10n, Object? value) => switch (value) {
@@ -492,12 +498,13 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
 
   void _confirm() {
     final start = _start;
+    final status = _status == _known.status ? null : _status;
     final ArchiveChoice choice;
     switch (_mode) {
       case ArchiveMode.all:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs, collection: _collection);
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, collection: _collection, status: status);
       case ArchiveMode.from:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs, start: start, collection: _collection);
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, start: start, collection: _collection, status: status);
       case ArchiveMode.ahead:
         final index = _startIndex;
         choice = ArchiveChoice(
@@ -506,9 +513,10 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
           ids: {for (final chapter in _chapters.skip(index).take(_window)) chapter.id},
           ahead: _window,
           collection: _collection,
+          status: status,
         );
       case ArchiveMode.pick:
-        choice = ArchiveChoice(where: _where, delayMs: _delayMs, ids: {..._picked}, collection: _collection);
+        choice = ArchiveChoice(where: _where, delayMs: _delayMs, ids: {..._picked}, collection: _collection, status: status);
       case ArchiveMode.card:
         choice = ArchiveChoice.card(
           where: _where,
@@ -564,51 +572,11 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                     style: KagamiType.body(12.5, height: 1.45, color: context.tokens.muted),
                   ),
                 ),
-                if (_mode != ArchiveMode.all) ...[
-                  const SizedBox(height: 26),
-                  _chapterTools(have),
-                  const SizedBox(height: 10),
-                ],
-              ],
-            ),
-          ),
-          if (_mode != ArchiveMode.all)
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: visible.isEmpty
-                  ? SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        child: Text(
-                          l10n.archiveStartNoMatch,
-                          textAlign: TextAlign.center,
-                          style: KagamiType.body(13, color: context.tokens.muted),
-                        ),
-                      ),
-                    )
-                  : SliverList.builder(
-                      itemCount: visible.length,
-                      itemBuilder: (context, position) {
-                        final chapter = visible[position];
-                        return _ChapterRow(
-                          chapter: chapter,
-                          mark: _markOf(chapter),
-                          mode: _mode,
-                          inLibrary: have.contains(chapter.id),
-                          onTap: () => _tap(chapter),
-                          onLongPress: () => _range(chapter),
-                        );
-                      },
-                    ),
-            ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 32),
-            sliver: SliverList.list(
-              children: [
-                if (_mode == ArchiveMode.card) ...[
-                  _shelf(),
-                  const SizedBox(height: 26),
-                ],
+                const SizedBox(height: 26),
+                // Stato, raccolta e destinazione stanno prima dei capitoli:
+                // con centinaia di capitoli, dopo l'elenco non li trova nessuno.
+                if (_mode == ArchiveMode.card) _shelf() else _statusField(),
+                const SizedBox(height: 26),
                 KGroup(
                   children: [
                     KTile(
@@ -655,9 +623,44 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
                   const SizedBox(height: 22),
                   _advancedCard(),
                 ],
+                if (_mode != ArchiveMode.all) ...[
+                  const SizedBox(height: 26),
+                  _chapterTools(have),
+                  const SizedBox(height: 10),
+                ],
               ],
             ),
           ),
+          if (_mode != ArchiveMode.all)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: visible.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        child: Text(
+                          l10n.archiveStartNoMatch,
+                          textAlign: TextAlign.center,
+                          style: KagamiType.body(13, color: context.tokens.muted),
+                        ),
+                      ),
+                    )
+                  : SliverList.builder(
+                      itemCount: visible.length,
+                      itemBuilder: (context, position) {
+                        final chapter = visible[position];
+                        return _ChapterRow(
+                          chapter: chapter,
+                          mark: _markOf(chapter),
+                          mode: _mode,
+                          inLibrary: have.contains(chapter.id),
+                          onTap: () => _tap(chapter),
+                          onLongPress: () => _range(chapter),
+                        );
+                      },
+                    ),
+            ),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
         ],
       ),
       bottomNavigationBar: _Summary(
@@ -807,6 +810,26 @@ class _ArchiveSeriesPageState extends ConsumerState<ArchiveSeriesPage> {
       ],
     );
   }
+
+  /// Lo stato sul ripiano per una serie da scaricare: della scheda servono
+  /// anche voto e note, qui basta dove metterla.
+  Widget _statusField() => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          KSection(context.l10n.libraryStatus),
+          KChipBar(
+            children: [
+              for (final entry in shelfLabels.entries)
+                KChip(
+                  label: entry.value,
+                  icon: shelfIcons[entry.key],
+                  active: entry.key == _status,
+                  onTap: () => setState(() => _status = entry.key),
+                ),
+            ],
+          ),
+        ],
+      );
 
   Widget _shelf() => ArchiveShelfFields(
         status: _status,

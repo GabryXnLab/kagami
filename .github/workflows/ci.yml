@@ -59,6 +59,10 @@ on:
         required: false
       GOOGLE_SERVER_CLIENT_ID:
         required: false
+      CATALOG_URLS:
+        required: false
+      CATALOG_KEYS:
+        required: false
 
 permissions:
   contents: read
@@ -151,6 +155,11 @@ jobs:
           context: .
           file: server/Dockerfile
           platforms: linux/${{ matrix.arch }}
+          # Il catalogo dei siti dell'immagine pubblicata (docs/catalogo.md):
+          # vuoto in un fork senza secret, e chi installa lo sovrascrive con KAGAMI_CATALOG_*.
+          build-args: |
+            CATALOG_URLS=${{ secrets.CATALOG_URLS }}
+            CATALOG_KEYS=${{ secrets.CATALOG_KEYS }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -222,6 +231,8 @@ jobs:
       BACKEND_URL: ${{ secrets.BACKEND_URL }}
       BACKEND_ANON_KEY: ${{ secrets.BACKEND_ANON_KEY }}
       GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+      CATALOG_URLS: ${{ secrets.CATALOG_URLS }}
+      CATALOG_KEYS: ${{ secrets.CATALOG_KEYS }}
       BUILD_MODE: ${{ inputs.build_mode || 'release' }}
       SPLIT_PER_ABI: ${{ inputs.split_per_abi && 'true' || '' }}
     steps:
@@ -260,7 +271,7 @@ jobs:
             } > android/key.properties
           fi
       - run: flutter pub get
-      - run: flutter build apk --"$BUILD_MODE" ${SPLIT_PER_ABI:+--split-per-abi} --dart-define=SENTRY_DSN="$SENTRY_DSN" --dart-define=GOOGLE_SERVER_CLIENT_SECRET="$GOOGLE_SERVER_CLIENT_SECRET" --dart-define=BACKEND_URL="$BACKEND_URL" --dart-define=BACKEND_ANON_KEY="$BACKEND_ANON_KEY" --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID"
+      - run: flutter build apk --"$BUILD_MODE" ${SPLIT_PER_ABI:+--split-per-abi} --dart-define=SENTRY_DSN="$SENTRY_DSN" --dart-define=GOOGLE_SERVER_CLIENT_SECRET="$GOOGLE_SERVER_CLIENT_SECRET" --dart-define=BACKEND_URL="$BACKEND_URL" --dart-define=BACKEND_ANON_KEY="$BACKEND_ANON_KEY" --dart-define=GOOGLE_SERVER_CLIENT_ID="$GOOGLE_SERVER_CLIENT_ID" --dart-define=CATALOG_URLS="$CATALOG_URLS" --dart-define=CATALOG_KEYS="$CATALOG_KEYS"
       # L'impronta da registrare in Firebase: con un'altra l'accesso con Google fallisce.
       - name: Impronta della firma
         run: |

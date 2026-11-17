@@ -108,6 +108,11 @@ List<Chapter> oldestFirst(List<Chapter> chapters) {
 void requireUniqueIds(List<Chapter> chapters, String site) {
   final seen = <String>{};
   for (final chapter in chapters) {
-    if (!seen.add(chapter.id)) throw ProviderChanged('Elenco capitoli $site incoerente.');
+    if (!seen.add(chapter.id)) {
+      throw ProviderChanged(
+        'Elenco capitoli $site incoerente.',
+        fault: SiteFault('chapters', field: 'series.chapters.id', detail: 'due capitoli con id ${chapter.id}'),
+      );
+    }
   }
 }

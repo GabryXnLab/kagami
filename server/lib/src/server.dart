@@ -9,12 +9,14 @@ import 'package:kagami_archive/google_token.dart';
 import 'package:kagami_archive/image_tools.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/providers.dart' show PageBrowser;
+import 'package:kagami_archive/renderer.dart' show installPageRenderer;
 import 'package:kagami_archive/remote.dart' show ServerSetup;
 import 'package:path/path.dart' as p;
 
 import 'api.dart';
 import 'browser.dart';
 import 'browser_container.dart';
+import 'catalog.dart';
 import 'config.dart';
 import 'google.dart';
 import 'identity.dart';
@@ -35,6 +37,7 @@ class ServerSpace implements UserSpace {
     required ImageTools images,
     PageBrowser? browser,
     int? checkMinutes,
+    ServerCatalog? catalog,
   }) async {
     final files = ArchiveFiles(directory.path);
     final drive = UserDrive(File(p.join(directory.path, 'drive.json')), client);
@@ -45,6 +48,7 @@ class ServerSpace implements UserSpace {
           owned: drive.ownedOf),
       blocked: drive.blocked,
       checkMinutes: checkMinutes,
+      catalog: catalog,
       folder: () => drive.folderId,
       browser: browser,
     )..start();
@@ -173,6 +177,14 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
       : chromium == null
           ? null
           : HeadlessBrowser(chromium, paths.browser, log: out);
+  // Le pagine che i siti vogliono rese (`browser.pages`) le apre lo stesso Chromium.
+  installPageRenderer(browser);
+  final catalog = ServerCatalog.fromEnvironment(Platform.environment, paths.catalog, log: out);
+  if (catalog != null) {
+    await catalog.load();
+    out('Catalogo dei siti: serial ${catalog.serial} dalla cache, ${catalog.urls.length} indirizzi.');
+    unawaited(catalog.refresh());
+  }
   final spaces = <String, ServerSpace>{};
   final accounts = applied == null
       ? null
@@ -185,6 +197,7 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
             images: images,
             browser: browser,
             checkMinutes: config.checkMinutes,
+            catalog: catalog,
           ),
         );
   final id = await serverIdentity(paths);
@@ -197,6 +210,7 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
     accounts: accounts,
     images: vips,
     browser: browser != null,
+    catalog: catalog,
   );
 
   final server = await HttpServer.bind(host ?? config.host, port ?? config.port);
@@ -271,4 +285,5 @@ Future<void> serve(ServerPaths paths, {String? host, int? port, String? setup, v
   await server.close();
   await accounts?.close();
   await browser?.close();
+  catalog?.close();
 }

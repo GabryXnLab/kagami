@@ -74,7 +74,7 @@ scarica solo ciò che gli chiedi. L'interfaccia è in italiano.
 
 ## Funzionalità
 
-Quattro destinazioni: **Home**, **Libreria**, **Raccolte** e **Impostazioni**
+Quattro destinazioni: **Home**, **Libreria** (con le raccolte), **Comunità** e **Impostazioni**
 (Scarica un manga, cronologia, statistiche, incognito e impostazioni). Tema scuro di
 partenza, perché si legge di sera; chiaro o come il sistema a scelta.
 

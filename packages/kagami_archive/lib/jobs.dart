@@ -15,6 +15,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 import 'health.dart';
+import 'providers.dart' show Provider, ProviderOrigin;
 import 'stores.dart';
 
 /// Dove finisce ciò che si scarica.
@@ -334,7 +335,7 @@ class CheckSettings {
 /// cartella scelta sul telefono —, tranne quelle che l'utente ha smesso di
 /// seguire.
 class CheckScope {
-  const CheckScope({this.toServer = false, this.driveFolder, this.localRoot, this.unfollowed = const {}, this.server, this.serverId, this.serverOwner, this.userSitesOnPhone = false});
+  const CheckScope({this.toServer = false, this.driveFolder, this.localRoot, this.unfollowed = const {}, this.server, this.serverId, this.serverOwner, this.userSitesOnPhone = false, this.catalogOnPhone = false});
 
   factory CheckScope.fromJson(Map<String, Object?> json) => CheckScope(
         toServer: json['toServer'] == true,
@@ -345,6 +346,7 @@ class CheckScope {
         serverId: json['serverId'] as String?,
         serverOwner: json['serverOwner'] as String?,
         userSitesOnPhone: json['userSitesOnPhone'] == true,
+        catalogOnPhone: json['catalogOnPhone'] == true,
       );
 
   final bool toServer;
@@ -366,6 +368,18 @@ class CheckScope {
   /// loro serie le controlla il telefono.
   final bool userSitesOnPhone;
 
+  /// Con [toServer], il catalogo del server è più vecchio di quello del
+  /// telefono: i siti del catalogo li controlla il telefono.
+  final bool catalogOnPhone;
+
+  /// Se questo telefono controlla [provider], col server a controllare gli
+  /// altri: l'origine decide, perché i siti del catalogo non sono degli utenti.
+  bool phoneChecks(Provider provider) => switch (provider.origin) {
+        ProviderOrigin.builtIn => false,
+        ProviderOrigin.catalog => catalogOnPhone,
+        ProviderOrigin.user => userSitesOnPhone,
+      };
+
   Map<String, Object?> toJson() => {
         'toServer': toServer,
         'driveFolder': ?driveFolder,
@@ -375,6 +389,7 @@ class CheckScope {
         'serverId': ?serverId,
         'serverOwner': ?serverOwner,
         'userSitesOnPhone': userSitesOnPhone,
+        'catalogOnPhone': catalogOnPhone,
       };
 }
 

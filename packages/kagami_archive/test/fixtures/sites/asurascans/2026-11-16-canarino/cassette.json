@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-16T20:54:16.333155Z",
+  "entries": {
+    "https://api.asurascans.com/api/series/nano-machine": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "6ccb6a67380b.json"
+    },
+    "https://api.asurascans.com/api/series/nano-machine/chapters": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "5dbcd169676d.json"
+    },
+    "https://api.asurascans.com/api/series/nano-machine/chapters/ac158a3a-7e87-4492-b792-cf36c9ef9dd5": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "af8e101ffffc.json"
+    }
+  }
+}

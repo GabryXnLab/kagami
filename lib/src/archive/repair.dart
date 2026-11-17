@@ -20,6 +20,7 @@ import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/repair.dart';
 import 'package:kagami_archive/tracking.dart';
 
+import '../data/catalog_sync.dart' show catalogProvider;
 import '../data/cloud.dart';
 import '../data/drive.dart';
 import '../data/network.dart';
@@ -29,7 +30,7 @@ import '../l10n.dart';
 import '../providers.dart';
 import 'background.dart';
 import 'device.dart';
-import 'phone_check.dart';
+import 'page_browser.dart' show platformPageBrowser;
 
 /// Come si è messa la richiesta di riparare.
 enum RepairStart {
@@ -134,7 +135,7 @@ final phoneRepairRunProvider = Provider<PhoneRepairRun>((ref) {
         httpFor: (provider) => environment.httpFor(provider),
         scratch: environment.scratch,
         images: environment.images,
-        browser: const NativePageBrowser(),
+        browser: platformPageBrowser(),
         health: files.health,
         tracking: Tracking(files.ongoing),
         files: files,
@@ -188,7 +189,12 @@ class RepairController extends Notifier<RepairView> {
     try {
       var engine = ref.read(archiveEngineProvider);
       if (engine == ArchiveEngine.server && site != null && providerById(site)?.builtIn == false) {
-        engine = engineForSite(engine, site, serverHasUserSites: await ref.read(serverUserSitesProvider.future));
+        engine = engineForSite(
+          engine,
+          site,
+          server: await ref.read(serverSitesProvider.future),
+          phoneCatalogSerial: ref.read(catalogProvider).serial,
+        );
       }
       if (engine == ArchiveEngine.server) {
         await ref.read(serverRepairRunProvider)(site: site, keys: keys);

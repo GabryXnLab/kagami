@@ -12,14 +12,18 @@ import 'package:kagami_archive/declarative.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/providers.dart' show installUserProviders;
 import 'package:kagami_archive/remote.dart' show ServerLink;
+import 'package:kagami_archive/renderer.dart' show installPageRenderer;
 import 'package:kagami_archive/runner.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import '../data/catalog_recheck.dart';
+import '../data/catalog_sync.dart';
 import '../data/drive.dart';
 import '../data/library_location.dart';
 import '../data/network.dart';
 import '../data/site_replacements.dart';
 import 'device.dart';
+import 'page_browser.dart' show NativePageBrowser;
 import 'phone_check.dart';
 
 /// Il lucchetto del giro: un file ritoccato ogni tanto, come quello della
@@ -91,7 +95,10 @@ Future<void> runBackgroundArchive({required bool check}) async {
     await GoogleSignIn.instance.initialize();
     client = DriveClient(DriveAuth().writeToken, network: NetworkMonitor.instance);
     final environment = deviceEnvironment(files, client, directories.cache);
+    final catalogSync = await syncCatalogForRun(directories.support);
+    final recheck = catalogSync == null ? null : CatalogRecheck(sync: catalogSync);
     await installUserSitesForRun(files, environment);
+    installPageRenderer(const NativePageBrowser());
     if (check) {
       try {
         const browser = NativePageBrowser();
@@ -104,8 +111,14 @@ Future<void> runBackgroundArchive({required bool check}) async {
               browser,
             ),
           // Col server, al telefono restano i siti degli utenti che lui non sa usare.
-          if (server == null || scope.userSitesOnPhone)
-            ...(await checkFromPhone(files, environment, browser: browser, cancelled: () => stopped)).gated,
+          if (server == null || scope.userSitesOnPhone || scope.catalogOnPhone)
+            ...(await checkFromPhone(
+              files,
+              environment,
+              browser: browser,
+              cancelled: () => stopped,
+              onProviderChanged: recheck?.onChanged,
+            )).gated,
         ];
       } on ProviderOffline {
         end = RunEnd.retry;
@@ -133,6 +146,7 @@ Future<void> runBackgroundArchive({required bool check}) async {
         environment,
         cancelled: () => stopped,
         onError: (error, stack) => Sentry.captureException(error, stackTrace: stack),
+        onProviderChanged: recheck?.onChanged,
         onStatus: (status) {
           final now = DateTime.now();
           if (now.difference(lastProgress) < const Duration(seconds: 1)) return;

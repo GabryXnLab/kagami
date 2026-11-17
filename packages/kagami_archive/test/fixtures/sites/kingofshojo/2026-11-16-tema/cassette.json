@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-16T21:10:46.740106Z",
+  "entries": {
+    "https://kingofshojo.com/?s=absolute": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "8852df7e55ea.html"
+    },
+    "https://kingofshojo.com/manga/the-strongest-level-0-absolute-supremacy-through-analysis-skills/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "88cdb805a7ba.html"
+    },
+    "https://kingofshojo.com/the-strongest-level-0-absolute-supremacy-through-analysis-skills-chapter-1/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "a90659f20bd5.html"
+    }
+  }
+}

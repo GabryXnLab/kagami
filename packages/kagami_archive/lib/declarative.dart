@@ -11,52 +11,33 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as parser;
 
+import 'catalog.dart' show CatalogSite, catalogEngine, maxCatalogSiteBytes;
 import 'http.dart';
 import 'indexes.dart' show prettyJson;
 import 'model.dart';
 import 'providers.dart';
 import 'providers/kit.dart';
+import 'renderer.dart';
+import 'site_engine.dart';
 import 'stores.dart';
 
-/// Il formato che questo motore sa leggere.
-const int siteFormat = 1;
+part 'declarative_extract.dart';
+part 'declarative_filters.dart';
+part 'declarative_guard.dart';
+part 'declarative_recipe.dart';
+part 'declarative_spec.dart';
+part 'declarative_vars.dart';
 
-/// Tetti di un'operazione (serie, tavole di un capitolo, ricerca) di un sito
-/// degli utenti: il file arriva da chiunque e gira sul telefono o nel server di
-/// qualcuno, quindi un sito sbagliato o ostile non deve poterlo occupare senza
-/// fine. Ordini di grandezza dai siti inclusi: una pagina HTML o JSON pesa
-/// 100-500 KB (2 MB è il tetto di `ProviderHttp.get`, qui ripetuto perché non
-/// dipenda dal client); il motore chiede 1 pagina e al più 1 API per
-/// operazione, i siti inclusi 1-2 (Coffee Manga una per pagina di capitoli,
-/// qualche decina al massimo); 30 s per richiesta e fino a 5 tentativi con
-/// attesa che raddoppia in `SiteHttp`, quindi 120 s coprono un sito lento ma
-/// non uno che trascina.
-const int maxSiteRequests = 8;
-const int maxSiteResponseBytes = 2000000;
-const Duration maxSiteOperationTime = Duration(seconds: 120);
-
-/// Il conto di una sola operazione.
-class _Budget {
-  int requests = 0;
-}
+/// Il formato più alto che questo motore sa leggere (legge anche il 1); quali
+/// chiavi del formato sa interpretare lo dice [catalogEngine].
+const int siteFormat = 2;
 
 /// La cartella dei siti nella libreria, accanto a `library.json`.
 const String sitesFolder = 'providers';
-
-const int _maxFileBytes = 64 * 1024;
-const int _maxPattern = 300;
-
-/// Il testo a cui si applica una regex: il `RegExp` di Dart va in
-/// backtracking, quindi una pagina enorme non deve poterlo tenere occupato.
-const int _maxMatchText = 64 * 1024;
-
-String _clip(String text) => text.length > _maxMatchText ? text.substring(0, _maxMatchText) : text;
-final RegExp _idPattern = RegExp(r'^[a-z0-9]{1,32}$');
-final RegExp _hostPattern = RegExp(r'^(\*\.)?([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]*[a-z0-9]$');
-const List<String> _privateSuffixes = ['.local', '.lan', '.internal', '.home', '.arpa', '.localhost', '.test', '.invalid'];
 
 /// Un file di sito che non si può installare: il messaggio dice quale campo.
 class SiteDefinitionError implements Exception {
@@ -68,16 +49,26 @@ class SiteDefinitionError implements Exception {
   String toString() => message;
 }
 
+/// Un file valido per un motore più nuovo: usa [key], che arriva con
+/// l'`engine` [engine], più alto di [catalogEngine]. L'app lo dice come «serve
+/// Kagami più nuovo», non come un file sbagliato.
+class SiteEngineError extends SiteDefinitionError {
+  SiteEngineError(this.engine, this.key)
+      : super('Il sito usa «$key», che richiede un Kagami più nuovo (engine $engine, questo arriva al $catalogEngine).');
+
+  final int engine;
+  final String key;
+}
+
 /// Un sito descritto da un file: si comporta come uno incluso.
 class DeclarativeProvider extends Provider {
-  DeclarativeProvider._(this.definition, this._spec);
+  DeclarativeProvider._(this.definition, this._spec, this.catalog);
 
   /// Legge [text], il contenuto di un file di sito, e lo valida per intero:
-  /// un errore qui non arriva mai a metà di un download.
-  factory DeclarativeProvider.parse(String text) {
-    if (utf8.encode(text).length > _maxFileBytes) {
-      throw const SiteDefinitionError('Il file del sito supera i 64 KB.');
-    }
+  /// un errore qui non arriva mai a metà di un download. [catalog] è la voce
+  /// dell'indice per un sito preso dal catalogo, `null` per uno dell'utente.
+  factory DeclarativeProvider.parse(String text, {CatalogSite? catalog}) {
+    _checkSize(utf8.encode(text).length, catalog);
     final Object? decoded;
     try {
       decoded = jsonDecode(text);
@@ -85,19 +76,35 @@ class DeclarativeProvider extends Provider {
       throw const SiteDefinitionError('Il file del sito non è un JSON valido.');
     }
     if (decoded is! Map<String, Object?>) throw const SiteDefinitionError('Il file del sito non è un oggetto JSON.');
-    return DeclarativeProvider.fromJson(decoded);
+    return DeclarativeProvider.fromJson(decoded, catalog: catalog);
   }
 
-  factory DeclarativeProvider.fromJson(Map<String, Object?> json) {
-    if (utf8.encode(jsonEncode(json)).length > _maxFileBytes) {
+  factory DeclarativeProvider.fromJson(Map<String, Object?> json, {CatalogSite? catalog}) {
+    _checkSize(utf8.encode(jsonEncode(json)).length, catalog);
+    return DeclarativeProvider._(Map.unmodifiable(json), _Spec.read(json), catalog);
+  }
+
+  static void _checkSize(int bytes, CatalogSite? catalog) {
+    if (catalog == null && bytes > _maxFileBytes) {
       throw const SiteDefinitionError('Il file del sito supera i 64 KB.');
     }
-    return DeclarativeProvider._(Map.unmodifiable(json), _Spec.read(json));
+    if (catalog != null && bytes > _maxCatalogFileBytes) {
+      throw const SiteDefinitionError('Il file del sito supera i 256 KB.');
+    }
   }
+
+  /// Richieste e byte di risposta ammessi a una operazione: quelli di fiducia
+  /// per un sito del catalogo, quelli degli utenti per gli altri.
+  int get requestLimit => catalog == null ? maxSiteRequests : maxCatalogSiteRequests;
+  int get responseLimit => catalog == null ? maxSiteResponseBytes : maxCatalogSiteResponseBytes;
 
   /// Il file com'è stato letto, per riscriverlo nella libreria.
   final Map<String, Object?> definition;
   final _Spec _spec;
+
+  /// La voce dell'indice del catalogo (stato e messaggio per la pagina Siti)
+  /// se il sito viene da lì; `null` per un sito dell'utente.
+  final CatalogSite? catalog;
 
   @override
   String get id => _spec.id;
@@ -113,6 +120,9 @@ class DeclarativeProvider extends Provider {
 
   @override
   bool get builtIn => false;
+
+  @override
+  ProviderOrigin get origin => catalog == null ? ProviderOrigin.user : ProviderOrigin.catalog;
 
   /// Le espressioni le scrive il motore: il file dà solo selettori, che
   /// restano stringhe JSON e non possono diventare codice.
@@ -149,25 +159,50 @@ class DeclarativeProvider extends Provider {
 
   @override
   String? seriesOfChapter(String url) {
-    final template = _spec.series.url;
+    final series = _spec.series;
+    final address = series.url;
     final found = siteMatch(url, hosts: _spec.hosts.toSet(), path: _spec.chapter.path, maxPath: _maxMatchText);
-    if (found == null || template == null || found.groupCount < 1 || found[1] == null) return null;
-    return _fill(template, '{id}', Uri.encodeComponent(found[1]!));
+    if (found == null || found.groupCount < 1 || found[1] == null) return null;
+    if (series.link case final link?) {
+      // `id` dal percorso del capitolo e le `linkVars` sul suo link: se una
+      // resta vuota il link non si compone e il capitolo non dà la serie.
+      final vars = _Vars({'id': found[1], 'url': url});
+      _evaluate(series.linkVars, url, _Context(url, vars, url: url));
+      final rendered = link.render(vars);
+      return rendered != null && accepts(rendered) ? rendered : null;
+    }
+    if (address == null) return null;
+    // Dal link di un capitolo si ha solo `id`: un indirizzo che chiede altre
+    // variabili non si rifà, e il link non vale come capitolo.
+    return address.alternatives.first.render(_Vars({'id': found[1]}));
   }
 
   @override
   bool allowedHost(Uri uri) =>
       _spec.hosts.contains(uri.host) || _spec.mediaHosts.any((host) => _hostMatches(host, uri.host));
 
+  /// Con `try` il link canonico è la prima alternativa, la stessa per ogni
+  /// forma del link; la richiesta passa poi alle altre.
   @override
   String canonical(String url) {
     final found = _seriesMatch(url);
-    final template = _spec.series.url;
     if (found == null) return url;
-    if (template != null && found.groupCount >= 1 && found[1] != null) {
-      return _fill(template, '{id}', Uri.encodeComponent(found[1]!));
+    if (_spec.series.link case final link?) {
+      // Un link che `series.path` rifiuta resta com'è arrivato: `canonical` non solleva.
+      final rendered = link.render(_linkVars(url, found));
+      return rendered != null && accepts(rendered) ? rendered : url;
+    }
+    if (_spec.series.url case final address?) {
+      if (address.alternatives.first.render(_linkVars(url, found)) case final rendered?) return rendered;
     }
     return Uri.parse(url).replace(query: '', fragment: '').toString().replaceAll(RegExp(r'[?#]+$'), '');
+  }
+
+  /// Le variabili della serie prima di ogni richiesta: `id`, `url` e `linkVars`.
+  _Vars _linkVars(String url, RegExpMatch found) {
+    final vars = _Vars({'id': found.groupCount >= 1 ? found[1] : null, 'url': url});
+    _evaluate(_spec.series.linkVars, url, _Context(url, vars, url: url));
+    return vars;
   }
 
   @override
@@ -178,14 +213,30 @@ class DeclarativeProvider extends Provider {
     if (found == null) throw ProviderError('Inserisci il link di una serie $name.');
     final spec = _spec.series;
     final address = canonical(url);
-    final page = await _read(http, budget, address, json: spec.json);
-    final context = _Context(address);
+    final vars = _linkVars(url, found);
+    final (fetched, page) = spec.url == null
+        ? (address, await _read(http, budget, address, 'series', json: spec.json, ready: _ready('series')))
+        : await _fetch(http, budget, spec.url!, vars, 'series', 'series.url', json: spec.json, ready: _ready('series'));
+    final context = _Context(fetched, vars);
+    _evaluate(spec.vars, page, context);
+    _require(spec.require, page, context, 'Serie $name non riconosciuta nella pagina.', 'series', 'series.require', fetched);
+    await spec.recipe?.run(page, context, budget, _recipeFetch(http, budget, 'series'), 'series', name);
     var seriesId = found.groupCount >= 1 ? found[1] : null;
-    if (spec.id case final extractor?) seriesId = extractor.first(page, context);
+    if (spec.id case final extractor?) {
+      seriesId = extractor.first(page, context);
+      if (seriesId != null && seriesId.isNotEmpty) SiteTrace.current?.seriesId = seriesId;
+    }
     final title = spec.title.first(page, context);
     if (seriesId == null || seriesId.isEmpty || title == null) {
-      throw ProviderChanged('Serie $name non riconosciuta nella pagina.');
+      final missingId = seriesId == null || seriesId.isEmpty;
+      throw ProviderChanged(
+        'Serie $name non riconosciuta nella pagina.',
+        fault: SiteFault('series',
+            field: missingId ? 'series.id' : 'series.title', detail: 'valore assente nella pagina', url: fetched),
+      );
     }
+    // `chapters.api` chiede l'elenco con l'id letto, come nel formato 1.
+    if (seriesId != found[1]) vars.set('id', seriesId);
     final metadata = <String, Object?>{};
     for (final MapEntry(key: field, value: extractor) in spec.metadata.entries) {
       final values = extractor.strings(page, context);
@@ -194,41 +245,105 @@ class DeclarativeProvider extends Provider {
     }
     var cover = spec.cover?.first(page, context);
     if (cover != null && !allows(cover)) cover = null;
-    final chapters = await _chapters(http, budget, page, context, seriesId);
+    final chapters = await _withReserves(spec.chapters.where,
+        spec.chapters, spec.chapters.fallback, budget, (block) => _chapters(block, http, budget, page, context));
+    var seriesUrl = address;
+    if (spec.link case final link?) {
+      // Con l'id letto dalla serie: `linkVars` restano quelle del link.
+      seriesUrl = link.render(vars) ?? '';
+      if (!accepts(seriesUrl)) {
+        throw ProviderChanged(
+          'Serie $name non riconosciuta nella pagina.',
+          fault: SiteFault('series', field: 'series.link', detail: 'link non accettato da series.path: $seriesUrl', url: fetched),
+        );
+      }
+    }
     return Series(
       provider: id,
       id: seriesId,
       title: title,
-      url: address,
+      url: seriesUrl,
       coverUrl: cover,
       metadata: metadata,
       chapters: chapters,
     );
   }
 
-  Future<List<Chapter>> _chapters(ProviderHttp http, _Budget budget, Object? page, _Context context, String seriesId) async {
-    final spec = _spec.series.chapters;
+  /// L'elenco dei capitoli secondo [spec], il principale o una riserva: [page]
+  /// e [context] sono la pagina della serie e le sue variabili, che nessun
+  /// blocco cambia.
+  Future<List<Chapter>> _chapters(
+      _ChaptersSpec spec, ProviderHttp http, _Budget budget, Object? page, _Context context) async {
+    final where = spec.where;
+    final declared = switch (spec.expect?.first(page, context)) {
+      null => null,
+      final text => int.tryParse(_shortNumber(text) ?? ''),
+    };
+    if (spec.expect != null && (declared == null || declared < 0)) SiteTrace.current?.missing('$where.expect');
     var source = page;
+    var read = context.page;
     // I link relativi di un'API si risolvono rispetto alla serie: l'API sta
     // spesso su un altro host, i capitoli no.
     final base = context;
     if (spec.api case final api?) {
-      source = await _read(http, budget, _fill(api, '{id}', Uri.encodeComponent(seriesId)), json: true);
+      (read, source) = await _fetch(http, budget, api, context.vars, 'chapters', '$where.api', json: true);
     }
+    final items = spec.items.nodes(source, base);
+    // Prima di `skip`: i capitoli che il file scarta per scelta il sito li conta.
+    final short = declared == null ? 0 : declared - items.length;
+    if (declared != null && short > chaptersTolerance(declared)) {
+      throw ProviderChanged(
+        'Elenco capitoli $name incompleto: ${items.length} su $declared.',
+        fault: SiteFault('chapters',
+            field: '$where.expect', detail: '${items.length} capitoli, il sito ne dichiara $declared', url: read),
+      );
+    }
+    // Uno scarto entro la soglia non blocca: il sito è usabile ma la sonda lo vede.
+    if (short > 0) SiteTrace.current?.missing('$where.expect');
     final chapters = <Chapter>[];
-    for (final item in spec.items.nodes(source, base)) {
-      final link = spec.url.first(item, base);
-      final title = spec.title.first(item, base);
-      if (link == null || title == null) throw ProviderChanged('Capitolo $name incompleto.');
-      if (!allows(link)) throw ProviderChanged('Capitolo $name fuori dai domini del sito.');
-      final itemContext = _Context(base.page, url: link);
+    for (final item in items) {
+      final itemBase = _Context(base.page, base.vars.child());
+      _evaluate(spec.vars, item, itemBase);
+      if (_anyHolds(spec.skip, item, itemBase)) continue;
+      final link = spec.url.first(item, itemBase);
+      final title = spec.title.first(item, itemBase);
+      if (link == null || title == null) {
+        throw ProviderChanged(
+          'Capitolo $name incompleto.',
+          fault: SiteFault('chapters',
+              field: link == null ? '$where.url' : '$where.title',
+              detail: 'valore assente in un capitolo',
+              url: base.page),
+        );
+      }
+      if (!allows(link)) {
+        throw ProviderChanged(
+          'Capitolo $name fuori dai domini del sito.',
+          fault: SiteFault('chapters', field: '$where.url', detail: 'indirizzo fuori dai domini: $link', url: base.page),
+        );
+      }
+      final itemContext = _Context(base.page, itemBase.vars, url: link);
       final chapterId = spec.id?.first(item, itemContext) ?? _lastSegment(link);
-      if (chapterId == null || chapterId.isEmpty) throw ProviderChanged('Capitolo $name senza id.');
+      if (chapterId == null || chapterId.isEmpty) {
+        throw ProviderChanged(
+          'Capitolo $name senza id.',
+          fault: SiteFault('chapters', field: '$where.id', detail: 'id assente in un capitolo', url: base.page),
+        );
+      }
       final number = spec.number?.first(item, itemContext) ?? chapterNumber(title) ?? title;
       final date = spec.date?.first(item, itemContext);
-      chapters.add(Chapter(chapterId, title, number, link, {'date': ?date}));
+      final kept = {
+        for (final name in spec.keep)
+          if (itemBase.vars.text(name) case final text when text.isNotEmpty) name: text,
+      };
+      chapters.add(Chapter(chapterId, title, number, link, {'date': ?date, ...kept}));
     }
-    if (chapters.isEmpty) throw ProviderChanged('Elenco capitoli $name vuoto.');
+    if (chapters.isEmpty) {
+      throw ProviderChanged(
+        'Elenco capitoli $name vuoto.',
+        fault: SiteFault('chapters', field: '$where.items', detail: 'elenco vuoto', url: base.page),
+      );
+    }
     final ordered = switch (spec.order) {
       'newest-first' => chapters.reversed.toList(),
       'oldest-first' => chapters,
@@ -242,27 +357,61 @@ class DeclarativeProvider extends Provider {
   Future<ChapterContent> fetchPages(Chapter chapter, ProviderHttp http) =>
       _bounded((budget) => _fetchPages(chapter, http, budget));
 
-  Future<ChapterContent> _fetchPages(Chapter chapter, ProviderHttp http, _Budget budget) async {
-    final spec = _spec.chapter;
-    var address = chapter.url;
-    if (spec.api case final api?) {
-      address = _fill(_fill(api, '{url}', Uri.encodeComponent(chapter.url)), '{id}', Uri.encodeComponent(chapter.id));
+  Future<ChapterContent> _fetchPages(Chapter chapter, ProviderHttp http, _Budget budget) =>
+      _withReserves('chapter', _spec.chapter, _spec.chapter.fallback, budget, (block) => _pages(block, chapter, http, budget));
+
+  /// Le tavole secondo [spec], il principale o una riserva: ognuno parte dalle
+  /// sole variabili del capitolo.
+  Future<ChapterContent> _pages(_ChapterSpec spec, Chapter chapter, ProviderHttp http, _Budget budget) async {
+    final where = spec.where;
+    final vars = _Vars({
+      'id': chapter.id,
+      'url': chapter.url,
+      'chapterId': chapter.id,
+      for (final name in _spec.series.chapters.keep)
+        if (chapter.metadata[name] case final String value) name: value,
+    });
+    _evaluate(spec.linkVars, chapter.url, _Context(chapter.url, vars, url: chapter.url));
+    final (address, page) = spec.api == null
+        ? (chapter.url, await _read(http, budget, chapter.url, 'pages', json: spec.json, ready: _ready('chapter')))
+        : await _fetch(http, budget, spec.api!, vars, 'pages', '$where.api', json: true);
+    final context = _Context(address, vars);
+    _evaluate(spec.vars, page, context);
+    _require(spec.require, page, context, 'Capitolo non corrispondente: ${chapter.title}.', 'pages', '$where.require', address);
+    if (spec.locked?.holds(page, context) ?? false) {
+      throw ProviderError('Capitolo riservato agli abbonati di $name: ${chapter.title}.');
     }
-    validateUrl(address);
-    final page = await _read(http, budget, address, json: spec.json || spec.api != null);
-    final context = _Context(address);
+    await spec.recipe?.run(page, context, budget, _recipeFetch(http, budget, 'pages'), 'pages', name);
     final pages = <Page>[];
     for (final item in spec.pages.items.nodes(page, context)) {
-      final link = spec.pages.url.first(item, context);
-      if (link == null) continue;
-      if (!allows(link)) throw ProviderChanged('Tavola fuori dai domini del sito: ${chapter.title}.');
+      final itemContext = _Context(address, vars.child());
+      _evaluate(spec.pages.vars, item, itemContext);
+      if (_anyHolds(spec.pages.skip, item, itemContext)) continue;
+      final link = spec.pages.url.first(item, itemContext);
+      if (link == null) {
+        throw ProviderChanged(
+          'Tavola senza indirizzo: ${chapter.title}.',
+          fault: SiteFault('pages', field: '$where.pages.url', detail: 'valore assente in una tavola', url: address),
+        );
+      }
+      if (!allows(link)) {
+        throw ProviderChanged(
+          'Tavola fuori dai domini del sito: ${chapter.title}.',
+          fault: SiteFault('pages', field: '$where.pages.url', detail: 'indirizzo fuori dai domini: $link', url: address),
+        );
+      }
       pages.add(Page(
         link,
-        int.tryParse(spec.pages.width?.first(item, context) ?? ''),
-        int.tryParse(spec.pages.height?.first(item, context) ?? ''),
+        int.tryParse(spec.pages.width?.first(item, itemContext) ?? ''),
+        int.tryParse(spec.pages.height?.first(item, itemContext) ?? ''),
       ));
     }
-    if (pages.isEmpty) throw ProviderChanged('Nessuna tavola trovata: ${chapter.title}.');
+    if (pages.isEmpty) {
+      throw ProviderChanged(
+        'Nessuna tavola trovata: ${chapter.title}.',
+        fault: SiteFault('pages', field: '$where.pages.items', detail: 'elenco vuoto', url: address),
+      );
+    }
     return ChapterContent(pages, const {});
   }
 
@@ -271,13 +420,22 @@ class DeclarativeProvider extends Provider {
 
   Future<List<SearchResult>> _search(String query, ProviderHttp http, _Budget budget) async {
     final spec = _spec.search;
-    if (spec == null) return const [];
-    final address = _fill(spec.url, '{query}', Uri.encodeQueryComponent(query.trim()));
-    validateUrl(address);
-    final page = await _read(http, budget, address, json: spec.json);
-    final context = _Context(address);
+    if (spec == null || query.trim().isEmpty) return const [];
+    return _withReserves('search', spec, spec.fallback, budget, (block) => _results(block, query.trim(), http, budget));
+  }
+
+  Future<List<SearchResult>> _results(_SearchSpec spec, String query, ProviderHttp http, _Budget budget) async {
+    final vars = _Vars({'query': query});
+    final (address, page) =
+        await _fetch(http, budget, spec.url, vars, 'search', '${spec.where}.url', json: spec.json, ready: _ready('search'));
+    final context = _Context(address, vars);
+    _evaluate(spec.vars, page, context);
+    _require(spec.require, page, context, 'Ricerca di $name non riconosciuta nella pagina.', 'search',
+        '${spec.where}.require', address);
+    await spec.recipe?.run(page, context, budget, _recipeFetch(http, budget, 'search'), 'search', name);
     final results = <SearchResult>[];
     for (final item in spec.items.nodes(page, context)) {
+      if (_anyHolds(spec.skip, item, context)) continue;
       final link = spec.link.first(item, context);
       final title = spec.title.first(item, context);
       if (link == null || title == null || !accepts(link)) continue;
@@ -296,6 +454,83 @@ class DeclarativeProvider extends Provider {
     return results;
   }
 
+  /// `fetch` della ricetta: la risposta come testo o JSON, contata fra le
+  /// richieste dell'operazione.
+  _Fetch _recipeFetch(ProviderHttp http, _Budget budget, String phase) =>
+      (address, vars, field, {required json}) async =>
+          (await _fetch(http, budget, address, vars, phase, field, json: json, text: true)).$2;
+
+  /// Chiede [address] con [vars]: con `try` le alternative in ordine, alla
+  /// successiva solo su uno stato di `on`; due uguali si chiedono una volta.
+  /// Dà anche l'indirizzo che ha risposto, per i link relativi.
+  Future<(String, Object?)> _fetch(
+      ProviderHttp http, _Budget budget, _Address address, _Vars vars, String phase, String field,
+      {required bool json, bool text = false, String? ready}) async {
+    // L'indirizzo e la sua alternativa, contata da 0: due uguali si chiedono
+    // una volta, e la traccia nomina la prima che lo dava.
+    final urls = <(String, int)>[];
+    for (final (alternative, link) in address.alternatives.indexed) {
+      final url = link.render(vars);
+      if (url == null) {
+        throw ProviderChanged(
+          'Indirizzo di $name incompleto: manca un valore della pagina.',
+          fault: SiteFault(phase, field: field, detail: 'variabile vuota nell\'indirizzo'),
+        );
+      }
+      if (!urls.any((known) => known.$1 == url)) urls.add((url, alternative));
+    }
+    for (final (index, (url, alternative)) in urls.indexed) {
+      try {
+        final page = await _read(http, budget, url, phase, json: json, text: text, ready: ready);
+        if (alternative > 0) SiteTrace.current?.note(field, alternative + 1);
+        return (url, page);
+      } on HttpStatusError catch (error) {
+        if (index == urls.length - 1 || !address.on.contains(error.status)) rethrow;
+      }
+    }
+    throw StateError('nessun indirizzo');
+  }
+
+  /// `fallback` (`docs/siti.md`, «Blocchi di riserva»): [main], poi le
+  /// riserve in ordine, finché uno riesce. Si passa alla successiva solo su un
+  /// `ProviderChanged` o su un 4xx che non sia 403 (verifica anti-bot) o 429
+  /// (limite di frequenza), e solo se restano richieste; se nessuno riesce
+  /// vale l'errore del principale, la forma da cui si ripara. La traccia
+  /// prende le voci del solo blocco riuscito, più `where#n` se è una riserva.
+  Future<T> _withReserves<T, B>(
+      String where, B main, List<B> reserves, _Budget budget, Future<T> Function(B block) attempt) async {
+    if (reserves.isEmpty) return attempt(main);
+    final outer = SiteTrace.current;
+    Object? failure;
+    StackTrace? failureStack;
+    for (final (index, block) in [main, ...reserves].indexed) {
+      if (index > 0 && budget.requests >= requestLimit) break;
+      final trace = SiteTrace();
+      try {
+        final result = await trace.run(() => attempt(block));
+        outer?.absorb(trace);
+        outer?.note(where, index + 1);
+        return result;
+      } on Object catch (error, stack) {
+        if (index == 0) (failure, failureStack) = (error, stack);
+        if (!_fallsBack(error)) break;
+      }
+    }
+    Error.throwWithStackTrace(failure!, failureStack!);
+  }
+
+  static bool _fallsBack(Object error) =>
+      error is ProviderChanged ||
+      (error is HttpStatusError && error.status >= 400 && error.status < 500 && error.status != 403 && error.status != 429);
+
+  /// `require`: una condizione che non vale vuol dire che il sito ha cambiato forma.
+  void _require(List<_Condition> conditions, Object? page, _Context context, String message, String phase,
+      String field, String url) {
+    if (!conditions.every((condition) => condition.holds(page, context))) {
+      throw ProviderChanged(message, fault: SiteFault(phase, field: field, detail: 'condizione non soddisfatta', url: url));
+    }
+  }
+
   Future<T> _bounded<T>(Future<T> Function(_Budget budget) operation) async {
     try {
       return await operation(_Budget()).timeout(maxSiteOperationTime);
@@ -304,19 +539,63 @@ class DeclarativeProvider extends Provider {
     }
   }
 
-  Future<Object?> _read(ProviderHttp http, _Budget budget, String url, {required bool json}) async {
+  /// L'espressione che riconosce [page] (`series`, `chapter`, `search`) pronta
+  /// nel browser, se il file la vuole resa (`browser.pages`); scritta dal motore.
+  String? _ready(String page) {
+    final gate = _spec.browser;
+    if (gate == null || !gate.pages.contains(page)) return null;
+    final selector = switch (page) {
+      'series' => gate.seriesReady,
+      'chapter' => gate.chapterReady!,
+      _ => gate.searchReady,
+    };
+    return '!!document.querySelector(${jsonEncode(selector)})';
+  }
+
+  /// [url] resa dal browser installato, appena [ready] è vera: il documento
+  /// che ne esce lo leggono gli estrattori come una pagina scaricata.
+  Future<dom.Document> _render(String url, String ready) async {
+    final hosts = _spec.browser!.hosts;
+    final uri = Uri.parse(url);
+    if (uri.scheme != 'https' || !hosts.contains(uri.host)) {
+      throw ProviderError('Il sito $name chiede di rendere una pagina fuori da browser.hosts: $url');
+    }
+    final renderer = pageRenderer;
+    if (renderer == null) throw RendererMissing('Il sito $name va letto da un browser, che qui non c\'è: serve il browser.');
+    final String? html;
+    try {
+      html = await renderer
+          .render(url, hosts: hosts, ready: ready, timeout: maxRenderTime)
+          .timeout(maxRenderTime + const Duration(seconds: 10));
+    } on TimeoutException {
+      throw RenderTimeout('La pagina di $name non è pronta nel browser: $url');
+    }
+    if (html == null) throw RenderTimeout('La pagina di $name non è pronta nel browser: $url');
+    if (utf8.encode(html).length > maxRenderedPageBytes) throw const ProviderError('Pagina resa troppo grande.');
+    return parser.parse(html);
+  }
+
+  /// [text]: senza [json], il corpo com'è invece del documento HTML. Con
+  /// [ready] la pagina la rende il browser (`browser.pages`).
+  Future<Object?> _read(ProviderHttp http, _Budget budget, String url, String phase,
+      {required bool json, bool text = false, String? ready}) async {
     validateUrl(url);
-    if (++budget.requests > maxSiteRequests) {
+    if (++budget.requests > requestLimit) {
       throw ProviderError('Il sito $name chiede troppe richieste per una sola operazione.');
     }
-    final result = await http.get(url, limit: maxSiteResponseBytes);
-    if (result.body.length > maxSiteResponseBytes) throw const ProviderError('Risposta troppo grande.');
+    // Una pagina già resa dal browser (SnapshotHttp) vale quanto un rendering.
+    if (ready != null && !(http is SnapshotHttp && http.url == url)) return _render(url, ready);
+    final result = await http.get(url, limit: responseLimit);
+    if (result.body.length > responseLimit) throw const ProviderError('Risposta troppo grande.');
     final body = utf8.decode(result.body, allowMalformed: true);
-    if (!json) return parser.parse(body);
+    if (!json) return text ? body : parser.parse(body);
     try {
       return jsonDecode(body);
     } on FormatException {
-      throw ProviderChanged('Risposta di $name non in JSON.');
+      throw ProviderChanged(
+        'Risposta di $name non in JSON.',
+        fault: SiteFault(phase, detail: 'attesa una risposta JSON, arrivato: $body', url: url),
+      );
     }
   }
 }
@@ -352,578 +631,5 @@ Future<void> saveSite(ArchiveStore store, DeclarativeProvider site) =>
 /// Toglie il file del sito [id] dalla libreria; le sue serie restano.
 Future<void> removeSite(ArchiveStore store, String id) => store.removeFile('$sitesFolder/$id.json');
 
-bool _hostMatches(String pattern, String host) =>
-    pattern.startsWith('*.') ? host.endsWith(pattern.substring(1)) : pattern == host;
-
-String _fill(String template, String name, String value) => template.replaceAll(name, value);
-
 String? _lastSegment(String url) =>
     Uri.tryParse(url)?.pathSegments.where((segment) => segment.isNotEmpty).lastOrNull;
-
-class _Context {
-  const _Context(this.page, {this.url});
-
-  final String page;
-
-  /// Il link già letto dell'elemento, per `from: url`.
-  final String? url;
-}
-
-/// Un campo da leggere da un nodo (documento, elemento HTML o valore JSON).
-class _Extractor {
-  _Extractor({
-    this.css,
-    this.json,
-    this.attrs = const [],
-    this.asHtml = false,
-    this.regex,
-    this.split,
-    this.all = false,
-    this.from,
-    this.value,
-    this.link = false,
-  });
-
-  static _Extractor read(Object? raw, String where, {bool link = false, bool all = false}) {
-    if (raw is String) return _Extractor(css: _selector(raw, where), link: link, all: all);
-    if (raw is! Map<String, Object?>) throw SiteDefinitionError('$where: serve un selettore o un oggetto.');
-    const known = {'css', 'json', 'attr', 'html', 'regex', 'split', 'all', 'from', 'value'};
-    for (final key in raw.keys) {
-      if (!known.contains(key)) throw SiteDefinitionError('$where: chiave sconosciuta «$key».');
-    }
-    final attr = raw['attr'];
-    final from = raw['from'];
-    if (from != null && from != 'url' && from != 'page') throw SiteDefinitionError('$where: «from» è url o page.');
-    return _Extractor(
-      css: raw['css'] == null ? null : _selector(_string(raw['css'], '$where.css'), where),
-      json: raw['json'] == null ? null : _string(raw['json'], '$where.json'),
-      attrs: switch (attr) {
-        null => const [],
-        String() => [attr],
-        List() when attr.every((name) => name is String && name.isNotEmpty) => attr.cast<String>(),
-        _ => throw SiteDefinitionError('$where.attr: un nome o una lista di nomi.'),
-      },
-      asHtml: _flag(raw['html'], '$where.html'),
-      regex: raw['regex'] == null ? null : _pattern(raw['regex'], '$where.regex'),
-      split: raw['split'] == null ? null : _pattern(raw['split'], '$where.split'),
-      all: all || _flag(raw['all'], '$where.all'),
-      from: from as String?,
-      value: raw['value'] == null ? null : _string(raw['value'], '$where.value'),
-      link: link,
-    );
-  }
-
-  static String _selector(String selector, String where) {
-    try {
-      parser.parseFragment('<p></p>').querySelectorAll(selector);
-    } on Object {
-      throw SiteDefinitionError('$where: selettore CSS non valido «$selector».');
-    }
-    return selector;
-  }
-
-  final String? css;
-  final String? json;
-  final List<String> attrs;
-  final bool asHtml;
-  final RegExp? regex;
-  final RegExp? split;
-  final bool all;
-  final String? from;
-  final String? value;
-
-  /// Un link: si risolve rispetto alla pagina.
-  final bool link;
-
-  /// I nodi trovati, per gli elenchi (`items`).
-  List<Object?> nodes(Object? node, _Context context) {
-    var current = <Object?>[
-      switch (from) {
-        'url' => context.url,
-        'page' => context.page,
-        _ => node,
-      },
-    ];
-    if (css case final selector?) {
-      current = [
-        for (final item in current)
-          ..._select(item, selector, all: all),
-      ];
-    }
-    if (json case final path?) {
-      current = [for (final item in current) ..._walk(_asJson(item), path)];
-      if (!all && current.length > 1) current = [current.first];
-    }
-    return current;
-  }
-
-  /// I valori come testi, già ripuliti e filtrati da [regex] e [split].
-  List<String> strings(Object? node, _Context context) {
-    if (value case final fixed?) return [fixed];
-    final texts = <String>[];
-    for (final item in nodes(node, context)) {
-      var text = _text(item);
-      if (text == null) continue;
-      if (regex != null || split != null) text = _clip(text);
-      if (regex case final pattern?) {
-        final found = pattern.firstMatch(text);
-        if (found == null) continue;
-        text = found.groupCount >= 1 ? (found[1] ?? '') : found[0]!;
-      }
-      final parts = split == null ? [text] : text.split(split!);
-      for (var part in parts) {
-        part = asHtml ? part.trim() : part.replaceAll(RegExp(r'\s+'), ' ').trim();
-        if (part.isEmpty) continue;
-        if (link) {
-          final resolved = Uri.tryParse(context.page)?.resolve(part).toString();
-          if (resolved == null) continue;
-          part = resolved;
-        }
-        texts.add(part);
-      }
-      if (!all && split == null && texts.isNotEmpty) break;
-    }
-    return texts;
-  }
-
-  String? first(Object? node, _Context context) => strings(node, context).firstOrNull;
-
-  String? _text(Object? item) {
-    if (item is dom.Element) {
-      for (final name in attrs) {
-        final value = item.attributes[name]?.trim();
-        if (value != null && value.isNotEmpty) return value;
-      }
-      if (attrs.isNotEmpty) return null;
-      return asHtml ? htmlText(item.innerHtml) : item.text;
-    }
-    if (item is dom.Document) return item.body?.text;
-    if (item is String) return asHtml ? htmlText(item) : item;
-    if (item is num || item is bool) return '$item';
-    if (item is Map) {
-      for (final name in attrs) {
-        final value = item[name];
-        if (value is String && value.trim().isNotEmpty) return value;
-        if (value is num) return '$value';
-      }
-      return metadataStrings(item).firstOrNull;
-    }
-    return null;
-  }
-
-  static List<dom.Element> _select(Object? item, String selector, {required bool all}) {
-    final List<dom.Element> found = switch (item) {
-      dom.Document() => all ? item.querySelectorAll(selector) : [?item.querySelector(selector)],
-      dom.Element() => all ? item.querySelectorAll(selector) : [?item.querySelector(selector)],
-      String() => () {
-          final fragment = parser.parseFragment(item);
-          return all ? fragment.querySelectorAll(selector) : [?fragment.querySelector(selector)];
-        }(),
-      _ => const [],
-    };
-    return found;
-  }
-
-  static Object? _asJson(Object? item) {
-    final text = switch (item) {
-      dom.Element() => item.text,
-      dom.Document() => item.body?.text,
-      String() => item,
-      _ => null,
-    };
-    if (text == null) return item;
-    try {
-      return jsonDecode(text.trim());
-    } on FormatException {
-      return null;
-    }
-  }
-
-  /// I valori in [path] (`a.b[0].c`); attraverso una lista, di ogni elemento.
-  static List<Object?> _walk(Object? root, String path) {
-    var current = <Object?>[root];
-    for (final segment in path.split('.').where((part) => part.isNotEmpty)) {
-      final found = RegExp(r'^([^\[\]]*)((?:\[\d+\])*)$').firstMatch(segment);
-      if (found == null) return const [];
-      final indexes = [for (final index in RegExp(r'\[(\d+)\]').allMatches(found[2]!)) int.parse(index[1]!)];
-      final next = <Object?>[];
-      for (final item in current) {
-        var values = <Object?>[item];
-        if (found[1]!.isNotEmpty) {
-          values = [
-            for (final value in values)
-              if (value is Map) value[found[1]]
-              else if (value is List) for (final element in value) if (element is Map) element[found[1]],
-          ];
-        }
-        for (final index in indexes) {
-          values = [for (final value in values) if (value is List && index < value.length) value[index]];
-        }
-        for (final value in values) {
-          if (value is List && indexes.isEmpty) {
-            next.addAll(value);
-          } else if (value != null) {
-            next.add(value);
-          }
-        }
-      }
-      current = next;
-    }
-    return current;
-  }
-}
-
-class _Spec {
-  _Spec({
-    required this.id,
-    required this.name,
-    required this.version,
-    required this.update,
-    required this.home,
-    required this.hosts,
-    required this.mediaHosts,
-    required this.icon,
-    required this.series,
-    required this.chapter,
-    required this.search,
-    required this.browser,
-  });
-
-  static _Spec read(Map<String, Object?> json) {
-    if (json['format'] != siteFormat) {
-      throw SiteDefinitionError('Formato del sito ${json['format']} non supportato: questa versione legge il $siteFormat.');
-    }
-    final id = _string(json['id'], 'id');
-    if (!_idPattern.hasMatch(id)) throw const SiteDefinitionError('id: solo lettere minuscole e cifre, al più 32.');
-    final version = json['version'];
-    if (version is! int || version < 1) throw const SiteDefinitionError('version: un intero da 1 in su.');
-    final hosts = _hosts(json['hosts'], 'hosts', wildcard: false);
-    if (hosts.isEmpty) throw const SiteDefinitionError('hosts: almeno un host.');
-    final mediaHosts = json['mediaHosts'] == null ? const <String>[] : _hosts(json['mediaHosts'], 'mediaHosts', wildcard: true);
-    bool allowed(Uri uri) => hosts.contains(uri.host) || mediaHosts.any((host) => _hostMatches(host, uri.host));
-    String link(Object? raw, String where, bool Function(Uri) ok) {
-      final value = _string(raw, where);
-      try {
-        checkUrl(value, ok);
-      } on ProviderError {
-        throw SiteDefinitionError('$where: un link https su uno degli host dichiarati.');
-      }
-      return value;
-    }
-
-    final home = link(json['home'], 'home', (uri) => hosts.contains(uri.host));
-    final update = json['update'] == null ? null : link(json['update'], 'update', (_) => true);
-    if (update != null && !_publicHost(Uri.parse(update).host)) {
-      throw const SiteDefinitionError('update: un host pubblico.');
-    }
-    final icon = json['icon'] == null ? null : link(json['icon'], 'icon', allowed);
-    return _Spec(
-      id: id,
-      name: _string(json['name'], 'name'),
-      version: version,
-      update: update,
-      home: home,
-      hosts: hosts,
-      mediaHosts: mediaHosts,
-      icon: icon,
-      series: _SeriesSpec.read(_object(json['series'], 'series'), hosts),
-      chapter: _ChapterSpec.read(_object(json['chapter'], 'chapter'), hosts),
-      search: json['search'] == null ? null : _SearchSpec.read(_object(json['search'], 'search'), hosts),
-      browser: json['browser'] == null ? null : _BrowserSpec.read(_object(json['browser'], 'browser'), hosts),
-    );
-  }
-
-  final String id;
-  final String name;
-  final int version;
-  final String? update;
-  final String home;
-  final List<String> hosts;
-  final List<String> mediaHosts;
-  final String? icon;
-  final _SeriesSpec series;
-  final _ChapterSpec chapter;
-  final _SearchSpec? search;
-  final _BrowserSpec? browser;
-}
-
-class _BrowserSpec {
-  _BrowserSpec(this.hosts, this.seriesReady, this.searchReady);
-
-  static _BrowserSpec read(Map<String, Object?> raw, List<String> siteHosts) {
-    final hosts = _hosts(raw['hosts'], 'browser.hosts', wildcard: false);
-    if (hosts.isEmpty) throw const SiteDefinitionError('browser.hosts: almeno un host.');
-    for (final host in hosts) {
-      if (!siteHosts.contains(host)) throw SiteDefinitionError('browser.hosts: «$host» non è fra gli hosts del sito.');
-    }
-    return _BrowserSpec(
-      hosts,
-      _Extractor._selector(_string(raw['seriesReady'], 'browser.seriesReady'), 'browser.seriesReady'),
-      _Extractor._selector(_string(raw['searchReady'], 'browser.searchReady'), 'browser.searchReady'),
-    );
-  }
-
-  final List<String> hosts;
-  final String seriesReady;
-  final String searchReady;
-}
-
-const List<String> _metadataKeys = [
-  'description',
-  'status',
-  'authors',
-  'artists',
-  'genres',
-  'tags',
-  'alternativeTitles',
-  'type',
-];
-
-class _SeriesSpec {
-  _SeriesSpec(this.path, this.url, this.json, this.id, this.title, this.cover, this.metadata, this.chapters);
-
-  static _SeriesSpec read(Map<String, Object?> raw, List<String> hosts) {
-    final url = raw['url'] == null ? null : _template(raw['url'], 'series.url', hosts, '{id}');
-    final metadata = {
-      for (final key in _metadataKeys)
-        if (raw[key] != null) key: _Extractor.read(raw[key], 'series.$key'),
-    };
-    return _SeriesSpec(
-      _pattern(raw['path'], 'series.path'),
-      url,
-      _flag(raw['json'], 'series.json'),
-      raw['id'] == null ? null : _Extractor.read(raw['id'], 'series.id'),
-      _Extractor.read(raw['title'], 'series.title'),
-      raw['cover'] == null ? null : _Extractor.read(raw['cover'], 'series.cover', link: true),
-      metadata,
-      _ChaptersSpec.read(_object(raw['chapters'], 'series.chapters'), hosts),
-    );
-  }
-
-  final RegExp path;
-  final String? url;
-  final bool json;
-  final _Extractor? id;
-  final _Extractor title;
-  final _Extractor? cover;
-  final Map<String, _Extractor> metadata;
-  final _ChaptersSpec chapters;
-}
-
-class _ChaptersSpec {
-  _ChaptersSpec(this.items, this.url, this.title, this.id, this.number, this.date, this.order, this.api);
-
-  static _ChaptersSpec read(Map<String, Object?> raw, List<String> hosts) {
-    final order = raw['order'] ?? 'auto';
-    if (order != 'auto' && order != 'newest-first' && order != 'oldest-first') {
-      throw const SiteDefinitionError('series.chapters.order: auto, newest-first o oldest-first.');
-    }
-    return _ChaptersSpec(
-      _Extractor.read(raw['items'], 'series.chapters.items', all: true),
-      _Extractor.read(raw['url'], 'series.chapters.url', link: true),
-      _Extractor.read(raw['title'], 'series.chapters.title'),
-      raw['id'] == null ? null : _Extractor.read(raw['id'], 'series.chapters.id'),
-      raw['number'] == null ? null : _Extractor.read(raw['number'], 'series.chapters.number'),
-      raw['date'] == null ? null : _Extractor.read(raw['date'], 'series.chapters.date'),
-      order as String,
-      raw['api'] == null ? null : _template(raw['api'], 'series.chapters.api', hosts, '{id}'),
-    );
-  }
-
-  final _Extractor items;
-  final _Extractor url;
-  final _Extractor title;
-  final _Extractor? id;
-  final _Extractor? number;
-  final _Extractor? date;
-  final String order;
-  final String? api;
-}
-
-class _PagesSpec {
-  _PagesSpec(this.items, this.url, this.width, this.height);
-
-  static _PagesSpec read(Map<String, Object?> raw) => _PagesSpec(
-        _Extractor.read(raw['items'], 'chapter.pages.items', all: true),
-        _Extractor.read(raw['url'] ?? const <String, Object?>{}, 'chapter.pages.url', link: true),
-        raw['width'] == null ? null : _Extractor.read(raw['width'], 'chapter.pages.width'),
-        raw['height'] == null ? null : _Extractor.read(raw['height'], 'chapter.pages.height'),
-      );
-
-  final _Extractor items;
-  final _Extractor url;
-  final _Extractor? width;
-  final _Extractor? height;
-}
-
-class _ChapterSpec {
-  _ChapterSpec(this.path, this.json, this.api, this.pages);
-
-  static _ChapterSpec read(Map<String, Object?> raw, List<String> hosts) => _ChapterSpec(
-        _pattern(raw['path'], 'chapter.path'),
-        _flag(raw['json'], 'chapter.json'),
-        raw['api'] == null ? null : _template(raw['api'], 'chapter.api', hosts, null),
-        _PagesSpec.read(_object(raw['pages'], 'chapter.pages')),
-      );
-
-  final RegExp path;
-  final bool json;
-  final String? api;
-  final _PagesSpec pages;
-}
-
-class _SearchSpec {
-  _SearchSpec(this.url, this.json, this.items, this.title, this.link, this.cover, this.latest, this.status);
-
-  static _SearchSpec read(Map<String, Object?> raw, List<String> hosts) => _SearchSpec(
-        _template(raw['url'], 'search.url', hosts, '{query}'),
-        _flag(raw['json'], 'search.json'),
-        _Extractor.read(raw['items'], 'search.items', all: true),
-        _Extractor.read(raw['title'], 'search.title'),
-        _Extractor.read(raw['link'], 'search.link', link: true),
-        raw['cover'] == null ? null : _Extractor.read(raw['cover'], 'search.cover', link: true),
-        raw['latest'] == null ? null : _Extractor.read(raw['latest'], 'search.latest'),
-        raw['status'] == null ? null : _Extractor.read(raw['status'], 'search.status'),
-      );
-
-  final String url;
-  final bool json;
-  final _Extractor items;
-  final _Extractor title;
-  final _Extractor link;
-  final _Extractor? cover;
-  final _Extractor? latest;
-  final _Extractor? status;
-}
-
-String _string(Object? raw, String where) {
-  if (raw is String && raw.trim().isNotEmpty) return raw.trim();
-  throw SiteDefinitionError('$where: serve un testo.');
-}
-
-Map<String, Object?> _object(Object? raw, String where) {
-  if (raw is Map<String, Object?>) return raw;
-  throw SiteDefinitionError('$where: serve un oggetto.');
-}
-
-bool _flag(Object? raw, String where) {
-  if (raw == null) return false;
-  if (raw is bool) return raw;
-  throw SiteDefinitionError('$where: true o false.');
-}
-
-RegExp _pattern(Object? raw, String where) {
-  final source = _string(raw, where);
-  if (source.length > _maxPattern) throw SiteDefinitionError('$where: espressione oltre $_maxPattern caratteri.');
-  final risky = _riskyPattern(source);
-  if (risky != null) throw SiteDefinitionError('$where: $risky');
-  try {
-    return RegExp(source);
-  } on FormatException {
-    throw SiteDefinitionError('$where: espressione regolare non valida.');
-  }
-}
-
-/// Controllo euristico sul sorgente (non una prova): rifiuta le
-/// backreference e un gruppo quantificato con `+`, `*` o `{n,}` che contiene
-/// a sua volta una ripetizione illimitata, come `(a+)+` o `(.*a){2,}`.
-String? _riskyPattern(String source) {
-  // Per ogni gruppo aperto: contiene una ripetizione illimitata?
-  final open = <bool>[false];
-  var i = 0;
-  // Fine dell'eventuale quantificatore in [at]: (illimitato, prossimo indice).
-  (bool, int) quantifier(int at) {
-    if (at >= source.length) return (false, at);
-    final c = source[at];
-    var unbounded = c == '+' || c == '*';
-    var end = at + 1;
-    if (c == '{') {
-      final found = RegExp(r'^\{(\d+)(,(\d*))?\}').firstMatch(source.substring(at));
-      if (found == null) return (false, at);
-      unbounded = found[2] != null && found[3]!.isEmpty;
-      end = at + found[0]!.length;
-    } else if (c != '?' && !unbounded) {
-      return (false, at);
-    }
-    if (end < source.length && (source[end] == '?' || source[end] == '+')) end++;
-    return (unbounded, end);
-  }
-
-  while (i < source.length) {
-    final c = source[i];
-    if (c == r'\') {
-      final next = i + 1 < source.length ? source[i + 1] : '';
-      if (RegExp(r'[1-9]').hasMatch(next) || next == 'k') return 'riferimenti a gruppi (backreference) non ammessi.';
-      final (unbounded, after) = quantifier(i + 2);
-      if (unbounded) open[open.length - 1] = true;
-      i = after;
-    } else if (c == '[') {
-      i++;
-      if (i < source.length && source[i] == '^') i++;
-      if (i < source.length && source[i] == ']') i++;
-      while (i < source.length && source[i] != ']') {
-        i += source[i] == r'\' ? 2 : 1;
-      }
-      final (unbounded, after) = quantifier(i + 1);
-      if (unbounded) open[open.length - 1] = true;
-      i = after;
-    } else if (c == '(') {
-      open.add(false);
-      i++;
-    } else if (c == ')') {
-      if (open.length == 1) return null;
-      final inner = open.removeLast();
-      final (unbounded, next) = quantifier(i + 1);
-      if (unbounded && inner) return 'ripetizioni annidate (come (a+)+) non ammesse.';
-      if (unbounded || inner) open[open.length - 1] = true;
-      i = next;
-    } else if (c == '^' || c == r'$' || c == '|') {
-      i++;
-    } else {
-      final (unbounded, next) = quantifier(i + 1);
-      if (unbounded) open[open.length - 1] = true;
-      i = next;
-    }
-  }
-  return null;
-}
-
-/// Un indirizzo con un segnaposto: con il segnaposto al posto di un valore
-/// qualsiasi deve restare un link https su uno degli [hosts].
-String _template(Object? raw, String where, List<String> hosts, String? placeholder) {
-  final value = _string(raw, where);
-  if (placeholder != null && !value.contains(placeholder)) throw SiteDefinitionError('$where: manca $placeholder.');
-  final sample = value.replaceAll('{id}', 'x').replaceAll('{url}', 'x').replaceAll('{query}', 'x');
-  try {
-    checkUrl(sample, (uri) => hosts.contains(uri.host));
-  } on ProviderError {
-    throw SiteDefinitionError('$where: un link https su uno degli host del sito.');
-  }
-  // Il segnaposto non può stare nell'host: deciderebbe lui a chi chiedere.
-  if (Uri.parse(sample).host != Uri.parse(value.replaceAll(RegExp(r'\{(id|url|query)\}'), 'y')).host) {
-    throw SiteDefinitionError('$where: il segnaposto non può stare nell\'host.');
-  }
-  return value;
-}
-
-List<String> _hosts(Object? raw, String where, {required bool wildcard}) {
-  if (raw is! List || raw.any((host) => host is! String)) throw SiteDefinitionError('$where: una lista di host.');
-  final hosts = [for (final host in raw.cast<String>()) host.trim().toLowerCase()];
-  for (final host in hosts) {
-    if (!_hostPattern.hasMatch(host) || (!wildcard && host.startsWith('*.')) || !_publicHost(host.replaceFirst('*.', ''))) {
-      throw SiteDefinitionError('$where: «$host» non è un nome di dominio pubblico.');
-    }
-    if (host.startsWith('*.') && host.split('.').length < 3) {
-      throw SiteDefinitionError('$where: «$host» vale per un dominio intero.');
-    }
-  }
-  return hosts;
-}
-
-/// Un nome di dominio, non un indirizzo IP né un nome della rete di casa.
-bool _publicHost(String host) =>
-    host.contains('.') &&
-    !RegExp(r'^[\d.]+$').hasMatch(host) &&
-    !host.contains(':') &&
-    host != 'localhost' &&
-    !_privateSuffixes.any(host.endsWith);

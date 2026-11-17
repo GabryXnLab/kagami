@@ -27,6 +27,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../archive/phone_check.dart' show gatedSites;
 import '../archive/repair.dart';
+import '../archive/search_ranking.dart';
+import '../data/catalog_recheck.dart';
 import '../data/server_error_text.dart';
 import '../data/site_switch.dart' show titleKey;
 import '../format/malf.dart';
@@ -272,7 +274,10 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     }
     _Found found;
     try {
-      found = _Found.results(await provider.search(query, http));
+      found = _Found.results(await ref.read(catalogRecheckProvider).guard(
+            provider.id,
+            () => (providerById(provider.id) ?? provider).search(query, http),
+          ));
     } on CloudflareChallenge {
       found = provider.needsBrowser
           ? const _Found.challenged()
@@ -627,47 +632,71 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
     // pagina), quindi «già in libreria» è lo stesso sito e lo stesso titolo,
     // a meno di maiuscole e punteggiatura.
     bool inLibrary(SearchResult result) => owned[result.provider]?.contains(titleKey(result.title)) ?? false;
-    return [
+    final l10n = context.l10n;
+    final active = [
       for (final provider in providers)
-        if (_found[provider.id] case final found? when _filters.searches(provider)) ...[
-          const SizedBox(height: 18),
-          KSection(provider.name),
-          _siteResults(provider, found, inLibrary),
-        ],
+        if (_found[provider.id] != null && _filters.searches(provider)) provider,
+    ];
+    if (active.isEmpty) return const [];
+    // Una lista sola, mescolata e ordinata per pertinenza; i siti che non
+    // hanno (ancora) risultati da mostrare restano righe compatte sotto.
+    final byId = {for (final provider in active) provider.id: provider};
+    final perSite = <List<SearchResult>>[];
+    final notes = <Widget>[];
+    for (final provider in active) {
+      final found = _found[provider.id]!;
+      final results = found.results;
+      final shown = [
+        for (final result in results ?? const <SearchResult>[])
+          if (_filters.passes(result, owned: inLibrary(result))) result,
+      ];
+      perSite.add(shown);
+      final note = _siteNote(provider, found, shown.length);
+      if (note != null) notes.add(note);
+    }
+    final ranked = rankSearchResults(_query.text, perSite);
+    return [
+      const SizedBox(height: 18),
+      KSection(l10n.archiveResults),
+      if (ranked.isNotEmpty)
+        KGroup(
+          children: [
+            for (final result in ranked)
+              if (byId[result.provider] case final provider?)
+                ArchiveResultTile(
+                  result: result,
+                  referer: provider.home,
+                  inLibrary: inLibrary(result),
+                  details: [
+                    provider.name,
+                    if (inLibrary(result)) l10n.archiveInLibrary,
+                    if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
+                    if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
+                  ].join(' · '),
+                  onTap: _busy ? null : () => _pick(result),
+                ),
+          ],
+        ),
+      for (final note in notes) ...[
+        SizedBox(height: ranked.isEmpty ? 0 : 8),
+        note,
+      ],
     ];
   }
 
-  /// Cosa ha dato un sito, filtrato. Se i filtri nascondono tutto lo si
-  /// dice, altrimenti sembrerebbe che il sito non abbia la serie.
-  Widget _siteResults(Provider provider, _Found found, bool Function(SearchResult) inLibrary) {
+  /// Lo stato di un sito che non ha risultati da mostrare: caricamento,
+  /// verifica, errore, «nessun risultato» o «tutti nascosti dai filtri»;
+  /// `null` se ne ha e stanno nella lista.
+  Widget? _siteNote(Provider provider, _Found found, int shown) {
     final muted = context.tokens.muted;
     final l10n = context.l10n;
+    final style = KagamiType.body(12.5, color: muted);
     if (found.results case final results?) {
-      if (results.isEmpty) {
-        return Text(l10n.archiveNoResults(provider.name), style: KagamiType.body(12.5, color: muted));
-      }
-      final shown = [
-        for (final result in results)
-          if (_filters.passes(result, owned: inLibrary(result))) result,
-      ];
-      if (shown.isEmpty) {
-        return Text(l10n.archiveResultsFiltered(results.length), style: KagamiType.body(12.5, color: muted));
-      }
-      return KGroup(
-        children: [
-          for (final result in shown)
-            ArchiveResultTile(
-              result: result,
-              referer: provider.home,
-              inLibrary: inLibrary(result),
-              details: [
-                if (inLibrary(result)) l10n.archiveInLibrary,
-                if (result.latestChapter case final number?) l10n.archiveLatestChapter(number),
-                if (result.releaseStatus != 'unknown') archiveStatusLabel(l10n, result.releaseStatus),
-              ].join(' · '),
-              onTap: _busy ? null : () => _pick(result),
-            ),
-        ],
+      if (shown > 0) return null;
+      final text = results.isEmpty ? l10n.archiveNoResults(provider.name) : l10n.archiveResultsFiltered(results.length);
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(results.isEmpty ? text : '${provider.name} · $text', style: style),
       );
     }
     if (found.challenged) {
@@ -684,9 +713,21 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
       );
     }
     if (found.error case final error?) {
-      return Text(error, style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text('${provider.name} · $error', style: KagamiType.body(12.5, height: 1.45, color: context.tokens.danger)),
+      );
     }
-    return const LinearProgressIndicator(minHeight: 3);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(provider.name, style: style),
+          const SizedBox(width: 12),
+          const Expanded(child: LinearProgressIndicator(minHeight: 3)),
+        ],
+      ),
+    );
   }
 
   List<Widget> _queue(ArchiveView view) {

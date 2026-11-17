@@ -176,6 +176,10 @@ class CheckReport {
   }
 }
 
+/// Chiamato quando un sito risponde con `ProviderChanged`: l'app ricontrolla il
+/// catalogo e dice `true` se ha adottato una variante nuova di [site].
+typedef ProviderChangedHandler = Future<bool> Function(String site, ProviderChanged error);
+
 class Tracking {
   Tracking(this.file);
 
@@ -268,6 +272,7 @@ class Tracking {
     Set<String>? only,
     Set<String> skip = const {},
     bool Function(Provider provider)? where,
+    ProviderChangedHandler? onProviderChanged,
   }) async {
     final report = CheckReport();
     if (where == null && await files.delegated()) return report;
@@ -288,6 +293,7 @@ class Tracking {
         rethrow;
       } on ProviderError catch (error) {
         await watch.failed(entry.provider, error);
+        if (error is ProviderChanged) await onProviderChanged?.call(entry.provider, error);
         final message = error is CloudflareChallenge
             ? 'Il sito chiede la verifica: apri la serie da «Scarica un manga».'
             : '$error';
@@ -430,6 +436,7 @@ Future<CheckReport> checkLibrary({
   Set<String>? only,
   bool Function(Provider provider)? where,
   bool Function()? cancelled,
+  ProviderChangedHandler? onProviderChanged,
   Duration pause = const Duration(seconds: 1),
 }) async {
   final report = CheckReport();
@@ -482,6 +489,7 @@ Future<CheckReport> checkLibrary({
         rethrow;
       } on ProviderError catch (error) {
         await watch.failed(provider.id, error);
+        if (error is ProviderChanged) await onProviderChanged?.call(provider.id, error);
         report.failed.add((title: title, error: '$error'));
         if (error is CloudflareChallenge) report.gated.add(GatedSeries(key: key, title: title, url: url));
         continue;

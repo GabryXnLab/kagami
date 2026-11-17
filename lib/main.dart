@@ -6,10 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kagami_archive/renderer.dart' show installPageRenderer;
 import 'package:path_provider/path_provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'src/archive/background.dart';
+import 'src/archive/page_browser.dart' show platformPageBrowser;
 import 'src/data/auto_cleanup.dart';
 import 'src/data/cloud.dart';
 import 'src/data/db/account_databases.dart';
@@ -33,6 +35,8 @@ Future<void> main() async {
   // altrimenti l'app si crederebbe scollegata per un istante e lo direbbe.
   await initCloud();
   NetworkMonitor.instance.start();
+  // Le pagine che i siti vogliono rese (`browser.pages`): la WebView invisibile, dove c'è.
+  installPageRenderer(platformPageBrowser());
   ArrivalNotifications.instance.start();
   SharedText.instance.start();
   final directories = await AppDirectories.resolve();
@@ -45,6 +49,13 @@ Future<void> main() async {
     support: Directory(directories.support),
     onUnreadable: (error) => Sentry.captureException(error),
   );
+  // Chi è entrato con un account prima di questa correzione ha già lo slot
+  // dell'account nella nota: il file di prima lo prende qui, prima di aprirlo.
+  try {
+    await databases.claimLegacy(slot);
+  } catch (error) {
+    await Sentry.captureException(error);
+  }
   // Lo slot segue l'account voluto: un altro uid lo cambia, una sessione persa
   // no; l'uscita esplicita la chiede `CloudAccountNotifier`.
   final slots = AccountSlots(databases, slot)

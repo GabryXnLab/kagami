@@ -14,6 +14,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../archive/repair.dart' show siteRecoveryProvider;
 import '../data/notifications.dart';
 import '../data/share_intake.dart';
+import '../data/catalog_sync.dart';
 import '../data/user_sites.dart';
 import '../l10n.dart';
 import '../providers.dart';
@@ -21,11 +22,11 @@ import '../providers_shares.dart';
 import '../providers_social.dart';
 import 'archive_flow.dart' show siteNameById, startRepair;
 import 'archive_screen.dart';
-import 'collections_screen.dart';
 import 'drive_received_sheet.dart';
 import 'home_screen.dart';
 import 'library_screen.dart';
 import 'social_messages.dart' show openConversation;
+import 'social_screen.dart';
 import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'theme.dart';
@@ -247,6 +248,8 @@ class _AppShellState extends ConsumerState<AppShell>
     ref.listen(collectionAutoFillProvider, (_, _) {});
     // I dati personali seguono una serie adottata con un'altra chiave.
     ref.listen(identityAdoptionProvider, (_, _) {});
+    // Il catalogo dei siti: si installa la cache e si aggiorna in rete.
+    ref.listen(catalogProvider, (_, _) {});
     // I siti degli utenti si leggono dalla libreria e, letti la prima volta,
     // si ricontrollano gli aggiornamenti (al più uno al giorno).
     ref.listen(userSitesProvider, (previous, next) {
@@ -422,14 +425,19 @@ class _ShellTabsState extends State<_ShellTabs>
 Widget _screenOf(ShellTab tab) => switch (tab) {
       ShellTab.home => const HomeScreen(),
       ShellTab.library => const LibraryScreen(),
-      ShellTab.collections => const CollectionsScreen(),
+      // La barra sospesa coprirebbe l'ultima riga dei suoi elenchi: la
+      // Comunità si apre anche come pagina, dove la barra non c'è.
+      ShellTab.social => const Padding(
+          padding: EdgeInsets.only(bottom: navBarInset),
+          child: SocialScreen(),
+        ),
       ShellTab.settings => const SettingsScreen(),
     };
 
 List<({IconData icon, String label})> _destinations(AppLocalizations l10n) => [
   (icon: LucideIcons.house, label: l10n.shellTabHome),
   (icon: LucideIcons.libraryBig, label: l10n.shellTabLibrary),
-  (icon: LucideIcons.bookmark, label: l10n.shellTabCollections),
+  (icon: LucideIcons.users, label: l10n.socialTitle),
   (icon: LucideIcons.settings, label: l10n.settingsTitle),
 ];
 

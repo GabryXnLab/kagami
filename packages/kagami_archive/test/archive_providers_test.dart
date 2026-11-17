@@ -83,7 +83,7 @@ void main() {
 
     test('un elenco più corto di quanto dichiarato non passa', () async {
       final http = FakeMangaK();
-      (http.series['stats'] as Map)['chaptersCount'] = 3;
+      (http.series['stats'] as Map)['chaptersCount'] = 10;
       await expectLater(
         MangaK().fetchSeries('https://mangak.io/test-series', http),
         throwsA(isA<ProviderError>()),
@@ -314,7 +314,7 @@ void main() {
       expect(metadata['description'], 'Heavenly Demons. Hunters.\n\n[Game Character\nAbilities Synchronized.]');
       expect(metadata['authors'], ['Writer']);
       expect(metadata['artists'], ['Studio']);
-      expect(metadata['genres'], ['Action', 'Fantasy']);
+      expect(metadata['genres'], ['Action', 'Fantasy', 'Manhwa']);
       expect(metadata['alternativeTitles'], ['멸망전쟁']);
       expect(metadata['releaseStatus'], 'ongoing');
       expect(metadata['publishedAt'], isNull);
@@ -418,8 +418,8 @@ void main() {
       expect(chapterFolderName(series.chapters.last), '0001.5 - Chapter 1.5 [chapter-1-5]');
       final metadata = normalizeMetadata(series.metadata);
       expect(metadata['description'], 'A broken girl meets an old man.');
-      expect(metadata['genres'], ['Fantasy', 'Action']);
-      expect(metadata['tags'], ['fantasy-adventure']);
+      expect(metadata['genres'], ['Fantasy', 'Action', 'Manhwa']);
+      expect(metadata['tags'], ['Fantasy Adventure']);
       expect(metadata['authors'], ['Writer', 'Other Writer']);
       expect(metadata['alternativeTitles'], ['Shard of Time', '시간이 머문 집']);
       expect(metadata['releaseStatus'], 'ongoing');
@@ -493,6 +493,8 @@ void main() {
         coffeeMangaKey('var a;$bundle').map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
         '143d17cc4fbf2e4e9441e493c4765c915ce55d6d0f7bf1b45af32f5d76a7699c',
       );
+      // Il bundle del 2026-11-16 dichiara l'array con `let`: la chiave è la stessa.
+      expect(coffeeMangaKey('var a;${bundle.replaceFirst('{const ', '{let ')}'), coffeeMangaKey('var a;$bundle'));
       // La precedenza è quella di JS: `+` prima di `&`, `^` prima di `|`.
       String key(String expression) => coffeeMangaKey(
             'const ue=[5,6];function T(){const l=new Uint8Array(32),r=document.documentElement.tagName;return '

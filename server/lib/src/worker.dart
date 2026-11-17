@@ -25,6 +25,8 @@ import 'package:kagami_archive/stores.dart';
 import 'package:kagami_archive/tracking.dart';
 import 'package:path/path.dart' as p;
 
+import 'catalog.dart';
+
 /// La rete del server: c'è. Un errore è un guasto di quel momento, e il giro
 /// lo tratta come il telefono tratta la rete che manca: aspetta e riprova.
 class ServerNetwork implements NetworkState {
@@ -315,8 +317,13 @@ class ServerWorker implements JobControl {
     this.repairWatch = const Duration(minutes: 1),
     this.sitesMaxAge = const Duration(minutes: 5),
     this.elsewhereDelay = const Duration(seconds: 2),
+    this.catalog,
     this.log = _stderr,
   });
+
+  /// Il catalogo dei siti, se configurato: si ricontrolla prima di ogni giro e
+  /// di ogni controllo (`docs/catalogo.md`, «Quando si ricontrolla»).
+  final ServerCatalog? catalog;
 
   final ArchiveFiles files;
   final ArchiveEnvironment environment;
@@ -557,6 +564,7 @@ class ServerWorker implements JobControl {
         await _sleep(queued.isEmpty && _repair == null && !_elsewhereWanted ? null : retryAfter);
         continue;
       }
+      await catalog?.refresh();
       await refreshSites();
       if (_repair != null && !await _repairNow()) {
         await _sleep(retryAfter);
@@ -963,6 +971,7 @@ class ServerWorker implements JobControl {
 
   Future<void> _check() async {
     if (await blocked() != null) return;
+    await catalog?.refresh();
     await refreshSites();
     final settings = await checkSettings();
     final CheckReport report;

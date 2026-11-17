@@ -16,6 +16,8 @@ FROM build AS test
 # Il contratto dei siti controlla che ognuno abbia la sua icona fra gli asset
 # dell'app: le icone entrano solo qui, l'immagine del server non le usa.
 COPY assets/providers /src/assets/providers
+# I test del pacchetto leggono i siti del catalogo (cassette, parità, lint dei reali).
+COPY catalog /src/catalog
 RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools chromium \
     && rm -rf /var/lib/apt/lists/*
 RUN cd /src/packages/kagami_archive && dart test && cd /src/server && dart analyze --fatal-infos && dart test
@@ -29,9 +31,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends libvips-tools c
     && useradd --uid 1000 --create-home kagami \
     && mkdir /data && chown kagami:kagami /data
 COPY --from=build /kagami-server /usr/local/bin/kagami-server
+# La sentinella cerca i canarini in catalog/canaries.json (default di --canaries),
+# relativo alla cartella di lavoro: la radice, dove sta il file.
+WORKDIR /
+COPY catalog/canaries.json /catalog/canaries.json
 USER kagami
 ENV KAGAMI_DATA=/data
 ENV KAGAMI_CHROMIUM=/usr/bin/chromium
+# Il catalogo firmato dei siti di chi compila l'immagine (docs/catalogo.md):
+# vuoto di default, così un'immagine costruita dal sorgente non si fida di
+# nessuno. Chi installa lo cambia o lo spegne con KAGAMI_CATALOG_URLS e
+# KAGAMI_CATALOG_KEYS, che vincono anche vuoti.
+ARG CATALOG_URLS=""
+ARG CATALOG_KEYS=""
+ENV CATALOG_URLS=${CATALOG_URLS}
+ENV CATALOG_KEYS=${CATALOG_KEYS}
 VOLUME /data
 EXPOSE 8080
 HEALTHCHECK --interval=1m --timeout=10s --start-period=30s --start-interval=5s CMD ["kagami-server", "ping"]

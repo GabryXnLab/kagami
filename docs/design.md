@@ -268,7 +268,13 @@ la serie ha già: tutta la serie se c'erano tutti, gli stessi spuntati se
 erano alcuni, la scheda se non ce n'era nessuno. E `moveSeries` riceve la
 traduzione degli id dei capitoli (`data/site_switch.dart`), perché ogni sito
 ha i suoi. I capitoli si abbinano per numero, quelli senza numero per nome.
-Letti, posizioni, cronologia e segnalibri seguono il capitolo. Un letto che
+Letti, posizioni, cronologia e segnalibri seguono il capitolo; voto, stato,
+preferito, nota, silenzio, raccolte (nella stessa posizione) e impostazioni di
+lettura passano con la serie, e se la serie nuova ha già i suoi dati vince il
+record più recente (`test/fallback_personal_data_test.dart`). Il ripiego sull'incluso
+rifiutato per identità non verificabile (`series.id` sconosciuto) lancia solo
+l'errore del catalogo: non scrive niente, i dati personali restano intatti e
+l'utente può sempre cambiare serie o provider portandoli con sé. Un letto che
 il sito nuovo non ha resta col suo id, quindi conta solo nella cronologia, e
 l'avviso finale dice quanti sono. La copia vecchia si toglie come la scheda
 manuale: cartelle, Drive nel cestino, coda e serie seguita, anche sul
@@ -432,9 +438,12 @@ telefono, il resto da Drive.
 ## Interfaccia
 
 Navigazione a quattro destinazioni: **Home** (ripresa, aggiornamenti,
-suggerimenti), **Libreria**, **Raccolte**, **Impostazioni** (profilo, scaricare,
+suggerimenti), **Libreria** (con le raccolte), **Comunità**, **Impostazioni** (profilo, scaricare,
 cronologia, statistiche, incognito e le impostazioni vere, ognuna nella sua
-pagina). La ricerca è sopra la libreria, non una destinazione a sé.
+pagina). La ricerca è sopra la libreria, non una destinazione a sé, e così le
+raccolte: sopra la griglia stanno come filtri, prima le automatiche e poi
+quelle dell'utente, e il segnalibro accanto alla ricerca apre la pagina che le
+crea e le modifica. Il posto lasciato libero nella barra è della Comunità.
 
 La barra di navigazione è **sospesa** sopra il contenuto, una pastiglia che
 galleggia invece di una fascia opaca che taglia l'ultima riga della griglia;
@@ -916,7 +925,12 @@ risultati (`/?s=…&post_type=wp-manga`), ManhwaRead con la pagina dei risultati
 (`/?s=…`), letta da una WebView invisibile perché Cloudflare
 non risponde al client HTTP dell'app nemmeno dopo la verifica, e blocca a
 parte la ricerca rapida di `admin-ajax.php`. Se la verifica chiede un tocco,
-al posto dei risultati compare la riga che la apre. Sotto il campo, una fila
+al posto dei risultati compare la riga che la apre. I risultati di tutti i siti
+accesi stanno in una lista sola, dal più pertinente al testo cercato (titolo
+uguale, che inizia con il testo, con tutte le parole, con alcune), ognuno col nome
+del suo sito; lo stesso titolo trovato su più siti sale in cima con le copie una
+accanto all'altra (`archive/search_ranking.dart`). Gli stati dei siti senza
+risultati (caricamento, errore, verifica, nessun risultato) restano righe sotto la lista. Sotto il campo, una fila
 di filtri: i siti da interrogare (uno spento non si cerca affatto, e almeno
 uno resta acceso), solo in corso o solo concluse, e solo quelle non ancora in
 libreria; si ricordano fra le impostazioni. Un risultato già in libreria lo
@@ -942,6 +956,13 @@ copertina e quello che il sito ne dice, in cui si sceglie:
 - **con una pausa** fra le richieste, da niente a due secondi, perché i siti
   bloccano chi scarica a raffica. Sta fra le «Avanzate»: quella di partenza
   va bene quasi sempre.
+
+L'ordine della pagina è: riquadri, stato sul ripiano (per la scheda anche
+preferito, voto e note), raccolta, dove, avanzate e, **per ultimo**,
+l'elenco dei capitoli. Con serie di centinaia di capitoli, le scelte messe
+dopo l'elenco non le trovava nessuno. Lo stato scelto vale da quando il
+lavoro è in coda (`ArchiveChoice.status`, `null` se resta quello di prima),
+come la raccolta.
 
 In fondo alla pagina resta il riepilogo — quanti capitoli, dove — con il
 pulsante. Chiudendola senza scegliere, la serie resta sotto la ricerca e la

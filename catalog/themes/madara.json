@@ -1,0 +1,65 @@
+{
+  "format": 2,
+  "series": {
+    "path": "^/manga/([a-z0-9-]+)/?$",
+    "title": {"first": [
+      "div.post-title h1",
+      {"css": "meta[property=\"og:title\"]", "attr": "content", "filters": [{"replace": ["\\s+[-|\u2013]\\s+[^-|\u2013]+$", ""]}]},
+      "h1"
+    ]},
+    "cover": {"first": [
+      {"css": "meta[property=\"og:image\"]", "attr": "content"},
+      {"css": "div.summary_image img", "attr": ["data-src", "data-lazy-src", "src"]}
+    ]},
+    "description": {"first": [
+      {"css": "div.description-summary div.summary__content", "html": true},
+      {"css": "meta[property=\"og:description\"]", "attr": "content"}
+    ]},
+    "authors": {"css": "div.author-content a", "all": true},
+    "genres": {"css": "div.genres-content a", "all": true},
+    "chapters": {
+      "items": {"first": [
+        "li.wp-manga-chapter",
+        "ul.version-chap li",
+        "div.listing-chapters_wrap li"
+      ]},
+      "url": {"css": "a", "attr": "href"},
+      "title": {"first": ["a", {"css": "a", "attr": "title"}]},
+      "order": "newest-first",
+      "fallback": [
+        {
+          "items": "div.listing-chapters_wrap a[href]",
+          "skip": [{"attr": "href", "matches": "^(#|javascript)"}],
+          "url": {"attr": "href"},
+          "title": {"regex": "^(.+)$"}
+        }
+      ]
+    }
+  },
+  "chapter": {
+    "path": "^/manga/([a-z0-9-]+)/[a-z0-9-]+/?$",
+    "pages": {
+      "items": {"first": [
+        "div.reading-content img",
+        "div.page-break img",
+        "div.chapter-video-frame img"
+      ]},
+      "url": {"attr": ["data-src", "data-lazy-src", "src"]}
+    },
+    "fallback": [
+      {
+        "pages": {
+          "items": "div.entry-content img",
+          "url": {"attr": ["data-src", "data-lazy-src", "src"]}
+        }
+      }
+    ]
+  },
+  "search": {
+    "items": {"first": ["div.c-tabs-item__content", "div.c-tabs-item div.row"]},
+    "title": {"first": ["div.post-title a", "h3 a"]},
+    "link": {"first": [{"css": "div.post-title a", "attr": "href"}, {"css": "h3 a", "attr": "href"}]},
+    "cover": {"css": "img", "attr": ["data-src", "data-lazy-src", "src"]},
+    "latest": "div.latest-chap span.chapter a"
+  }
+}

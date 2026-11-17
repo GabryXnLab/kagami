@@ -219,6 +219,28 @@ tutto il resto e serve solo alla scheda di dettaglio, che legge `series.json`.
 uguale in `library.json` e in `index.json`. Il client rilegge una serie solo
 quando la firma cambia, senza confrontare capitolo per capitolo.
 
+### Forma di `type`, generi e tag
+
+Perché filtri e raccolte funzionino uguale per ogni sito, chi scrive porta
+questi campi in forma canonica (`canonicalLabel`, `canonicalType` in
+`packages/kagami_archive/lib/model.dart`) e chi legge li applica anche a ciò
+che trova già scritto, senza aspettare una riscrittura:
+
+- `type`: minuscolo. Se nomina una famiglia (`manga`, `manhwa`, `manhua`; anche
+  «webtoon», «korean», «chinese», «japanese», «doujin») vale la famiglia. Se il
+  sito non lo dà, lo si deduce da un genere o tag che sia proprio il nome di una
+  famiglia; altrimenti manca.
+- `genres` e `tags`: etichette leggibili, spazi compressi; uno slug o un testo
+  tutto minuscolo diventa «Overpowered Male Lead» (parole piccole come «of»
+  restano minuscole). Sinonimi unificati: «Sci fi», «Sci-fi», «Science Fiction»
+  → «Sci-Fi»; «Shonen» → «Shounen»; «Shojo» → «Shoujo»; «Full colour»,
+  «Full-color» → «Full Color». Niente doppioni fra maiuscole e minuscole né fra
+  generi e tag: un tag uguale a un genere resta solo nei generi.
+- La famiglia del `type` compare anche fra i `genres` («Manhwa», «Manga»,
+  «Manhua»).
+- Un confronto fra etichette (regole di raccolta) si fa sulla forma canonica,
+  senza distinguere le maiuscole.
+
 ## `index.json` e `pages.json`
 
 `index.json` porta in testa chiave, provider, titolo, `source`, `releaseStatus`,

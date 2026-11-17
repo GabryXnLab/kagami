@@ -40,6 +40,7 @@ Valgono per `ci.yml` e per `build.yml`.
 | `GOOGLE_SERVER_CLIENT_SECRET` | l'app non crea né collega Kagami Server | il segreto del client «Web» del progetto Google Cloud, con cui l'app riscatta il permesso di Drive per il server (`docs/server.md`) |
 | `BACKEND_URL`, `BACKEND_ANON_KEY` | niente dati personali sul backend né inviti ai server | indirizzo e chiave pubblica del proprio backend (`backend/README.md`) |
 | `GOOGLE_SERVER_CLIENT_ID` | `google_sign_in` ricava il client da `google-services.json` | l'id del client «Web», se serve passarlo esplicito |
+| `CATALOG_URLS`, `CATALOG_KEYS` | niente catalogo dei siti: valgono gli inclusi e quelli degli utenti | indirizzi e chiavi pubbliche del proprio catalogo firmato (`docs/catalogo.md`), passati all'app come `--dart-define` e all'immagine del server come build-arg |
 
 ### L'immagine del server
 
@@ -101,7 +102,11 @@ Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
 4. `publish` scarica gli artefatti di quel run (`Kagami-*-release*-<sha>`), rifiuta un
    APK firmato con una chiave di debug e crea la release con i quattro APK, l'IPA, un
    `kagami-<versione>.sha256` per tutti e, nelle note, quale scegliere e l'impronta
-   della firma.
+   della firma. Rifiuta anche ogni APK la cui SHA-1 non sia quella della variabile del
+   repo `ANDROID_RELEASE_SHA1` (la chiave di release attesa; senza la variabile si ferma);
+5. `cleanup`, solo se tutti i job precedenti sono riusciti, cancella gli artefatti
+   creati prima dell'inizio della run precedente: restano quelli della precedente e
+   della corrente (la quota degli artefatti è del repo, e piena fa fallire `publish`).
 
 Con `--split-per-abi` Flutter somma al `versionCode` mille per l'architettura (arm64
 2000): un APK per architettura si installa sopra l'universale, non il contrario. Le
@@ -140,6 +145,10 @@ risultato.
   cambiamenti che non vengono da un sync, e la PR successiva li cancellerebbe, il sync
   si ferma e prepara la patch da riportare nel privato. Una PR di un contributore si
   unisce qui come sempre; i sync riprendono quando la modifica è anche nel privato.
+
+## `catalog.yml` (**Catalog**): lo specchio del catalogo
+
+Su push al ramo `catalog` (che ha alla radice solo index.json, index.sig e sites/, gli stessi file del bucket di Hestia) e a mano: `dart run tool/catalog.dart verify` di `packages/kagami_archive` con il secret `CATALOG_KEYS`; senza secret (un fork) salta ed esce 0. Come `ci.yml`, in un repo privato parte solo a mano. `docs/catalogo.md`.
 
 ## Gli altri workflow
 

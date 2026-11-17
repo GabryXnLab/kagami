@@ -930,14 +930,16 @@ dopo `normalizeMetadata` per ogni sito. Fonti:
   `type`, `genres.name`, `author`, `artist`, `alt_titles` con ripiego su
   `alternative_titles` (testo unico, come il Dart). Identico all'incluso, anche
   dal vivo.
-- **ManhwaRead** (v2): solo le fonti strutturate che il Dart legge e che si
-  dicono con un selettore: `keywords` della testa (poi `keywords` del JSON-LD)
-  per i tag, `genre`, `author`, `artist` del JSON-LD. Differenza ammessa: il
-  Dart legge anche le coppie etichetta-valore del corpo (`_labels`: stato,
-  tipo, titoli alternativi, autori, artisti, generi e tag scritti nella
-  pagina), che il formato non sa dire; la pagina vera non si è potuta vedere
-  (Cloudflare, nessuna cassetta), quindi finché non c'è una cattura dal PC di
-  casa il catalogo dà di ManhwaRead solo ciò che sta nella testa.
+- **ManhwaRead** (v3): letta sulla pagina vera del 2026-11-17 (cattura da un
+  browser a casa, cassetta `2026-11-17-browser`). Il markup nuovo non ha più
+  coppie etichetta-valore: generi, tag, autori e artisti sono link
+  (`/genre/`, `/tag/`, `/author/`, `/artist/`, il nome nello `span.pl-2`), lo
+  stato è `data-status` di `.manga-status.has-bg`, i titoli alternativi stanno
+  in `.manga-titles h2` separati da `|`, e il tipo solo nella descrizione
+  («This Ongoing Manhwa…», `regex`). Le fonti strutturate di v2 (JSON-LD,
+  `keywords`) restano come alternative. Il Dart incluso legge ancora le
+  coppie (`_labels`) e su questa pagina non trova niente: qui il catalogo è
+  più completo dell'incluso.
 - **Coffee Manga**: già in parità, tranne gli autori scritti come testo
   (sotto).
 

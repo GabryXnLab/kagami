@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-17T10:00:11.605098Z",
+  "entries": {
+    "https://manhwaread.com/manhwa/my-girlfriend-was-already-fully-trained/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "034be5e90ed9.html"
+    },
+    "https://manhwaread.com/?s=girlfriend": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "eb9eb7c608f5.html"
+    },
+    "https://manhwaread.com/manhwa/my-girlfriend-was-already-fully-trained/chapter-48/": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "4664cbea51a0.html"
+    }
+  }
+}

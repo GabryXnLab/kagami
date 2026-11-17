@@ -2,7 +2,7 @@
   "format": 2,
   "id": "manhwaread",
   "name": "ManhwaRead",
-  "version": 2,
+  "version": 3,
   "home": "https://manhwaread.com",
   "hosts": ["manhwaread.com", "www.manhwaread.com"],
   "mediaHosts": ["manread.xyz", "mancover.xyz"],
@@ -30,19 +30,29 @@
       {"css": "meta[name=\"description\"]", "attr": "content"},
       {"css": "meta[property=\"og:description\"]", "attr": "content"}
     ]},
+    "status": {"first": [
+      {"css": ".manga-status.has-bg", "attr": "data-status"},
+      {"css": "meta[name=\"description\"]", "attr": "content", "regex": "\\bThis (\\w+) (?:Manhwa|Manhua|Manga|Webtoon|Comic)\\b"}
+    ]},
+    "type": {"css": "meta[name=\"description\"]", "attr": "content", "regex": "\\bThis \\w+ (Manhwa|Manhua|Manga|Webtoon|Comic)\\b"},
+    "alternativeTitles": {"css": ".manga-titles h2", "split": "\\s*\\|\\s*"},
     "genres": {"first": [
+      {"css": "a[href^=\"/genre/\"]", "all": true},
       {"css": "script[type=\"application/ld+json\"]", "json": "genre.name", "all": true, "split": "\\s*,\\s*"},
       {"css": "script[type=\"application/ld+json\"]", "json": "genre", "all": true, "split": "\\s*,\\s*"}
     ]},
     "tags": {"first": [
+      {"css": "a[href^=\"/tag/\"] span.pl-2", "all": true},
       {"css": "meta[name=\"keywords\"]", "attr": "content", "all": true, "split": "\\s*,\\s*"},
       {"css": "script[type=\"application/ld+json\"]", "json": "keywords", "all": true, "split": "\\s*,\\s*"}
     ]},
     "authors": {"first": [
+      {"css": "a[href^=\"/author/\"] span.pl-2", "all": true},
       {"css": "script[type=\"application/ld+json\"]", "json": "author.name", "all": true, "split": "\\s*,\\s*"},
       {"css": "script[type=\"application/ld+json\"]", "json": "author", "all": true, "split": "\\s*,\\s*"}
     ]},
     "artists": {"first": [
+      {"css": "a[href^=\"/artist/\"] span.pl-2", "all": true},
       {"css": "script[type=\"application/ld+json\"]", "json": "artist.name", "all": true, "split": "\\s*,\\s*"},
       {"css": "script[type=\"application/ld+json\"]", "json": "artist", "all": true, "split": "\\s*,\\s*"}
     ]},

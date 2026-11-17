@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-11-16T20:54:07.848829Z",
+  "entries": {
+    "https://api.mangak.io/titles/search?q=solo+leveling&limit=10": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "2e32a8db606f.json"
+    },
+    "https://mangak.io/solo-leveling": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "64b90014e917.html"
+    },
+    "https://api.mangak.io/titles/VYPXzEYz/chapters?cv=1794853283332": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "15924d22b2eb.json"
+    },
+    "https://mangak.io/solo-leveling/chapter-0-1": {
+      "status": 200,
+      "contentType": "text/html",
+      "file": "b351544fe8e0.html"
+    }
+  }
+}

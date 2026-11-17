@@ -1,0 +1,10 @@
+{
+  "extends": "mangathemesia",
+  "id": "kingofshojo",
+  "name": "King of Shojo",
+  "version": 1,
+  "home": "https://kingofshojo.com",
+  "hosts": ["kingofshojo.com"],
+  "mediaHosts": ["cdn.kingofshojo.com", "i.ibb.co", "i?.wp.com", "kingofshojo.com"],
+  "search": {"url": "https://kingofshojo.com/?s={query}"}
+}

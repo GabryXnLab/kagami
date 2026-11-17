@@ -146,6 +146,65 @@ class AccountDatabases {
     return true;
   }
 
+  File get _claimed => File(p.join(documents.path, 'kagami-legacy-claimed.json'));
+
+  /// Il passaggio da Firebase a Hestia: al primo avvio nessuno ha ancora una
+  /// sessione sul backend nuovo, quindi il file di prima lo adotta `guest`, e
+  /// il primo accesso apriva un file vuoto (e lo mandava su). Qui il primo
+  /// account che entra dopo un'adozione prende una copia di `guest`, ma solo
+  /// se il suo file non ha dati di lettura: non è una fusione, e i dati di un
+  /// account non finiscono mai sopra quelli di un altro. Una volta sola per
+  /// telefono (nota `kagami-legacy-claimed.json`); il file di `guest` resta.
+  /// Va chiamata con il file di [slot] chiuso. Restituisce se ha copiato.
+  Future<bool> claimLegacy(String slot) async {
+    if (slot == guest || !_validSlot(slot)) return false;
+    if (await _claimed.exists()) return false;
+    if (!await File('${_legacy.path}.adopted').exists()) return false;
+    final source = fileFor(guest);
+    if (!await source.exists() || !await _hasReading(source)) return false;
+    final target = fileFor(slot);
+    if (await target.exists() && await _hasReading(target)) {
+      // L'account ha già dati suoi: il file di prima non era suo.
+      await _writeClaimed(slot, copied: false);
+      return false;
+    }
+    final tmp = File('${target.path}.tmp');
+    if (await tmp.exists()) await tmp.delete();
+    final db = KagamiDatabase.forTesting(NativeDatabase(source));
+    try {
+      await db.customStatement("VACUUM INTO '${tmp.path.replaceAll("'", "''")}'");
+    } finally {
+      await db.close();
+    }
+    for (final suffix in const ['-journal', '-wal', '-shm']) {
+      final side = File('${target.path}$suffix');
+      if (await side.exists()) await side.delete();
+    }
+    await tmp.rename(target.path);
+    await _writeClaimed(slot, copied: true);
+    return true;
+  }
+
+  Future<void> _writeClaimed(String slot, {required bool copied}) =>
+      _claimed.writeAsString(jsonEncode({'slot': slot, 'copied': copied}), flush: true);
+
+  /// Se il file ha dati di lettura (serie, letti, posizioni, raccolte): le sole
+  /// impostazioni non contano, le scrive anche la prima sincronizzazione.
+  static Future<bool> _hasReading(File file) async {
+    final db = KagamiDatabase.forTesting(NativeDatabase(file));
+    try {
+      for (final table in const [
+        'series_states', 'chapter_reads', 'progresses', 'collection_rows', 'bookmarks',
+      ]) {
+        final rows = await db.customSelect('SELECT 1 FROM $table LIMIT 1').get();
+        if (rows.isNotEmpty) return true;
+      }
+      return false;
+    } finally {
+      await db.close();
+    }
+  }
+
   Future<void> _adoptBackups(Directory support, String slot) async {
     final from = Directory(p.join(support.path, 'backup'));
     if (!await from.exists()) return;
@@ -220,6 +279,13 @@ class AccountSlots extends ValueNotifier<String> {
   /// slot di prima, mai uno che il file non conferma.
   Future<void> switchTo(String slot) async {
     if (slot == value) return;
+    // Il file di [slot] qui è ancora chiuso: il contenitore che lo apre nasce
+    // solo dopo la notifica. Una copia fallita non deve impedire l'accesso.
+    try {
+      await databases.claimLegacy(slot);
+    } on Object catch (error) {
+      debugPrint('claimLegacy: $error');
+    }
     await databases.writeNote(slot);
     value = slot;
   }

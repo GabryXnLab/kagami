@@ -40,7 +40,6 @@ import 'drive_ui.dart';
 import 'history_screen.dart';
 import 'statistics_screen.dart';
 import 'privacy_screen.dart';
-import 'social_screen.dart';
 import 'sources_screen.dart';
 import 'sync_screen.dart';
 import 'theme.dart';
@@ -256,16 +255,6 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const _Value(),
                     onTap: () => open(const HistoryScreen()),
                   ),
-                  if (cloudAvailable)
-                    KTile(
-                      icon: LucideIcons.users,
-                      title: l10n.socialTitle,
-                      subtitle: (ref.watch(socialSettingsProvider).value?.enabled ?? false)
-                          ? l10n.socialSubtitleOn
-                          : l10n.socialSubtitleOff,
-                      trailing: const _Value(),
-                      onTap: () => open(const SocialScreen()),
-                    ),
                   KTile(
                     icon: LucideIcons.chartColumn,
                     title: l10n.moreStatistics,

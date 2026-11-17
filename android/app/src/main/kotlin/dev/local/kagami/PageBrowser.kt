@@ -47,12 +47,15 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         if (url == null || ready == null) return result.error("args", "url e ready", null)
         // Solo pagine di siti in https: mai file:, content: o http.
         if (!url.startsWith("https://")) return result.success(null)
+        val hosts = (call.argument<List<String>>("hosts") ?: emptyList()).map { it.lowercase() }
+        // Come `pageHostAllowed` in `page_browser.dart`: https su un host dichiarato dal sito.
+        if (!hostAllowed(url, hosts)) return result.success(null)
         val timeout = (call.argument<Int>("timeoutMs") ?: 45000).toLong()
-        main.post { open(url, ready, timeout, result) }
+        main.post { open(url, hosts, ready, timeout, result) }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun open(url: String, ready: String, timeout: Long, result: MethodChannel.Result) {
+    private fun open(url: String, hosts: List<String>, ready: String, timeout: Long, result: MethodChannel.Result) {
         val view = try {
             WebView(context)
         } catch (error: Throwable) {
@@ -66,10 +69,15 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         view.settings.allowContentAccess = false
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(view, true)
-        // Un reindirizzamento fuori da https (file:, content:, intent:, http:) non si segue.
+        // Un reindirizzamento fuori da https o da un host dichiarato dal sito non si segue,
+        // e la pagina che non arriva fa finire la lettura con `null`.
+        var blocked = false
         view.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-                request.url.scheme != "https"
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (hostAllowed(request.url.toString(), hosts)) return false
+                if (request.isForMainFrame) blocked = true
+                return true
+            }
         }
         val metrics = context.resources.displayMetrics
         view.measure(
@@ -87,6 +95,8 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         fun finish(html: String?) {
             if (done) return
             done = true
+            // Ricontrollo finale: la pagina letta dev'essere su un host dichiarato.
+            val html = if (blocked || !hostAllowed(view.url ?: "", hosts)) null else html
             view.stopLoading()
             view.destroy()
             CookieManager.getInstance().flush()
@@ -96,6 +106,7 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
         poll = Runnable {
             view.evaluateJavascript(ready) { found ->
                 when {
+                    blocked -> finish(null)
                     found == "true" -> view.evaluateJavascript("document.documentElement.outerHTML") { html ->
                         finish((runCatching { JSONTokener(html).nextValue() }.getOrNull() as? String)?.let { "<!DOCTYPE html>$it" })
                     }
@@ -105,5 +116,10 @@ class PageBrowser(messenger: BinaryMessenger, private val context: Context) : Me
             }
         }
         main.postDelayed(poll, 1000)
+    }
+
+    private fun hostAllowed(url: String, hosts: List<String>): Boolean {
+        val uri = runCatching { android.net.Uri.parse(url) }.getOrNull() ?: return false
+        return uri.scheme == "https" && uri.userInfo == null && uri.host?.lowercase() in hosts
     }
 }

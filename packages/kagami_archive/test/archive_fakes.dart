@@ -111,6 +111,13 @@ class FakeMangaK implements ProviderHttp {
 
   @override
   Future<Map<String, Object?>> json(String url) async {
+    // Le tavole di un capitolo dall'API, la riserva di `catalog/sites/mangak.json`:
+    // la forma vista con Reverse API Engineering, solo gli indirizzi in ordine.
+    for (final MapEntry(key: number, value: pages) in urls.entries) {
+      if (url == 'https://api.mangak.io/titles/S1/chapters/C$number/images') {
+        return {'success': true, 'data': {'images': pages}};
+      }
+    }
     _check(url, 'https://api.mangak.io/titles/S1/chapters?cv=123');
     return {'success': true, 'data': {'chapters': chapterItems}};
   }
@@ -488,8 +495,9 @@ class FakeCoffeeManga implements ProviderHttp {
     final mask = [for (var i = 0; i < 32; i += 2) int.parse('d0c5bcb3134cb9fe8dc6913211696ed8'.substring(i, i + 2), radix: 16)];
     final d = switch (v % 3) {
       0 => data,
-      1 => base64.encode(utf8.encode(data)),
-      _ => base64.encode([for (final (i, b) in utf8.encode(data).indexed) b ^ mask[i % mask.length]]),
+      // Il sito usa l'alfabeto base64url, senza riempimento.
+      1 => base64Url.encode(utf8.encode(data)).replaceAll('=', ''),
+      _ => base64Url.encode([for (final (i, b) in utf8.encode(data).indexed) b ^ mask[i % mask.length]]).replaceAll('=', ''),
     };
     final envelope = {'c': id, 'e': 1793216018, 'd': d, 's': 'sig'};
     return _json(switch (v ~/ 3) {
@@ -506,6 +514,15 @@ class FakeCoffeeManga implements ProviderHttp {
     if (image != null) return _image(image);
     if (url == FakeCoffeeManga.url) return _html(_series());
     if (url == bundleUrl) return (body: Uint8List.fromList(utf8.encode(bundle)), contentType: 'text/javascript');
+    // L'elenco intero, senza pagine: lo legge la definizione del catalogo.
+    if (url == '$host/manga/$slug/chapters.json') {
+      return _json({
+        'items': [
+          for (final (chapterSlug, number, _, locked) in chapters)
+            {'slug': chapterSlug, 'label': 'Chapter $number', 'locked': locked, 'access': locked ? 'vip' : 'free', 'published_label': '18 Jun'},
+        ],
+      });
+    }
     final more = RegExp('^$host/manga/$slug/chapters/(\\d+)\\.json\$').firstMatch(url);
     if (more != null) return _json({'items': _items(_slice(int.parse(more[1]!)))});
     for (final (chapterSlug, _, id, _) in chapters) {

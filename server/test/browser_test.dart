@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:kagami_archive/providers.dart';
+import 'package:kagami_archive/renderer.dart';
 import 'package:kagami_server/src/browser.dart';
 import 'package:kagami_server/src/browser_container.dart';
 import 'package:kagami_server/src/browser_proxy.dart';
@@ -180,6 +181,20 @@ void main() {
     final browser = await newBrowser(const Duration(seconds: 3));
     const never = BrowserGate(hosts: ['127.0.0.2'], seriesReady: 'false', searchReady: 'true');
     expect(await browser.seriesPage('http://127.0.0.2:${site.port}/serie', never), isNull);
+  }, skip: missing, timeout: const Timeout(Duration(minutes: 4)));
+
+  test('pagina resa: il DOM costruito dal JavaScript, col tempo chiesto dal motore', () async {
+    final browser = await newBrowser(const Duration(seconds: 60));
+    final PageRenderer renderer = browser;
+    final html = await renderer.render('http://127.0.0.2:${site.port}/serie',
+        hosts: ['127.0.0.2'], ready: "!!document.querySelector(\"#chaptersList\")", timeout: const Duration(seconds: 30));
+    expect(html, contains('id="chaptersList"'), reason: logged.join('\n'));
+    final started = DateTime.now();
+    expect(
+        await renderer.render('http://127.0.0.2:${site.port}/serie',
+            hosts: ['127.0.0.2'], ready: 'false', timeout: const Duration(seconds: 3)),
+        isNull);
+    expect(DateTime.now().difference(started), lessThan(const Duration(seconds: 30)));
   }, skip: missing, timeout: const Timeout(Duration(minutes: 4)));
 
   test('contenitore: il comando browser lancia Chromium con gli argomenti del locale e il proxy del server', () {

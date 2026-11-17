@@ -13,11 +13,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart' as rp show Provider;
+import 'package:intl/intl.dart';
+import 'package:kagami_archive/catalog.dart' show CatalogSiteProblem, CatalogSiteResult, CatalogSiteState;
 import 'package:kagami_archive/declarative.dart';
 import 'package:kagami_archive/http.dart';
+import 'package:kagami_archive/model.dart' show ProviderChanged;
 import 'package:kagami_archive/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../data/catalog_sync.dart';
 import '../data/drive.dart' show DriveAuthRequired;
 import '../data/user_sites.dart';
 import '../l10n.dart';
@@ -32,6 +37,14 @@ class SitesScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final muted = context.tokens.muted;
     final sites = ref.watch(userSitesProvider).value ?? const UserSites();
+    final catalog = ref.watch(catalogProvider);
+    final catalogConfigured = ref.watch(catalogSyncProvider).config.isConfigured;
+    final shown = _baseSites(catalog);
+    final shownIds = {for (final site in shown) site.id};
+    final unknown = [
+      for (final id in catalog.sites.keys)
+        if (!shownIds.contains(id) && sites.byId(id) == null) id,
+    ];
     // Un file rovinato senza il sito di prima non è in `sites`.
     final orphans = [
       for (final file in sites.errors.keys)
@@ -42,15 +55,39 @@ class SitesScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
+          if (catalogConfigured) ...[
+            KSection(l10n.sitesCatalogSection),
+            KGroup(
+              children: [
+                KTile(
+                  icon: LucideIcons.cloud,
+                  title: l10n.sitesCatalogUse,
+                  subtitle: _catalogLine(context, catalog),
+                  trailing: Switch(
+                    value: catalog.enabled,
+                    onChanged: (value) => unawaited(ref.read(catalogProvider.notifier).setEnabled(value)),
+                  ),
+                  onTap: () => unawaited(ref.read(catalogProvider.notifier).setEnabled(!catalog.enabled)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
           KSection(l10n.sitesBuiltInSection),
           KGroup(
             children: [
-              for (final site in builtInProviders)
+              for (final site in shown)
                 KTile(
                   icon: LucideIcons.globe,
                   leading: _icon(site),
                   title: site.name,
-                  subtitle: Uri.parse(site.home).host,
+                  subtitle: _baseSubtitle(context, site, catalog),
+                ),
+              for (final id in unknown)
+                KTile(
+                  icon: LucideIcons.globe,
+                  title: id,
+                  subtitle: _subtitle(context, ProviderOrigin.catalog, catalog.sites[id], null),
                 ),
             ],
           ),
@@ -69,7 +106,7 @@ class SitesScreen extends ConsumerWidget {
                     icon: LucideIcons.globe,
                     leading: _icon(site),
                     title: site.name,
-                    subtitle: _subtitle(context, sites, site),
+                    subtitle: _userSubtitle(context, sites, site),
                     trailing: sites.errors.containsKey('${site.id}.json')
                         ? Icon(LucideIcons.triangleAlert, size: 18, color: context.tokens.danger)
                         : const Icon(LucideIcons.ellipsis, size: 18),
@@ -109,9 +146,60 @@ class SitesScreen extends ConsumerWidget {
         child: SiteIcon(site, size: 36),
       );
 
-  String _subtitle(BuildContext context, UserSites sites, DeclarativeProvider site) {
+  /// Gli inclusi, ciascuno al posto del sito del catalogo che lo sostituisce, e
+  /// quelli che il catalogo aggiunge. Un sito dell'utente sta nella sua sezione.
+  static List<Provider> _baseSites(CatalogStatus catalog) {
+    final live = {for (final site in providers) site.id: site};
+    return [
+      for (final built in builtInProviders) live[built.id]?.origin == ProviderOrigin.catalog ? live[built.id]! : built,
+      for (final site in live.values)
+        if (site.origin == ProviderOrigin.catalog && !builtInProviders.any((built) => built.id == site.id)) site,
+    ];
+  }
+
+  String _catalogLine(BuildContext context, CatalogStatus catalog) {
+    final l10n = context.l10n;
+    if (!catalog.enabled) return l10n.sitesCatalogOff;
+    final date = DateFormat.yMd(l10n.localeName);
+    final issued = catalog.issuedAt;
+    final checked = catalog.lastCheck;
+    return [
+      if (catalog.hasCatalog) l10n.sitesCatalogIssue(catalog.serial, issued == null ? '' : date.format(issued.toLocal())),
+      if (checked != null) l10n.sitesCatalogChecked(date.add_Hm().format(checked.toLocal())),
+    ].join('\n');
+  }
+
+  String _baseSubtitle(BuildContext context, Provider site, CatalogStatus catalog) =>
+      _subtitle(context, site.origin, catalog.sites[site.id], switch (site.unwrapped) {
+        final DeclarativeProvider declared => declared,
+        _ => null,
+      });
+
+  /// Origine e versione, e sotto il guasto o il «serve Kagami più nuovo» che il
+  /// catalogo dice di quel sito.
+  String _subtitle(BuildContext context, ProviderOrigin origin, CatalogSiteResult? result, DeclarativeProvider? site) {
+    final l10n = context.l10n;
+    final state = result?.state ?? site?.catalog?.state;
+    final message = result?.message ?? site?.catalog?.message;
+    return [
+      [
+        switch (origin) {
+          ProviderOrigin.builtIn => l10n.sitesOriginBuiltIn,
+          ProviderOrigin.catalog => l10n.sitesOriginCatalog,
+          ProviderOrigin.user => l10n.sitesOriginUser,
+        },
+        if (site != null) l10n.sitesVersion(site.version),
+      ].join(' · '),
+      if (state == CatalogSiteState.broken)
+        message == null || message.isEmpty ? l10n.sitesCatalogBroken : l10n.sitesCatalogBrokenWith(message),
+      if (result?.problem == CatalogSiteProblem.needsNewerEngine) l10n.sitesNeedsNewer,
+    ].join('\n');
+  }
+
+  String _userSubtitle(BuildContext context, UserSites sites, DeclarativeProvider site) {
     final l10n = context.l10n;
     return [
+      l10n.sitesOriginUser,
       l10n.sitesVersion(site.version),
       if (sites.unconfirmed.contains(site.id))
         l10n.sitesUnconfirmed(providerNameOf(site.id))
@@ -229,11 +317,19 @@ class AddSitePage extends ConsumerStatefulWidget {
 /// Un errore in due livelli: cosa è andato storto in generale, e il messaggio
 /// tecnico.
 class _Problem {
-  const _Problem(this.title, this.detail);
+  const _Problem(this.title, this.detail, {this.fault});
 
   final String title;
   final String detail;
+
+  /// Fase e campo del guasto, già in frase: solo per un `ProviderChanged`.
+  final String? fault;
 }
+
+/// Il client della prova di un sito; i test ne mettono uno senza rete.
+final siteProbeHttpProvider = rp.Provider<ProviderHttp Function(DeclarativeProvider site)>(
+  (ref) => (site) => SiteHttp(site.allowedHost, publicOnly: !site.builtIn),
+);
 
 class _AddSitePageState extends ConsumerState<AddSitePage> {
   final _source = TextEditingController();
@@ -297,7 +393,7 @@ class _AddSitePageState extends ConsumerState<AddSitePage> {
       _probeResult = null;
       _probeProblem = null;
     });
-    final http = SiteHttp(site.allowedHost, publicOnly: !site.builtIn);
+    final http = ref.read(siteProbeHttpProvider)(site);
     String? result;
     _Problem? problem;
     try {
@@ -309,9 +405,18 @@ class _AddSitePageState extends ConsumerState<AddSitePage> {
         result = l10n.sitesTryResults(found.length, found.isEmpty ? '' : found.first.title);
       }
     } on Object catch (error) {
-      problem = _Problem(l10n.sitesTryFailed, error is SiteDefinitionError ? error.message : '$error');
+      final fault = error is ProviderChanged ? error.fault : null;
+      problem = _Problem(
+        l10n.sitesTryFailed,
+        error is SiteDefinitionError ? error.message : '$error',
+        fault: fault == null
+            ? null
+            : fault.field == null
+                ? l10n.sitesFaultPhase(fault.phase)
+                : l10n.sitesFault(fault.phase, fault.field!),
+      );
     } finally {
-      http.close();
+      if (http is SiteHttp) http.close();
     }
     if (!mounted) return;
     setState(() {
@@ -464,6 +569,20 @@ class _ProblemText extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(problem.title, style: KagamiType.body(13, height: 1.45, color: context.tokens.danger)),
+          if (problem.fault != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(LucideIcons.triangleAlert, size: 13, color: context.tokens.danger),
+                ),
+                const SizedBox(width: 6),
+                Expanded(child: Text(problem.fault!, style: KagamiType.body(12.5, height: 1.4))),
+              ],
+            ),
+          ],
           const SizedBox(height: 2),
           Text(problem.detail, style: KagamiType.body(11, height: 1.4, color: context.tokens.muted)),
         ],

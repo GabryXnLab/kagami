@@ -348,7 +348,7 @@ void main() {
     final folder = p.join(libraryPath(), result.folder);
     expect(p.basename(folder), 'War of Extinction [asurascans-war-of-extinction]');
     final manifest = readJson(File(p.join(folder, 'series.json')));
-    expect((manifest['metadata'] as Map)['genres'], ['Action', 'Fantasy']);
+    expect((manifest['metadata'] as Map)['genres'], ['Action', 'Fantasy', 'Manhwa']);
     final chapters = Directory(p.join(folder, 'chapters')).listSync().map((e) => p.basename(e.path)).toList()..sort();
     expect(chapters, ['0001 - Chapter 1 [101]', '0002 - Chapter 2 - The Arena [102]']);
     final index = readJson(File(p.join(folder, 'index.json')));

@@ -11,8 +11,9 @@ import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/site_replacements.dart';
 import 'package:kagami/src/data/user_sites.dart';
 import 'package:kagami/src/providers.dart';
+import 'package:kagami_archive/catalog.dart' show CatalogSite, CatalogSiteState, catalogEngine;
 import 'package:kagami_archive/declarative.dart';
-import 'package:kagami_archive/providers.dart' as archive show installUserProviders, providers;
+import 'package:kagami_archive/providers.dart' as archive show installCatalogProviders, installUserProviders, providers;
 import 'package:kagami_archive/stores.dart';
 
 Map<String, Object?> siteJson(String id, {int version = 1, String? update, String host = 'examplescans.com'}) => {
@@ -77,6 +78,28 @@ void main() {
     addTearDown(container.dispose);
     return container;
   }
+
+  test('un sito del catalogo va al server solo se il suo engine e il suo catalogo non sono più vecchi', () {
+    addTearDown(() => archive.installCatalogProviders(const []));
+    archive.installCatalogProviders([
+      DeclarativeProvider.fromJson(
+        siteJson('catalogscans'),
+        catalog: CatalogSite(id: 'catalogscans', state: CatalogSiteState.ok, variants: const []),
+      ),
+    ]);
+    ArchiveEngine pick(int? engine, int? serial, {int phone = 5}) => engineForSite(
+          ArchiveEngine.server,
+          'catalogscans',
+          server: (userSites: false, catalogEngine: engine, catalogSerial: serial),
+          phoneCatalogSerial: phone,
+        );
+    expect(pick(null, null), ArchiveEngine.phone);
+    expect(pick(catalogEngine - 1, 9), ArchiveEngine.phone);
+    expect(pick(catalogEngine, 4), ArchiveEngine.phone);
+    expect(pick(catalogEngine, 5), ArchiveEngine.server);
+    expect(pick(catalogEngine + 1, 6), ArchiveEngine.server);
+    expect(engineForSite(ArchiveEngine.phone, 'catalogscans', server: noServerSites), ArchiveEngine.phone);
+  });
 
   test('installare scrive il file, mette il sito nel motore e avvisa il server', () async {
     final container = make();

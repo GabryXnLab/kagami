@@ -7,6 +7,7 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:kagami_archive/model.dart' show canonicalLabel;
 import 'package:kagami_archive/manual.dart' show manualProvider;
 
 import '../format/malf.dart';
@@ -735,7 +736,11 @@ bool collectionRulesMatch(CollectionRules rules, SeriesSignals s) {
     final have = {
       for (final t in [...entry.genres, ...entry.tags]) t.toLowerCase(),
     };
-    if (!rules.tags.every((t) => have.contains(t.toLowerCase()))) return false;
+    // Una regola salvata con lo slug vecchio vale ancora: si confronta in
+    // forma canonica (docs/malf.md).
+    if (!rules.tags.every((t) => have.contains(canonicalLabel(t).toLowerCase()))) {
+      return false;
+    }
   }
   if (rules.shelf.isNotEmpty && !rules.shelf.contains(s.state.status)) {
     return false;

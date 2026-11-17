@@ -149,16 +149,31 @@ class AppLocalizationsHi extends AppLocalizations {
   String get seriesMuteMuted => 'नए अध्यायों की सूचनाएँ म्यूट कर दी गईं।';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other:
-          'फ़ोन में जो है, वह सब पढ़ लिया: $count घोषित अध्याय अभी नहीं हैं।',
-      one: 'फ़ोन में जो है, वह सब पढ़ लिया: एक घोषित अध्याय अभी नहीं है।',
+          'डाउनलोड किया गया सब पढ़ लिया: $count बिना पढ़े अध्याय अभी नहीं आए हैं।',
+      one: 'डाउनलोड किया गया सब पढ़ लिया: एक बिना पढ़ा अध्याय अभी नहीं आया है।',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'डाउनलोड किया गया सब पढ़ लिया: $count अध्याय पढ़ने बाकी हैं, अगले कतार में हैं।',
+      one: 'डाउनलोड किया गया सब पढ़ लिया: अगला अध्याय कतार में है।',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => 'अगले डाउनलोड करें';
 
   @override
   String get seriesCaughtUpAll => 'पूरी पढ़ ली।';
@@ -919,6 +934,9 @@ class AppLocalizationsHi extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get archiveResults => 'परिणाम';
 
   @override
   String archiveNoResults(String site) {
@@ -2861,9 +2879,6 @@ class AppLocalizationsHi extends AppLocalizations {
   String get shellTabLibrary => 'लाइब्रेरी';
 
   @override
-  String get shellTabCollections => 'कलेक्शन';
-
-  @override
   String get moreDownload => 'मांगा डाउनलोड करें';
 
   @override
@@ -4598,6 +4613,16 @@ class AppLocalizationsHi extends AppLocalizations {
   String get sitesTryFailed => 'आज़माइश विफल रही';
 
   @override
+  String sitesFault(String phase, String field) {
+    return 'चरण: $phase · फ़ील्ड: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return 'चरण: $phase';
+  }
+
+  @override
   String get sitesInstall => 'इंस्टॉल करें';
 
   @override
@@ -5694,4 +5719,44 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get serverErrorNotOwner =>
       'यह Drive फ़ोल्डर आपका नहीं है: सर्वर कुछ भी कचरे में नहीं डालेगा।';
+
+  @override
+  String get sitesOriginBuiltIn => 'शामिल';
+
+  @override
+  String get sitesOriginCatalog => 'कैटलॉग';
+
+  @override
+  String get sitesOriginUser => 'आपका';
+
+  @override
+  String get sitesCatalogBroken => 'बंद है';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return 'बंद है: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'Kagami का नया संस्करण चाहिए';
+
+  @override
+  String get sitesCatalogSection => 'साइट कैटलॉग';
+
+  @override
+  String get sitesCatalogUse => 'कैटलॉग का उपयोग करें';
+
+  @override
+  String get sitesCatalogOff =>
+      'बंद: सिर्फ़ शामिल साइटें और आपकी अपनी साइटें चलती हैं, और ऐप इसके लिए कोई नेटवर्क अनुरोध नहीं करता।';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return 'संस्करण $serial, $date का';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return 'आखिरी जाँच: $when';
+  }
 }

@@ -265,4 +265,16 @@ void main() {
     expect(index.chapters[1].formerIds, isEmpty);
     expect(index.chapters[2].listed, isTrue);
   });
+
+  test('una voce con tag in slug si legge in forma canonica', () {
+    final e = SeriesEntry.fromJson({
+      'key': 'k',
+      'type': 'Manhwa',
+      'genres': ['Action', 'sci fi'],
+      'tags': ['overpowered-male-lead', 'action'],
+    });
+    expect(e.type, 'manhwa');
+    expect(e.genres, ['Action', 'Sci-Fi', 'Manhwa']);
+    expect(e.tags, ['Overpowered Male Lead']);
+  });
 }

@@ -183,6 +183,9 @@ Workflow degli agenti: ricetta ottimizza-claude rev. 2026-11-13.2. Gli strumenti
 | skill di progetto: `riprendi`, `chiudi-sessione`, `piano` (handoff in `handoff/<feature>/`) | `.claude/skills/` |
 | autopilota (motore comune del kit): sessioni `claude --bg` da `handoff/<x>/PROSSIMO.md`, sul ramo del conf, mai su `main`; lancio `tmux -L claude new -d -s autopilota-kagami 'scripts/agent/autopilota.sh handoff/<x>'`, prova `--stampa-prompt`, stop `touch .claude/autopilota.stop` | `scripts/agent/autopilota.{sh,conf}`, `autopilota-nota.md`, `autopilota-transizione.md` |
 | orchestratore: apre dal vivo la sessione dell'autopilota (comando globale `orchestratore-kagami`) | `scripts/agent/orchestratore.sh` |
+| skill `ripara-sito`: un sito del catalogo dal guasto della sonda alla build controllata (triage su cassette, cattura, correzione, cancelli; firma al proprietario) | `.claude/skills/ripara-sito/SKILL.md` |
+| cattura di rae (Chromium su ARM64, HAR in `~/.cache/kagami-rae/`, costo stampato; costa 0,22 $, in background); `--stampa` mostra i comandi | `scripts/agent/rae-cattura.sh <url> <obiettivo\|->` |
+| sessione `claude --bg` che ripara un sito, col guasto da `--esito <probe.json>`; `--stampa-prompt` per vederlo | `scripts/agent/ripara-sito.sh <id>` |
 
 I file grandi dell'app (`lib/src/providers.dart` ~3100 righe, `series_screen.dart` e
 `reader_screen.dart` oltre 2000) non si leggono interi: firme con `api.sh`, poi `rg -n` e `Read` a

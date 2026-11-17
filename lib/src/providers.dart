@@ -19,6 +19,7 @@ import 'package:kagami_archive/stores.dart' show LocalStore;
 import 'package:kagami_archive/tracking.dart';
 
 import 'archive/device.dart';
+import 'archive/page_browser.dart' show platformPageBrowser;
 import 'archive/phone_check.dart';
 import 'data/adoption.dart';
 import 'data/arrivals.dart';
@@ -51,7 +52,9 @@ import 'data/server_error_text.dart';
 import 'data/sources/remote_router.dart';
 import 'providers_backup.dart' show backupFolderProvider;
 import 'providers_sources.dart' show downloadOriginProvider, storageSourcesProvider;
-import 'data/user_sites.dart' show engineForSite, serverUserSitesProvider;
+import 'data/catalog_recheck.dart' show catalogRecheckProvider;
+import 'data/catalog_sync.dart' show catalogProvider;
+import 'data/user_sites.dart' show engineForSite, noServerSites, serverCatalogOlder, serverSitesProvider;
 import 'data/statistics.dart';
 import 'data/user_repository.dart';
 import 'format/malf.dart';
@@ -2156,7 +2159,7 @@ final incognitoProvider = AsyncNotifierProvider<Incognito, bool>(Incognito.new);
 
 /// Le destinazioni della navigazione. Stanno nel grafo e non nella shell
 /// perché anche le raccolte automatiche vi mandano l'utente.
-enum ShellTab { home, library, collections, settings }
+enum ShellTab { home, library, social, settings }
 
 class ShellTabNotifier extends Notifier<ShellTab> {
   @override
@@ -2293,7 +2296,8 @@ class ArchiveController extends Notifier<ArchiveView> {
       report = await checkFromPhone(
         _files,
         deviceEnvironment(_files, client, ref.read(appDirectoriesProvider).cache),
-        browser: const NativePageBrowser(),
+        browser: platformPageBrowser(),
+        onProviderChanged: ref.read(catalogRecheckProvider).onChanged,
       );
     } finally {
       client.close();
@@ -2469,11 +2473,12 @@ class ReadAhead extends Notifier<void> {
     final window = await ref.read(readAheadWindowProvider.future);
     if (ref.read(archiveEngineProvider) == ArchiveEngine.server) {
       await _planServer(window);
-      final serverHasUserSites = await ref.read(serverUserSitesProvider.future);
+      final sites = await ref.read(serverSitesProvider.future);
+      final phoneSerial = ref.read(catalogProvider).serial;
       await _planPhone(
         window,
         only: (entry) =>
-            engineForSite(ArchiveEngine.server, entry.provider, serverHasUserSites: serverHasUserSites) ==
+            engineForSite(ArchiveEngine.server, entry.provider, server: sites, phoneCatalogSerial: phoneSerial) ==
             ArchiveEngine.phone,
       );
     } else {
@@ -2879,6 +2884,7 @@ const int defaultCheckMinutes = 4 * 60;
 typedef _CheckPlan = ({
   ArchiveEngine engine,
   bool serverHasUserSites,
+  bool serverCatalogOlder,
   Set<String> unfollowed,
   String? driveFolder,
   String? localRoot,
@@ -2896,8 +2902,12 @@ final _checkPlanProvider = Provider<_CheckPlan?>((ref) {
   final signedIn = ref.watch(cloudAccountProvider.select((status) => status.signedIn));
   return (
     engine: ref.watch(archiveEngineProvider),
-    // Finché non risponde è «no»: quei siti restano al telefono ([serverUserSitesProvider]).
-    serverHasUserSites: ref.watch(serverUserSitesProvider).value ?? false,
+    // Finché non risponde è «no»: quei siti restano al telefono ([serverSitesProvider]).
+    serverHasUserSites: (ref.watch(serverSitesProvider).value ?? noServerSites).userSites,
+    serverCatalogOlder: serverCatalogOlder(
+      ref.watch(serverSitesProvider).value ?? noServerSites,
+      ref.watch(catalogProvider).serial,
+    ),
     unfollowed: unfollowed.value ?? const {},
     // La cartella può arrivare da un backup anche in una build senza
     // backend, dove Drive non si può aprire.
@@ -2934,6 +2944,7 @@ class ArchiveEngineSync extends Notifier<void> {
       localRoot: plan.localRoot,
       unfollowed: plan.unfollowed,
       userSitesOnPhone: server && !plan.serverHasUserSites,
+      catalogOnPhone: server && plan.serverCatalogOlder,
       server: server ? link?.url.toString() : null,
       serverId: server ? link?.id : null,
       serverOwner: server ? link?.owner : null,

@@ -55,7 +55,7 @@ enum RunEnd {
 }
 
 class ArchiveRunner {
-  ArchiveRunner(this.files, this.environment, {this.cancelled, this.onStatus, this.onError});
+  ArchiveRunner(this.files, this.environment, {this.cancelled, this.onStatus, this.onError, this.onProviderChanged});
 
   final ArchiveFiles files;
   final ArchiveEnvironment environment;
@@ -63,6 +63,10 @@ class ArchiveRunner {
 
   /// Un guasto del codice, non del sito: nell'app va a Sentry.
   final Future<void> Function(Object error, StackTrace stack)? onError;
+
+  /// Su `ProviderChanged` l'app ricontrolla il catalogo: se porta una variante
+  /// nuova il lavoro resta in coda e si riprova al giro dopo.
+  final ProviderChangedHandler? onProviderChanged;
 
   /// A ogni cambiamento dell'avanzamento: la notifica del lavoro.
   final void Function(ArchiveStatus status)? onStatus;
@@ -210,6 +214,9 @@ class ArchiveRunner {
       await _finish(job, _failure(job, 'Serve il permesso di scrivere su Drive: '
           'aprilo da «Scarica un manga».'));
     } on ProviderChanged catch (error) {
+      if (site != null && await onProviderChanged?.call(site, error) == true) {
+        return _wait('Sito aggiornato: nuovo tentativo');
+      }
       if (site != null) await files.health.markBroken(site, error.message);
       await _finish(job, _failure(job, '$error'));
     } on ProviderError catch (error) {

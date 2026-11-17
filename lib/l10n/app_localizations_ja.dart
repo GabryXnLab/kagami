@@ -147,15 +147,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get seriesMuteMuted => '新着話の通知をオフにしました。';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '端末内の話は読み終えました。告知済みの$count話が未ダウンロードです。',
-      one: '端末内の話は読み終えました。告知済みの1話が未ダウンロードです。',
+      other: 'ダウンロード済みの分はすべて読みました。未読の$count話がまだ届いていません。',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ダウンロード済みの分はすべて読みました。未読は$count話、次の分はキューに入っています。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => '次の話をダウンロード';
 
   @override
   String get seriesCaughtUpAll => '全話読了。';
@@ -895,6 +907,9 @@ class AppLocalizationsJa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get archiveResults => '検索結果';
 
   @override
   String archiveNoResults(String site) {
@@ -2779,9 +2794,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shellTabLibrary => 'ライブラリ';
 
   @override
-  String get shellTabCollections => 'コレクション';
-
-  @override
   String get moreDownload => 'マンガをダウンロード';
 
   @override
@@ -4448,6 +4460,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sitesTryFailed => '試行に失敗しました';
 
   @override
+  String sitesFault(String phase, String field) {
+    return '段階: $phase · フィールド: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return '段階: $phase';
+  }
+
+  @override
   String get sitesInstall => 'インストール';
 
   @override
@@ -5510,4 +5532,43 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get serverErrorNotOwner =>
       'この Drive フォルダはあなたのものではありません。サーバーは何もゴミ箱へ移しません。';
+
+  @override
+  String get sitesOriginBuiltIn => '内蔵';
+
+  @override
+  String get sitesOriginCatalog => 'カタログ';
+
+  @override
+  String get sitesOriginUser => '自分のサイト';
+
+  @override
+  String get sitesCatalogBroken => '故障中';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return '故障中: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'Kagami を新しいバージョンに更新する必要があります';
+
+  @override
+  String get sitesCatalogSection => 'サイトカタログ';
+
+  @override
+  String get sitesCatalogUse => 'カタログを使う';
+
+  @override
+  String get sitesCatalogOff => 'オフ: 内蔵サイトと自分のサイトだけが有効になり、アプリはこのための通信を行いません。';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return '第 $serial 版（$date）';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return '最終確認: $when';
+  }
 }

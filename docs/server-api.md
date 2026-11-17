@@ -282,7 +282,15 @@ sapere per chi chiedere il biglietto, e il controllo di salute di Docker.
   `owner`: il server sposta nel cestino di Drive solo nella cartella di chi
   chiama che è sua (`me.drive.owned`, vedi «Proprietà della cartella»).
   `tickets`: accetta `Authorization: Kagami-Ticket` (vedi «Biglietto»).
+  `catalog`: usa il catalogo firmato dei siti di chi ha compilato l'immagine
+  (`docs/catalogo.md`) e ne dà `engine` e `serial` nel campo `catalog`.
 - `id`: lo stesso di `GET /`.
+- `catalog`: solo con la funzione `catalog`, `{"engine": 2, "serial": 42}`:
+  l'`engine` del motore del server e il `serial` del catalogo adottato (`0` se
+  non ne ha ancora uno). Un'app con `engine` più alto, o con un `serial` più
+  nuovo, tiene sul telefono i lavori dei siti del catalogo (`docs/catalogo.md`,
+  «Sul server»). I siti del catalogo compaiono in `providers` con `"origin":
+  "catalog"` e la loro `version`.
 - `me.expiresAt` (ISO 8601 UTC) c'è solo se l'accesso di chi chiama scade.
   Un accesso scaduto non risponde più: l'account è già stato tolto (vedi
   «Scadenza» in «Utenti») e riceve `403 not_allowed`.

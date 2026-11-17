@@ -328,11 +328,23 @@ abstract class AppLocalizations {
   /// **'Notifiche dei capitoli nuovi silenziate.'**
   String get seriesMuteMuted;
 
-  /// Riquadro di ripresa: tutto ciò che è sul telefono è letto, ma alcuni capitoli annunciati non sono stati scaricati
+  /// Riquadro di ripresa: tutto ciò che è leggibile (telefono o Drive) è letto, ma restano capitoli da leggere annunciati e non scaricati
   ///
   /// In it, this message translates to:
-  /// **'{count, plural, =1{In pari con quello che c\'è sul telefono: manca un capitolo annunciato.} other{In pari con quello che c\'è sul telefono: mancano {count} capitoli annunciati.}}'**
-  String seriesCaughtUpMissing(int count);
+  /// **'{count, plural, =1{Hai letto tutto quello che è scaricato: un capitolo da leggere non è ancora arrivato.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere non sono ancora arrivati.}}'**
+  String seriesWaitingChapters(int count);
+
+  /// Riquadro di ripresa: come sopra, ma i prossimi capitoli sono già in coda per lo scaricamento
+  ///
+  /// In it, this message translates to:
+  /// **'{count, plural, =1{Hai letto tutto quello che è scaricato: il prossimo capitolo è in coda.} other{Hai letto tutto quello che è scaricato: {count} capitoli da leggere, i prossimi sono in coda.}}'**
+  String seriesWaitingQueued(int count);
+
+  /// Pulsante del riquadro di ripresa: scarica dal sito i prossimi capitoli da leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Scarica i prossimi'**
+  String get seriesFetchNext;
 
   /// Riquadro di ripresa: la serie è stata letta per intero
   ///
@@ -1503,6 +1515,12 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'{count, plural, =1{Scarica 1 capitolo} other{Scarica {count} capitoli}}'**
   String archiveDownloadPicked(int count);
+
+  /// Titolo della sezione con i risultati della ricerca in Scarica un manga, mescolati fra i siti
+  ///
+  /// In it, this message translates to:
+  /// **'Risultati'**
+  String get archiveResults;
 
   /// Ricerca per titolo senza risultati su un sito
   ///
@@ -4450,12 +4468,6 @@ abstract class AppLocalizations {
   /// **'Libreria'**
   String get shellTabLibrary;
 
-  /// Barra di navigazione in basso: le raccolte, elenchi di serie creati dall'utente o automatici
-  ///
-  /// In it, this message translates to:
-  /// **'Raccolte'**
-  String get shellTabCollections;
-
   /// Voce delle Impostazioni che apre la schermata per archiviare una serie da un sito
   ///
   /// In it, this message translates to:
@@ -6865,6 +6877,18 @@ abstract class AppLocalizations {
   /// **'La prova non è riuscita'**
   String get sitesTryFailed;
 
+  /// Prova di un sito: fase e campo del guasto, sotto l'errore
+  ///
+  /// In it, this message translates to:
+  /// **'Fase: {phase} · campo: {field}'**
+  String sitesFault(String phase, String field);
+
+  /// Prova di un sito: fase e campo del guasto, sotto l'errore
+  ///
+  /// In it, this message translates to:
+  /// **'Fase: {phase}'**
+  String sitesFaultPhase(String phase);
+
   /// Anteprima di un sito: pulsante che installa il sito
   ///
   /// In it, this message translates to:
@@ -8610,6 +8634,72 @@ abstract class AppLocalizations {
   /// In it, this message translates to:
   /// **'Questa cartella di Drive non è tua: il server non sposta niente nel cestino.'**
   String get serverErrorNotOwner;
+
+  /// Pagina Siti: il sito è incluso nell'app
+  ///
+  /// In it, this message translates to:
+  /// **'Incluso'**
+  String get sitesOriginBuiltIn;
+
+  /// Pagina Siti: il sito viene dal catalogo firmato
+  ///
+  /// In it, this message translates to:
+  /// **'Catalogo'**
+  String get sitesOriginCatalog;
+
+  /// Pagina Siti: il sito l'ha aggiunto l'utente
+  ///
+  /// In it, this message translates to:
+  /// **'Tuo'**
+  String get sitesOriginUser;
+
+  /// Pagina Siti: il manutentore ha segnato il sito del catalogo come guasto, senza messaggio
+  ///
+  /// In it, this message translates to:
+  /// **'Fuori uso'**
+  String get sitesCatalogBroken;
+
+  /// Pagina Siti: sito del catalogo guasto; {message} è il testo scritto dal manutentore
+  ///
+  /// In it, this message translates to:
+  /// **'Fuori uso: {message}'**
+  String sitesCatalogBrokenWith(String message);
+
+  /// Pagina Siti: il catalogo ha una versione del sito che questa versione dell'app non sa leggere
+  ///
+  /// In it, this message translates to:
+  /// **'Serve Kagami più nuovo'**
+  String get sitesNeedsNewer;
+
+  /// Pagina Siti: titolo della sezione del catalogo
+  ///
+  /// In it, this message translates to:
+  /// **'Catalogo dei siti'**
+  String get sitesCatalogSection;
+
+  /// Pagina Siti: interruttore che accende o spegne il catalogo dei siti
+  ///
+  /// In it, this message translates to:
+  /// **'Usa il catalogo'**
+  String get sitesCatalogUse;
+
+  /// Pagina Siti: spiegazione sotto l'interruttore del catalogo quando è spento
+  ///
+  /// In it, this message translates to:
+  /// **'Spento: valgono solo i siti inclusi e i tuoi, e l\'app non chiede niente in rete.'**
+  String get sitesCatalogOff;
+
+  /// Pagina Siti: edizione del catalogo adottata; {serial} è il numero progressivo, {date} la data di emissione
+  ///
+  /// In it, this message translates to:
+  /// **'Edizione {serial} del {date}'**
+  String sitesCatalogIssue(int serial, String date);
+
+  /// Pagina Siti: quando l'app ha controllato il catalogo l'ultima volta; {when} è data e ora
+  ///
+  /// In it, this message translates to:
+  /// **'Ultimo controllo: {when}'**
+  String sitesCatalogChecked(String when);
 }
 
 class _AppLocalizationsDelegate

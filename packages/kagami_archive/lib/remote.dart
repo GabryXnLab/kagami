@@ -350,6 +350,8 @@ class ServerInfo {
     this.expiresAt,
     this.expired = false,
     this.id,
+    this.catalogEngine,
+    this.catalogSerial,
   });
 
   factory ServerInfo.fromJson(Map<String, Object?> json) {
@@ -377,8 +379,14 @@ class ServerInfo {
       expiresAt: DateTime.tryParse('${me['expiresAt']}'),
       expired: me['expired'] == true,
       id: serverIdOf(json['id']),
+      catalogEngine: ((json['catalog'] as Map?)?['engine'] as num?)?.toInt(),
+      catalogSerial: ((json['catalog'] as Map?)?['serial'] as num?)?.toInt(),
     );
   }
+
+  /// Motore e serial del catalogo dei siti del server (`catalog`); `null` se non ce l'ha.
+  final int? catalogEngine;
+  final int? catalogSerial;
 
   /// L'id del server (`tickets`), lo stesso di `GET /`.
   final String? id;
@@ -476,6 +484,8 @@ class ServerInfo {
         check: check,
         features: features,
         id: id,
+        catalogEngine: catalogEngine,
+        catalogSerial: catalogSerial,
       );
 
   ServerInfo withCheck(RemoteCheck check) => ServerInfo(
@@ -494,6 +504,8 @@ class ServerInfo {
         check: check,
         features: features,
         id: id,
+        catalogEngine: catalogEngine,
+        catalogSerial: catalogSerial,
       );
 }
 

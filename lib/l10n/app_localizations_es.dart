@@ -149,16 +149,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get seriesMuteMuted => 'Avisos de capítulos nuevos silenciados.';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other:
-          'Al día con lo que hay en el teléfono: faltan $count capítulos anunciados.',
-      one: 'Al día con lo que hay en el teléfono: falta un capítulo anunciado.',
+          'Has leído todo lo descargado: faltan por llegar $count capítulos sin leer.',
+      one: 'Has leído todo lo descargado: falta por llegar un capítulo sin leer.',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Has leído todo lo descargado: $count capítulos por leer, los próximos están en cola.',
+      one: 'Has leído todo lo descargado: el próximo capítulo está en cola.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => 'Descargar los siguientes';
 
   @override
   String get seriesCaughtUpAll => 'Leída entera.';
@@ -920,6 +935,9 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get archiveResults => 'Resultados';
 
   @override
   String archiveNoResults(String site) {
@@ -2868,9 +2886,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shellTabLibrary => 'Biblioteca';
 
   @override
-  String get shellTabCollections => 'Colecciones';
-
-  @override
   String get moreDownload => 'Descargar un manga';
 
   @override
@@ -4616,6 +4631,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sitesTryFailed => 'La prueba falló';
 
   @override
+  String sitesFault(String phase, String field) {
+    return 'Fase: $phase · campo: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return 'Fase: $phase';
+  }
+
+  @override
   String get sitesInstall => 'Instalar';
 
   @override
@@ -5717,4 +5742,44 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get serverErrorNotOwner =>
       'Esta carpeta de Drive no es tuya: el servidor no moverá nada a la papelera.';
+
+  @override
+  String get sitesOriginBuiltIn => 'Incluido';
+
+  @override
+  String get sitesOriginCatalog => 'Catálogo';
+
+  @override
+  String get sitesOriginUser => 'Tuyo';
+
+  @override
+  String get sitesCatalogBroken => 'Fuera de servicio';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return 'Fuera de servicio: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'Necesita una versión más nueva de Kagami';
+
+  @override
+  String get sitesCatalogSection => 'Catálogo de sitios';
+
+  @override
+  String get sitesCatalogUse => 'Usar el catálogo';
+
+  @override
+  String get sitesCatalogOff =>
+      'Desactivado: solo valen los sitios incluidos y los tuyos, y la app no hace peticiones de red para esto.';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return 'Edición $serial del $date';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return 'Última comprobación: $when';
+  }
 }

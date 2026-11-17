@@ -17,6 +17,7 @@ import 'package:kagami_archive/providers.dart';
 import 'package:kagami_archive/remote.dart' show ServerSetup;
 import 'package:kagami_archive/stores.dart' show readJsonFile;
 import 'package:kagami_archive/tracking.dart';
+import 'package:kagami_archive/signature.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:kagami_server/src/browser.dart';
 import 'package:path/path.dart' as p;

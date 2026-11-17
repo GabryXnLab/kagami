@@ -40,6 +40,11 @@ jobs:
   check:
     name: Controlli
     needs: version
+    # I job di ci.yml chiedono packages: write (immagine del server): un workflow chiamato
+    # non può avere più permessi del chiamante, senza questo il run è startup_failure.
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/ci.yml
     with:
       build_apk: false
@@ -61,6 +66,8 @@ jobs:
       BACKEND_URL: ${{ secrets.BACKEND_URL }}
       BACKEND_ANON_KEY: ${{ secrets.BACKEND_ANON_KEY }}
       GOOGLE_SERVER_CLIENT_ID: ${{ secrets.GOOGLE_SERVER_CLIENT_ID }}
+      CATALOG_URLS: ${{ secrets.CATALOG_URLS }}
+      CATALOG_KEYS: ${{ secrets.CATALOG_KEYS }}
 
   publish:
     name: Pubblica
@@ -71,6 +78,8 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
+      # SHA-1 della chiave di release attesa: variabile del repo (Settings → Variables), mai nel codice.
+      EXPECTED_SHA1: ${{ vars.ANDROID_RELEASE_SHA1 }}
     steps:
       # Gli artefatti di flutter-ci si chiamano <app>-<piattaforma>-<modo>[-per-abi]-<sha>.
       - uses: actions/download-artifact@v4
@@ -82,6 +91,11 @@ jobs:
       # release firmata con una chiave di debug legherebbe per sempre chi la installa.
       - name: Firma e impronte
         run: |
+          if [ -z "$EXPECTED_SHA1" ]; then
+            echo "::error::variabile ANDROID_RELEASE_SHA1 mancante: serve la SHA-1 della chiave di release"
+            exit 1
+          fi
+          expected=$(tr -d ':[:space:]' <<< "$EXPECTED_SHA1" | tr 'A-F' 'a-f')
           apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           mkdir out
           for abi in arm64-v8a armeabi-v7a x86_64 universal; do
@@ -91,6 +105,11 @@ jobs:
             certs=$("$apksigner" verify --print-certs "$apk")
             if grep -q 'CN=Android Debug' <<< "$certs"; then
               echo "::error::$apk firmato con una chiave di debug: servono i secret ANDROID_KEYSTORE* della chiave di release"
+              exit 1
+            fi
+            actual=$(sed -n 's/.*certificate SHA-1 digest: *//p' <<< "$certs" | head -1 | tr -d ':[:space:]' | tr 'A-F' 'a-f')
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::$apk ha SHA-1 ${actual:-assente}, diversa dalla chiave di release attesa"
               exit 1
             fi
           done
@@ -119,3 +138,30 @@ jobs:
           gh release create "v$VERSION" out/* \
             -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Kagami $VERSION" \
             --notes-file notes.md --generate-notes
+
+  # Gli artefatti di build e di CI riempiono la quota del repo e, piena, Pubblica fallisce.
+  # Parte solo se la release è finita senza errori (needs senza condizioni: con un job
+  # fallito o saltato non gira) e tiene gli artefatti della run precedente e di questa.
+  cleanup:
+    name: Pulizia artefatti
+    needs: [version, check, build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Cancella gli artefatti più vecchi della run precedente
+        run: |
+          prev=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?per_page=10" \
+            --jq "[.workflow_runs[] | select(.id != $GITHUB_RUN_ID)] | .[0].created_at // empty")
+          if [ -z "$prev" ]; then
+            echo "Nessuna run precedente: niente da cancellare."
+            exit 0
+          fi
+          echo "Cancello gli artefatti creati prima di $prev"
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq ".artifacts[] | select(.created_at < \"$prev\" and .workflow_run.id != $GITHUB_RUN_ID) | .id" |
+          while read -r id; do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" && echo "cancellato $id"
+          done

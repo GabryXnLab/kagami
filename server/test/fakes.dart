@@ -198,6 +198,7 @@ class TestServer {
     DateTime Function()? now,
     String? id,
     IdentityVerifier? tickets,
+    ServerCatalog? catalog,
   }) async {
     final dir = await Directory.systemTemp.createTemp('kagami-api-');
     final spaces = <String, FakeSpace>{};
@@ -215,6 +216,7 @@ class TestServer {
       log: (_) {},
       id: id,
       tickets: tickets,
+      catalog: catalog,
     );
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen(api.handle);

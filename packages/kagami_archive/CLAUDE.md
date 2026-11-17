@@ -25,8 +25,10 @@ Vincoli del pacchetto Dart puro; il resto del progetto è nel `CLAUDE.md` di roo
 - **I siti degli utenti non sono file Dart.** Un sito descritto da un JSON
   (`docs/siti.md`, `providers/<id>.json` nella libreria) lo interpreta
   `declarative.dart` (`DeclarativeProvider`, nessun codice eseguito, host
-  validati all'installazione). Il registro [providers] è un getter: inclusi
-  (`builtInProviders`) più quelli degli utenti, sul telefono con
+  validati all'installazione). Il registro [providers] è un getter a tre
+  strati (`Provider.origin`): inclusi (`builtInProviders`), sopra il catalogo
+  firmato (`installCatalogProviders`, uno per processo, `docs/catalogo.md`),
+  sopra quelli degli utenti, sul telefono con
   `installUserProviders`, sul server per account con `withUserProviders` /
   `withUserProviderSource` (una zona: due account possono avere lo stesso id
   con file diversi). Un campo nuovo del formato si aggiunge prima in

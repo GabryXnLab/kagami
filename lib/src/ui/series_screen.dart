@@ -23,6 +23,7 @@ import '../data/cleanup.dart';
 import '../data/downloads.dart';
 import '../data/library.dart';
 import '../data/library_view.dart';
+import '../data/read_ahead.dart' show readAheadWindow, unreadUnavailable;
 import '../data/site_switch.dart';
 import '../data/user_sites.dart' show siteOfKey;
 import '../format/malf.dart';
@@ -246,6 +247,11 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
             .split('\u0000')
             .where((id) => id.isNotEmpty)
             .toSet();
+    // Da leggere ma non ancora leggibili, in ordine: il riquadro di ripresa
+    // non è «in pari» finché ce ne sono.
+    final waiting = unreadUnavailable(chapters, signals.state);
+    final window = ref.watch(readAheadWindowProvider).value ?? readAheadWindow;
+    final toFetch = waiting.where((id) => missing.contains(id) && !queued.contains(id)).take(window).toList();
     final offerStart = siteSource != null &&
         index.hasValue &&
         chapters.isNotEmpty &&
@@ -274,6 +280,11 @@ class _SeriesScreenState extends ConsumerState<SeriesScreen> {
                             signals: signals,
                             next: next,
                             onOpen: _open,
+                            waiting: waiting.length,
+                            fetching: waiting.any(queued.contains),
+                            onFetch: toFetch.isEmpty || _siteBusy
+                                ? null
+                                : () => _downloadFromSite(siteSource!, toFetch),
                           ),
                   ),
                   const SizedBox(height: 12),
@@ -1281,17 +1292,63 @@ class _Resume extends ConsumerWidget {
     required this.signals,
     required this.next,
     required this.onOpen,
+    this.waiting = 0,
+    this.fetching = false,
+    this.onFetch,
   });
 
   final SeriesSignals signals;
   final ChapterEntry? next;
   final ValueChanged<String> onOpen;
 
+  /// Capitoli ancora da leggere che non si possono aprire: annunciati e non
+  /// scaricati, né sul telefono né su Drive.
+  final int waiting;
+
+  /// Qualcuno di quelli è già in coda.
+  final bool fetching;
+
+  /// Scarica dal sito i prossimi; `null` se non si può o sono già in coda.
+  final VoidCallback? onFetch;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final muted = context.tokens.muted;
     final state = signals.state;
     final index = ref.watch(seriesIndexProvider(signals.entry.key)).value;
+    if (next == null && waiting > 0) {
+      return KCard(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(LucideIcons.cloudDownload, size: 20, color: muted),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    fetching
+                        ? context.l10n.seriesWaitingQueued(waiting)
+                        : context.l10n.seriesWaitingChapters(waiting),
+                    style: KagamiType.body(13.5, height: 1.5, color: muted),
+                  ),
+                ),
+              ],
+            ),
+            if (onFetch != null) ...[
+              const SizedBox(height: 14),
+              KButton(
+                label: context.l10n.seriesFetchNext,
+                icon: LucideIcons.download,
+                expand: true,
+                onPressed: onFetch,
+              ),
+            ],
+          ],
+        ),
+      );
+    }
     if (next == null) {
       return KCard(
         child: Row(
@@ -1300,10 +1357,7 @@ class _Resume extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                signals.entry.missingChapterCount > 0
-                    ? context.l10n.seriesCaughtUpMissing(
-                        signals.entry.missingChapterCount)
-                    : context.l10n.seriesCaughtUpAll,
+                context.l10n.seriesCaughtUpAll,
                 style: KagamiType.body(13.5, color: muted),
               ),
             ),

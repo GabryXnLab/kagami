@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kagami/src/data/catalog_sync.dart' show CatalogNotifier, CatalogStatus, catalogProvider;
 import 'package:kagami/src/data/db/database.dart';
 import 'package:kagami/src/data/library.dart';
 import 'package:kagami/src/data/user_sites.dart';
@@ -61,7 +62,8 @@ Future<int> _loadsAfterHistoryChange({required bool serverHasUserSites}) async {
     }),
     archiveFilesProvider.overrideWithValue(files),
     archiveEngineProvider.overrideWithValue(ArchiveEngine.server),
-    serverUserSitesProvider.overrideWith((ref) async => serverHasUserSites),
+    catalogProvider.overrideWith(_NoCatalog.new),
+    serverSitesProvider.overrideWith((ref) async => (userSites: serverHasUserSites, catalogEngine: null, catalogSerial: null)),
     readingProvider.overrideWith(_Reading.new),
     libraryCatalogProvider.overrideWith((ref) async {
       loads++;
@@ -80,6 +82,12 @@ Future<int> _loadsAfterHistoryChange({required bool serverHasUserSites}) async {
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
   return loads - before;
+}
+
+/// Il catalogo del telefono, senza avviare la rete né le cartelle dell'app.
+class _NoCatalog extends CatalogNotifier {
+  @override
+  CatalogStatus build() => const CatalogStatus();
 }
 
 void main() {

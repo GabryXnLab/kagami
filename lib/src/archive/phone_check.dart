@@ -4,7 +4,6 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:kagami_archive/http.dart';
 import 'package:kagami_archive/jobs.dart';
 import 'package:kagami_archive/model.dart' show ProviderError;
@@ -29,12 +28,13 @@ Future<CheckReport> checkFromPhone(
   PageBrowser? browser,
   Set<String>? only,
   bool Function()? cancelled,
+  ProviderChangedHandler? onProviderChanged,
 }) async {
   final report = CheckReport();
   final scope = await files.scope();
-  if (scope.toServer && !scope.userSitesOnPhone) return report;
+  if (scope.toServer && !scope.userSitesOnPhone && !scope.catalogOnPhone) return report;
   // Col server a controllare, al telefono restano i siti che lui non sa usare.
-  final bool Function(Provider provider)? where = scope.toServer ? (provider) => !provider.builtIn : null;
+  final bool Function(Provider provider)? where = scope.toServer ? scope.phoneChecks : null;
   ProviderHttp httpFor(Provider provider) => environment.httpFor(provider);
   final tracking = Tracking(files.ongoing);
   report.absorb(await tracking.check(
@@ -45,6 +45,7 @@ Future<CheckReport> checkFromPhone(
     only: only,
     skip: scope.unfollowed,
     where: where,
+    onProviderChanged: onProviderChanged,
   ));
   final drive = scope.driveFolder;
   final local = scope.localRoot;
@@ -64,35 +65,11 @@ Future<CheckReport> checkFromPhone(
       only: only,
       where: where,
       cancelled: cancelled,
+      onProviderChanged: onProviderChanged,
     ));
   }
   await files.recordGated(report.gated, only: only);
   return report;
-}
-
-/// Una WebView invisibile e grande quanto lo schermo, dal Kotlin
-/// (`PageBrowser.kt`): c'è anche ad app chiusa, dove una WebView di Flutter
-/// non si può aprire. I cookie sono quelli di tutte le WebView dell'app, quindi
-/// una verifica superata a mano vale anche qui finché Cloudflare la tiene.
-class NativePageBrowser implements PageBrowser {
-  const NativePageBrowser();
-
-  static const MethodChannel _channel = MethodChannel('kagami/page-browser');
-
-  @override
-  Future<String?> seriesPage(String url, BrowserGate gate) async {
-    try {
-      return await _channel.invokeMethod<String>('seriesPage', {
-        'url': url,
-        'ready': gate.seriesReady,
-        'timeoutMs': 45000,
-      });
-    } on MissingPluginException {
-      return null;
-    } on PlatformException {
-      return null;
-    }
-  }
 }
 
 /// I siti di [gated], per nome, come li si scrive in un avviso.

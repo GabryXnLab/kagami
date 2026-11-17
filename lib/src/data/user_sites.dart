@@ -12,8 +12,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kagami_archive/catalog.dart' show catalogEngine;
 import 'package:kagami_archive/declarative.dart';
-import 'package:kagami_archive/providers.dart' show builtInProviders, installUserProviders, providerById;
+import 'package:kagami_archive/providers.dart' show ProviderOrigin, builtInProviders, installUserProviders, providerById;
 import 'package:kagami_archive/remote.dart';
 import 'package:kagami_archive/stores.dart' show ArchiveStore;
 
@@ -144,29 +145,59 @@ final userSitesServerSyncProvider = Provider<Future<void> Function()>((ref) {
   };
 });
 
-/// Se il server collegato sa usare i siti degli utenti. Finché non lo si è
-/// chiesto, o se non risponde, è `false`: quei lavori restano sul telefono.
-final serverUserSitesProvider = FutureProvider<bool>((ref) async {
+/// Ciò che il server collegato sa fare coi siti: [userSites] legge `providers/`
+/// della libreria, [catalogEngine] e [catalogSerial] sono quelli del suo
+/// catalogo (`null` se non ha la funzione `catalog`).
+typedef ServerSites = ({bool userSites, int? catalogEngine, int? catalogSerial});
+
+/// Quello di un server che non risponde o non c'è: i lavori restano sul telefono.
+const ServerSites noServerSites = (userSites: false, catalogEngine: null, catalogSerial: null);
+
+/// Cosa sa fare il server collegato. Finché non lo si è chiesto, o se non
+/// risponde, è [noServerSites].
+final serverSitesProvider = FutureProvider<ServerSites>((ref) async {
   final link = ref.watch(serverLinkProvider).value;
-  if (link == null) return false;
+  if (link == null) return noServerSites;
   final client = serverClient(ref, link);
   try {
-    return (await client.info()).userProviders;
+    final info = await client.info();
+    return (
+      userSites: info.userProviders,
+      catalogEngine: info.catalogEngine,
+      catalogSerial: info.catalogSerial,
+    );
   } on ServerException {
-    return false;
+    return noServerSites;
   } on IOException {
-    return false;
+    return noServerSites;
   } finally {
     client.close();
   }
 });
 
-/// Chi lavora per il sito [siteId]: [engine], salvo che il sito sia di un
-/// utente e il server non sappia usarli (`userProviders`), allora il telefono.
-ArchiveEngine engineForSite(ArchiveEngine engine, String siteId, {required bool serverHasUserSites}) {
-  if (engine != ArchiveEngine.server || serverHasUserSites) return engine;
-  final site = providerById(siteId);
-  return site != null && !site.builtIn ? ArchiveEngine.phone : engine;
+/// Il catalogo del server ha un engine o un serial più vecchi del telefono.
+bool serverCatalogOlder(ServerSites server, int phoneCatalogSerial) =>
+    server.catalogEngine == null || server.catalogEngine! < catalogEngine || (server.catalogSerial ?? 0) < phoneCatalogSerial;
+
+/// Chi lavora per il sito [siteId]: [engine], salvo che il server non sappia
+/// farlo e allora il telefono. Non lo sa se il sito è di un utente e manca
+/// `userProviders`, o se è del catalogo e il server non ha la funzione `catalog`,
+/// ha un engine più vecchio del telefono ([catalogEngine]) o un catalogo più
+/// vecchio ([phoneCatalogSerial]): il telefono lo interpreta meglio.
+/// Un sito del catalogo non è dell'utente, anche se non è incluso.
+ArchiveEngine engineForSite(
+  ArchiveEngine engine,
+  String siteId, {
+  required ServerSites server,
+  int phoneCatalogSerial = 0,
+}) {
+  if (engine != ArchiveEngine.server) return engine;
+  final origin = providerById(siteId)?.origin;
+  if (origin == ProviderOrigin.user && !server.userSites) return ArchiveEngine.phone;
+  if (origin == ProviderOrigin.catalog) {
+    if (serverCatalogOlder(server, phoneCatalogSerial)) return ArchiveEngine.phone;
+  }
+  return engine;
 }
 
 /// L'id del sito dalla chiave di una serie, `<sito>:<id serie>`.

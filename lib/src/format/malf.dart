@@ -7,6 +7,7 @@ library;
 
 import 'dart:developer' as developer;
 
+import 'package:kagami_archive/model.dart' show canonicalClassification;
 import 'package:kagami_archive/transport.dart' show isIndexPath;
 import 'package:path/path.dart' as p;
 
@@ -79,7 +80,22 @@ class SeriesEntry {
     this.formerKeys = const [],
   });
 
-  factory SeriesEntry.fromJson(Map<String, Object?> json) => SeriesEntry(
+  factory SeriesEntry.fromJson(Map<String, Object?> json) {
+    // Le librerie già scritte hanno tag in slug e generi in grafie diverse:
+    // si leggono in forma canonica (docs/malf.md), senza riscaricare.
+    final c = canonicalClassification(
+      type: json['type'] as String?,
+      genres: _strings(json['genres']),
+      tags: _strings(json['tags']),
+    );
+    return SeriesEntry._fromJson(json, c);
+  }
+
+  factory SeriesEntry._fromJson(
+    Map<String, Object?> json,
+    ({String? type, List<String> genres, List<String> tags}) c,
+  ) =>
+      SeriesEntry(
         key: json['key'] as String,
         // Senza `path` resta la radice, com'era: dentro la libreria comunque.
         path: json['path'] == null || json['path'] == '' ? '' : _indexPath(json['path']),
@@ -97,9 +113,9 @@ class SeriesEntry {
         coverHeight: _maybeInt(json['coverHeight']),
         authors: _strings(json['authors']),
         artists: _strings(json['artists']),
-        genres: _strings(json['genres']),
-        tags: _strings(json['tags']),
-        type: json['type'] as String?,
+        genres: c.genres,
+        tags: c.tags,
+        type: c.type,
         language: json['language'] as String?,
         latestChapterNumber: json['latestChapterNumber'] as String?,
         latestChapterTitle: json['latestChapterTitle'] as String?,

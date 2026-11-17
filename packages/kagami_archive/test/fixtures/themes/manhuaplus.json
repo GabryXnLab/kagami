@@ -1,0 +1,10 @@
+{
+  "extends": "madara",
+  "id": "manhuaplus",
+  "name": "ManhuaPlus",
+  "version": 1,
+  "home": "https://manhuaplus.com",
+  "hosts": ["manhuaplus.com"],
+  "mediaHosts": ["cdn.manhuaplus.com", "*.files.wordpress.com", "manhuaplus.com"],
+  "search": {"url": "https://manhuaplus.com/?s={query}&post_type=wp-manga"}
+}

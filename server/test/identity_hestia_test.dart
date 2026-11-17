@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:kagami_archive/google_token.dart';
+import 'package:kagami_archive/signature.dart';
 import 'package:kagami_server/kagami_server.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';

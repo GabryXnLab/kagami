@@ -37,6 +37,8 @@ class ServerPaths {
   File get config => File(p.join(root.path, 'config.json'));
   File get setup => File(p.join(root.path, 'setup.json'));
   File get users => File(p.join(root.path, 'users.json'));
+  /// La cache del catalogo dei siti, una per tutto il server (`catalog.dart`).
+  Directory get catalog => Directory(p.join(root.path, 'catalog'));
   Directory get scratch => Directory(p.join(root.path, 'scratch'));
 
   /// Il profilo di Chromium: i cookie di una verifica passata valgono anche

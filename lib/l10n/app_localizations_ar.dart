@@ -157,18 +157,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get seriesMuteMuted => 'كُتمت إشعارات الفصول الجديدة.';
 
   @override
-  String seriesCaughtUpMissing(int count) {
+  String seriesWaitingChapters(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'أنت على اطلاع بكل ما على الهاتف: ينقص $count فصل معلن.',
-      many: 'أنت على اطلاع بكل ما على الهاتف: ينقص $count فصلًا معلنًا.',
-      few: 'أنت على اطلاع بكل ما على الهاتف: تنقص $count فصول معلنة.',
-      two: 'أنت على اطلاع بكل ما على الهاتف: ينقص فصلان معلنان.',
-      one: 'أنت على اطلاع بكل ما على الهاتف: ينقص فصل واحد معلن.',
+      other: 'قرأت كل ما تم تنزيله: $count فصول غير مقروءة لم تصل بعد.',
+      one: 'قرأت كل ما تم تنزيله: فصل واحد غير مقروء لم يصل بعد.',
     );
     return '$_temp0';
   }
+
+  @override
+  String seriesWaitingQueued(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'قرأت كل ما تم تنزيله: $count فصول للقراءة، والتالية في قائمة الانتظار.',
+      one: 'قرأت كل ما تم تنزيله: الفصل التالي في قائمة الانتظار.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get seriesFetchNext => 'نزّل الفصول التالية';
 
   @override
   String get seriesCaughtUpAll => 'قرأتها كلها.';
@@ -965,6 +977,9 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get archiveResults => 'النتائج';
 
   @override
   String archiveNoResults(String site) {
@@ -2942,9 +2957,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shellTabLibrary => 'المكتبة';
 
   @override
-  String get shellTabCollections => 'المجموعات';
-
-  @override
   String get moreDownload => 'تنزيل مانغا';
 
   @override
@@ -4738,6 +4750,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get sitesTryFailed => 'فشلت التجربة';
 
   @override
+  String sitesFault(String phase, String field) {
+    return 'المرحلة: $phase · الحقل: $field';
+  }
+
+  @override
+  String sitesFaultPhase(String phase) {
+    return 'المرحلة: $phase';
+  }
+
+  @override
   String get sitesInstall => 'تثبيت';
 
   @override
@@ -5837,4 +5859,44 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get serverErrorNotOwner =>
       'مجلد Drive هذا ليس لك: لن ينقل الخادم أي شيء إلى سلة المهملات.';
+
+  @override
+  String get sitesOriginBuiltIn => 'مضمَّن';
+
+  @override
+  String get sitesOriginCatalog => 'الفهرس';
+
+  @override
+  String get sitesOriginUser => 'خاص بك';
+
+  @override
+  String get sitesCatalogBroken => 'خارج الخدمة';
+
+  @override
+  String sitesCatalogBrokenWith(String message) {
+    return 'خارج الخدمة: $message';
+  }
+
+  @override
+  String get sitesNeedsNewer => 'يحتاج إلى إصدار أحدث من Kagami';
+
+  @override
+  String get sitesCatalogSection => 'فهرس المواقع';
+
+  @override
+  String get sitesCatalogUse => 'استخدام الفهرس';
+
+  @override
+  String get sitesCatalogOff =>
+      'متوقف: تُعتمد المواقع المضمَّنة ومواقعك فقط، ولا يرسل التطبيق أي طلب شبكة لهذا الغرض.';
+
+  @override
+  String sitesCatalogIssue(int serial, String date) {
+    return 'الإصدار $serial بتاريخ $date';
+  }
+
+  @override
+  String sitesCatalogChecked(String when) {
+    return 'آخر فحص: $when';
+  }
 }

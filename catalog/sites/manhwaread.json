@@ -2,7 +2,7 @@
   "format": 2,
   "id": "manhwaread",
   "name": "ManhwaRead",
-  "version": 1,
+  "version": 2,
   "home": "https://manhwaread.com",
   "hosts": ["manhwaread.com", "www.manhwaread.com"],
   "mediaHosts": ["manread.xyz", "mancover.xyz"],
@@ -29,6 +29,22 @@
     "description": {"first": [
       {"css": "meta[name=\"description\"]", "attr": "content"},
       {"css": "meta[property=\"og:description\"]", "attr": "content"}
+    ]},
+    "genres": {"first": [
+      {"css": "script[type=\"application/ld+json\"]", "json": "genre.name", "all": true, "split": "\\s*,\\s*"},
+      {"css": "script[type=\"application/ld+json\"]", "json": "genre", "all": true, "split": "\\s*,\\s*"}
+    ]},
+    "tags": {"first": [
+      {"css": "meta[name=\"keywords\"]", "attr": "content", "all": true, "split": "\\s*,\\s*"},
+      {"css": "script[type=\"application/ld+json\"]", "json": "keywords", "all": true, "split": "\\s*,\\s*"}
+    ]},
+    "authors": {"first": [
+      {"css": "script[type=\"application/ld+json\"]", "json": "author.name", "all": true, "split": "\\s*,\\s*"},
+      {"css": "script[type=\"application/ld+json\"]", "json": "author", "all": true, "split": "\\s*,\\s*"}
+    ]},
+    "artists": {"first": [
+      {"css": "script[type=\"application/ld+json\"]", "json": "artist.name", "all": true, "split": "\\s*,\\s*"},
+      {"css": "script[type=\"application/ld+json\"]", "json": "artist", "all": true, "split": "\\s*,\\s*"}
     ]},
     "chapters": {
       "items": {"first": [

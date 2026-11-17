@@ -28,7 +28,7 @@ import 'google.dart';
 import 'identity.dart';
 import 'shares.dart';
 import 'users.dart';
-import 'worker.dart' show ServerCheck;
+import 'worker.dart' show PagesRepair, ServerCheck, WorkerBusy;
 
 /// Il corpo più grande accettato: la pagina di una serie di ManhwaRead, che
 /// il telefono manda quando il sito è dietro Cloudflare, sta abbondantemente
@@ -196,6 +196,7 @@ class ServerApi {
       ('PUT', ['ongoing', final key]) => (HttpStatus.ok, await _want(me, key, await _body(request))),
       ('POST', ['check']) => _check(me),
       ('PUT', ['check']) => (HttpStatus.ok, await _configureCheck(me, await _body(request))),
+      ('POST', ['repair', 'pages']) => (HttpStatus.ok, await _repairPages(me, await _body(request))),
       ('POST', ['check', 'pages']) => (HttpStatus.ok, await _checkPages(me, await _body(request))),
       ('GET', ['users']) => (HttpStatus.ok, await _users(_owner(accounts, email))),
       ('POST', ['users']) => (HttpStatus.created, await _addUser(_owner(accounts, email), await _body(request))),
@@ -212,7 +213,7 @@ class ServerApi {
   /// Ciò che questo server sa fare oltre alla v2 di partenza: l'app offre
   /// una funzione solo a un server che la elenca.
   List<String> get _features =>
-      ['ahead', 'unfollowed', 'verify', 'sites', 'repair', 'elsewhere', 'userProviders', 'expiry', 'shares', 'owner', if (browser) 'browser',
+      ['ahead', 'unfollowed', 'verify', 'sites', 'repair', 'repairPages', 'elsewhere', 'userProviders', 'expiry', 'shares', 'owner', if (browser) 'browser',
         if (tickets != null) 'tickets', if (catalog != null) 'catalog'];
 
   /// Chi chiama, se il token vale e l'account è ammesso.
@@ -528,6 +529,39 @@ class ServerApi {
     };
   }
 
+  /// Le pagine delle serie da riparare, aperte sul telefono che ha passato la
+  /// verifica: la riparazione si fa adesso e la risposta dice com'è andata.
+  Future<Map<String, Object?>> _repairPages(UserSpace me, Map<String, Object?> body) async {
+    final pages = _pagesBody(body);
+    if (!await me.drive.authorized || me.drive.folderId == null) {
+      throw const ApiError(HttpStatus.conflict, 'drive_not_ready',
+          'Il server non ha ancora il tuo Drive: collegalo dall\'app e scegli la cartella della libreria.');
+    }
+    final PagesRepair report;
+    try {
+      report = await me.jobs.repairPages(pages);
+    } on WorkerBusy {
+      throw const ApiError(HttpStatus.conflict, 'busy', 'Il server sta già lavorando: riprova fra poco.');
+    }
+    return {
+      'repaired': report.repaired,
+      'failed': [for (final f in report.failed) {'title': f.title, 'error': f.error}],
+    };
+  }
+
+  /// Il corpo `{"pages": [{"url", "html"}]}` di `check/pages` e `repair/pages`.
+  Map<String, String> _pagesBody(Map<String, Object?> body) {
+    final pages = body['pages'];
+    if (pages is! List ||
+        pages.isEmpty ||
+        pages.length > maxPages ||
+        pages.any((page) => page is! Map || page['url'] is! String || page['html'] is! String)) {
+      throw const ApiError(HttpStatus.badRequest, 'bad_request',
+          '«pages» è un elenco di pagine, da 1 a $maxPages, ognuna con «url» e «html».');
+    }
+    return {for (final page in pages.cast<Map>()) page['url'] as String: page['html'] as String};
+  }
+
   Future<Map<String, Object?>> _configureCheck(UserSpace me, Map<String, Object?> body) async {
     final enabled = body['enabled'];
     final minutes = body['minutes'];
@@ -608,17 +642,7 @@ class ServerApi {
   /// l'ha passata: il controllo di quelle serie si fa adesso, e la risposta
   /// dice com'è andato.
   Future<Map<String, Object?>> _checkPages(UserSpace me, Map<String, Object?> body) async {
-    final pages = body['pages'];
-    if (pages is! List ||
-        pages.isEmpty ||
-        pages.length > maxPages ||
-        pages.any((page) => page is! Map || page['url'] is! String || page['html'] is! String)) {
-      throw const ApiError(HttpStatus.badRequest, 'bad_request',
-          '«pages» è un elenco di pagine, da 1 a $maxPages, ognuna con «url» e «html».');
-    }
-    final report = await me.jobs.checkPages({
-      for (final page in pages.cast<Map>()) page['url'] as String: page['html'] as String,
-    });
+    final report = await me.jobs.checkPages(_pagesBody(body));
     return {
       'checked': report.checked,
       'queued': report.queued.length,

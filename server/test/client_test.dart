@@ -209,6 +209,9 @@ void main() {
     expect(passed.checked, 1);
     expect(passed.queued, 1);
     expect(jobs.pages.single.keys, ['https://manhwaread.com/manhwa/d/']);
+    final fixed = await client.repairPages({'https://manhwaread.com/manhwa/d/': '<html></html>'});
+    expect(fixed.repaired, 1);
+    expect(fixed.failed, isEmpty);
 
     final folder = await client.chooseFolder('nuova');
     expect(folder, (id: 'nuova', name: 'Scelta', owned: true));

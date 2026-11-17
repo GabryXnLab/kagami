@@ -438,6 +438,10 @@ class ServerInfo {
   /// Ripara la libreria su Drive ([ServerClient.repair]).
   bool get repair => features.contains('repair');
 
+  /// Il server ripara le serie dietro la verifica con le pagine aperte sul
+  /// telefono ([ServerClient.repairPages]).
+  bool get repairPages => features.contains('repairPages');
+
   /// Cerca le serie della libreria sugli altri siti ([ServerClient.elsewhere]).
   bool get elsewhere => features.contains('elsewhere');
 
@@ -870,6 +874,21 @@ class ServerClient {
         'site': ?site,
         if (keys != null) 'keys': [...keys],
       });
+
+  /// Ripara adesso le serie delle pagine aperte sul telefono ([pages], per
+  /// link; solo con `repairPages`). Il server risponde a riparazione finita.
+  Future<({int repaired, List<({String title, String error})> failed})> repairPages(Map<String, String> pages) async {
+    final json = (await _call('POST', '/v$serverApi/repair/pages', timeout: const Duration(minutes: 5), body: {
+      'pages': [for (final MapEntry(:key, :value) in pages.entries) {'url': key, 'html': value}],
+    }))!;
+    return (
+      repaired: (json['repaired'] as num?)?.toInt() ?? 0,
+      failed: [
+        for (final f in (json['failed'] as List? ?? const []).whereType<Map>())
+          (title: '${f['title']}', error: '${f['error']}'),
+      ],
+    );
+  }
 
   Future<RemoteCheck> configureCheck({
     bool? enabled,

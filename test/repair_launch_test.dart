@@ -166,4 +166,15 @@ void main() {
     expect(archiveOutcomeText(l10n, outcome({'key': 'a:1'})), 'Niente da riparare');
     expect(archiveOutcomeText(l10n, outcome({'key': 'a:1', 'error': 'Sito giù'})), 'Non riparata: Sito giù');
   });
+
+  test('la riparazione di una serie dietro la verifica chiede la pagina al telefono, le altre no', () {
+    const sources = {
+      'manhwaread:a': 'https://manhwaread.com/manhwa/a',
+      'mangak:b': 'https://mangak.io/b',
+    };
+    expect(repairNeedingVerification({'manhwaread:a', 'mangak:b', 'altra:x'}, sources),
+        {'manhwaread:a': 'https://manhwaread.com/manhwa/a/'});
+    expect(repairNeedingVerification({'mangak:b'}, sources), isEmpty);
+    expect(repairNeedingVerification({'manhwaread:z'}, sources), isEmpty);
+  });
 }

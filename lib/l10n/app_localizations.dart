@@ -1864,6 +1864,24 @@ abstract class AppLocalizations {
   /// **'Riparazione non riuscita: {error}'**
   String archiveRepairFailed(String error);
 
+  /// Messaggio dopo aver riparato una serie dietro la verifica del sito, con le pagine mandate al server
+  ///
+  /// In it, this message translates to:
+  /// **'Serie riparata.'**
+  String get archiveRepairPagesDone;
+
+  /// Riparazione di una serie dietro la verifica: il server non ha trovato la serie nella libreria
+  ///
+  /// In it, this message translates to:
+  /// **'Il server non ha trovato la serie nella libreria.'**
+  String get archiveRepairPagesNone;
+
+  /// Riparazione di una serie dietro la verifica: l'utente ha chiuso la pagina di verifica senza passarla
+  ///
+  /// In it, this message translates to:
+  /// **'Verifica non passata: la serie non è stata riparata.'**
+  String get archiveRepairNoVerification;
+
   /// Riparazione: se ne chiede una mentre un'altra è in corso
   ///
   /// In it, this message translates to:

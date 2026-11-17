@@ -1505,6 +1505,18 @@
       }
     }
   },
+  "archiveRepairPagesDone": "Serie riparata.",
+  "@archiveRepairPagesDone": {
+    "description": "Messaggio dopo aver riparato una serie dietro la verifica del sito, con le pagine mandate al server"
+  },
+  "archiveRepairPagesNone": "Il server non ha trovato la serie nella libreria.",
+  "@archiveRepairPagesNone": {
+    "description": "Riparazione di una serie dietro la verifica: il server non ha trovato la serie nella libreria"
+  },
+  "archiveRepairNoVerification": "Verifica non passata: la serie non è stata riparata.",
+  "@archiveRepairNoVerification": {
+    "description": "Riparazione di una serie dietro la verifica: l'utente ha chiuso la pagina di verifica senza passarla"
+  },
   "archiveRepairBusy": "Il telefono sta già riparando o scaricando: riprova fra poco.",
   "@archiveRepairBusy": {
     "description": "Riparazione: se ne chiede una mentre un'altra è in corso"

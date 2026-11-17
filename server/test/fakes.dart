@@ -101,6 +101,16 @@ class FakeJobs implements JobControl {
   @override
   Future<Map<String, SiteHealth>> sites() => files.health.load();
 
+  final List<Map<String, String>> repairedPages = [];
+  bool busy = false;
+
+  @override
+  Future<PagesRepair> repairPages(Map<String, String> pages) async {
+    if (busy) throw const WorkerBusy();
+    repairedPages.add(pages);
+    return PagesRepair()..repaired = pages.length;
+  }
+
   @override
   Future<CheckReport> checkPages(Map<String, String> pages) async {
     this.pages.add(pages);

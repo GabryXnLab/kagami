@@ -152,10 +152,24 @@ class BrokenSitesCard extends ConsumerWidget {
 
 /// Lancia la riparazione (di [site], di [keys] o di tutta la libreria) e dice
 /// com'è andata. Dopo, la proposta del sito non serve più.
-Future<void> startRepair(BuildContext context, WidgetRef ref, {String? site, Set<String>? keys}) async {
+///
+/// [sources] dice il link di ogni chiave di [keys]: con il motore server e un
+/// sito dietro la verifica, il server non può leggere la serie da sé e la
+/// pagina la apre il telefono (`POST /v2/repair/pages`).
+Future<void> startRepair(
+  BuildContext context,
+  WidgetRef ref, {
+  String? site,
+  Set<String>? keys,
+  Map<String, String>? sources,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = currentL10n();
   if (site != null) unawaited(ref.read(siteRecoveryProvider.notifier).dismiss(site));
+  if (site == null && keys != null && sources != null) {
+    final targets = repairNeedingVerification(keys, sources);
+    if (targets.isNotEmpty && await _repairBehindVerification(context, ref, targets)) return;
+  }
   final result = await ref.read(repairProvider.notifier).start(site: site, keys: keys);
   final error = ref.read(repairProvider).error;
   final text = switch (result) {
@@ -166,6 +180,43 @@ Future<void> startRepair(BuildContext context, WidgetRef ref, {String? site, Set
     RepairStart.failed => error == null ? null : l10n.archiveRepairFailed(error),
   };
   if (text != null) messenger.showSnackBar(SnackBar(content: Text(text)));
+}
+
+/// La riparazione sul server di serie dietro la verifica: il telefono la passa
+/// per ognuna, il server ripara con le pagine. `false` se non è questo il
+/// caso (motore telefono, server che non sa farlo): allora vale la strada di
+/// sempre.
+Future<bool> _repairBehindVerification(BuildContext context, WidgetRef ref, Map<String, String> targets) async {
+  final link = ref.read(serverLinkProvider).value;
+  if (ref.read(archiveEngineProvider) != ArchiveEngine.server || link == null) return false;
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = currentL10n();
+  final client = ServerClient(link, ref.read(serverAccessProvider).idToken);
+  try {
+    if (!(await client.info()).repairPages) return false;
+    if (!context.mounted) return true;
+    final pages = await collectVerifiedPages(context, targets.values);
+    if (pages.isEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.archiveRepairNoVerification)));
+      return true;
+    }
+    final result = await client.repairPages(pages);
+    final text = result.failed.isNotEmpty
+        ? l10n.archiveRepairFailed(result.failed.first.error)
+        : result.repaired == 0
+            ? l10n.archiveRepairPagesNone
+            : l10n.archiveRepairPagesDone;
+    messenger.showSnackBar(SnackBar(content: Text(text)));
+    return true;
+  } on ServerException catch (error) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.archiveRepairFailed(serverErrorText(error)))));
+    return true;
+  } on IOException catch (error) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.archiveRepairFailed('$error'))));
+    return true;
+  } finally {
+    client.close();
+  }
 }
 
 /// Una riga per ogni sito tornato sano: propone di ripararne le serie.
@@ -300,6 +351,28 @@ Future<InspectedSeries> _inspectArchiveLink(BuildContext context, String url, Br
   }
 }
 
+/// Apre [BrowserCheckPage] per ogni link di [urls] il cui sito ha una verifica
+/// e raccoglie le pagine passate, per link. Chiusa una senza passarla ci si
+/// ferma, con ciò che si è preso.
+Future<Map<String, String>> collectVerifiedPages(BuildContext context, Iterable<String> urls) async {
+  final pages = <String, String>{};
+  for (final url in urls) {
+    final Provider provider;
+    try {
+      provider = selectProvider(url);
+    } on ProviderError {
+      continue;
+    }
+    final gate = provider.browser;
+    if (gate == null) continue;
+    if (!context.mounted) break;
+    final pass = await BrowserCheckPage.open(context, provider.canonical(url), gate.hosts, ready: gate.seriesReady);
+    if (pass == null) break;
+    pages[url] = utf8.decode(pass.html);
+  }
+  return pages;
+}
+
 /// Fa passare all'utente la verifica che ha fermato il controllo di
 /// [gated], e fa ripartire il controllo da quelle serie, da chi controlla.
 ///
@@ -320,21 +393,7 @@ Future<({int checked, int queued, int gated})?> passVerification(
   List<GatedSeries> gated, {
   VoidCallback? onChecking,
 }) async {
-  final pages = <String, String>{};
-  for (final entry in gated) {
-    final Provider provider;
-    try {
-      provider = selectProvider(entry.url);
-    } on ProviderError {
-      continue;
-    }
-    final gate = provider.browser;
-    if (gate == null) continue;
-    if (!context.mounted) break;
-    final pass = await BrowserCheckPage.open(context, provider.canonical(entry.url), gate.hosts, ready: gate.seriesReady);
-    if (pass == null) break;
-    pages[entry.url] = utf8.decode(pass.html);
-  }
+  final pages = await collectVerifiedPages(context, [for (final entry in gated) entry.url]);
   if (pages.isEmpty) return null;
   onChecking?.call();
   final link = ref.read(serverLinkProvider).value;

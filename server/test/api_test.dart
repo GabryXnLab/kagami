@@ -324,6 +324,25 @@ void main() {
     await bare.close(force: true);
   });
 
+  test('POST /v2/repair/pages ripara subito le serie delle pagine, e lo dichiara fra le features', () async {
+    final (_, about) = await call('GET', '/v2/server');
+    expect(about!['features'], contains('repairPages'));
+    final page = {'url': 'https://manhwaread.com/manhwa/d/', 'html': '<html></html>'};
+    drive.ready = false;
+    expect((await call('POST', '/v2/repair/pages', body: {'pages': [page]})).$1, 409);
+    drive.ready = true;
+    drive.folderId = 'root';
+    expect((await call('POST', '/v2/repair/pages', body: {'pages': <Object?>[]})).$1, 400);
+    expect((await call('POST', '/v2/repair/pages', body: {'pages': [{'url': 'x'}]})).$1, 400);
+    final (status, body) = await call('POST', '/v2/repair/pages', body: {'pages': [page]});
+    expect(status, 200);
+    expect(body, {'repaired': 1, 'failed': <Object?>[]});
+    expect(jobs.repairedPages.single.keys, ['https://manhwaread.com/manhwa/d/']);
+    jobs.busy = true;
+    final (busy, answer) = await call('POST', '/v2/repair/pages', body: {'pages': [page]});
+    expect((busy, code(answer)), (409, 'busy'));
+  });
+
   test('POST /v2/repair mette in attesa la riparazione, e la dichiara fra le features', () async {
     final (_, about) = await call('GET', '/v2/server');
     expect(about!['features'], contains('repair'));

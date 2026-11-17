@@ -1,11 +1,17 @@
 {
   "catalog": 1,
-  "serial": 1,
-  "issuedAt": "2026-11-17T07:30:09Z",
+  "serial": 2,
+  "issuedAt": "2026-11-17T08:33:12Z",
   "sites": {
     "asurascans": {
       "state": "ok",
       "variants": [
+        {
+          "version": 3,
+          "minEngine": 7,
+          "sha256": "5a479a2f37d0793708b3e9a8ef3bb2f7661be82ec9816f3383565f2719bc4ac6",
+          "path": "sites/asurascans-3.json"
+        },
         {
           "version": 2,
           "minEngine": 7,
@@ -29,6 +35,12 @@
       "state": "ok",
       "variants": [
         {
+          "version": 3,
+          "minEngine": 9,
+          "sha256": "dc87bf5a432468a4ad57446e7ad1363a7c9db8d7c4794481bd6ef5fecd2196e5",
+          "path": "sites/mangak-3.json"
+        },
+        {
           "version": 2,
           "minEngine": 9,
           "sha256": "e0346ea9c396f1e52bba4cd7383f7eefee30287f103d3cd0b1c8923b65fa0312",
@@ -39,6 +51,12 @@
     "manhwaread": {
       "state": "ok",
       "variants": [
+        {
+          "version": 2,
+          "minEngine": 11,
+          "sha256": "b9b4d78fde76a62e0cadfce4104def71c96205945dd57191a3cd43ad094d3e40",
+          "path": "sites/manhwaread-2.json"
+        },
         {
           "version": 1,
           "minEngine": 11,

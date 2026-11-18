@@ -38,6 +38,11 @@ on:
       build_apk:
         type: boolean
         default: true
+      # Da release.yml: l'immagine del server si pubblica anche come `stable` e `v<versione>`,
+      # i tag che seguono solo le release (chi aggiorna da sé, come Iris, segue `stable`).
+      release_version:
+        type: string
+        default: ''
     secrets:
       GOOGLE_SERVICES_JSON:
         required: false
@@ -121,12 +126,12 @@ jobs:
 
   # L'immagine che il comando generato dall'app scarica: una per architettura, sul
   # runner nativo (Dart sotto QEMU compila piano e a volte si pianta), poi un indice
-  # che le riunisce sotto lo stesso nome. Solo dal pubblico e solo da main: è quella
-  # che usa chiunque abbia l'app.
+  # che le riunisce sotto lo stesso nome. Solo dal pubblico e solo da main (un push o
+  # una release): è quella che usa chiunque abbia l'app.
   server-publish:
     name: Pubblica il server (${{ matrix.arch }})
     needs: [check, server-image]
-    if: ${{ !github.event.repository.private && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ !github.event.repository.private && github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.release_version) }}
     strategy:
       matrix:
         include:
@@ -202,14 +207,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # `latest` è quello del comando dell'app; lo sha resta per tornare indietro.
+      # `stable` e `v<versione>` si muovono solo con una release.
       - name: Indice multi-architettura
         working-directory: ${{ runner.temp }}/digests
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kagami-server"
-          docker buildx imagetools create -t "$image:latest" -t "$image:sha-${GITHUB_SHA::7}" \
-            $(printf "$image@sha256:%s " *)
+          tags=(-t "$image:latest" -t "$image:sha-${GITHUB_SHA::7}")
+          if [ -n "$RELEASE_VERSION" ]; then
+            tags+=(-t "$image:stable" -t "$image:v$RELEASE_VERSION")
+          fi
+          docker buildx imagetools create "${tags[@]}" $(printf "$image@sha256:%s " *)
           docker buildx imagetools inspect "$image:latest"
-          echo "Immagine: \`$image:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Immagine: \`$image:latest\`${RELEASE_VERSION:+, \`$image:stable\` e \`$image:v$RELEASE_VERSION\`}" >> "$GITHUB_STEP_SUMMARY"
 
   android:
     name: APK

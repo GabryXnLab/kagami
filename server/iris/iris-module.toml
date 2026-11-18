@@ -8,9 +8,16 @@
 # fa Iris (configurazione di aggiornamento modulo + registry), quindi il socket dell'engine non entra in nessun
 # contenitore e il digest qui sotto non va rincorso a mano.
 #
-# Subentro a un'installazione Docker fatta col comando dell'app: `replaces` ferma i container `kagami-server` e
-# `kagami-browser` (politica `no`, mai cancellati), `import_from` copia il loro /data nei volumi del modulo e
-# `[[retire]]` ferma `kagami-updater`. Su un host senza quei container le chiavi non fanno niente.
+# Aggiornamenti: configurazione d'aggiornamento di Iris con bersaglio questo modulo, sorgente il registry
+# `ghcr.io/gabryxnlab/kagami-server` col tag `stable` (si muove solo con le release, `.github/workflows/release.yml`)
+# e strategia Digest: Iris riscrive il digest nel manifesto installato e riapplica il modulo senza accettare rischi L4.
+#
+# Subentro a un'installazione Docker fatta col comando dell'app, una volta sola: per il primo apply si aggiungono a
+# `browser` e `server` `replaces = { container = "kagami-browser"|"kagami-server", engine = "docker" }` (ferma i
+# container con politica `no`, mai cancellati), `import_from = { component_path = "/data" }` ai due volumi (copia il
+# loro /data nei volumi del modulo; senza `replaces` è un manifesto invalido) e
+# `[[retire]] container = "kagami-updater", engine = "docker"`, con `accept_risks` (L4: toccano l'engine di sistema).
+# Poi si riapplica questo file così com'è: con quelle chiavi il rischio resta L4 e l'aggiornamento automatico rifiuta.
 format = 1
 
 [module]
@@ -67,11 +74,6 @@ type = "string"
 default = "Europe/Rome"
 description = "Fuso orario del controllo giornaliero dei capitoli nuovi (TZ)"
 
-# Il vecchio aggiornatore Docker: con Iris non serve più (e teneva il socket dell'engine).
-[[retire]]
-container = "kagami-updater"
-engine = "docker"
-
 # Chromium senza schermo, in un contenitore suo: ha solo il proprio profilo, mai il volume dei dati né KAGAMI_SETUP.
 # `isolated`: nessuna uscita verso internet (come la rete Docker `--internal`), esce solo dal proxy del server.
 # `init`: raccoglie gli zombie di Chromium.
@@ -80,25 +82,23 @@ id = "browser"
 kind = "container"
 isolated = true
 init = true
-replaces = { container = "kagami-browser", engine = "docker" }
-image = "ghcr.io/gabryxnlab/kagami-server@sha256:509cd0c3e9d85217f1a93349ea92ad0187b7e2a0cac623792432d74083bd230a"
+image = "ghcr.io/gabryxnlab/kagami-server@sha256:c6659d57758e8a7331e15f4d724ee4cd0953e4ba7249b97d4b122ffd0a7b4ee5"
 command = ["browser"]
 env = { KAGAMI_BROWSER_PROXY = "server:9223" }
-volumes = [{ name = "profile", target = "/data", import_from = { component_path = "/data" } }]
+volumes = [{ name = "profile", target = "/data" }]
 
 [[component]]
 id = "server"
 kind = "container"
-image = "ghcr.io/gabryxnlab/kagami-server@sha256:509cd0c3e9d85217f1a93349ea92ad0187b7e2a0cac623792432d74083bd230a"
+image = "ghcr.io/gabryxnlab/kagami-server@sha256:c6659d57758e8a7331e15f4d724ee4cd0953e4ba7249b97d4b122ffd0a7b4ee5"
 command = ["serve"]
 depends_on = ["browser"]
 init = true
-replaces = { container = "kagami-server", engine = "docker" }
 ports = [
     { name = "http", container = 8080, host = { param = "port" }, bind = { param = "bind" } },
     { name = "http2", container = 8080, host = { param = "second_port" }, bind = { param = "second_bind" } },
 ]
-volumes = [{ name = "data", target = "/data", backup = true, import_from = { component_path = "/data" } }]
+volumes = [{ name = "data", target = "/data", backup = true }]
 env = { KAGAMI_SETUP = { param = "setup" }, KAGAMI_BROWSER = "browser", KAGAMI_BACKEND_URL = { param = "backend_url" }, KAGAMI_BACKEND_ANON_KEY = { param = "backend_anon_key" }, TZ = { param = "tz" } }
 readiness = { endpoint = "health", timeout_s = 120 }
 

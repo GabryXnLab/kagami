@@ -505,6 +505,7 @@ class ServerWorker implements JobControl {
     wake();
     await _loop;
     await _checking;
+    await _repairSaved;
   }
 
   @override
@@ -541,8 +542,12 @@ class ServerWorker implements JobControl {
     final request = RepairRequest(site, keys);
     _repair = _repair?.merge(request) ?? request;
     wake();
-    unawaited(_saveRepair());
+    unawaited(_repairSaved = _saveRepair());
   }
+
+  /// L'ultima scrittura di `repair.json` partita da [repair]: [close] la
+  /// aspetta, così chi chiude non trova il file ancora a metà.
+  Future<void>? _repairSaved;
 
   File get _repairFile => File(p.join(files.directory.path, repairFileName));
 

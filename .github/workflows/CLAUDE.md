@@ -10,7 +10,7 @@ dipendere da nessun altro repo.
 | :--- | :--- | :--- |
 | `check` | push su `main`, PR, a mano | `.g.dart` allineati allo schema, `flutter analyze`, `flutter test`, `dart analyze` e `dart test` di `packages/kagami_archive` e `server` |
 | `server-image` | idem | `docker build --target test`: i test del server con libvips |
-| `server-publish`, `server-manifest` | push su `main` del **pubblico** | l'immagine del server su GHCR, `ghcr.io/<owner>/kagami-server:latest` e `:sha-<7>`, amd64 e arm64 |
+| `server-publish`, `server-manifest` | push su `main` del **pubblico**, e chiamati da `release.yml` | l'immagine del server su GHCR, `ghcr.io/<owner>/kagami-server:latest` e `:sha-<7>`, amd64 e arm64; da una release anche `:stable` e `:v<versione>` |
 | `android` | a mano, e chiamato da `release.yml` | APK (release di default, `build_mode` a mano; `split_per_abi` per uno per architettura), artefatto del run |
 
 In un repo privato (il manutentore, un fork chiuso) `check` e `server-image` partono
@@ -49,8 +49,11 @@ Valgono per `ci.yml` e per `build.yml`.
 l'app: `server-publish` la costruisce per architettura sul runner nativo
 (`ubuntu-24.04-arm` per arm64: Dart sotto QEMU è lento e a volte si pianta) e
 la spinge per impronta, `server-manifest` riunisce le due impronte sotto
-`latest` e `sha-<7>`. Parte solo da un push su `main` di un repo pubblico, dopo
-che `check` e `server-image` sono passati; il pacchetto su GHCR va reso pubblico
+`latest` e `sha-<7>`. Parte solo da un push su `main` di un repo pubblico, o da
+`release.yml` (input `release_version`), dopo che `check` e `server-image` sono
+passati. Da una release l'indice prende anche `stable` e `v<versione>`: `stable` si
+muove solo con le release ed è il tag che segue chi aggiorna il server da sé (il
+manutentore con Iris, `docs/server.md`); il pacchetto su GHCR va reso pubblico
 una volta a mano (*Package settings → Change visibility*), altrimenti `docker
 run` chiede un accesso. L'immagine non contiene niente di personale: tutto
 arriva da `KAGAMI_SETUP`.
@@ -94,8 +97,9 @@ notifica non parte e il run non avvisa.
 Solo a mano, da `main`, dopo aver alzato `version` in `pubspec.yaml`:
 
 1. `version` legge la versione e si ferma se la release `v<versione>` esiste già;
-2. `check` chiama `ci.yml` (`workflow_call`, `build_apk: false`): analisi, test e
-   immagine del server, senza il suo APK;
+2. `check` chiama `ci.yml` (`workflow_call`, `build_apk: false`, `release_version`):
+   analisi, test e immagine del server, che pubblica come `latest`, `stable` e
+   `v<versione>` (con i secret `CATALOG_*`), senza il suo APK;
 3. `build` chiama `build.yml` (`workflow_call`): le stesse build di ogni merge, cioè un
    APK per architettura (`arm64-v8a`, `armeabi-v7a`, `x86_64`), l'universale e l'IPA
    iOS non firmata;

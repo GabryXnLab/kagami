@@ -1,11 +1,17 @@
 {
   "catalog": 1,
-  "serial": 3,
-  "issuedAt": "2026-11-17T10:03:25Z",
+  "serial": 4,
+  "issuedAt": "2026-11-20T12:50:28Z",
   "sites": {
     "asurascans": {
       "state": "ok",
       "variants": [
+        {
+          "version": 4,
+          "minEngine": 7,
+          "sha256": "4f18d8b0ac77507b7671c9ebdd61a3565db6779a1bd88a419c636408ec5d513e",
+          "path": "sites/asurascans-4.json"
+        },
         {
           "version": 3,
           "minEngine": 7,

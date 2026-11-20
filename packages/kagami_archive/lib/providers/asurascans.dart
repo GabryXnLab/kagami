@@ -81,7 +81,9 @@ class AsuraScans extends Provider {
         if (error.status != 404) rethrow;
       }
     }
-    final series = response?['series'];
+    // Il sito serve due forme: la serie in cima o dentro `data` (dal 2026-11-20, per alcune serie).
+    final data = response?['data'];
+    final series = response?['series'] ?? (data is Map<String, Object?> ? data['series'] : null);
     if (series is! Map<String, Object?> || !isText(series['slug']) || !isText(series['title'])) {
       throw const ProviderError('Serie Asura Scans non trovata.');
     }

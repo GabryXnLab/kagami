@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-20T12:49:45.091971Z",
+  "entries": {
+    "https://api.asurascans.com/api/series/war-of-extinction": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "ba5d2ac9caaa.json"
+    },
+    "https://api.asurascans.com/api/series/war-of-extinction/chapters": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "229e495d2038.json"
+    },
+    "https://api.asurascans.com/api/series/war-of-extinction/chapters/chapter-1": {
+      "status": 200,
+      "contentType": "application/json",
+      "file": "aeabc6f22818.json"
+    }
+  }
+}

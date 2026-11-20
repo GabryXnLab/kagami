@@ -282,6 +282,9 @@ class FakeAsuraScans implements ProviderHttp {
   /// I capitoli che l'API dà chiusi, come durante l'accesso anticipato.
   final Set<int> locked = {};
 
+  /// La serie dentro `data`, come il sito la serve dal 2026-11-20 per alcune serie.
+  bool wrapped = false;
+
   Map<String, Object?> _chapter(int id) {
     final item = chapters.firstWhere((c) => c['id'] == id);
     return {
@@ -302,6 +305,7 @@ class FakeAsuraScans implements ProviderHttp {
   Future<Map<String, Object?>> json(String url) async {
     requests.add(url);
     if (url == '$api/series/war-of-extinction') {
+      if (wrapped) return {'data': {'series': series, 'recommended_series': <Object?>[]}};
       return {'series': series, 'recommended_series': <Object?>[], 'linked_ebook': null};
     }
     if (url == '$api/series/war-of-extinction/chapters') return {'data': chapters};

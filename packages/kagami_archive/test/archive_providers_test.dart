@@ -321,6 +321,14 @@ void main() {
       expect(metadata['type'], 'manhwa');
     });
 
+    test('la serie dentro data vale come quella in cima', () async {
+      final http = FakeAsuraScans()..wrapped = true;
+      final series = await provider.fetchSeries(url, http);
+      expect((series.key, series.title), ('asurascans:war-of-extinction', 'War of Extinction'));
+      expect(series.chapters, hasLength(2));
+      expect(normalizeMetadata(series.metadata)['type'], 'manhwa');
+    });
+
     test('tavole con le misure quando l\'API le dà', () async {
       final http = FakeAsuraScans();
       final series = await provider.fetchSeries(url, http);

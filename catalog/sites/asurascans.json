@@ -2,7 +2,7 @@
   "format": 2,
   "id": "asurascans",
   "name": "Asura Scans",
-  "version": 3,
+  "version": 4,
   "home": "https://asurascans.com",
   "hosts": ["asurascans.com", "www.asurascans.com", "api.asurascans.com"],
   "mediaHosts": ["cdn.asurascans.com"],
@@ -24,19 +24,22 @@
       "on": [404]
     },
     "json": true,
+    "vars": {
+      "s": {"first": [{"json": "series"}, {"json": "data.series"}]}
+    },
     "link": "https://asurascans.com/comics/{slug}",
-    "id": {"json": "series.slug"},
-    "title": {"json": "series.title"},
-    "cover": {"json": "series.cover"},
-    "description": {"json": "series.description", "html": true},
-    "status": {"json": "series.status"},
-    "type": {"json": "series.type"},
-    "genres": {"json": "series.genres.name", "all": true},
-    "authors": {"json": "series.author"},
-    "artists": {"json": "series.artist"},
+    "id": {"var": "s", "json": "slug"},
+    "title": {"var": "s", "json": "title"},
+    "cover": {"var": "s", "json": "cover"},
+    "description": {"var": "s", "json": "description", "html": true},
+    "status": {"var": "s", "json": "status"},
+    "type": {"var": "s", "json": "type"},
+    "genres": {"var": "s", "json": "genres.name", "all": true},
+    "authors": {"var": "s", "json": "author"},
+    "artists": {"var": "s", "json": "artist"},
     "alternativeTitles": {"first": [
-      {"json": "series.alt_titles", "all": true},
-      {"json": "series.alternative_titles"}
+      {"var": "s", "json": "alt_titles", "all": true},
+      {"var": "s", "json": "alternative_titles"}
     ]},
     "chapters": {
       "api": "https://api.asurascans.com/api/series/{id}/chapters",

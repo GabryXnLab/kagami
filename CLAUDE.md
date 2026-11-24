@@ -215,3 +215,7 @@ compresi).
 Nel riassunto conserva: voce in corso e criterio di fine, file modificati, comandi di verifica e
 ultimo esito, decisioni del proprietario della sessione. Dopo la compattazione `session-brief.sh`
 ristampa le note architetturali.
+
+## Mandato in corso (priorità massima)
+
+- Login con email e password su Hestia come accesso principale, Google secondo: `MANDATO-HESTIA-LOGIN.md` (2026-11-24).
